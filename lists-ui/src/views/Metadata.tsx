@@ -1,4 +1,4 @@
-import { useState} from "react";
+import {useContext, useState} from "react";
 import { useParams } from "react-router-dom";
 import { gql, useMutation, useQuery } from "@apollo/client";
 import { useIntl } from "react-intl";
@@ -13,16 +13,16 @@ import {
 } from "@mantine/core";
 import { MetadataForm } from "./MetadataForm";
 import SpeciesListSideBar from "./SpeciesListSideBar";
-import {SpeciesList} from "../api/sources/model";
+import {ListsUser, SpeciesList} from "../api/sources/model";
 import {MetadataProps} from "../api/sources/props";
-import {useAuth} from "../helpers/useAuth.ts";
 import LicenceLink from "../components/LicenceLink.tsx";
 import {IconLock, IconLockOpen} from "@tabler/icons-react";
+import UserContext from "../helpers/UserContext.ts";
 
 export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
     const {speciesListID} = useParams<{ speciesListID: string }>();
     const [edit, setEdit] = useState(false);
-    const {currentUser} = useAuth();
+    const currentUser = useContext(UserContext) as ListsUser;
 
     const GET_LIST = gql`
         query loadList($speciesListID: String!) {

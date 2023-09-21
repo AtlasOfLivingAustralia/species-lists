@@ -8,7 +8,7 @@ import {
     Text, Skeleton
 } from "@mantine/core";
 import { gql, useQuery } from "@apollo/client";
-import {useState} from "react";
+import {useContext, useState} from "react";
 import {
     IconEye,
     IconList, IconLock,
@@ -17,9 +17,9 @@ import {
 import {useNavigate} from "react-router-dom";
 import { FormattedMessage } from "react-intl";
 import { Dispatch, SetStateAction } from "react";
-import {SpeciesList} from "../api/sources/model.ts";
+import {ListsUser, SpeciesList} from "../api/sources/model.ts";
 import {SpeciesListsSideBar} from "./SpeciesListsSideBar.tsx";
-import {useAuth} from "../helpers/useAuth.ts";
+import UserContext from "../helpers/UserContext.ts";
 
 function MyLists() {
 
@@ -83,7 +83,7 @@ export function SearchTable({
                                 selectSpeciesList
                             }: SearchTableProps) {
 
-    const {currentUser} = useAuth();
+    const currentUser = useContext(UserContext) as ListsUser;
 
     const MY_LISTS = gql`
         query findList($searchQuery: String, $page: Int, $size: Int, $userId: String) {

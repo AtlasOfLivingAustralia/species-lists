@@ -2,10 +2,12 @@ import {Accordion} from "@mantine/core";
 import {Link} from "react-router-dom";
 import {IconHomeCog, IconSettings} from "@tabler/icons-react";
 import {AllLists, UploadListOption} from "./SpeciesListSideBar.tsx";
-import {useAuth} from "../helpers/useAuth.ts";
+import {useContext} from "react";
+import UserContext from "../helpers/UserContext.ts";
+import {ListsUser} from "../api/sources/model.ts";
 
 export function SpeciesListsSideBar({ resetSpeciesList }: { resetSpeciesList: () => void }) {
-    const {currentUser} = useAuth();
+    const currentUser = useContext(UserContext) as ListsUser;
 
     return (
         <Accordion defaultValue="selected-list" styles={{ chevron: { display: "none" } }}>

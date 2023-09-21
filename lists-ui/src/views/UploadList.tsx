@@ -1,4 +1,4 @@
-import { useState} from "react";
+import {useContext, useState} from "react";
 import {
     Group,
     Text,
@@ -9,8 +9,8 @@ import { IconUpload, IconX, IconFile } from "@tabler/icons-react";
 import { Dropzone } from "@mantine/dropzone";
 import { useNavigate } from "react-router-dom";
 import { MetadataForm } from "./MetadataForm";
-import {SpeciesList} from "../api/sources/model";
-import {useAuth} from "../helpers/useAuth.ts";
+import {ListsUser, SpeciesList} from "../api/sources/model";
+import UserContext from "../helpers/UserContext.ts";
 
 const ACCEPTED_TYPES: string[] = ["text/csv", "application/zip"];
 
@@ -20,7 +20,7 @@ function UploadList() {
     const [uploaded, setUploaded] = useState<any>(null); // Replace 'any' with actual uploaded data type
     const [ingesting, setIngesting] = useState<boolean | null>(null);
     const [rejectedMessage, setRejectedMessage] = useState<string | null>(null);
-    const {currentUser} = useAuth();
+    const currentUser = useContext(UserContext) as ListsUser;
 
     let speciesList:SpeciesList = {} as SpeciesList;
 

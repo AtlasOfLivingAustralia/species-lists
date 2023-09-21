@@ -6,13 +6,14 @@ import {
 } from "@mantine/core";
 import { useParams } from "react-router-dom";
 import { gql, useQuery } from "@apollo/client";
-import {ReleasesData} from "../api/sources/model.ts";
-import {useAuth} from "../helpers/useAuth.ts";
+import {ListsUser, ReleasesData} from "../api/sources/model.ts";
 import { IconDownload } from "@tabler/icons-react";
+import {useContext} from "react";
+import UserContext from "../helpers/UserContext.ts";
 
 export function Releases(){
     const { speciesListID } = useParams<{ speciesListID: string }>();
-    const { currentUser } = useAuth();
+    const currentUser = useContext(UserContext) as ListsUser;
 
     const GET_LIST = gql`
         query loadList($speciesListID: String!) {

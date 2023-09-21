@@ -2,13 +2,15 @@ import {
     Button, Group, Text
 } from "@mantine/core";
 import { useNavigate, useParams } from "react-router-dom";
-import {useAuth} from "../helpers/useAuth.ts";
 import {IconAlertHexagon} from "@tabler/icons-react";
+import {useContext} from "react";
+import UserContext from "../helpers/UserContext.ts";
+import {ListsUser} from "../api/sources/model.ts";
 
 function DangerZone() {
     const navigate = useNavigate();
     const { speciesListID } = useParams();
-    const { currentUser } = useAuth();
+    const currentUser = useContext(UserContext) as ListsUser;
 
     function deleteList() {
         fetch( import.meta.env.VITE_DELETE_URL + "/" + speciesListID, {

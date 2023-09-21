@@ -1,4 +1,4 @@
-import { useState} from "react";
+import {useContext, useState} from "react";
 import {
     Button,
     Group,
@@ -11,7 +11,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { gql, useQuery } from "@apollo/client";
 import { Dropzone } from "@mantine/dropzone";
 import { IconFile, IconUpload, IconX } from "@tabler/icons-react";
-import {useAuth} from "../helpers/useAuth.ts";
+import UserContext from "../helpers/UserContext.ts";
+import {ListsUser} from "../api/sources/model.ts";
 
 const ACCEPTED_TYPES: string[] = ["text/csv", "application/zip"];
 
@@ -22,7 +23,7 @@ function ReloadList() {
     const [uploaded, setUploaded] = useState<any>(null); // Replace 'any' with actual uploaded data type
     const [ingesting, setIngesting] = useState<boolean | null>(null);
     const [rejectedMessage, setRejectedMessage] = useState<string | null>(null);
-    const { currentUser } = useAuth();
+    const currentUser = useContext(UserContext) as ListsUser;
 
     const GET_LIST = gql`
         query loadList( $speciesListID:String!) {

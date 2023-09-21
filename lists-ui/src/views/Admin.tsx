@@ -3,12 +3,14 @@ import {
     Grid,
     Text, Button,
 } from "@mantine/core";
-import {useAuth} from "../helpers/useAuth.ts";
 import {SpeciesListsSideBar} from "./SpeciesListsSideBar.tsx";
+import UserContext from "../helpers/UserContext.ts";
+import {useContext} from "react";
+import {ListsUser} from "../api/sources/model.ts";
 
 function Admin() {
 
-    const {  currentUser } = useAuth();
+    const currentUser = useContext(UserContext) as ListsUser;
 
     function reindex() {
         if (window.confirm('Are you sure you want to reindex all lists?')) {

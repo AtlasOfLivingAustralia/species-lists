@@ -36,7 +36,7 @@ import {FacetProps, SpeciesListItemProps, SpeciesListProps} from "../api/sources
 function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps) {
 
     const location = useLocation();
-    let previousQuery = location.state.searchQuery;
+    let previousQuery = location.state?.searchQuery ? location.state.searchQuery : '';
     const { speciesListID } = useParams<{ speciesListID: string }>();
     const [activePage, setPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<any>(12);

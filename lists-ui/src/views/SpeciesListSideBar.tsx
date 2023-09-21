@@ -15,15 +15,16 @@ import {
     IconUpload,
     IconVersions,
 } from '@tabler/icons-react';
-import { SpeciesList} from "../api/sources/model";
+import {ListsUser, SpeciesList} from "../api/sources/model";
 import {SpeciesListSideBarProps} from "../api/sources/props.ts";
-import {useAuth} from "../helpers/useAuth.ts";
+import {useContext} from "react";
+import UserContext from "../helpers/UserContext.ts";
 
 function SpeciesListSideBar({ selectedView,
                               resetSpeciesList,
                             }: SpeciesListSideBarProps) {
 
-    const { currentUser } = useAuth();
+    const currentUser = useContext(UserContext) as ListsUser;
     const { speciesListID } = useParams();
 
     const GET_LIST = gql`
