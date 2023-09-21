@@ -5,7 +5,7 @@ import {
     Grid,
     TextInput,
     Group,
-    Text, Skeleton
+    Text, Skeleton, CloseButton
 } from "@mantine/core";
 import { gql, useQuery } from "@apollo/client";
 import {useContext, useState} from "react";
@@ -47,6 +47,13 @@ function MyLists() {
                                 placeholder="Search across lists..."
                                 icon={<IconSearch size={16} />}
                                 value={searchQuery}
+                                rightSection={
+                                    <CloseButton
+                                        aria-label="Clear input"
+                                        onClick={() => setSearchQuery('')}
+                                        style={{ display: searchQuery ? undefined : 'none' }}
+                                    />
+                                }
                                 onChange={(e) => setSearchQuery(e.currentTarget.value)}
                             />
                         </Grid.Col>
@@ -139,8 +146,11 @@ export function SearchTable({
             ))}
             </tbody>
         </Table>
-    </>;;
+    </>;
+
     if (error) return null;
+
+    if (!data?.lists?.content) return <>No matching lists</>;
 
     const rows = data?.lists?.content?.map((dataset: any) => (
         <tr

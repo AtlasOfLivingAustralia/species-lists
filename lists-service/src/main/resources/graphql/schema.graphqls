@@ -50,6 +50,8 @@ type SpeciesList {
   createDate: String
   lastModifiedDate: String
   lastUpdatedBy: String
+  owner: String
+  editors: [String]
 }
 
 type SpeciesListPage {

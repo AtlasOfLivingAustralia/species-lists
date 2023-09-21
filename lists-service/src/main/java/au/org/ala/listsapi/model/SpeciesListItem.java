@@ -1,6 +1,8 @@
 package au.org.ala.listsapi.model;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,4 +28,18 @@ public class SpeciesListItem {
   private String genus;
   private List<KeyValue> properties;
   private Classification classification;
+
+  public Map<String, String> toTaxonMap() {
+    Map<String, String> taxon = new HashMap<String, String>();
+    taxon.put("taxonID", this.taxonID);
+    taxon.put("scientificName", this.scientificName);
+    taxon.put("vernacularName", this.vernacularName);
+    taxon.put("kingdom", this.kingdom);
+    taxon.put("phylum", this.phylum);
+    taxon.put("class", this.classs);
+    taxon.put("order", this.order);
+    taxon.put("family", this.family);
+    taxon.put("genus", this.genus);
+    return taxon;
+  }
 }

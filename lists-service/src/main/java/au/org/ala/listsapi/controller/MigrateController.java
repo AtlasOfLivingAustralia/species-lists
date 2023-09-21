@@ -134,14 +134,13 @@ public class MigrateController {
               FileUtils.copyURLToFile(new URL(downloadUrl), localFile);
               speciesListMongoRepository.save(speciesList);
               IngestJob ingestJob =
-                  uploadService.loadCSV(speciesList.getId(), new FileInputStream(localFile), false);
+                  uploadService.loadCSV(
+                      speciesList.getId(), new FileInputStream(localFile), false, true);
               // update the field list
               speciesList.setRowCount(ingestJob.getRowCount());
               speciesList.setFieldList(ingestJob.getFieldList());
               speciesList.setFacetList(ingestJob.getFacetList());
               speciesListMongoRepository.save(speciesList);
-              releaseService.release(speciesList.getId(), true);
-              taxonService.taxonMatchDataset(speciesList.getId(), true);
             } catch (Exception e) {
               e.printStackTrace();
             }
@@ -174,15 +173,14 @@ public class MigrateController {
               HashSet<String> fieldNames = new HashSet<>();
               HashSet<String> facetNames = new HashSet<>();
               IngestJob ingestJob =
-                  uploadService.loadCSV(speciesList.getId(), new FileInputStream(localFile), false);
+                  uploadService.loadCSV(
+                      speciesList.getId(), new FileInputStream(localFile), false, true);
               // update the field list
               speciesList.setRowCount(ingestJob.getRowCount());
               speciesList.setFieldList(ingestJob.getFieldList());
               speciesList.setFacetList(ingestJob.getFacetList());
 
               speciesListMongoRepository.save(speciesList);
-              releaseService.release(speciesList.getId(), true);
-              taxonService.taxonMatchDataset(speciesList.getId(), true);
             } catch (Exception e) {
               e.printStackTrace();
               ;

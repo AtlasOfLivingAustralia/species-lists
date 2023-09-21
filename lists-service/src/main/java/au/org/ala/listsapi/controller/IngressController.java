@@ -57,7 +57,7 @@ public class IngressController {
   private String tempDir;
 
   @SecurityRequirement(name = "JWT")
-  @Tag(name = "Ingress", description = "Release a list")
+  @Operation(tags = "Ingress", summary = "Release a list")
   @GetMapping("/release/{speciesListID}")
   public ResponseEntity<Object> release(
       @PathVariable("speciesListID") String speciesListID,
@@ -73,7 +73,7 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Tag(name = "Ingress", description = "Delete a list")
+  @Operation(tags = "Ingress", summary = "Delete a list")
   @DeleteMapping("/delete/{speciesListID}")
   public ResponseEntity<Object> delete(
       @PathVariable("speciesListID") String speciesListID,
@@ -91,7 +91,7 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Tag(name = "Ingress", description = "Rematch the taxonomy for a list")
+  @Operation(tags = "Ingress", summary = "Rematch the taxonomy for a list")
   @GetMapping("/rematch/{speciesListID}")
   public ResponseEntity<Object> rematch(
       @PathVariable("speciesListID") String speciesListID,
@@ -100,7 +100,7 @@ public class IngressController {
       ResponseEntity<Object> errorResponse = checkAuthorized(speciesListID, principal);
       if (errorResponse != null) return errorResponse;
 
-      taxonService.taxonMatchDataset(speciesListID, true);
+      taxonService.taxonMatchDataset(speciesListID);
       return new ResponseEntity<>(HttpStatus.OK);
     } catch (Exception e) {
       return ResponseEntity.badRequest().body("Error while releasing the file: " + e.getMessage());
@@ -108,7 +108,21 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Tag(name = "Ingress", description = "Rematch the taxonomy for a list")
+  @Operation(tags = "Ingress", summary = "Rematch the taxonomy for all lists")
+  @GetMapping("/rematch")
+  public ResponseEntity<Object> rematch(@AuthenticationPrincipal Principal principal) {
+    try {
+      ResponseEntity<Object> errorResponse = checkAuthorized(principal);
+      if (errorResponse != null) return errorResponse;
+      taxonService.taxonMatchDatasets();
+      return new ResponseEntity<>(HttpStatus.OK);
+    } catch (Exception e) {
+      return ResponseEntity.badRequest().body("Error while releasing the file: " + e.getMessage());
+    }
+  }
+
+  @SecurityRequirement(name = "JWT")
+  @Operation(summary = "Reindex all species lists", tags = "Ingress")
   @GetMapping("/reindex/{speciesListID}")
   public ResponseEntity<Object> reindex(
       @PathVariable("speciesListID") String speciesListID,
@@ -117,7 +131,7 @@ public class IngressController {
       ResponseEntity<Object> errorResponse = checkAuthorized(speciesListID, principal);
       if (errorResponse != null) return errorResponse;
 
-      taxonService.taxonMatchDataset(speciesListID, false);
+      taxonService.taxonMatchDataset(speciesListID);
       return new ResponseEntity<>(HttpStatus.OK);
     } catch (Exception e) {
       logger.error("Error while reindexing dataset " + e.getMessage(), e);
@@ -126,13 +140,14 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Tag(name = "Ingress", description = "Reindex all species lists")
+  @Tag(name = "Ingress", description = "Services for ingesting species lists")
+  @Operation(summary = "Reindex all species lists", tags = "Ingress")
   @GetMapping("/reindex")
   public ResponseEntity<Object> reindex(@AuthenticationPrincipal Principal principal) {
     try {
       ResponseEntity<Object> errorResponse = checkAuthorized(principal);
       if (errorResponse != null) return errorResponse;
-      taxonService.reindex(false);
+      taxonService.reindex();
       return new ResponseEntity<>(HttpStatus.OK);
     } catch (Exception e) {
       logger.error("Error while reindexing all datasets: " + e.getMessage(), e);
@@ -142,8 +157,7 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Upload a species list", tags = "Ingress")
-  @Tag(name = "Ingress", description = "Upload a list")
+  @Operation(summary = "Upload a CSV species list", tags = "Ingress")
   @PostMapping("/upload")
   public ResponseEntity<Object> handleFileUpload(@RequestParam("file") MultipartFile file) {
 
@@ -151,7 +165,7 @@ public class IngressController {
       logger.info("Upload to temporary area started...");
       File tempFile = uploadService.getFileTemp(file);
       file.transferTo(tempFile);
-      IngestJob ingestJob = uploadService.ingest((String) null, tempFile, true);
+      IngestJob ingestJob = uploadService.ingest((String) null, tempFile, true, true);
       return new ResponseEntity<>(ingestJob, HttpStatus.OK);
     } catch (Exception e) {
       logger.error("Error while uploading the file: " + e.getMessage(), e);
@@ -160,8 +174,7 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Upload a species list", tags = "Ingress")
-  @Tag(name = "Ingress", description = "Upload a list")
+  @Operation(summary = "Ingest a species list", tags = "Ingress")
   @PostMapping("/ingest")
   public ResponseEntity<Object> ingest(
       @RequestParam("file") String fileName,
@@ -193,7 +206,7 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Tag(name = "Ingress", description = "Reingest a list")
+  @Operation(summary = "Upload a species list", tags = "Ingress")
   @PostMapping("/ingest/{speciesListID}")
   public ResponseEntity<Object> ingest(
       @RequestParam("file") String fileName,

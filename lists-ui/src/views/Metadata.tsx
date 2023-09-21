@@ -6,7 +6,8 @@ import {
     Affix,
     Button,
     Grid,
-    Group, Skeleton,
+    Group,
+    Skeleton,
     Space,
     Switch,
     Title,
@@ -46,6 +47,8 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                 createDate
                 lastModifiedDate
                 lastUpdatedBy
+                owner
+                editors                
             }
         }
     `;
@@ -95,6 +98,8 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                 isBIE
                 createDate
                 lastModifiedDate
+                owner
+                editors
             }
         }
     `;
@@ -132,7 +137,9 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
 
     setSpeciesList(data?.getSpeciesListMetadata);
 
-    const speciesList = data?.getSpeciesListMetadata ? data?.getSpeciesListMetadata  as SpeciesList : {} as SpeciesList;
+    const speciesList = data?.getSpeciesListMetadata ? data?.getSpeciesListMetadata as SpeciesList : {} as SpeciesList;
+
+    console.log(speciesList);
 
     return (
         <Grid mb="md" align="flex-start">
@@ -143,53 +150,59 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
             <Grid.Col xs={12} sm={10} style={{paddingLeft: "30px"}}>
                 <Title order={3}>Metadata for {speciesList?.title}</Title>
                 <Space h="md"/>
-                <Affix position={{top: 160, right: 20}}>
-                    <Switch
-                        onLabel="EDIT"
-                        offLabel="EDIT"
-                        checked={edit}
-                        size="lg"
-                        onChange={(event) => setEdit(event.currentTarget.checked)}
-                    />
-                </Affix>
+                { !loading &&
+                    <Affix position={{top: 160, right: 20}}>
+                        <Switch
+                            onLabel="EDIT"
+                            offLabel="EDIT"
+                            checked={edit}
+                            size="lg"
+                            disabled={
+                                currentUser?.user?.access_token === undefined
+                                || (!currentUser.isAdmin && currentUser.userId != speciesList.owner)
+                            }
+                            onChange={(event) => setEdit(event.currentTarget.checked)}
+                        />
+                    </Affix>
+                }
                 <Space h="md"/>
 
                 {loading &&
                     <dl>
                         <dt>Species list name</dt>
-                        <dd><Skeleton height={20} width={500} /></dd>
+                        <dd><Skeleton height={25} width={500} /></dd>
 
                         <Space h="md"/>
                         <dt>Description</dt>
-                        <dd><Skeleton height={20} width={500} /></dd>
+                        <dd><Skeleton height={25} width={500} /></dd>
 
                         <Space h="md"/>
                         <dt>Category</dt>
-                        <dd><Skeleton height={20} width={500} /></dd>
+                        <dd><Skeleton height={25} width={500} /></dd>
 
                         <Space h="md"/>
                         <dt>Licence</dt>
-                        <dd><Skeleton height={20} width={500} /></dd>
+                        <dd><Skeleton height={25} width={500} /></dd>
 
                         <Space h="md"/>
                         <dt>Visibility</dt>
-                        <dd><Skeleton height={20} width={500} /></dd>
+                        <dd><Skeleton height={25} width={500} /></dd>
 
                         <Space h="md"/>
                         <dt>Authority</dt>
-                        <dd><Skeleton height={20} width={500} /></dd>
+                        <dd><Skeleton height={25} width={500} /></dd>
 
                         <Space h="md"/>
                         <dt>Region</dt>
-                        <dd><Skeleton height={20} width={500} /></dd>
+                        <dd><Skeleton height={25} width={500} /></dd>
 
                         <Space h="md"/>
                         <dt>Created</dt>
-                        <dd><Skeleton height={20} width={500} /></dd>
+                        <dd><Skeleton height={25} width={500} /></dd>
 
                         <Space h="md"/>
                         <dt>Last modified</dt>
-                        <dd><Skeleton height={20} width={500} /></dd>
+                        <dd><Skeleton height={25} width={500} /></dd>
                     </dl>
                 }
 
@@ -214,7 +227,7 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
 
                             <Space h="md"/>
                             <dt>Description</dt>
-                            <dd>{speciesList?.description}</dd>
+                            <dd>{speciesList?.description ? speciesList?.description : 'Not specified'}</dd>
 
                             <Space h="md"/>
                             <dt>Category</dt>

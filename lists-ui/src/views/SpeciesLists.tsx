@@ -5,7 +5,7 @@ import {
     Grid,
     TextInput,
     Group,
-    Text, Skeleton
+    Text, Skeleton, CloseButton
 } from "@mantine/core";
 import { gql, useQuery } from "@apollo/client";
 import {useState} from "react";
@@ -46,6 +46,13 @@ function SpeciesLists() {
                                 placeholder="Search across lists..."
                                 icon={<IconSearch size={16} />}
                                 value={searchQuery}
+                                rightSection={
+                                    <CloseButton
+                                        aria-label="Clear input"
+                                        onClick={() => setSearchQuery('')}
+                                        style={{ display: searchQuery ? undefined : 'none' }}
+                                    />
+                                }
                                 onChange={(e) => setSearchQuery(e.currentTarget.value)}
                             />
                         </Grid.Col>

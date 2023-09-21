@@ -1,10 +1,11 @@
 package au.org.ala.listsapi.controller;
 
-import au.org.ala.listsapi.model.LegacySpeciesListQuery;
+import au.org.ala.listsapi.model.RESTSpeciesListQuery;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +30,8 @@ public class RESTController {
 
   @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
 
-  @Tag(name = "REST services", description = "Get species list metadata")
+  @Operation(tags = "REST", summary = "Get species list metadata")
+  @Tag(name = "REST", description = "REST Services for species lists lookups")
   @GetMapping("/speciesList/{speciesListID}")
   public ResponseEntity<SpeciesList> speciesList(
       @PathVariable("speciesListID") String speciesListID) {
@@ -37,10 +39,10 @@ public class RESTController {
     return speciesList.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
   }
 
-  @Tag(name = "REST services", description = "Get species lists matching the query")
+  @Operation(tags = "REST", summary = "Get species lists matching the query")
   @GetMapping("/speciesList/")
   public ResponseEntity<Object> speciesLists(
-      LegacySpeciesListQuery speciesList,
+      RESTSpeciesListQuery speciesList,
       @RequestParam(name = "page", defaultValue = "1") int page,
       @RequestParam(name = "pageSize", defaultValue = "10") int pageSize) {
     try {
@@ -65,7 +67,7 @@ public class RESTController {
     }
   }
 
-  @Tag(name = "REST services", description = "Get species lists items for a list")
+  @Operation(tags = "REST", summary = "Get species lists items for a list")
   @GetMapping("/speciesListItems/{speciesListID}")
   public ResponseEntity<Object> speciesList(
       @PathVariable("speciesListID") String speciesListID,

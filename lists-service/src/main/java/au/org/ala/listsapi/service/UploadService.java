@@ -4,7 +4,6 @@ import au.org.ala.listsapi.controller.AuthUtils;
 import au.org.ala.listsapi.model.IngestJob;
 import au.org.ala.listsapi.model.KeyValue;
 import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.model.SpeciesListIndex;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
@@ -15,7 +14,6 @@ import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -78,7 +76,7 @@ public class UploadService {
     extractUpdates(speciesListMetadata, speciesList);
     speciesList = speciesListMongoRepository.save(speciesList);
 
-    IngestJob ingestJob = ingest(speciesList.getId(), fileToLoad, dryRun);
+    IngestJob ingestJob = ingest(speciesList.getId(), fileToLoad, dryRun, false);
 
     speciesList.setFieldList(ingestJob.getFieldList());
     speciesList.setFacetList(ingestJob.getFacetList());
@@ -86,6 +84,7 @@ public class UploadService {
 
     speciesList = speciesListMongoRepository.save(speciesList);
 
+    releaseService.release(speciesList.getId());
     return speciesList;
   }
 
@@ -135,12 +134,14 @@ public class UploadService {
         // delete from mongo
         speciesListItemMongoRepository.deleteBySpeciesListID(speciesListID);
 
-        IngestJob ingestJob = ingest(speciesListID, fileToLoad, dryRun);
+        IngestJob ingestJob = ingest(speciesListID, fileToLoad, dryRun, false);
 
         speciesList.get().setFieldList(ingestJob.getFieldList());
         speciesList.get().setFacetList(ingestJob.getFacetList());
         speciesList.get().setRowCount(ingestJob.getRowCount());
-        return speciesListMongoRepository.save(speciesList.get());
+        SpeciesList speciesList1 = speciesListMongoRepository.save(speciesList.get());
+        releaseService.release(speciesList1.getId());
+        return speciesList1;
       } else {
         return null;
       }
@@ -149,7 +150,9 @@ public class UploadService {
     }
   }
 
-  public IngestJob ingest(String speciesListID, File fileToLoad, boolean dryRun) throws Exception {
+  public IngestJob ingest(
+      String speciesListID, File fileToLoad, boolean dryRun, boolean skipIndexing)
+      throws Exception {
 
     IngestJob ingestJob = null;
 
@@ -159,14 +162,14 @@ public class UploadService {
     // handle CSV
     if (mimeType.equals("text/csv")) {
       // load a CSV
-      ingestJob = ingestCSV(speciesListID, fileToLoad, dryRun);
+      ingestJob = ingestCSV(speciesListID, fileToLoad, dryRun, skipIndexing);
     }
 
     // handle zip file
     if (mimeType.equals("application/zip")) {
       try (ZipFile zipFile = new ZipFile(fileToLoad)) {
         // load a zip file
-        ingestJob = ingestZip(speciesListID, zipFile, dryRun);
+        ingestJob = ingestZip(speciesListID, zipFile, dryRun, skipIndexing);
       }
     }
 
@@ -178,26 +181,30 @@ public class UploadService {
     return null;
   }
 
-  public IngestJob ingestCSV(String speciesListID, File file, boolean dryRun) throws Exception {
-    return loadCSV(speciesListID, new FileInputStream(file), dryRun);
+  public IngestJob ingestCSV(String speciesListID, File file, boolean dryRun, boolean skipIndexing)
+      throws Exception {
+    return loadCSV(speciesListID, new FileInputStream(file), dryRun, skipIndexing);
   }
 
-  public IngestJob ingestZip(String speciesListID, ZipFile zipFile, boolean dryRun)
+  public IngestJob ingestZip(
+      String speciesListID, ZipFile zipFile, boolean dryRun, boolean skipIndexing)
       throws Exception {
     // get the field list
     Enumeration<? extends ZipEntry> entries = zipFile.entries();
     while (entries.hasMoreElements()) {
       ZipEntry entry = entries.nextElement();
       if (!entry.isDirectory() && entry.getName().endsWith(".csv")) {
-        IngestJob ingestJob = loadCSV(speciesListID, zipFile.getInputStream(entry), dryRun);
+        IngestJob ingestJob =
+            loadCSV(speciesListID, zipFile.getInputStream(entry), dryRun, skipIndexing);
         return ingestJob;
       }
     }
     return null;
   }
 
-  public IngestJob loadCSV(String speciesListID, InputStream inputStream, boolean dryRun)
-      throws IOException {
+  public IngestJob loadCSV(
+      String speciesListID, InputStream inputStream, boolean dryRun, boolean skipIndexing)
+      throws Exception {
 
     SpeciesList speciesList = null;
 
@@ -294,32 +301,7 @@ public class UploadService {
                 keyValues,
                 null);
 
-        taxonService.updateClassification(speciesListItem);
         speciesListItemMongoRepository.save(speciesListItem);
-
-        // write the data to Elasticsearch
-        SpeciesListIndex speciesListIndex =
-            new SpeciesListIndex(
-                speciesListItem.getId(),
-                speciesList.getDataResourceUid(),
-                speciesList.getTitle(),
-                speciesList.getListType(),
-                speciesListID,
-                scientificName,
-                vernacularName,
-                taxonID,
-                kingdom,
-                phylum,
-                classs,
-                order,
-                family,
-                genus,
-                properties,
-                speciesListItem.getClassification(),
-                speciesList.getIsPrivate() != null ? speciesList.getIsPrivate() : true,
-                speciesList.getOwner(),
-                speciesList.getEditors() != null ? speciesList.getEditors() : new ArrayList<>());
-        speciesListIndexElasticRepository.save(speciesListIndex);
       }
       rowCount++;
     }
@@ -343,6 +325,11 @@ public class UploadService {
         validationError.add("SOME_RECORDS_WITHOUT_SCIENTIFIC_NAME");
       }
       ingestJob.setValidationErrors(validationError);
+    }
+
+    if (!dryRun && !skipIndexing) {
+      taxonService.taxonMatchDataset(speciesListID);
+      taxonService.reindex(speciesListID);
     }
 
     return ingestJob;

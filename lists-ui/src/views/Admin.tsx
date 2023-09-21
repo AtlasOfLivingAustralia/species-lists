@@ -29,6 +29,41 @@ function Admin() {
         }
     }
 
+    function rematch() {
+        if (window.confirm('Are you sure you want to rematch all lists?')) {
+            fetch(import.meta.env.VITE_REMATCH_URL, {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + currentUser?.user.access_token,
+                }
+            }).then(response => {
+                if (response.ok) {
+                    alert('Rematching started.');
+                } else {
+                    alert('Rematching failed.');
+                }
+            });
+        }
+    }
+
+
+    function migrate() {
+        if (window.confirm('Are you sure you want to migrate all lists?')) {
+            fetch(import.meta.env.VITE_MIGRATE_URL, {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + currentUser?.user.access_token,
+                }
+            }).then(response => {
+                if (response.ok) {
+                    alert('Migration started.');
+                } else {
+                    alert('Migration failed.');
+                }
+            });
+        }
+    }
+
     return (
         <>
             <Grid mb="md">
@@ -49,11 +84,11 @@ function Admin() {
                                 <td><Text>Regenerate the elastic search index for all lists</Text></td>
                             </tr>
                             <tr>
-                                <td><Button variant="outline"  onClick={() => alert('Not implemented! ')}>Rematch lists</Button></td>
+                                <td><Button variant="outline"  onClick={rematch}>Rematch lists</Button></td>
                                 <td><Text>Rematch the taxonomy for all lists</Text></td>
                             </tr>
                             <tr>
-                                <td><Button variant="outline"  onClick={() => alert('Not implemented! ')}>Migrate</Button></td>
+                                <td><Button variant="outline"  onClick={migrate}>Migrate</Button></td>
                                 <td><Text>Migrate data from existing list tool</Text></td>
                             </tr>
                             <tr>

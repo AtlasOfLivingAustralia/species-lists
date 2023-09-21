@@ -3,8 +3,9 @@ import { useForm } from "@mantine/form";
 import { useIntl } from "react-intl";
 
 import {MetadataFormProps} from "../api/sources/props.ts";
-import {useState} from "react";
-import {SpeciesList} from "../api/sources/model.ts";
+import {useContext, useState} from "react";
+import {ListsUser, SpeciesList} from "../api/sources/model.ts";
+import UserContext from "../helpers/UserContext.ts";
 
 export function MetadataForm({ speciesList,
                                submitFormFcn,
@@ -16,6 +17,7 @@ export function MetadataForm({ speciesList,
     const [isAuthoritative] = useState(speciesList?.isAuthoritative);
     const [isSDS] = useState(speciesList?.isSDS);
     const [isBIE] = useState(speciesList?.isBIE);
+    const currentUser = useContext(UserContext) as ListsUser;
 
     const form = useForm({
         initialValues: {
@@ -98,21 +100,24 @@ export function MetadataForm({ speciesList,
                             checked={isPrivate}
                             {...form.getInputProps('isPrivate', { type: 'checkbox' })}
                     />
-                    <Checkbox size="lg"
-                              label="Is Authoritative"
-                              checked={isAuthoritative}
-                              {...form.getInputProps('isAuthoritative', { type: 'checkbox' })}
-                    />
-                    <Checkbox size="lg"
-                              label="Is SDS"
-                              checked={isSDS}
-                              {...form.getInputProps('isSDS', { type: 'checkbox' })}
-                    />
-                    <Checkbox size="lg"
-                              label="Is BIE"
-                              checked={isBIE}
-                              {...form.getInputProps('isBIE', { type: 'checkbox' })}
-                    />
+                    {currentUser?.isAdmin && <>
+                        <Checkbox size="lg"
+                                  label="Is Authoritative"
+                                  checked={isAuthoritative}
+                                  {...form.getInputProps('isAuthoritative', { type: 'checkbox' })}
+                        />
+                        <Checkbox size="lg"
+                                  label="Is SDS"
+                                  checked={isSDS}
+                                  {...form.getInputProps('isSDS', { type: 'checkbox' })}
+                        />
+                        <Checkbox size="lg"
+                                  label="Is BIE"
+                                  checked={isBIE}
+                                  {...form.getInputProps('isBIE', { type: 'checkbox' })}
+                        />
+                    </>}
+
                 </Group>
                 <TextInput mt="md" label="Authority" disabled={!edit} placeholder="" {...form.getInputProps("authority")} />
                 <Space h="md" />

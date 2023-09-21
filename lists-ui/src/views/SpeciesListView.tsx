@@ -12,7 +12,7 @@ import {
     Anchor,
     Group,
     Text,
-    Skeleton, Button, List, ThemeIcon, Select, Divider
+    Skeleton, Button, List, ThemeIcon, Select, Divider, CloseButton
 } from '@mantine/core';
 import { gql, useQuery } from '@apollo/client';
 import {useLocation, useParams} from 'react-router-dom';
@@ -247,9 +247,19 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                                     placeholder="Search within list..."
                                     icon={<IconSearch size={16} />}
                                     value={searchQuery ? searchQuery : ''}
+                                    rightSection={
+                                        <CloseButton
+                                            aria-label="Clear input"
+                                            onClick={() => setSearchQuery('')}
+                                            style={{ display: searchQuery ? undefined : 'none' }}
+                                        />
+                                    }
                                     onChange={(e) => setSearchQuery(e.currentTarget.value)}
                                 />
-                                <Text size="xl">{totalElements} taxa</Text>
+                                <Group>
+                                    {loading && <><Skeleton height={30} width={50} /></>}
+                                    {!loading && <><Text>{totalElements} taxa</Text></>}
+                                </Group>
                             </Group>
                         </Grid.Col>
                         <Grid.Col xs={8} sm={9}>

@@ -34,9 +34,8 @@ function SpeciesListSideBar({ selectedView,
             getSpeciesListMetadata(speciesListID: $speciesListID) {
                 id
                 title
-                rowCount
-                fieldList
-                facetList
+                owner
+                editors
             }
         }
     `;
@@ -49,6 +48,8 @@ function SpeciesListSideBar({ selectedView,
     if (!speciesListID) {
         return null;
     }
+
+    const speciesList = data?.getSpeciesListMetadata as SpeciesList;
 
     if (loading) {
         return (
@@ -114,7 +115,7 @@ function SpeciesListSideBar({ selectedView,
                     </Link>
                 </Accordion.Item>
 
-                {currentUser && currentUser.isAdmin &&
+                {currentUser && speciesList && (currentUser.isAdmin || currentUser.userId == speciesList?.owner) &&
                     <Accordion.Item value="reload">
                         <Link to={`/reload/${speciesListID}`}>
                             <Accordion.Control>
@@ -126,7 +127,7 @@ function SpeciesListSideBar({ selectedView,
                         </Link>
                     </Accordion.Item>
                 }
-                {currentUser && currentUser.isAdmin &&
+                {currentUser && speciesList && (currentUser.isAdmin || currentUser.userId == speciesList?.owner) &&
                     <Accordion.Item value="reload">
                         <Link to={`/dangerzone/${speciesListID}`}>
                             <Accordion.Control>

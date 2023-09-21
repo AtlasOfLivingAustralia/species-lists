@@ -7,10 +7,10 @@ import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.ProxySelector;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -18,7 +18,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,7 +47,7 @@ public class TaxonService {
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
 
   @Async("processExecutor")
-  public void reindex(boolean rematchTaxonomy) {
+  public void reindex() {
     logger.info("Rematching all datasets");
     int size = 1000;
     int page = 0;
@@ -58,7 +60,7 @@ public class TaxonService {
         speciesLists.forEach(
             speciesList -> {
               try {
-                reindex(speciesList.getId(), rematchTaxonomy);
+                reindex(speciesList.getId());
                 datasetsIndex.getAndIncrement();
               } catch (Exception e) {
                 logger.error(e.getMessage(), e);
@@ -73,7 +75,7 @@ public class TaxonService {
   }
 
   @Async("processExecutor")
-  public void taxonMatchDatasets(boolean rematchTaxonomy) {
+  public void taxonMatchDatasets() {
     logger.info("Rematching all datasets");
     int size = 10;
     int page = 0;
@@ -85,7 +87,7 @@ public class TaxonService {
         speciesLists.forEach(
             speciesList -> {
               try {
-                taxonMatchDataset(speciesList.getId(), rematchTaxonomy);
+                taxonMatchDataset(speciesList.getId());
               } catch (Exception e) {
                 logger.error(e.getMessage(), e);
               }
@@ -98,10 +100,9 @@ public class TaxonService {
     logger.info("Rematching all datasets complete.");
   }
 
-  @Async("processExecutor")
-  public void reindex(String speciesListID, boolean rematchTaxonomy) {
+  public void reindex(String speciesListID) {
 
-    logger.info("Rematching " + speciesListID);
+    logger.info("Indexing " + speciesListID);
     SpeciesList speciesList = speciesListMongoRepository.findById(speciesListID).get();
     int size = 1000;
     int page = 0;
@@ -117,10 +118,6 @@ public class TaxonService {
         speciesListItems.forEach(
             speciesListItem -> {
               try {
-                if (rematchTaxonomy) {
-                  updateClassification(speciesListItem);
-                  speciesListItemMongoRepository.save(speciesListItem);
-                }
 
                 Map<String, String> map = new HashMap<>();
                 speciesListItem.getProperties().forEach(kv -> map.put(kv.getKey(), kv.getValue()));
@@ -176,61 +173,29 @@ public class TaxonService {
     logger.info("Rematching " + speciesListID + " complete.");
   }
 
-  @Async("processExecutor")
-  public void taxonMatchDataset(String speciesListID, boolean rematchTaxonomy) {
+  public void taxonMatchDataset(String speciesListID) {
 
     logger.info("Rematching " + speciesListID);
-    SpeciesList speciesList = speciesListMongoRepository.findById(speciesListID).get();
-    int size = 10;
+    Optional<SpeciesList> optionalSp = speciesListMongoRepository.findById(speciesListID);
+    if (!optionalSp.isPresent()) return;
+
+    int size = 100;
     int page = 0;
     boolean done = false;
     while (!done) {
       Pageable paging = PageRequest.of(page, size);
-
       Page<SpeciesListItem> speciesListItems =
           speciesListItemMongoRepository.findBySpeciesListID(speciesListID, paging);
 
       if (speciesListItems.getContent().size() > 0) {
-        speciesListItems.forEach(
-            speciesListItem -> {
-              try {
-                if (rematchTaxonomy) {
-                  updateClassification(speciesListItem);
-                  speciesListItemMongoRepository.save(speciesListItem);
-                }
+        try {
+          List<SpeciesListItem> items = speciesListItems.getContent();
+          updateClassifications(items);
+          speciesListItemMongoRepository.saveAll(items);
 
-                Map<String, String> map = new HashMap<>();
-                speciesListItem.getProperties().forEach(kv -> map.put(kv.getKey(), kv.getValue()));
-
-                // write the data to Elasticsearch
-                SpeciesListIndex speciesListIndex =
-                    new SpeciesListIndex(
-                        speciesListItem.getId(),
-                        speciesList.getDataResourceUid(),
-                        speciesList.getTitle(),
-                        speciesList.getListType(),
-                        speciesListItem.getSpeciesListID(),
-                        speciesListItem.getScientificName(),
-                        speciesListItem.getVernacularName(),
-                        speciesListItem.getTaxonID(),
-                        speciesListItem.getKingdom(),
-                        speciesListItem.getPhylum(),
-                        speciesListItem.getClasss(),
-                        speciesListItem.getOrder(),
-                        speciesListItem.getFamily(),
-                        speciesListItem.getGenus(),
-                        map,
-                        speciesListItem.getClassification(),
-                        speciesList.getIsPrivate(),
-                        speciesList.getOwner(),
-                        speciesList.getEditors());
-                logger.info("Reindexing - " + speciesListItem.getScientificName());
-                speciesListIndexElasticRepository.save(speciesListIndex);
-
-              } catch (Exception e) {
-                logger.error(e.getMessage(), e);
-              }
-            });
+        } catch (Exception e) {
+          logger.error(e.getMessage(), e);
+        }
       } else {
         done = true;
       }
@@ -239,27 +204,29 @@ public class TaxonService {
     logger.info("Rematching " + speciesListID + " complete.");
   }
 
-  public SpeciesListItem updateClassification(SpeciesListItem speciesListItem) {
+  public List<SpeciesListItem> updateClassifications(List<SpeciesListItem> speciesListItems) {
     try {
-      logger.info("Lookup for " + speciesListItem.getScientificName());
-      Classification classification = lookupTaxonID(speciesListItem.getScientificName());
+      List<Classification> classification = lookupTaxa(speciesListItems);
+      for (int i = 0; i < speciesListItems.size(); i++) {
+        speciesListItems.get(i).setClassification(classification.get(i));
+      }
       // write to mongo
-      speciesListItem.setClassification(classification);
     } catch (Exception e) {
       logger.error(e.getMessage());
     }
-    return speciesListItem;
+    return speciesListItems;
   }
 
-  private Classification lookupTaxonID(String scientificName) throws Exception {
+  private List<Classification> lookupTaxa(List<SpeciesListItem> items) throws Exception {
 
+    List<Map<String, String>> values =
+        items.stream().map(item -> item.toTaxonMap()).collect(Collectors.toList());
+    ObjectMapper om = new ObjectMapper();
+    String json = om.writeValueAsString(values);
     HttpRequest httpRequest =
-        HttpRequest.newBuilder(
-                new URI(
-                    namematchingQueryUrl
-                        + "/api/search?q="
-                        + URLEncoder.encode(scientificName, "UTF-8")))
-            .GET()
+        HttpRequest.newBuilder(new URI(namematchingQueryUrl + "/api/searchAllByClassification"))
+            .POST(HttpRequest.BodyPublishers.ofString(json))
+            .header("Content-Type", "application/json")
             .build();
 
     HttpResponse<String> response =
@@ -271,7 +238,9 @@ public class TaxonService {
     ObjectMapper objectMapper = new ObjectMapper();
 
     if (response.statusCode() == 200) {
-      return objectMapper.readValue(response.body(), Classification.class);
+      List<Classification> classifications =
+          objectMapper.readValue(response.body(), new TypeReference<List<Classification>>() {});
+      return classifications;
     }
     return null;
   }

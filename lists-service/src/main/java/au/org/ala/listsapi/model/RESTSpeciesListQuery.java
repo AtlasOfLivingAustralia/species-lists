@@ -11,7 +11,7 @@ import lombok.extern.jackson.Jacksonized;
 @SuperBuilder
 @AllArgsConstructor
 @Jacksonized
-public class LegacySpeciesListQuery {
+public class RESTSpeciesListQuery {
 
   private String id;
   private String dataResourceUid;

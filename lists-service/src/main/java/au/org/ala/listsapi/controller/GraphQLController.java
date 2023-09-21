@@ -279,7 +279,7 @@ public class GraphQLController {
       // in elasticsearch and mongo
       SpeciesList updatedList = speciesListMongoRepository.save(toUpdate);
       if (reindexRequired) {
-        taxonService.reindex(updatedList.getId(), false);
+        taxonService.reindex(updatedList.getId());
       }
 
       return updatedList;
@@ -301,8 +301,7 @@ public class GraphQLController {
         q ->
             q.bool(
                 bq -> {
-                  buildQuery(
-                      cleanRawQuery(searchQuery), speciesListID, null, null, filters, bq);
+                  buildQuery(cleanRawQuery(searchQuery), speciesListID, null, null, filters, bq);
                   return bq;
                 }));
 
