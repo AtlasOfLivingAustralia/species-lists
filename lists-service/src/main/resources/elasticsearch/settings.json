@@ -1,0 +1,21 @@
+{
+  "index": {
+      "analysis": {
+        "tokenizer": {
+          "binomial_ngram_tokenizer": {
+            "type": "ngram",
+            "min_gram": 2,
+            "max_gram": 2,
+            "token_chars": ["letter", "digit"]
+          }
+        },
+        "analyzer": {
+          "partial_binomial_analyzer": {
+            "type": "custom",
+            "tokenizer": "binomial_ngram_tokenizer",
+            "filter": ["lowercase"]
+          }
+        }
+      }
+    }
+}

@@ -1,0 +1,121 @@
+type Query {
+  lists(searchQuery:String, page:Int = 0, size: Int = 10, userId:String, isPrivate: Boolean = false): SpeciesListPage
+  listsFacet(searchQuery:String): Facet
+  listReleases(speciesListID: String, page:Int = 0, size: Int = 10): [Release]
+  getSpeciesListMetadata(speciesListID: String): SpeciesList
+  getSpeciesList(speciesListID: String, page:Int = 0, size: Int = 10): SpeciesListItemPage
+  filterSpeciesList(speciesListID: String, searchQuery: String, filters:[Filter], page:Int = 0, size: Int = 10): SpeciesListItemPage
+  facetSpeciesList(speciesListID: String, searchQuery:String, filters:[Filter], facetFields:[String], page:Int = 0, size: Int = 10): [Facet]
+  getTaxonImage(taxonID:String): Image
+}
+
+type Mutation {
+  updateMetadata(id: String!, title: String!, description: String,
+    licence: String!, listType: String!, authority:String, region:String,
+    isAuthoritative:Boolean, isPrivate: Boolean, isInvasive: Boolean, isThreatened: Boolean,
+    isBIE: Boolean, isSDS: Boolean, doi:String): SpeciesList
+}
+
+type Image {
+  url: String
+}
+
+type Release {
+  id: ID
+  releasedVersion: String!
+  speciesListID: String!
+  storedLocation: String
+  metadata: SpeciesList
+  createdDate: String
+}
+
+type SpeciesList {
+  id: ID
+  title: String
+  description: String
+  rowCount: Int
+  fieldList:[String]
+  facetList:[String]
+  licence: String
+  listType: String
+  doi:String
+  authority:String
+  region:String
+  isAuthoritative:Boolean
+  isPrivate: Boolean
+  isInvasive: Boolean
+  isThreatened: Boolean
+  isBIE: Boolean
+  isSDS: Boolean
+  createDate: String
+  lastModifiedDate: String
+  lastUpdatedBy: String
+}
+
+type SpeciesListPage {
+  content: [SpeciesList]
+  totalPages: Int
+  currentPage: Int
+  totalElements: Int
+}
+
+type SpeciesListItem {
+  id: ID
+  speciesListID: String
+  scientificName: String
+  taxonID: String
+  vernacularName: String
+  kingdom: String
+  phylum: String
+  classs: String
+  order: String
+  family: String
+  genus: String
+  properties: [KeyValue]
+  classification: Classification
+}
+
+type SpeciesListItemPage {
+  content: [SpeciesListItem]
+  totalPages: Int
+  currentPage: Int
+  totalElements: Int
+}
+
+type Classification {
+  scientificName: String
+  vernacularName: String
+  taxonConceptID: String
+  kingdom: String
+  kingdomID: String
+  phylum: String
+  phylumID: String
+  classs: String
+  classID: String
+  order: String
+  orderID: String
+  family: String
+  familyID: String
+  genus: String
+  genusID: String
+}
+
+input Filter {
+  key: String
+  value: String
+}
+
+type KeyValue {
+  key: String
+  value: String
+}
+
+type Facet {
+  key: String
+  counts: [FacetCount]
+}
+
+type FacetCount {
+  value: String
+  count: Int
+}

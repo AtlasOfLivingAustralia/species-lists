@@ -1,0 +1,8 @@
+schema: schema.graphql
+extensions:
+  endpoints:
+    Local:
+      url: http://localhost:8080/graphql
+      headers:
+        user-agent: JS GraphQL
+      introspect: false

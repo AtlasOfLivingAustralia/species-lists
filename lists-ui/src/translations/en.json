@@ -1,0 +1,24 @@
+{
+  "CONSERVATION_LIST" : "Conservation",
+  "SENSITIVE_LIST" : "Sensitive list",
+  "COMMON_TRAIT" : "Traits",
+  "LOCAL_LIST" : "Regional checklist",
+  "SPECIES_CHARACTERS": "Character list",
+  "INVASIVE": "Invasive species list",
+  "COMMON_HABITAT": "Common habitat",
+
+  "classification.kingdom" : "Kingdom (matched)",
+  "classification.phylum" : "Phylum (matched)",
+  "classification.class" : "Class (matched)",
+  "classification.order" : "Order (matched)",
+  "classification.family" : "Family (matched)",
+  "classification.genus" : "Genus (matched)",
+  "classification.scientificName" : "Scientific name (matched)",
+  "classification.vernacularName" : "Vernacular name (matched)",
+
+  "scientificName" : "Scientific name",
+  "scientificNameAuthority" : "Scientific name authority",
+  "vernacularName" : "Vernacular name",
+  "speciesGroup" : "Species group",
+  "establishmentMeans" : "Establishment means"
+}
