@@ -28,7 +28,7 @@ function SpeciesLists() {
     const [searchQuery, setSearchQuery] = useState<string>("");
 
     function selectSpeciesList(speciesList: SpeciesList) {
-        navigate(`/list/` + speciesList.id + '?q=' + searchQuery);
+        navigate(`/list/` + speciesList.id, {state: {searchQuery: searchQuery}} );
     }
 
     return (
@@ -118,11 +118,17 @@ export function SearchTable({
             <tbody>
             {[...Array(10)].map((_, index) => (
                 <tr key={index}>
-                    {[...Array(3)].map((_, colIndex) => (
-                        <td key={colIndex}>
-                            <Skeleton height={30} />
-                        </td>
-                    ))}
+                    <td >
+                        <Group>
+                            <IconList /> <Skeleton height={30} width={300} />
+                        </Group>
+                    </td>
+                    <td>
+                         <Skeleton height={30} />
+                    </td>
+                    <td >
+                        <Skeleton height={30} />
+                    </td>
                 </tr>
             ))}
             </tbody>

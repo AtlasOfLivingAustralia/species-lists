@@ -52,9 +52,11 @@ function SpeciesListSideBar({ selectedView,
     if (loading) {
         return (
             <Accordion>
-                <Accordion.Item value="skeleton">
-                    <Accordion.Control>
-                        <Skeleton height={14} mt={6} radius="xl"/>
+                <AllLists resetSpeciesList={resetSpeciesList} />
+                <UploadListOption resetSpeciesList={resetSpeciesList} />
+                <Accordion.Item value="the-list">
+                    <Accordion.Control icon={<IconTable />}>
+                        <Skeleton height={20}/>
                     </Accordion.Control>
                 </Accordion.Item>
             </Accordion>
@@ -90,7 +92,7 @@ function SpeciesListSideBar({ selectedView,
                         </Accordion.Control>
                     </Link>
                 </Accordion.Item>
-                    <Accordion.Item value="metadata">
+                <Accordion.Item value="metadata">
                     <Link to={`/metadata/${speciesListID}`}>
                         <Accordion.Control>
                             <Group>

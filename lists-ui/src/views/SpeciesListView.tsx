@@ -15,7 +15,7 @@ import {
     Skeleton, Button, List, ThemeIcon, Select, Divider
 } from '@mantine/core';
 import { gql, useQuery } from '@apollo/client';
-import { useParams } from 'react-router-dom';
+import {useLocation, useParams} from 'react-router-dom';
 import SpeciesListSideBar from './SpeciesListSideBar';
 import { FormattedMessage } from 'react-intl';
 import {
@@ -35,12 +35,12 @@ import {FacetProps, SpeciesListItemProps, SpeciesListProps} from "../api/sources
 
 function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps) {
 
-    const url = new URL(window.location.href);
-    const params = url.searchParams;
+    const location = useLocation();
+    let previousQuery = location.state.searchQuery;
     const { speciesListID } = useParams<{ speciesListID: string }>();
     const [activePage, setPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<any>(12);
-    const [searchQuery, setSearchQuery] = useState<string | null>(params.get('q') ? params.get('q') : '')
+    const [searchQuery, setSearchQuery] = useState<string | null>(previousQuery);
 
     const [speciesSelected, speciesHandlers] = useDisclosure(false);
     const [filtersSelected, filtersHandlers] = useDisclosure(false);
