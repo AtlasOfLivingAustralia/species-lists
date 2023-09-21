@@ -14,6 +14,7 @@ import {IconFile, IconInfoCircle, IconUpload, IconX} from "@tabler/icons-react";
 import UserContext from "../helpers/UserContext.ts";
 import {ListsUser} from "../api/sources/model.ts";
 import {FormattedMessage} from "react-intl";
+import {validateListType} from "../helpers/validation.tsx";
 
 const ACCEPTED_TYPES: string[] = ["text/csv", "application/zip"];
 
@@ -47,19 +48,23 @@ function ReloadList() {
 
     const speciesList = data.getSpeciesListMetadata;
 
-    function validateListType(suppliedFields:string[]) {
-        if (speciesList.listType === "SENSITIVE_LIST" && !(suppliedFields.includes('generalisation'))){
-            return "SENSITIVE_LIST_VALIDATION_FAILED";
-        }
-        if (speciesList.listType === "CONSERVATION_LIST" && !(suppliedFields.includes('status'))){
-            return "CONSERVATION_LIST_VALIDATION_FAILED";
-        }
-        if (speciesList.listType === "INVASIVE" && !(suppliedFields.includes('status'))){
-            return "INVASIVE_LIST_VALIDATION_FAILED";
-        }
-        return null
-    }
-
+    // const validationRules: Record<string, string[]> = {
+    //     "SENSITIVE_LIST": ["generalisation", "category"],
+    //     "CONSERVATION_LIST": ["status"],
+    //     "INVASIVE": ["status"]
+    // }
+    //
+    // function validateListType(suppliedFields:string[]) {
+    //
+    //     if (!validationRules[speciesList.listType])
+    //         return null;
+    //
+    //     return validationRules[speciesList.listType].filter((field) => {
+    //         if (!suppliedFields.includes(field)){
+    //             return `${speciesList.listType}_VALIDATION_FAILED`;
+    //         }
+    //     });
+    // }
 
     function resetUpload() {
         setUploaded(null);
@@ -129,7 +134,7 @@ function ReloadList() {
     if (uploaded) {
 
         const validationFailed = uploaded?.validationErrors && uploaded?.validationErrors?.length > 0;
-        const listTypeValidation = validateListType(uploaded.fieldList);
+        const listTypeValidation = validateListType(speciesList?.listType, uploaded.fieldList);
 
         return (
             <>

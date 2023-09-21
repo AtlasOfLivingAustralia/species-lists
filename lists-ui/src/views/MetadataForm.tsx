@@ -7,6 +7,7 @@ import {useContext, useState} from "react";
 import {ListsUser, SpeciesList} from "../api/sources/model.ts";
 import UserContext from "../helpers/UserContext.ts";
 import {IconInfoCircle} from "@tabler/icons-react";
+import {validateListType} from "../helpers/validation.tsx";
 
 export function MetadataForm({ speciesList,
                                submitFormFcn,
@@ -47,20 +48,7 @@ export function MetadataForm({ speciesList,
         },
     });
 
-    function validateListType() {
-        if (form.values.listType === "SENSITIVE_LIST" && !(suppliedFields.includes('generalisation'))){
-            return "SENSITIVE_LIST_VALIDATION_FAILED";
-        }
-        if (form.values.listType === "CONSERVATION_LIST" && !(suppliedFields.includes('status'))){
-            return "CONSERVATION_LIST_VALIDATION_FAILED";
-        }
-        if (form.values.listType === "INVASIVE" && !(suppliedFields.includes('status'))){
-            return "INVASIVE_LIST_VALIDATION_FAILED";
-        }
-        return null
-    }
-
-    const listTypeValidation = validateListType();
+    const listTypeValidation:string| null = validateListType(form.values.listType, suppliedFields);
 
     return (
         <>
