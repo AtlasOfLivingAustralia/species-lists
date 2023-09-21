@@ -181,7 +181,7 @@ public class GraphQLController {
                       f.queryString(
                           qs ->
                               qs.defaultOperator(Operator.And)
-                                  .fields(filter.getKey())
+                                  .fields(getPropertiesFacetField(filter.getKey()))
                                   .query(filter.getValue()))));
     }
 
@@ -430,7 +430,7 @@ public class GraphQLController {
     return objectMapper.readValue(new URL(url), Map.class);
   }
 
-  private String getPropertiesFacetField(String filter) {
+  private static String getPropertiesFacetField(String filter) {
     if (filter.startsWith("classification.")) {
       return filter + ".keyword";
     }
