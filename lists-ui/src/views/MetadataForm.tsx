@@ -1,16 +1,19 @@
-import {Checkbox, Group, Select, Space, Textarea, TextInput} from "@mantine/core";
+import {Alert, Button, Checkbox, Group, Select, Space, Textarea, TextInput} from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useIntl } from "react-intl";
+import {FormattedMessage, useIntl} from "react-intl";
 
 import {MetadataFormProps} from "../api/sources/props.ts";
 import {useContext, useState} from "react";
 import {ListsUser, SpeciesList} from "../api/sources/model.ts";
 import UserContext from "../helpers/UserContext.ts";
+import {IconInfoCircle} from "@tabler/icons-react";
 
 export function MetadataForm({ speciesList,
                                submitFormFcn,
                                formButtons,
-                               edit
+                               suppliedFields,
+                               edit,
+                               resetUpload
                              }: MetadataFormProps) {
 
     const [isPrivate] = useState(speciesList?.isPrivate);
@@ -43,6 +46,21 @@ export function MetadataForm({ speciesList,
             region: (value) => (!value ? "Please supply a region" : null),
         },
     });
+
+    function validateListType() {
+        if (form.values.listType === "SENSITIVE_LIST" && !(suppliedFields.includes('generalisation'))){
+            return "SENSITIVE_LIST_VALIDATION_FAILED";
+        }
+        if (form.values.listType === "CONSERVATION_LIST" && !(suppliedFields.includes('status'))){
+            return "CONSERVATION_LIST_VALIDATION_FAILED";
+        }
+        if (form.values.listType === "INVASIVE" && !(suppliedFields.includes('status'))){
+            return "INVASIVE_LIST_VALIDATION_FAILED";
+        }
+        return null
+    }
+
+    const listTypeValidation = validateListType();
 
     return (
         <>
@@ -81,6 +99,20 @@ export function MetadataForm({ speciesList,
                     ]}
                     {...form.getInputProps("listType")}
                 />
+
+                { listTypeValidation &&
+                    <>
+                        <Space h="md" />
+                        <Alert variant="light" color="orange" title="Required fields missing for this list type" icon={<IconInfoCircle />}>
+                            The uploaded file has the following validation errors.
+                            <ul>
+                                <li><FormattedMessage id={listTypeValidation} defaultMessage={listTypeValidation}/></li>
+                            </ul>
+                        </Alert>
+                        <Space h="md" />
+                    </>
+                }
+
                 <Space h="md" />
                 <Select
                     label="Licence"
@@ -107,12 +139,12 @@ export function MetadataForm({ speciesList,
                                   {...form.getInputProps('isAuthoritative', { type: 'checkbox' })}
                         />
                         <Checkbox size="lg"
-                                  label="Is SDS"
+                                  label="Use in Sensitive data service"
                                   checked={isSDS}
                                   {...form.getInputProps('isSDS', { type: 'checkbox' })}
                         />
                         <Checkbox size="lg"
-                                  label="Is BIE"
+                                  label="Display on species pages"
                                   checked={isBIE}
                                   {...form.getInputProps('isBIE', { type: 'checkbox' })}
                         />
@@ -149,7 +181,16 @@ export function MetadataForm({ speciesList,
                 />
                 <Space h="md" />
                 <Textarea  label="Well known text" disabled={!edit} placeholder="" {...form.getInputProps("wkt")} />
-                {formButtons}
+
+                { listTypeValidation &&
+                    <>
+                        <Space h="md" />
+                        <Button variant="outline" onClick={resetUpload}>Try again</Button>
+                    </>
+
+                }
+
+                { !listTypeValidation && formButtons }
             </form>
         </>
     );

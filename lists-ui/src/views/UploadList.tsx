@@ -3,14 +3,15 @@ import {
     Group,
     Text,
     Button,
-    Notification,
+    Notification, Alert, Space,
 } from "@mantine/core";
-import { IconUpload, IconX, IconFile } from "@tabler/icons-react";
+import {IconUpload, IconX, IconFile, IconInfoCircle} from "@tabler/icons-react";
 import { Dropzone } from "@mantine/dropzone";
 import { useNavigate } from "react-router-dom";
 import { MetadataForm } from "./MetadataForm";
 import {ListsUser, SpeciesList} from "../api/sources/model";
 import UserContext from "../helpers/UserContext.ts";
+import {FormattedMessage} from "react-intl";
 
 const ACCEPTED_TYPES: string[] = ["text/csv", "application/zip"];
 
@@ -106,6 +107,9 @@ function UploadList() {
     }
 
     if (uploaded) {
+
+        const validationFailed = uploaded?.validationErrors && uploaded?.validationErrors?.length > 0;
+
         return (
             <>
                 <Dropzone disabled onDrop={() => console.log('disabled')}>
@@ -114,29 +118,47 @@ function UploadList() {
                             <IconFile /> File Uploaded: {uploaded.localFile}
                         </Text>
                         <Text size="sm" color="dimmed" inline mt={7}>
-                            Line count: {uploaded.rowCount}, Fields:{uploaded.fieldList?.length || 0}
+                            Line count: {uploaded.rowCount}, Additional fields: {uploaded.fieldList?.join(', ') || 'None'}
                         </Text>
                     </div>
                 </Dropzone>
                 <br />
-                <div>
-                    <MetadataForm
-                        speciesList={speciesList}
-                        submitFormFcn={ingest}
-                        edit={true}
-                        formButtons={
-                            <Group position="center" mt="xl">
-                                <Button variant="outline" onClick={resetUpload}>Reset</Button>
-                                {currentUser &&
-                                    <Button  variant="outline" type="submit">Upload list</Button>
-                                }
-                                {!currentUser &&
-                                    <Button variant="outline" onClick={() => navigate("/login")}>Login to upload list</Button>
-                                }
-                            </Group>
-                        }
-                    />
-                </div>
+
+                {validationFailed &&
+                    <>
+                        <Alert variant="light" color="orange" title="CSV Missing required taxonomic fields" icon={<IconInfoCircle />}>
+                        The uploaded file has the following validation errors:
+                        <ul>
+                            {uploaded.validationErrors.map((error: any) => <li><FormattedMessage id={error} defaultMessage={error}/></li>)}
+                        </ul>
+                        </Alert>
+                        <Space h="md" />
+                        <Button variant="outline" onClick={resetUpload}>Try again</Button>
+                    </>
+                }
+
+                {!validationFailed &&
+                    <div>
+                        <MetadataForm
+                            speciesList={speciesList}
+                            submitFormFcn={ingest}
+                            suppliedFields={uploaded.fieldList}
+                            edit={true}
+                            resetUpload={() => resetUpload()}
+                            formButtons={
+                                <Group position="center" mt="xl">
+                                    <Button variant="outline" onClick={resetUpload}>Reset</Button>
+                                    {currentUser &&
+                                        <Button  variant="outline" type="submit">Upload list</Button>
+                                    }
+                                    {!currentUser &&
+                                        <Button variant="outline" onClick={() => navigate("/login")}>Login to upload list</Button>
+                                    }
+                                </Group>
+                            }
+                        />
+                    </div>
+                }
             </>
         );
     }

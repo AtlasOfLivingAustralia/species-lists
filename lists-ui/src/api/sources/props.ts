@@ -37,8 +37,10 @@ interface MetadataFormProps {
         isThreatened: boolean;
         isInvasive: boolean;
     };
+    suppliedFields: string[];
     submitFormFcn: (speciesList:SpeciesList) => void;
     formButtons: React.ReactNode;
+    resetUpload: () => void;
     edit: boolean;
 }
 

@@ -228,20 +228,22 @@ public class UploadService {
     while (iterator.hasNext()) {
       Map<String, String> values = iterator.next();
       String scientificName = values.remove(DwcTerm.scientificName.simpleName());
+      String taxonID = values.remove(DwcTerm.taxonID.simpleName());
+      String taxonConceptID = values.remove(DwcTerm.taxonConceptID.simpleName());
+
+
       String suppliedName = values.remove("Supplied Name");
 
       if (suppliedName != null) {
         scientificName = suppliedName;
       }
 
-      if (StringUtils.isEmpty(scientificName)) {
+      if (StringUtils.isEmpty(scientificName) && StringUtils.isEmpty(taxonID) && StringUtils.isEmpty(taxonConceptID)) {
         recordsWithoutScientificName++;
       }
 
       // remove legacy data
       values.remove("guid");
-
-      String taxonID = values.remove(DwcTerm.taxonID.simpleName());
       String vernacularName = values.remove(DwcTerm.vernacularName.simpleName());
       String kingdom = values.remove(DwcTerm.kingdom.simpleName());
       String phylum = values.remove(DwcTerm.phylum.simpleName());
