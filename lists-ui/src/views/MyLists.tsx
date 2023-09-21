@@ -137,11 +137,20 @@ export function SearchTable({
             <tbody>
             {[...Array(10)].map((_, index) => (
                 <tr key={index}>
-                    {[...Array(4)].map((_, colIndex) => (
-                        <td key={colIndex}>
-                            <Skeleton height={30} />
-                        </td>
-                    ))}
+                    <td >
+                        <Group>
+                            <IconList /> <Skeleton height={30} width={Math.floor(Math.random() * (500 - 200 + 1) + 200)} />
+                        </Group>
+                    </td>
+                    <td>
+                        <Skeleton height={30} width={Math.floor(Math.random() * (150 - 100 + 1) + 100)}/>
+                    </td>
+                    <td>
+                        <Skeleton height={30} width={Math.floor(Math.random() * (50 - 30 + 1) + 100)}/>
+                    </td>
+                    <td>
+                        <Skeleton height={30} width={Math.floor(Math.random() * (50 - 30 + 1) + 100)}/>
+                    </td>
                 </tr>
             ))}
             </tbody>

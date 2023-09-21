@@ -291,11 +291,14 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                                 </tr>
                                 </thead>
                                 <tbody>
-                                {[...Array(12)].map((_, colIndex) => (
-                                    <tr key={`skHdrRow${colIndex}`}>
-                                        {[...Array(8)].map((_) => (
+                                {[...Array(12)].map((_, rowlIndex) => (
+                                    <tr key={`skHdrRow${rowlIndex}`}>
+                                        {[...Array(8)].map((_, colIndex) => (
                                         <td>
-                                            <Skeleton height={14} mt={6}  />
+                                            <Group noWrap={true}>
+                                                {colIndex == 0 && <IconSelect />}
+                                                <Skeleton height={14} mt={6}  />
+                                            </Group>
                                         </td>
                                         ))}
                                     </tr>
@@ -408,7 +411,7 @@ function SearchTable({ results,
                             }}>
                             {/*<HoverCard shadow="xl" >*/}
                             {/*    <HoverCard.Target>*/}
-                                    <Group>
+                                    <Group noWrap={true}>
                                         <IconSelect />
                                         <Text>{speciesListItem?.scientificName}</Text>
                                     </Group>
