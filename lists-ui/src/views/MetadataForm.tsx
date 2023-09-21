@@ -185,9 +185,10 @@ export function MetadataForm({ speciesList,
                 { listTypeValidation &&
                     <>
                         <Space h="md" />
-                        <Button variant="outline" onClick={resetUpload}>Try again</Button>
+                        <Group position="center" mt="xl">
+                            <Button variant="outline" onClick={resetUpload}>Try again</Button>
+                        </Group>
                     </>
-
                 }
 
                 { !listTypeValidation && formButtons }

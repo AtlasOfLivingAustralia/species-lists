@@ -21,9 +21,8 @@
   "vernacularName" : "Vernacular name",
   "speciesGroup" : "Species group",
   "establishmentMeans" : "Establishment means",
-  "ALL_RECORDS_WITHOUT_SCIENTIFIC_NAME" : "All supplied records are missing a scientific name, a taxonID or taxonConceptID. Please add this field to your CSV and try again.",
+  "ALL_RECORDS_WITHOUT_SCIENTIFIC_NAME" : "All supplied records are missing a scientificName, a taxonID or taxonConceptID. Please add this field to your CSV and try again.",
   "SOME_RECORDS_WITHOUT_SCIENTIFIC_NAME" : "Some of the supplied records are missing a scientific name, a taxonID or taxonConceptID. Please add this field to your CSV and try again.",
-
   "CONSERVATION_LIST_VALIDATION_FAILED" : "Conservation lists require a status value",
   "INVASIVE_LIST_VALIDATION_FAILED" : "Invasive lists require a status value",
   "SENSITIVE_LIST_VALIDATION_FAILED" : "Sensitive lists require a generalisation value"

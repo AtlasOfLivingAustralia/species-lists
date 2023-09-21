@@ -212,6 +212,8 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                             speciesList={speciesList}
                             submitFormFcn={updateMetadata}
                             edit={edit}
+                            suppliedFields={speciesList?.fieldList}
+                            resetUpload={() => console.log('reset upload') }
                             formButtons={
                                 <Group position="center" mt="xl">
                                     <Button variant="outline" onClick={() => setEdit(false)}>Cancel</Button>
