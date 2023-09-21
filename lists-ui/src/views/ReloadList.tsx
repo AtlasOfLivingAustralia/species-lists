@@ -5,14 +5,15 @@ import {
     Space,
     Text,
     Notification,
-    Title,
+    Title, Alert,
 } from "@mantine/core";
 import { useNavigate, useParams } from "react-router-dom";
 import { gql, useQuery } from "@apollo/client";
 import { Dropzone } from "@mantine/dropzone";
-import { IconFile, IconUpload, IconX } from "@tabler/icons-react";
+import {IconFile, IconInfoCircle, IconUpload, IconX} from "@tabler/icons-react";
 import UserContext from "../helpers/UserContext.ts";
 import {ListsUser} from "../api/sources/model.ts";
+import {FormattedMessage} from "react-intl";
 
 const ACCEPTED_TYPES: string[] = ["text/csv", "application/zip"];
 
@@ -32,6 +33,7 @@ function ReloadList() {
                 title
                 licence
                 rowCount
+                listType
             }
         }`;
 
@@ -44,6 +46,20 @@ function ReloadList() {
     if (loading) return <></>;
 
     const speciesList = data.getSpeciesListMetadata;
+
+    function validateListType(suppliedFields:string[]) {
+        if (speciesList.listType === "SENSITIVE_LIST" && !(suppliedFields.includes('generalisation'))){
+            return "SENSITIVE_LIST_VALIDATION_FAILED";
+        }
+        if (speciesList.listType === "CONSERVATION_LIST" && !(suppliedFields.includes('status'))){
+            return "CONSERVATION_LIST_VALIDATION_FAILED";
+        }
+        if (speciesList.listType === "INVASIVE" && !(suppliedFields.includes('status'))){
+            return "INVASIVE_LIST_VALIDATION_FAILED";
+        }
+        return null
+    }
+
 
     function resetUpload() {
         setUploaded(null);
@@ -111,6 +127,10 @@ function ReloadList() {
     }
 
     if (uploaded) {
+
+        const validationFailed = uploaded?.validationErrors && uploaded?.validationErrors?.length > 0;
+        const listTypeValidation = validateListType(uploaded.fieldList);
+
         return (
             <>
                 <Title order={3}>Reload for {speciesList.title}</Title>
@@ -125,13 +145,49 @@ function ReloadList() {
                         </Text>
                     </div>
                 </Dropzone>
-                <Space h="md" />
-                <div>
-                    <Group position="center" mt="xl">
-                        <Button variant="outline" onClick={resetUpload}>Reset</Button>
-                        <Button variant="outline" onClick={ingest}>Re-Upload list</Button>
-                    </Group>
-                </div>
+
+                {validationFailed &&
+                    <>
+                        <Space h="md" />
+                        <Alert variant="light" color="orange" title="CSV Missing required taxonomic fields" icon={<IconInfoCircle />}>
+                            The uploaded file has the following validation errors:
+                            <ul>
+                                {uploaded.validationErrors.map((error: any) => <li><FormattedMessage id={error} defaultMessage={error}/></li>)}
+                            </ul>
+                        </Alert>
+                        <Space h="md" />
+                        <Group position="center" mt="xl">
+                            <Button variant="outline" onClick={resetUpload}>Try again</Button>
+                        </Group>
+                    </>
+                }
+
+                {listTypeValidation &&
+                    <>
+                        <Space h="md" />
+                        <Alert variant="light" color="orange" title="Missing required fields for list type" icon={<IconInfoCircle />}>
+                            The uploaded file has the following validation errors:
+                            <ul>
+                                <li><FormattedMessage id={listTypeValidation} defaultMessage={listTypeValidation}/></li>
+                            </ul>
+                        </Alert>
+                        <Space h="md" />
+                        <Group position="center" mt="xl">
+                            <Button variant="outline" onClick={resetUpload}>Try again</Button>
+                        </Group>
+                    </>
+                }
+
+                {!validationFailed && !listTypeValidation && <>
+                    <Space h="md" />
+                    <div>
+                        <Group position="center" mt="xl">
+                            <Button variant="outline" onClick={resetUpload}>Reset</Button>
+                            <Button variant="outline" onClick={ingest}>Re-Upload list</Button>
+                        </Group>
+                    </div>
+                    </>
+                }
             </>
         );
     }
