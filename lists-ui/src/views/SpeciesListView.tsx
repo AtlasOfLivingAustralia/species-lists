@@ -283,27 +283,23 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                             <Table>
                                 <thead>
                                 <tr key={`skHdr`}>
+                                    {[...Array(8)].map((_,) => (
                                     <th key={`skHdr`}>
                                         <Skeleton height={14} mt={6} radius="xl" />
                                     </th>
+                                    ))}
                                 </tr>
                                 </thead>
                                 <tbody>
-                                <tr key={`skHdrRow1`}>
-                                    <td>
-                                        <Skeleton height={14} mt={6} radius="xl" />
-                                    </td>
-                                </tr>
-                                <tr key={`skHdrRow2`}>
-                                    <td>
-                                        <Skeleton height={14} mt={6} radius="xl" />
-                                    </td>
-                                </tr>
-                                <tr key={`skHdrRow3`}>
-                                    <td>
-                                        <Skeleton height={14} mt={6} radius="xl" />
-                                    </td>
-                                </tr>
+                                {[...Array(12)].map((_, colIndex) => (
+                                    <tr key={`skHdrRow${colIndex}`}>
+                                        {[...Array(8)].map((_) => (
+                                        <td>
+                                            <Skeleton height={14} mt={6}  />
+                                        </td>
+                                        ))}
+                                    </tr>
+                                ))}
                                 </tbody>
                             </Table>
                         )}
@@ -345,14 +341,17 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                                 </tr>
                                 </thead>
                                 <tbody>
-                                <SearchTable
-                                    results={results}
-                                    classificationFields={classificationFields}
-                                    customFields={data?.getSpeciesListMetadata.fieldList}
-                                    selectRow={selectRow}
-                                    totalPages={totalPages}
-                                    totalElements={totalElements}
-                                />
+                                {!loading && (!results || results.length == 0) && <tr><td colSpan={8}>No results found</td></tr>}
+                                {!loading && results &&
+                                    <SearchTable
+                                        results={results}
+                                        classificationFields={classificationFields}
+                                        customFields={data?.getSpeciesListMetadata.fieldList}
+                                        selectRow={selectRow}
+                                        totalPages={totalPages}
+                                        totalElements={totalElements}
+                                    />
+                                }
                                 </tbody>
                             </Table>
                         )}

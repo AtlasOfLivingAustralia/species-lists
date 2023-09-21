@@ -85,11 +85,15 @@ function Admin() {
                             </tr>
                             <tr>
                                 <td><Button variant="outline"  onClick={rematch}>Rematch lists</Button></td>
-                                <td><Text>Rematch the taxonomy for all lists</Text></td>
+                                <td><Text>Rematch the taxonomy for all lists.
+                                    <br/>Note: this does not re-index the data</Text>
+                                </td>
                             </tr>
                             <tr>
                                 <td><Button variant="outline"  onClick={migrate}>Migrate</Button></td>
-                                <td><Text>Migrate data from existing list tool</Text></td>
+                                <td><Text>Migrate data from existing list tool.
+                                    <br/>Note: this does not perform taxon matching and re-indexing the data.
+                                </Text></td>
                             </tr>
                             <tr>
                                 <td><Button variant="outline"  onClick={() => alert('Not implemented! ')}>Manage licences</Button></td>

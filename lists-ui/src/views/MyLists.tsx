@@ -184,7 +184,10 @@ export function SearchTable({
                     <th>Visibility</th>
                 </tr>
                 </thead>
-                <tbody>{rows}</tbody>
+                <tbody>
+                    {rows}
+                    {(!rows || rows.length ==0) && <tr><td colSpan={4}>No lists found</td></tr>}
+                </tbody>
             </Table>
             <Space h="md" />
             <Pagination value={activePage} onChange={setPage} total={data?.lists?.totalPages || 0} color="gray" />

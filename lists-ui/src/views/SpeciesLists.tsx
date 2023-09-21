@@ -127,14 +127,14 @@ export function SearchTable({
                 <tr key={index}>
                     <td >
                         <Group>
-                            <IconList /> <Skeleton height={30} width={300} />
+                            <IconList /> <Skeleton height={30} width={Math.floor(Math.random() * (500 - 200 + 1) + 200)} />
                         </Group>
                     </td>
                     <td>
-                         <Skeleton height={30} />
+                         <Skeleton height={30} width={Math.floor(Math.random() * (150 - 100 + 1) + 100)}/>
                     </td>
                     <td >
-                        <Skeleton height={30} />
+                        <Skeleton height={30} width={Math.floor(Math.random() * (50 - 30 + 1) + 100)}/>
                     </td>
                 </tr>
             ))}
@@ -148,8 +148,7 @@ export function SearchTable({
         <tr
             id={dataset.id}
             key={dataset.id}
-            style={{ cursor: "pointer" }}
-        >
+            style={{ cursor: "pointer" }}>
             <td onClick={() => selectSpeciesList(dataset)}>
                 <Group>
                     <IconList />
@@ -174,7 +173,10 @@ export function SearchTable({
                     <th></th>
                 </tr>
                 </thead>
-                <tbody>{rows}</tbody>
+                <tbody>
+                    {rows}
+                    {(!rows || rows.length ==0) && <tr><td colSpan={4}>No lists found matching the search</td></tr>}
+                </tbody>
             </Table>
             <Space h="md" />
             <Pagination value={activePage} onChange={setPage} total={data?.lists?.totalPages || 0} color="gray" />
