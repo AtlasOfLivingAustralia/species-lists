@@ -49,7 +49,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
 /** GraphQL API for lists */
-@Controller("/graphql")
+@Controller
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class GraphQLController {
 
