@@ -150,8 +150,7 @@ public class UploadService {
     }
   }
 
-  public IngestJob ingest( File fileToLoad, boolean dryRun, boolean skipIndexing)
-          throws Exception {
+  public IngestJob ingest(File fileToLoad, boolean dryRun, boolean skipIndexing) throws Exception {
     return ingest(null, fileToLoad, dryRun, skipIndexing);
   }
 
@@ -236,14 +235,15 @@ public class UploadService {
       String taxonID = values.remove(DwcTerm.taxonID.simpleName());
       String taxonConceptID = values.remove(DwcTerm.taxonConceptID.simpleName());
 
-
       String suppliedName = values.remove("Supplied Name");
 
       if (suppliedName != null) {
         scientificName = suppliedName;
       }
 
-      if (StringUtils.isEmpty(scientificName) && StringUtils.isEmpty(taxonID) && StringUtils.isEmpty(taxonConceptID)) {
+      if (StringUtils.isEmpty(scientificName)
+          && StringUtils.isEmpty(taxonID)
+          && StringUtils.isEmpty(taxonConceptID)) {
         recordsWithoutScientificName++;
       }
 
