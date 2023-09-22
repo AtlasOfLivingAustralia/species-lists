@@ -22,21 +22,7 @@ interface SpeciesListItemProps {
 }
 
 interface MetadataFormProps {
-    speciesList: {
-        id: string;
-        title: string;
-        description: string;
-        listType: string;
-        licence: string;
-        authority: string;
-        region: string;
-        isPrivate: boolean;
-        isAuthoritative: boolean;
-        isSDS: boolean;
-        isBIE: boolean;
-        isThreatened: boolean;
-        isInvasive: boolean;
-    };
+    speciesList: SpeciesList;
     suppliedFields: string[];
     submitFormFcn: (speciesList:SpeciesList) => void;
     formButtons: React.ReactNode;

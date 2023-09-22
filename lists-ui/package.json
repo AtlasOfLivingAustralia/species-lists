@@ -18,14 +18,19 @@
     "@mantine/hooks": "^6.0.20",
     "@mantine/modals": "^6.0.20",
     "@mantine/spotlight": "^6.0.20",
+    "@mapbox/geojson-extent": "^1.0.1",
     "@tabler/icons": "^2.33.0",
     "@tabler/icons-react": "^2.34.0",
+    "@types/geojson": "^7946.0.11",
+    "@types/mapbox-gl": "^2.7.14",
     "graphql": "^16.8.0",
+    "mapbox-gl": "^2.15.0",
     "oidc-client-ts": "^2.2.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-intl": "^6.4.4",
-    "react-router-dom": "^6.15.0"
+    "react-router-dom": "^6.15.0",
+    "wkt": "^0.1.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",

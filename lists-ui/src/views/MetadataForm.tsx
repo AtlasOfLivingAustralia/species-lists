@@ -37,7 +37,8 @@ export function MetadataForm({ speciesList,
             isInvasive: speciesList?.isInvasive,
             isThreatened: speciesList?.isThreatened,
             isSDS: speciesList?.isSDS,
-            isBIE: speciesList?.isBIE
+            isBIE: speciesList?.isBIE,
+            wkt: speciesList?.wkt
         },
         validate: {
             title: (value) => (!value ? "Please supply a title" : null),
@@ -113,25 +114,25 @@ export function MetadataForm({ speciesList,
                     ]}
                     {...form.getInputProps("licence")}
                 />
-                <Space h="md" />
+                <Space h="lg" />
                 <Group>
-                    <Checkbox size="lg"
+                    <Checkbox size="md"
                             label="Is private"
                             checked={isPrivate}
                             {...form.getInputProps('isPrivate', { type: 'checkbox' })}
                     />
                     {currentUser?.isAdmin && <>
-                        <Checkbox size="lg"
+                        <Checkbox size="md"
                                   label="Is Authoritative"
                                   checked={isAuthoritative}
                                   {...form.getInputProps('isAuthoritative', { type: 'checkbox' })}
                         />
-                        <Checkbox size="lg"
+                        <Checkbox size="md"
                                   label="Use in Sensitive data service"
                                   checked={isSDS}
                                   {...form.getInputProps('isSDS', { type: 'checkbox' })}
                         />
-                        <Checkbox size="lg"
+                        <Checkbox size="md"
                                   label="Display on species pages"
                                   checked={isBIE}
                                   {...form.getInputProps('isBIE', { type: 'checkbox' })}
@@ -139,6 +140,7 @@ export function MetadataForm({ speciesList,
                     </>}
 
                 </Group>
+                <Space h="md" />
                 <TextInput mt="md" label="Authority" disabled={!edit} placeholder="" {...form.getInputProps("authority")} />
                 <Space h="md" />
                 <Select
@@ -168,7 +170,7 @@ export function MetadataForm({ speciesList,
                     {...form.getInputProps("region")}
                 />
                 <Space h="md" />
-                <Textarea  label="Well known text" disabled={!edit} placeholder="" {...form.getInputProps("wkt")} />
+                <Textarea h={100} label="Well known text" disabled={!edit} placeholder="" {...form.getInputProps("wkt")} />
 
                 { listTypeValidation &&
                     <>

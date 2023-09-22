@@ -49,7 +49,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
 /** GraphQL API for lists */
-@Controller
+@Controller("/graphql")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class GraphQLController {
 
@@ -239,6 +239,7 @@ public class GraphQLController {
       @Argument String listType,
       @Argument String authority,
       @Argument String region,
+      @Argument String wkt,
       @Argument Boolean isPrivate,
       @Argument Boolean isThreatened,
       @Argument Boolean isInvasive,
@@ -273,6 +274,7 @@ public class GraphQLController {
       toUpdate.setIsAuthoritative(isAuthoritative);
       toUpdate.setIsBIE(isBIE);
       toUpdate.setIsSDS(isSDS);
+      toUpdate.setWkt(wkt);
       toUpdate.setLastUpdatedBy(principal.getName());
 
       // If the visibility has changed, update the visibility of the list items

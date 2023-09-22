@@ -120,7 +120,7 @@ public class UploadService {
             + "/upload-"
             + System.currentTimeMillis()
             + "-"
-            + file.getOriginalFilename().replaceAll(" ", "_"));
+            + file.getOriginalFilename().replaceAll("[^a-zA-Z0-9_-]", "_"));
   }
 
   public SpeciesList reload(String speciesListID, File fileToLoad, boolean dryRun)
@@ -148,6 +148,11 @@ public class UploadService {
     } else {
       return null;
     }
+  }
+
+  public IngestJob ingest( File fileToLoad, boolean dryRun, boolean skipIndexing)
+          throws Exception {
+    return ingest(null, fileToLoad, dryRun, skipIndexing);
   }
 
   public IngestJob ingest(

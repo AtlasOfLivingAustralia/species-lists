@@ -11,7 +11,6 @@ import {UserManager, WebStorageStateStore} from "oidc-client-ts";
 import AuthContext from "./helpers/AuthContext.ts";
 import {setContext} from "@apollo/client/link/context";
 
-
 const httpLink = createHttpLink({
     uri: import.meta.env.VITE_GRAPHQL_URL,
 });

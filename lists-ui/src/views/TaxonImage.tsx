@@ -1,6 +1,5 @@
 import {gql, useQuery} from "@apollo/client";
 import {Image, Skeleton, Space} from "@mantine/core";
-
 import {TaxonImageProps} from "../api/sources/props.ts";
 
 export function TaxonImage({ taxonID }: TaxonImageProps) {

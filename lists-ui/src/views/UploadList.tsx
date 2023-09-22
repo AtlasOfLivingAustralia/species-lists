@@ -205,6 +205,7 @@ function UploadList() {
                 accept={ACCEPTED_TYPES}
             >
                 <Group position="center" spacing="xl" style={{ minHeight: 220, pointerEvents: "none" }}>
+
                     <Dropzone.Accept>
                         <IconUpload />
                     </Dropzone.Accept>

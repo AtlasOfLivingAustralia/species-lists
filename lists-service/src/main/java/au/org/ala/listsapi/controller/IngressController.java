@@ -122,7 +122,7 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Reindex all species lists", tags = "Ingress")
+  @Operation(summary = "Reindex a species lists", tags = "Ingress")
   @GetMapping("/reindex/{speciesListID}")
   public ResponseEntity<Object> reindex(
       @PathVariable("speciesListID") String speciesListID,
@@ -165,7 +165,7 @@ public class IngressController {
       logger.info("Upload to temporary area started...");
       File tempFile = uploadService.getFileTemp(file);
       file.transferTo(tempFile);
-      IngestJob ingestJob = uploadService.ingest((String) null, tempFile, true, true);
+      IngestJob ingestJob = uploadService.ingest(tempFile, true, true);
       return new ResponseEntity<>(ingestJob, HttpStatus.OK);
     } catch (Exception e) {
       logger.error("Error while uploading the file: " + e.getMessage(), e);

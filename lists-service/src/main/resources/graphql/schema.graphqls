@@ -13,7 +13,7 @@ type Mutation {
   updateMetadata(id: String!, title: String!, description: String,
     licence: String!, listType: String!, authority:String, region:String,
     isAuthoritative:Boolean, isPrivate: Boolean, isInvasive: Boolean, isThreatened: Boolean,
-    isBIE: Boolean, isSDS: Boolean, doi:String): SpeciesList
+    isBIE: Boolean, isSDS: Boolean, doi:String, wkt:String): SpeciesList
 }
 
 type Image {
@@ -41,6 +41,7 @@ type SpeciesList {
   doi:String
   authority:String
   region:String
+  wkt:String
   isAuthoritative:Boolean
   isPrivate: Boolean
   isInvasive: Boolean

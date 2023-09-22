@@ -22,6 +22,7 @@ interface SpeciesList {
     title: string;
     lastUpdatedBy: string;
     owner: string;
+    wkt: string;
 }
 
 type Release = {
