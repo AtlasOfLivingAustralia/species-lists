@@ -27,6 +27,7 @@ public class SpeciesList {
   private String description;
   private String listType;
   private String licence;
+  private List<String> originalFieldList;
   private List<String> fieldList;
   private List<String> facetList;
   private String doi;
@@ -51,6 +52,7 @@ public class SpeciesList {
 
   private Classification classification; // who created the list
 
-  @CreatedDate public Date createDate;
-  @LastModifiedDate public Date lastModifiedDate;
+  @CreatedDate public Date dateCreated;
+  public Date lastUploaded;
+  @LastModifiedDate public Date lastUpdated;
 }

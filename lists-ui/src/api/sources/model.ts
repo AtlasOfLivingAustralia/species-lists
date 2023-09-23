@@ -2,7 +2,7 @@ import {User} from "oidc-client-ts";
 
 interface SpeciesList {
     authority: string;
-    createDate: string;
+    dateCreated: string;
     description: string;
     doi: string;
     facetList: string[];
@@ -14,7 +14,7 @@ interface SpeciesList {
     isBIE: boolean;
     isSDS: boolean;
     isThreatened: boolean;
-    lastModifiedDate: string;
+    lastUpdated: string;
     licence: string;
     listType: string;
     region: string;

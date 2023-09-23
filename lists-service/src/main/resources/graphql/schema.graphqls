@@ -48,8 +48,9 @@ type SpeciesList {
   isThreatened: Boolean
   isBIE: Boolean
   isSDS: Boolean
-  createDate: String
-  lastModifiedDate: String
+  dateCreated: String
+  lastUpdated: String
+  lastUploaded: String
   lastUpdatedBy: String
   owner: String
   editors: [String]

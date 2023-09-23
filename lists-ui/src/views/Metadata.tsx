@@ -61,8 +61,9 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                 isThreatened
                 isBIE
                 isSDS
-                createDate
-                lastModifiedDate
+                dateCreated
+                lastUpdated
+                lastUploaded
                 lastUpdatedBy
                 owner
                 editors
@@ -116,8 +117,9 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                 isThreatened
                 isSDS
                 isBIE
-                createDate
-                lastModifiedDate
+                dateCreated
+                lastUpdated
+                lastUploaded
                 owner
                 editors
                 wkt
@@ -249,27 +251,27 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                 {loading &&
                     <dl>
                         <dt>Species list name</dt>
-                        <dd><Skeleton height={25} width={500} /></dd>
+                        <dd><Skeleton height={25} width={300} /></dd>
 
                         <Space h="md"/>
                         <dt>Description</dt>
-                        <dd><Skeleton height={25} width={500} /></dd>
+                        <dd><Skeleton height={25} width={700} /></dd>
 
                         <Space h="md"/>
                         <dt>Category</dt>
-                        <dd><Skeleton height={25} width={500} /></dd>
+                        <dd><Skeleton height={25} width={300} /></dd>
 
                         <Space h="md"/>
                         <dt>Licence</dt>
-                        <dd><Skeleton height={25} width={500} /></dd>
+                        <dd><Skeleton height={25} width={400} /></dd>
 
                         <Space h="md"/>
                         <dt>Visibility</dt>
-                        <dd><Skeleton height={25} width={500} /></dd>
+                        <dd><Skeleton height={25} width={200} /></dd>
 
                         <Space h="md"/>
                         <dt>Authority</dt>
-                        <dd><Skeleton height={25} width={500} /></dd>
+                        <dd><Skeleton height={25} width={600} /></dd>
 
                         <Space h="md"/>
                         <dt>Region</dt>
@@ -277,11 +279,11 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
 
                         <Space h="md"/>
                         <dt>Created</dt>
-                        <dd><Skeleton height={25} width={500} /></dd>
+                        <dd><Skeleton height={25} width={400} /></dd>
 
                         <Space h="md"/>
                         <dt>Last modified</dt>
-                        <dd><Skeleton height={25} width={500} /></dd>
+                        <dd><Skeleton height={25} width={400} /></dd>
                     </dl>
                 }
 
@@ -334,10 +336,6 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                             <dd>{speciesList?.region ? speciesList?.region: 'Not specified'}</dd>
 
                             <Space h="md"/>
-                            <dt>Created</dt>
-                            <dd>{speciesList?.createDate}</dd>
-
-                            <Space h="md"/>
                             <dt>Well Known Text</dt>
                             <dd>
                                 { !speciesList.wkt &&
@@ -353,8 +351,12 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                             </dd>
 
                             <Space h="md"/>
+                            <dt>Created</dt>
+                            <dd>{speciesList?.dateCreated}</dd>
+
+                            <Space h="md"/>
                             <dt>Last modified</dt>
-                            <dd>{speciesList?.lastModifiedDate}</dd>
+                            <dd>{speciesList?.lastUpdated}</dd>
 
                             {speciesList?.lastUpdatedBy && <>
                                 <Space h="md"/>

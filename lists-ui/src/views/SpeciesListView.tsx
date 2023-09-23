@@ -23,7 +23,7 @@ import {
     IconSearch,
     IconSquareRoundedXFilled,
     IconSelect,
-    IconArrowLeftSquare, IconArrowRightSquare
+    IconArrowLeftSquare, IconArrowRightSquare, IconDownload
 } from "@tabler/icons-react";
 import {
     SpeciesListItem,
@@ -142,6 +142,23 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
         filters: selectedFacets
     });
 
+    function download() {
+        fetch(import.meta.env.VITE_DOWNLOAD_URL + "/" + speciesListID, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/zip'}
+        })
+        .then( res => res.blob() )
+        .then( blob => {
+            var url = window.URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = "species-list.zip";
+            document.body.appendChild(a); // we need to append the element to the dom -> otherwise it will not work in firefox
+            a.click();
+            a.remove();
+        });
+    }
+
     if (error) return <>`Error! ${error.message}`</>;
 
     const standardFields: string[] = ['scientificName'];
@@ -229,7 +246,7 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                 </Grid.Col>
                 <Grid.Col xs={12} sm={10}>
                     <Grid align="center" mb="md">
-                        <Grid.Col xs={8} sm={9}>
+                        <Grid.Col xs={8} sm={12}>
                             <Group>
                                 <Select
                                     value={pageSize}
@@ -256,10 +273,11 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                                     }
                                     onChange={(e) => setSearchQuery(e.currentTarget.value)}
                                 />
-                                <Group>
+                                <Group style={{paddingRight:"40px"}}>
                                     {loading && <><Skeleton height={30} width={50} /></>}
                                     {!loading && <><Text>{totalElements} taxa</Text></>}
                                 </Group>
+                                <Button variant="outline" onClick={download}><IconDownload />Download</Button>
                             </Group>
                         </Grid.Col>
                         <Grid.Col xs={8} sm={9}>
@@ -343,7 +361,7 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                                         ))}
                                 </tr>
                                 </thead>
-                                <tbody>
+                                <tbody style={{ verticalAlign :'top'}}>
                                 {!loading && (!results || results.length == 0) && <tr><td colSpan={8}>No results found</td></tr>}
                                 {!loading && results &&
                                     <SearchTable

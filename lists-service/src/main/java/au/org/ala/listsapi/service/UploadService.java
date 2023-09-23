@@ -81,6 +81,7 @@ public class UploadService {
     speciesList.setFieldList(ingestJob.getFieldList());
     speciesList.setFacetList(ingestJob.getFacetList());
     speciesList.setRowCount(ingestJob.getRowCount());
+    speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
 
     speciesList = speciesListMongoRepository.save(speciesList);
 
@@ -139,6 +140,7 @@ public class UploadService {
         speciesList.get().setFieldList(ingestJob.getFieldList());
         speciesList.get().setFacetList(ingestJob.getFacetList());
         speciesList.get().setRowCount(ingestJob.getRowCount());
+        speciesList.get().setOriginalFieldList(ingestJob.getOriginalFieldNames());
         SpeciesList speciesList1 = speciesListMongoRepository.save(speciesList.get());
         releaseService.release(speciesList1.getId());
         return speciesList1;
@@ -187,7 +189,7 @@ public class UploadService {
 
   public IngestJob ingestCSV(String speciesListID, File file, boolean dryRun, boolean skipIndexing)
       throws Exception {
-    return loadCSV(speciesListID, new FileInputStream(file), dryRun, skipIndexing);
+    return loadCSV(speciesListID, new FileInputStream(file), dryRun, skipIndexing, false);
   }
 
   public IngestJob ingestZip(
@@ -199,7 +201,7 @@ public class UploadService {
       ZipEntry entry = entries.nextElement();
       if (!entry.isDirectory() && entry.getName().endsWith(".csv")) {
         IngestJob ingestJob =
-            loadCSV(speciesListID, zipFile.getInputStream(entry), dryRun, skipIndexing);
+            loadCSV(speciesListID, zipFile.getInputStream(entry), dryRun, skipIndexing, false);
         return ingestJob;
       }
     }
@@ -207,13 +209,14 @@ public class UploadService {
   }
 
   public IngestJob loadCSV(
-      String speciesListID, InputStream inputStream, boolean dryRun, boolean skipIndexing)
+      String speciesListID, InputStream inputStream, boolean dryRun, boolean skipIndexing, boolean isMigration)
       throws Exception {
 
-    SpeciesList speciesList = null;
-
     if (!dryRun && speciesListID != null) {
-      speciesList = speciesListMongoRepository.findById(speciesListID).get();
+      Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListID);
+      if (speciesList.isEmpty()) {
+        throw new Exception("Species list not found");
+      }
     }
 
     int rowCount = 0;
@@ -229,8 +232,23 @@ public class UploadService {
 
     int recordsWithoutScientificName = 0;
 
+    List<String> originalFieldNames = new ArrayList<>();
+
     while (iterator.hasNext()) {
       Map<String, String> values = iterator.next();
+
+      if (isMigration) {
+        // remove legacy data
+        values.remove("guid");
+        values.remove("scientificName");
+        values.remove("family");
+        values.remove("kingdom");
+      }
+
+      if (originalFieldNames.isEmpty()){
+        originalFieldNames.addAll(values.keySet());
+      }
+
       String scientificName = values.remove(DwcTerm.scientificName.simpleName());
       String taxonID = values.remove(DwcTerm.taxonID.simpleName());
       String taxonConceptID = values.remove(DwcTerm.taxonConceptID.simpleName());
@@ -247,8 +265,6 @@ public class UploadService {
         recordsWithoutScientificName++;
       }
 
-      // remove legacy data
-      values.remove("guid");
       String vernacularName = values.remove(DwcTerm.vernacularName.simpleName());
       String kingdom = values.remove(DwcTerm.kingdom.simpleName());
       String phylum = values.remove(DwcTerm.phylum.simpleName());
@@ -323,6 +339,7 @@ public class UploadService {
     ingestJob.setFieldList(fieldNames.stream().toList());
     ingestJob.setFacetList(facetNames);
     ingestJob.setRowCount(rowCount);
+    ingestJob.setOriginalFieldNames(originalFieldNames);
 
     if (recordsWithoutScientificName > 0) {
       List<String> validationError = new ArrayList<>();

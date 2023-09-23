@@ -30,7 +30,7 @@ public class SpeciesListItem {
   private Classification classification;
 
   public Map<String, String> toTaxonMap() {
-    Map<String, String> taxon = new HashMap<String, String>();
+    Map<String, String> taxon = new HashMap<>();
     taxon.put("taxonID", this.taxonID);
     taxon.put("scientificName", this.scientificName);
     taxon.put("vernacularName", this.vernacularName);

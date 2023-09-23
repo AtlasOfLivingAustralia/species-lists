@@ -69,18 +69,28 @@ export default function App() {
     useEffect(() => {
         let result = userManager.getUser();
         result.then((user:User | null) => {
-            if (user) {
-                const roles = (user?.profile?.role || []) as string[];
-                const userId = user?.profile?.userid as string || '';
-                setCurrentUser({
-                    user: user,
-                    userId: userId,
-                    isAdmin: roles.includes('ROLE_ADMIN'),
-                    roles: roles
-                });
-                localStorage.setItem('access_token', user.access_token);
-                console.log('Setting current user');
 
+            if (user) {
+
+                if (!user.expired) {
+                    const roles = (user?.profile?.role || []) as string[];
+                    const userId = user?.profile?.userid as string || '';
+                    setCurrentUser({
+                        user: user,
+                        userId: userId,
+                        isAdmin: roles.includes('ROLE_ADMIN'),
+                        roles: roles
+                    });
+                    localStorage.setItem('access_token', user.access_token);
+                    console.log('Setting current user');
+                } else {
+
+                    // TODO use refresh token
+                    userManager.removeUser();
+                    setCurrentUser(null);
+                    localStorage.removeItem('access_token');
+                    console.log('Setting current user to null');
+                }
             } else if (search.includes('code=') && search.includes('state=')) {
                 const params = new URLSearchParams(window.location.search);
 
@@ -117,6 +127,8 @@ export default function App() {
                     );
                 })();
             } else {
+                userManager.removeUser();
+                localStorage.removeItem('access_token');
                 setCurrentUser(null);
                 console.log('Setting current user to null');
             }

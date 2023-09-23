@@ -18,6 +18,7 @@ import lombok.extern.jackson.Jacksonized;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class IngestJob {
   List<String> fieldList;
+  List<String> originalFieldNames;
   List<String> facetList;
   int rowCount = 0;
   String localFile;
