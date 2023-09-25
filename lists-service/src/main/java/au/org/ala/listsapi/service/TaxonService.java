@@ -217,7 +217,12 @@ public class TaxonService {
     return speciesListItems;
   }
 
-  private List<Classification> lookupTaxa(List<SpeciesListItem> items) throws Exception {
+
+  public Classification lookupTaxon(SpeciesListItem item) throws Exception {
+    return lookupTaxa(List.of(item)).get(0);
+  }
+
+  public List<Classification> lookupTaxa(List<SpeciesListItem> items) throws Exception {
 
     List<Map<String, String>> values =
         items.stream().map(item -> item.toTaxonMap()).collect(Collectors.toList());

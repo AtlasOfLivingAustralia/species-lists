@@ -121,7 +121,7 @@ public class UploadService {
             + "/upload-"
             + System.currentTimeMillis()
             + "-"
-            + file.getOriginalFilename().replaceAll("[^a-zA-Z0-9_-]", "_"));
+            + file.getOriginalFilename().replaceAll("[^a-zA-Z0-9._-]", "_"));
   }
 
   public SpeciesList reload(String speciesListID, File fileToLoad, boolean dryRun)
@@ -363,7 +363,7 @@ public class UploadService {
     try {
       String cleanedName =
           keyName
-              .replaceAll("[^\\w\\s-+.^:,]", "")
+              .replaceAll("[^\\w\\s-+^:,]", "")
               .replaceAll("__+", "_")
               .replaceAll(" ", "_")
               .trim();

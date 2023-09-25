@@ -1,15 +1,18 @@
 package au.org.ala.listsapi.controller;
 
+import au.org.ala.listsapi.model.Classification;
 import au.org.ala.listsapi.model.Facet;
 import au.org.ala.listsapi.model.FacetCount;
 import au.org.ala.listsapi.model.Filter;
 import au.org.ala.listsapi.model.Image;
+import au.org.ala.listsapi.model.InputSpeciesListItem;
 import au.org.ala.listsapi.model.KeyValue;
 import au.org.ala.listsapi.model.Release;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListIndex;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.repo.ReleaseMongoRepository;
+import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.TaxonService;
@@ -27,6 +30,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -54,6 +59,8 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class GraphQLController {
 
+  private static final Logger logger = LoggerFactory.getLogger(GraphQLController.class);
+
   @Value("${image.url}")
   private String imageTemplateUrl;
 
@@ -64,6 +71,7 @@ public class GraphQLController {
   @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
   @Autowired protected ReleaseMongoRepository releaseMongoRepository;
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
+  @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
 
   @Autowired protected TaxonService taxonService;
   @Autowired
@@ -380,6 +388,91 @@ public class GraphQLController {
     taxonService.reindex(id);
 
     return speciesListMongoRepository.save(toUpdate);
+  }
+
+  @SchemaMapping(typeName = "Mutation", field = "updateSpeciesListItem")
+  public SpeciesListItem updateSpeciesListItem(
+          @Argument InputSpeciesListItem inputSpeciesListItem,
+          @AuthenticationPrincipal Principal principal) {
+
+    Optional<SpeciesListItem> optionalSpeciesListItem = speciesListItemMongoRepository.findById(inputSpeciesListItem.getId());
+    if (optionalSpeciesListItem.isEmpty()){
+      return null;
+    }
+
+    Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findById(inputSpeciesListItem.getSpeciesListID());
+
+    if (optionalSpeciesList.isEmpty()){
+      return null;
+    }
+
+    SpeciesListItem speciesListItem = optionalSpeciesListItem.get();
+    speciesListItem.setScientificName(inputSpeciesListItem.getScientificName());
+    speciesListItem.setTaxonID(inputSpeciesListItem.getTaxonID());
+    speciesListItem.setGenus(inputSpeciesListItem.getGenus());
+    speciesListItem.setFamily(inputSpeciesListItem.getFamily());
+    speciesListItem.setOrder(inputSpeciesListItem.getOrder());
+    speciesListItem.setClasss(inputSpeciesListItem.getClasss());
+    speciesListItem.setPhylum(inputSpeciesListItem.getPhylum());
+    speciesListItem.setKingdom(inputSpeciesListItem.getKingdom());
+    speciesListItem.setVernacularName(inputSpeciesListItem.getVernacularName());
+    speciesListItem.setProperties(inputSpeciesListItem.getProperties().stream().map(kv -> new KeyValue(kv.getKey(), kv.getValue())).collect(Collectors.toList()));
+    speciesListItemMongoRepository.save(speciesListItem);
+
+    // TODO rematch taxonomy
+    Classification classification = speciesListItem.getClassification();
+    try {
+      classification = taxonService.lookupTaxon(speciesListItem);
+    } catch (Exception e) {
+      logger.error(e.getMessage(), e);
+    }
+
+
+    // write the data to Elasticsearch
+    SpeciesListIndex speciesListIndex =
+            new SpeciesListIndex(
+                    speciesListItem.getId(),
+                    optionalSpeciesList.get().getDataResourceUid(),
+                    optionalSpeciesList.get().getTitle(),
+                    optionalSpeciesList.get().getListType(),
+                    speciesListItem.getSpeciesListID(),
+                    speciesListItem.getScientificName(),
+                    speciesListItem.getVernacularName(),
+                    speciesListItem.getTaxonID(),
+                    speciesListItem.getKingdom(),
+                    speciesListItem.getPhylum(),
+                    speciesListItem.getClasss(),
+                    speciesListItem.getOrder(),
+                    speciesListItem.getFamily(),
+                    speciesListItem.getGenus(),
+                    speciesListItem.getProperties().stream().collect(Collectors.toMap(KeyValue::getKey, KeyValue::getValue)),
+                    classification,
+                    optionalSpeciesList.get().getIsPrivate() != null ? optionalSpeciesList.get().getIsPrivate() : false,
+                    optionalSpeciesList.get().getOwner(),
+                    optionalSpeciesList.get().getEditors());
+
+    speciesListIndexElasticRepository.save(speciesListIndex);
+
+    logger.info("Updated species list item: " + speciesListItem.getId());
+    return speciesListItem;
+  }
+
+  @SchemaMapping(typeName = "Mutation", field = "addSpeciesListItem")
+  public SpeciesListItem addSpeciesListItem(
+          @Argument InputSpeciesListItem inputSpeciesListItem,
+          @AuthenticationPrincipal Principal principal) {
+
+
+    return null;
+  }
+
+  @SchemaMapping(typeName = "Mutation", field = "removeSpeciesListItem")
+  public SpeciesListItem removeSpeciesListItem(
+          @Argument SpeciesListItem speciesListItem,
+          @AuthenticationPrincipal Principal principal) {
+
+
+    return null;
   }
 
 

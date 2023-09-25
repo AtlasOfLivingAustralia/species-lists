@@ -20,6 +20,12 @@ type Mutation {
   removeField(id: String!, fieldName:String!): SpeciesList
 
   renameField(id: String!, oldName:String!, newName:String!): SpeciesList
+
+  updateSpeciesListItem(inputSpeciesListItem: InputSpeciesListItem): SpeciesListItem
+
+  addSpeciesListItem(inputSpeciesListItem: InputSpeciesListItem): SpeciesListItem
+
+  removeSpeciesListItem(id: String!): SpeciesListItem
 }
 
 type Image {
@@ -85,6 +91,22 @@ type SpeciesListItem {
   classification: Classification
 }
 
+input InputSpeciesListItem {
+  id: String
+  speciesListID: String
+  scientificName: String
+  taxonID: String
+  vernacularName: String
+  kingdom: String
+  phylum: String
+  classs: String
+  order: String
+  family: String
+  genus: String
+  properties: [InputKeyValue]
+}
+
+
 type SpeciesListItemPage {
   content: [SpeciesListItem]
   totalPages: Int
@@ -116,6 +138,11 @@ input Filter {
 }
 
 type KeyValue {
+  key: String
+  value: String
+}
+
+input InputKeyValue {
   key: String
   value: String
 }
