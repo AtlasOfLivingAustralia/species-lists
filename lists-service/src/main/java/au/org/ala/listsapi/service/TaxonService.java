@@ -48,7 +48,7 @@ public class TaxonService {
 
   @Async("processExecutor")
   public void reindex() {
-    logger.info("Rematching all datasets");
+    logger.info("Indexing all datasets");
     int size = 1000;
     int page = 0;
     boolean done = false;
@@ -83,7 +83,7 @@ public class TaxonService {
     while (!done) {
       Pageable paging = PageRequest.of(page, size);
       Page<SpeciesList> speciesLists = speciesListMongoRepository.findAll(paging);
-      if (speciesLists.getContent().size() > 0) {
+      if (!speciesLists.getContent().isEmpty()) {
         speciesLists.forEach(
             speciesList -> {
               try {
@@ -114,7 +114,7 @@ public class TaxonService {
       Page<SpeciesListItem> speciesListItems =
           speciesListItemMongoRepository.findBySpeciesListID(speciesListID, paging);
 
-      if (speciesListItems.getContent().size() > 0) {
+      if (!speciesListItems.getContent().isEmpty()) {
         speciesListItems.forEach(
             speciesListItem -> {
               try {
@@ -187,7 +187,7 @@ public class TaxonService {
       Page<SpeciesListItem> speciesListItems =
           speciesListItemMongoRepository.findBySpeciesListID(speciesListID, paging);
 
-      if (speciesListItems.getContent().size() > 0) {
+      if (!speciesListItems.getContent().isEmpty()) {
         try {
           List<SpeciesListItem> items = speciesListItems.getContent();
           updateClassifications(items);

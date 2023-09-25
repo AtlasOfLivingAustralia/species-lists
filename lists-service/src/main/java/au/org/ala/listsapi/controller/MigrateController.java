@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -28,6 +30,7 @@ import org.springframework.web.client.RestTemplate;
 @Controller
 public class MigrateController {
 
+  private static final Logger logger = LoggerFactory.getLogger(MigrateController.class);
   private final SpeciesListMongoRepository speciesListMongoRepository;
   private final UploadService uploadService;
   private final ReleaseService releaseService;
@@ -109,7 +112,7 @@ public class MigrateController {
     List<SpeciesList> speciesLists = listOfAuthoritativeLists();
     speciesLists.forEach(
         speciesList -> {
-          System.out.println("Downloading file for " + speciesList.getDataResourceUid());
+          logger.info("Downloading file for " + speciesList.getDataResourceUid());
           String downloadUrl =
               migrateUrl
                   + "/speciesListItem/downloadList/"
