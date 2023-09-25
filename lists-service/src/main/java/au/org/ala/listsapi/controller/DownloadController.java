@@ -46,6 +46,7 @@ public class DownloadController {
           @AuthenticationPrincipal Principal principal,
           HttpServletResponse response) {
     try {
+      logger.info("Downloading species list " + speciesListID);
       Optional<SpeciesList> speciesListOptional = speciesListMongoRepository.findById(speciesListID);
       if (speciesListOptional.isEmpty()) {
         return ResponseEntity.badRequest().body("Unrecognized ID while downloading dataset");
@@ -92,11 +93,12 @@ public class DownloadController {
           }
           logger.info("Finished writing CSV data for species list " + speciesListID);
         } catch (Exception e){
-          e.printStackTrace();
+          logger.error(e.getMessage(), e);
         }
       } catch (Exception ex){
-        ex.printStackTrace();
+        logger.error(ex.getMessage(), ex);
       }
+      logger.info("Finished writing zip download data for species list " + speciesListID);
       return new ResponseEntity<>(HttpStatus.OK);
     } catch (Exception e) {
       return ResponseEntity.badRequest().body("Error while attempting to download dataset: " + e.getMessage());
