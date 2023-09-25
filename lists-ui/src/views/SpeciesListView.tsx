@@ -502,7 +502,7 @@ function SpeciesListItemView({ selectedItem, customFields }: SpeciesListItemProp
                     <tr>
                         <td>family</td>
                         <td>
-                            <Anchor href={'https://bie.ala.org.au/species/' + selectedItem.classification.familyID}>
+                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem.classification.familyID}>
                                 {selectedItem.classification?.family}
                             </Anchor>
                         </td>
@@ -510,7 +510,7 @@ function SpeciesListItemView({ selectedItem, customFields }: SpeciesListItemProp
                     <tr>
                         <td>kingdom</td>
                         <td>
-                            <Anchor href={'https://bie.ala.org.au/species/' + selectedItem.classification.kingdomID}>
+                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem.classification.kingdomID}>
                                 {selectedItem.classification?.kingdom}
                             </Anchor>
                         </td>
@@ -533,7 +533,7 @@ function SpeciesListItemView({ selectedItem, customFields }: SpeciesListItemProp
                         <td>scientificName</td>
                         <td>{selectedItem?.scientificName}</td>
                         <td>
-                            <Anchor href={'https://bie.ala.org.au/species/' + selectedItem?.classification.taxonConceptID}>
+                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem?.classification.taxonConceptID}>
                                 {selectedItem?.classification?.scientificName}
                             </Anchor>
                         </td>
@@ -547,7 +547,7 @@ function SpeciesListItemView({ selectedItem, customFields }: SpeciesListItemProp
                         <td>genus</td>
                         <td>{selectedItem?.genus}</td>
                         <td>
-                            <Anchor href={'https://bie.ala.org.au/species/' + selectedItem.classification.genusID}>
+                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem.classification.genusID}>
                                 {selectedItem?.classification?.genus}
                             </Anchor>
                         </td>
@@ -556,7 +556,7 @@ function SpeciesListItemView({ selectedItem, customFields }: SpeciesListItemProp
                         <td>family</td>
                         <td>{selectedItem?.family}</td>
                         <td>
-                            <Anchor href={'https://bie.ala.org.au/species/' + selectedItem.classification.familyID}>
+                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem.classification.familyID}>
                                 {selectedItem?.classification?.family}
                             </Anchor>
                         </td>
@@ -565,7 +565,7 @@ function SpeciesListItemView({ selectedItem, customFields }: SpeciesListItemProp
                         <td>order</td>
                         <td>{selectedItem?.order}</td>
                         <td>
-                            <Anchor href={'https://bie.ala.org.au/species/' + selectedItem.classification.orderID}>
+                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem.classification.orderID}>
                                 {selectedItem?.classification?.order}
                             </Anchor>
                         </td>
@@ -574,7 +574,7 @@ function SpeciesListItemView({ selectedItem, customFields }: SpeciesListItemProp
                         <td>class</td>
                         <td>{selectedItem?.classs}</td>
                         <td>
-                            <Anchor href={'https://bie.ala.org.au/species/' + selectedItem.classification.classID}>
+                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem.classification.classID}>
                                 {selectedItem?.classification?.classs}
                             </Anchor>
                         </td>
@@ -583,7 +583,7 @@ function SpeciesListItemView({ selectedItem, customFields }: SpeciesListItemProp
                         <td>phylum</td>
                         <td>{selectedItem?.phylum}</td>
                         <td>
-                            <Anchor href={'https://bie.ala.org.au/species/' + selectedItem.classification.phylumID}>
+                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem.classification.phylumID}>
                                 {selectedItem?.classification?.phylum}
                             </Anchor>
                         </td>
@@ -592,7 +592,7 @@ function SpeciesListItemView({ selectedItem, customFields }: SpeciesListItemProp
                         <td>kingdom</td>
                         <td>{selectedItem?.kingdom}</td>
                         <td>
-                            <Anchor href={'https://bie.ala.org.au/species/' + selectedItem.classification.kingdomID}>
+                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem.classification.kingdomID}>
                                 {selectedItem?.classification?.kingdom}
                             </Anchor>
                         </td>
@@ -602,7 +602,7 @@ function SpeciesListItemView({ selectedItem, customFields }: SpeciesListItemProp
             )}
 
             <Text style={{ paddingTop: '15px', paddingBottom: '15px' }}>
-                <FormattedMessage id="Note: Interpreted values are matched against the national checklists. These may differ from the original values supplied." />
+                <FormattedMessage id="interpreted.values.warning" />
             </Text>
 
             <Switch

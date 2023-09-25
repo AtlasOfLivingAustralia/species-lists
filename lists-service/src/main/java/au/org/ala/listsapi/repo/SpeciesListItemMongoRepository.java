@@ -10,4 +10,5 @@ public interface SpeciesListItemMongoRepository extends MongoRepository<SpeciesL
   Page<SpeciesListItem> findBySpeciesListID(String speciesListID, Pageable pageable);
 
   void deleteBySpeciesListID(String speciesListID);
+
 }

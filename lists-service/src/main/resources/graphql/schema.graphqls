@@ -14,6 +14,12 @@ type Mutation {
     licence: String!, listType: String!, authority:String, region:String,
     isAuthoritative:Boolean, isPrivate: Boolean, isInvasive: Boolean, isThreatened: Boolean,
     isBIE: Boolean, isSDS: Boolean, doi:String, wkt:String): SpeciesList
+
+  addField(id: String!, fieldName:String!, fieldValue:String): SpeciesList
+
+  removeField(id: String!, fieldName:String!): SpeciesList
+
+  renameField(id: String!, oldName:String!, newName:String!): SpeciesList
 }
 
 type Image {

@@ -10,6 +10,7 @@ import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListIndex;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.repo.ReleaseMongoRepository;
+import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.TaxonService;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
@@ -65,6 +66,8 @@ public class GraphQLController {
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
 
   @Autowired protected TaxonService taxonService;
+  @Autowired
+  private SpeciesListItemMongoRepository speciesListItemMongoRepository;
 
   public static SpeciesListItem convert(SpeciesListIndex index) {
     SpeciesListItem speciesListItem = new SpeciesListItem();
@@ -229,6 +232,156 @@ public class GraphQLController {
       @Argument String speciesListID, @Argument Integer page, @Argument Integer size) {
     return filterSpeciesList(speciesListID, null, new ArrayList<>(), page, size);
   }
+
+  @SchemaMapping(typeName = "Mutation", field = "addField")
+  public SpeciesList addField(@Argument String id, @Argument String fieldName, @Argument String fieldValue,
+                              @AuthenticationPrincipal Principal principal) {
+
+    Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(id);
+    if (speciesList.isEmpty()) {
+      return null;
+    }
+
+    if (!AuthUtils.isAuthorized(speciesList.get(), principal)) {
+      return null;
+    }
+
+    SpeciesList toUpdate = speciesList.get();
+    toUpdate.getFieldList().add(fieldName);
+
+    if (StringUtils.isNotEmpty(fieldValue)) {
+      int startIndex = 0;
+      int pageSize = 1000;
+      Pageable pageable = PageRequest.of(startIndex, pageSize);
+
+      boolean finished = false;
+      while (!finished) {
+        Page<SpeciesListItem> page = speciesListItemMongoRepository.findBySpeciesListID(id, pageable);
+        List<SpeciesListItem> toSave = new ArrayList<>();
+        for (SpeciesListItem item : page) {
+          item.getProperties().add(new KeyValue(fieldName, fieldValue));
+          toSave.add(item);
+        }
+
+        speciesListItemMongoRepository.saveAll(toSave);
+
+        if (page.isEmpty()) {
+          finished = true;
+        } else {
+          startIndex += 1;
+          pageable = PageRequest.of(startIndex, pageSize);
+        }
+      }
+      // reindex
+      taxonService.reindex(id);
+    }
+
+    return speciesListMongoRepository.save(toUpdate);
+  }
+
+  @SchemaMapping(typeName = "Mutation", field = "renameField")
+  public SpeciesList renameField(
+          @Argument String id,
+          @Argument String oldName,
+          @Argument String newName,
+          @AuthenticationPrincipal Principal principal) {
+
+    Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(id);
+    if (speciesList.isEmpty()) {
+      return null;
+    }
+
+    if (!AuthUtils.isAuthorized(speciesList.get(), principal)) {
+      return null;
+    }
+
+    // remove from species list metadata
+    SpeciesList toUpdate = speciesList.get();
+    toUpdate.getFieldList().remove(oldName);
+    toUpdate.getFieldList().add(newName);
+
+    int startIndex = 0;
+    int pageSize = 1000;
+    Pageable pageable = PageRequest.of(startIndex, pageSize);
+    boolean finished = false;
+
+    while (!finished) {
+      Page<SpeciesListItem> page = speciesListItemMongoRepository.findBySpeciesListID(id, pageable);
+      List<SpeciesListItem> toSave = new ArrayList<>();
+      for (SpeciesListItem item : page) {
+
+        Optional<KeyValue> kv = item.getProperties().stream().filter(k -> k.getKey().equals(oldName)).findFirst();
+        if (kv.isPresent()){
+          kv.get().setKey(newName);
+          toSave.add(item);
+        }
+      }
+
+      speciesListItemMongoRepository.saveAll(toSave);
+
+      if (page.isEmpty()) {
+        finished = true;
+      } else {
+        startIndex += 1;
+        pageable = PageRequest.of(startIndex, pageSize);
+      }
+    }
+    // reindex
+    taxonService.reindex(id);
+
+    return speciesListMongoRepository.save(toUpdate);
+  }
+
+  @SchemaMapping(typeName = "Mutation", field = "removeField")
+  public SpeciesList removeField(
+          @Argument String id,
+          @Argument String fieldName,
+          @AuthenticationPrincipal Principal principal) {
+
+    Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(id);
+    if (speciesList.isEmpty()) {
+      return null;
+    }
+
+    if (!AuthUtils.isAuthorized(speciesList.get(), principal)) {
+      return null;
+    }
+
+    SpeciesList toUpdate = speciesList.get();
+    toUpdate.getFieldList().remove(fieldName);
+
+    int startIndex = 0;
+    int pageSize = 1000;
+    Pageable pageable = PageRequest.of(startIndex, pageSize);
+
+    boolean finished = false;
+    while (!finished) {
+      Page<SpeciesListItem> page = speciesListItemMongoRepository.findBySpeciesListID(id, pageable);
+      List<SpeciesListItem> toSave = new ArrayList<>();
+      for (SpeciesListItem item : page) {
+
+        Optional<KeyValue> kv = item.getProperties().stream().filter(k -> k.getKey().equals(fieldName)).findFirst();
+        if (kv.isPresent()){
+          item.getProperties().remove(kv.get());
+          toSave.add(item);
+        }
+      }
+      speciesListItemMongoRepository.saveAll(toSave);
+
+      if (page.isEmpty()) {
+        finished = true;
+      } else {
+        startIndex += 1;
+        pageable = PageRequest.of(startIndex, pageSize);
+      }
+    }
+
+    // reindex
+    taxonService.reindex(id);
+
+    return speciesListMongoRepository.save(toUpdate);
+  }
+
 
   @SchemaMapping(typeName = "Mutation", field = "updateMetadata")
   public SpeciesList updateMetadata(
