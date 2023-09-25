@@ -3,6 +3,7 @@ package au.org.ala.listsapi.controller;
 import au.org.ala.listsapi.model.IngestJob;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import au.org.ala.listsapi.service.ReleaseService;
 import au.org.ala.listsapi.service.UploadService;
 import java.io.File;
 import java.io.FileInputStream;
@@ -29,6 +30,7 @@ public class MigrateController {
 
   private final SpeciesListMongoRepository speciesListMongoRepository;
   private final UploadService uploadService;
+  private final ReleaseService releaseService;
   private final String tempDir;
   private final String migrateUrl;
   private final RestTemplate restTemplate;
@@ -36,12 +38,14 @@ public class MigrateController {
   public MigrateController(
       SpeciesListMongoRepository speciesListMongoRepository,
       UploadService uploadService,
+      ReleaseService releaseService,
       @Value("${temp.dir:/tmp}") String tempDir,
       @Value("${migrate.url:https://lists.ala.org.au}") String migrateUrl,
       RestTemplate restTemplate) {
 
     this.speciesListMongoRepository = speciesListMongoRepository;
     this.uploadService = uploadService;
+    this.releaseService = releaseService;
     this.tempDir = tempDir;
     this.migrateUrl = migrateUrl;
     this.restTemplate = restTemplate;
@@ -134,6 +138,7 @@ public class MigrateController {
             speciesList.setFacetList(ingestJob.getFacetList());
             speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
             speciesListMongoRepository.save(speciesList);
+            releaseService.release(speciesList.getId());
           } catch (Exception e) {
             e.printStackTrace();
           }
@@ -159,6 +164,7 @@ public class MigrateController {
             speciesList.setFacetList(ingestJob.getFacetList());
             speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
             speciesListMongoRepository.save(speciesList);
+            releaseService.release(speciesList.getId());
           } catch (Exception e) {
             e.printStackTrace();
           }
