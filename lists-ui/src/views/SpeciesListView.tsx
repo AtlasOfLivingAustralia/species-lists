@@ -152,7 +152,7 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
             var url = window.URL.createObjectURL(blob);
             var a = document.createElement('a');
             a.href = url;
-            a.download = "species-list.zip";
+            a.download = "species-list-" + speciesListID + ".zip";
             document.body.appendChild(a); // we need to append the element to the dom -> otherwise it will not work in firefox
             a.click();
             a.remove();
