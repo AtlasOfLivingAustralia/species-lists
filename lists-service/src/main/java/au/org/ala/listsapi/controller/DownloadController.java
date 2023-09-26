@@ -42,12 +42,13 @@ public class DownloadController {
   @Operation(summary = "Download a species list", tags = "Download")
   @GetMapping("/download/{speciesListID}")
   public ResponseEntity<Object> download(
-          @PathVariable("speciesListID") String speciesListID,
-          @AuthenticationPrincipal Principal principal,
-          HttpServletResponse response) {
+      @PathVariable("speciesListID") String speciesListID,
+      @AuthenticationPrincipal Principal principal,
+      HttpServletResponse response) {
     try {
       logger.info("Downloading species list " + speciesListID);
-      Optional<SpeciesList> speciesListOptional = speciesListMongoRepository.findById(speciesListID);
+      Optional<SpeciesList> speciesListOptional =
+          speciesListMongoRepository.findById(speciesListID);
       if (speciesListOptional.isEmpty()) {
         return ResponseEntity.badRequest().body("Unrecognized ID while downloading dataset");
       }
@@ -68,10 +69,11 @@ public class DownloadController {
 
       try (ZipOutputStream zipOutputStream = new ZipOutputStream(response.getOutputStream())) {
 
-        ZipEntry zipEntry = new ZipEntry( "taxa.csv");
+        ZipEntry zipEntry = new ZipEntry("taxa.csv");
         zipOutputStream.putNextEntry(zipEntry);
 
-        try (CSVWriter csvWriter = new CSVWriter(new OutputStreamWriter(zipOutputStream, StandardCharsets.UTF_8))) {
+        try (CSVWriter csvWriter =
+            new CSVWriter(new OutputStreamWriter(zipOutputStream, StandardCharsets.UTF_8))) {
           writeCsvHeaders(csvWriter, csvHeaders);
 
           int startIndex = 0;
@@ -80,11 +82,18 @@ public class DownloadController {
 
           boolean finished = false;
           while (!finished) {
-            Page<SpeciesListItem> page = speciesListItemMongoRepository.findBySpeciesListID(speciesListID, pageable);
+            Page<SpeciesListItem> page =
+                speciesListItemMongoRepository.findBySpeciesListID(speciesListID, pageable);
             if (page.isEmpty()) {
               finished = true;
             } else {
-              logger.info("Writing CSV data for species list " + speciesListID + " page " + startIndex + " page size " + page.stream().count());
+              logger.info(
+                  "Writing CSV data for species list "
+                      + speciesListID
+                      + " page "
+                      + startIndex
+                      + " page size "
+                      + page.stream().count());
               writeCsvData(csvWriter, speciesList.getFieldList(), page);
               csvWriter.flush();
               startIndex += 1;
@@ -92,40 +101,45 @@ public class DownloadController {
             }
           }
           logger.info("Finished writing CSV data for species list " + speciesListID);
-        } catch (Exception e){
+        } catch (Exception e) {
           logger.error(e.getMessage(), e);
         }
-      } catch (Exception ex){
+      } catch (Exception ex) {
         logger.error(ex.getMessage(), ex);
       }
       logger.info("Finished writing zip download data for species list " + speciesListID);
       return new ResponseEntity<>(HttpStatus.OK);
     } catch (Exception e) {
-      return ResponseEntity.badRequest().body("Error while attempting to download dataset: " + e.getMessage());
+      return ResponseEntity.badRequest()
+          .body("Error while attempting to download dataset: " + e.getMessage());
     }
   }
 
   private void setupResponseHeaders(HttpServletResponse response, String speciesListID) {
     response.setHeader("Content-Type", "application/octet-stream");
-    response.setHeader("Content-Disposition", "attachment; filename=species-list-" + speciesListID + ".zip");
+    response.setHeader(
+        "Content-Disposition", "attachment; filename=species-list-" + speciesListID + ".zip");
   }
 
   private void writeCsvHeaders(CSVWriter csvWriter, List<String> csvHeaders) {
     csvWriter.writeNext(csvHeaders.toArray(new String[0]));
   }
 
-  private void writeCsvData(CSVWriter csvWriter, List<String> fieldList, Page<SpeciesListItem> page) {
-    page.forEach(speciesListItem -> {
-      List<String> csvRow = new ArrayList<>();
-      csvRow.add(speciesListItem.getScientificName());
-      fieldList.forEach(field -> {
-        speciesListItem.getProperties().stream()
-                .filter(keyValue -> keyValue.getKey().equals(field))
-                .findFirst()
-                .ifPresent(keyValue -> csvRow.add(keyValue.getValue()));
-      });
-      csvWriter.writeNext(csvRow.toArray(new String[0]));
-    });
+  private void writeCsvData(
+      CSVWriter csvWriter, List<String> fieldList, Page<SpeciesListItem> page) {
+    page.forEach(
+        speciesListItem -> {
+          List<String> csvRow = new ArrayList<>();
+          csvRow.add(speciesListItem.getScientificName());
+          fieldList.forEach(
+              field -> {
+                speciesListItem.getProperties().stream()
+                    .filter(keyValue -> keyValue.getKey().equals(field))
+                    .findFirst()
+                    .ifPresent(keyValue -> csvRow.add(keyValue.getValue()));
+              });
+          csvWriter.writeNext(csvRow.toArray(new String[0]));
+        });
   }
 
   @Nullable
