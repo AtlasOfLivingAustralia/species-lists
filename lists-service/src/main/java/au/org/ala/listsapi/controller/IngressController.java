@@ -1,6 +1,7 @@
 package au.org.ala.listsapi.controller;
 
 import au.org.ala.listsapi.model.IngestJob;
+import au.org.ala.listsapi.model.InputSpeciesList;
 import au.org.ala.listsapi.model.Release;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
@@ -178,7 +179,7 @@ public class IngressController {
   @PostMapping("/ingest")
   public ResponseEntity<Object> ingest(
       @RequestParam("file") String fileName,
-      SpeciesList speciesList,
+      InputSpeciesList speciesList,
       @AuthenticationPrincipal Principal principal) {
     try {
 
@@ -196,7 +197,6 @@ public class IngressController {
 
       SpeciesList updatedSpeciesList =
           uploadService.ingest(alaUserProfile.getUserId(), speciesList, tempFile, false);
-      releaseService.release(updatedSpeciesList.getId());
       logger.info("Ingestion complete..." + updatedSpeciesList.toString());
       return new ResponseEntity<>(updatedSpeciesList, HttpStatus.OK);
     } catch (Exception e) {

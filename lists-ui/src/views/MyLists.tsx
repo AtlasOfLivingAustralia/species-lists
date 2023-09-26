@@ -7,7 +7,7 @@ import {
     Group,
     Text, Skeleton, CloseButton
 } from "@mantine/core";
-import { gql, useQuery } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import {useContext, useState} from "react";
 import {
     IconEye,
@@ -20,6 +20,7 @@ import { Dispatch, SetStateAction } from "react";
 import {ListsUser, SpeciesList} from "../api/sources/model.ts";
 import {SpeciesListsSideBar} from "./SpeciesListsSideBar.tsx";
 import UserContext from "../helpers/UserContext.ts";
+import {GET_MY_LISTS} from "../api/sources/graphql.ts";
 
 function MyLists() {
 
@@ -91,25 +92,7 @@ export function SearchTable({
                             }: SearchTableProps) {
 
     const currentUser = useContext(UserContext) as ListsUser;
-
-    const MY_LISTS = gql`
-        query findList($searchQuery: String, $page: Int, $size: Int, $userId: String) {
-            lists(searchQuery: $searchQuery, page: $page, size: $size, userId: $userId) {
-                content {
-                    id
-                    title
-                    rowCount
-                    listType
-                    isAuthoritative
-                    isPrivate
-                }
-                totalPages
-                totalElements
-            }
-        }
-    `;
-
-    const { loading, error, data} = useQuery(MY_LISTS, {
+    const { loading, error, data} = useQuery(GET_MY_LISTS, {
         context: {
             headers: {
                 "Authorization": "Bearer " + currentUser?.user?.access_token

@@ -1,6 +1,6 @@
 import {Accordion} from "@mantine/core";
 import {Link} from "react-router-dom";
-import {IconHomeCog, IconSettings} from "@tabler/icons-react";
+import {IconEyeClosed, IconHomeCog, IconSettings} from "@tabler/icons-react";
 import {AllLists, UploadListOption} from "./SpeciesListSideBar.tsx";
 import {useContext} from "react";
 import UserContext from "../helpers/UserContext.ts";
@@ -17,6 +17,13 @@ export function SpeciesListsSideBar({ resetSpeciesList }: { resetSpeciesList: ()
                 <Accordion.Item value="my-lists">
                     <Link to={`/my-lists`}>
                         <Accordion.Control icon={<IconHomeCog />}>My lists</Accordion.Control>
+                    </Link>
+                </Accordion.Item>
+            }
+            {currentUser?.isAdmin &&
+                <Accordion.Item value="private-lists">
+                    <Link to={`/private-lists`}>
+                        <Accordion.Control icon={<IconEyeClosed />}>Private lists</Accordion.Control>
                     </Link>
                 </Accordion.Item>
             }

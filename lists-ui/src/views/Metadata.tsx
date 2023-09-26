@@ -1,6 +1,6 @@
 import {useContext, useEffect, useRef, useState} from "react";
 import { useParams } from "react-router-dom";
-import { gql, useMutation, useQuery } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import { useIntl } from "react-intl";
 import {
     Affix,
@@ -25,6 +25,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import geojsonExtent from '@mapbox/geojson-extent';
 import { useClipboard } from '@mantine/hooks';
 import {Geometry} from "geojson";
+import {GET_LIST_METADATA, UPDATE_LIST} from "../api/sources/graphql.ts";
 
 mapboxgl.accessToken = import.meta.env.VITE_APP_MAPBOX_TOKEN;
 
@@ -41,95 +42,9 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
     const [lat ] = useState(-24.5);
     const [zoom] = useState(3);
 
-
-    const GET_LIST = gql`
-        query loadList($speciesListID: String!) {
-            getSpeciesListMetadata(speciesListID: $speciesListID) {
-                id
-                title
-                description
-                licence
-                rowCount
-                fieldList
-                listType
-                doi
-                authority
-                region
-                isAuthoritative
-                isPrivate
-                isInvasive
-                isThreatened
-                isBIE
-                isSDS
-                dateCreated
-                lastUpdated
-                lastUploaded
-                lastUpdatedBy
-                owner
-                editors
-                wkt
-            }
-        }
-    `;
-
-    const UPDATE_LIST = gql`
-        mutation update(
-            $id: String!
-            $title: String!
-            $description: String
-            $licence: String!
-            $listType: String!
-            $authority: String
-            $region: String
-            $isAuthoritative: Boolean
-            $isPrivate: Boolean
-            $isSDS: Boolean
-            $isBIE: Boolean
-            $wkt: String
-        ) {
-            updateMetadata(
-                id: $id
-                title: $title
-                description: $description
-                licence: $licence
-                listType: $listType
-                authority: $authority
-                region: $region
-                isAuthoritative: $isAuthoritative
-                isPrivate: $isPrivate
-                isSDS: $isSDS
-                isBIE: $isBIE
-                wkt: $wkt
-            ) {
-                id
-                title
-                description
-                licence
-                rowCount
-                fieldList
-                listType
-                doi
-                authority
-                region
-                isAuthoritative
-                isPrivate
-                isInvasive
-                isThreatened
-                isSDS
-                isBIE
-                dateCreated
-                lastUpdated
-                lastUploaded
-                owner
-                editors
-                wkt
-            }
-        }
-    `;
-
     const intl = useIntl();
 
-    const {loading, error, data} = useQuery<{ getSpeciesListMetadata: SpeciesList }>(GET_LIST, {
+    const {loading, error, data} = useQuery<{ getSpeciesListMetadata: SpeciesList }>(GET_LIST_METADATA, {
         variables: {
             speciesListID: speciesListID,
         },
@@ -144,7 +59,7 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
         },
         refetchQueries: [
             {
-                query: GET_LIST,
+                query: GET_LIST_METADATA,
             },
         ],
     });

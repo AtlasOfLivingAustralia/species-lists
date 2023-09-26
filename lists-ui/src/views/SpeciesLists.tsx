@@ -7,7 +7,7 @@ import {
     Group,
     Text, Skeleton, CloseButton
 } from "@mantine/core";
-import { gql, useQuery } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import {useState} from "react";
 import {
     IconList,
@@ -18,9 +18,10 @@ import { FormattedMessage } from "react-intl";
 import { Dispatch, SetStateAction } from "react";
 import {SpeciesList} from "../api/sources/model.ts";
 import {SpeciesListsSideBar} from "./SpeciesListsSideBar.tsx";
+import {SEARCH_SPECIES_LISTS} from "../api/sources/graphql.ts";
 
 
-function SpeciesLists() {
+function SpeciesLists({isPrivate}: {isPrivate: boolean})  {
 
     const navigate = useNavigate();
     const [activePage, setPage] = useState<number>(1);
@@ -66,6 +67,7 @@ function SpeciesLists() {
                         pageSize={pageSize}
                         setPage={setPage}
                         selectSpeciesList={selectSpeciesList}
+                        isPrivate={isPrivate}
                     />
                 </Grid.Col>
             </Grid>
@@ -77,6 +79,7 @@ interface SearchTableProps {
     searchQuery: string;
     activePage: number;
     pageSize: number;
+    isPrivate: boolean
     setPage: Dispatch<SetStateAction<number>>;
     selectSpeciesList: (speciesList: SpeciesList) => void;
 }
@@ -86,29 +89,16 @@ export function SearchTable({
                                 activePage,
                                 pageSize,
                                 setPage,
-                                selectSpeciesList
+                                selectSpeciesList,
+                                isPrivate
                             }: SearchTableProps) {
 
-    const GET_LISTS = gql`
-        query findList($searchQuery: String, $page: Int, $size: Int) {
-            lists(searchQuery: $searchQuery, page: $page, size: $size) {
-                content {
-                    id
-                    title
-                    rowCount
-                    listType
-                }
-                totalPages
-                totalElements
-            }
-        }
-    `;
-
-    const { loading, error, data} = useQuery(GET_LISTS, {
+    const { loading, error, data} = useQuery(SEARCH_SPECIES_LISTS, {
         variables: {
             searchQuery: searchQuery,
             page: activePage - 1,
-            size: pageSize
+            size: pageSize,
+            isPrivate: isPrivate,
         },
     });
 

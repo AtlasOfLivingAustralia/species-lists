@@ -7,7 +7,7 @@
     "classification": {
       "properties": {
         "classID": {
-          "type": "text",
+          "type": "keyword",
           "fields": {
             "keyword": {
               "type": "keyword",
@@ -16,7 +16,7 @@
           }
         },
         "classs": {
-          "type": "text",
+          "type": "keyword",
           "copy_to": [
             "all"
           ],
@@ -28,7 +28,7 @@
           }
         },
         "family": {
-          "type": "text",
+          "type": "keyword",
           "copy_to": [
             "all"
           ],
@@ -40,7 +40,7 @@
           }
         },
         "familyID": {
-          "type": "text",
+          "type": "keyword",
           "fields": {
             "keyword": {
               "type": "keyword",
@@ -49,7 +49,7 @@
           }
         },
         "genus": {
-          "type": "text",
+          "type": "keyword",
           "copy_to": [
             "all"
           ],
@@ -61,7 +61,7 @@
           }
         },
         "genusID": {
-          "type": "text",
+          "type": "keyword",
           "fields": {
             "keyword": {
               "type": "keyword",
@@ -70,7 +70,7 @@
           }
         },
         "issues": {
-          "type": "text",
+          "type": "keyword",
           "fields": {
             "keyword": {
               "type": "keyword",
@@ -79,7 +79,7 @@
           }
         },
         "kingdom": {
-          "type": "text",
+          "type": "keyword",
           "copy_to": [
             "all"
           ],
@@ -91,7 +91,7 @@
           }
         },
         "kingdomID": {
-          "type": "text",
+          "type": "keyword",
           "fields": {
             "keyword": {
               "type": "keyword",
@@ -103,7 +103,7 @@
           "type": "long"
         },
         "matchType": {
-          "type": "text",
+          "type": "keyword",
           "fields": {
             "keyword": {
               "type": "keyword",
@@ -112,7 +112,7 @@
           }
         },
         "nameType": {
-          "type": "text",
+          "type": "keyword",
           "fields": {
             "keyword": {
               "type": "keyword",
@@ -121,7 +121,7 @@
           }
         },
         "order": {
-          "type": "text",
+          "type": "keyword",
           "copy_to": [
             "all"
           ],
@@ -133,7 +133,7 @@
           }
         },
         "orderID": {
-          "type": "text",
+          "type": "keyword",
           "fields": {
             "keyword": {
               "type": "keyword",
@@ -142,7 +142,7 @@
           }
         },
         "phylum": {
-          "type": "text",
+          "type": "keyword",
           "copy_to": [
             "all"
           ],
@@ -154,7 +154,7 @@
           }
         },
         "phylumID": {
-          "type": "text",
+          "type": "keyword",
           "fields": {
             "keyword": {
               "type": "keyword",
@@ -163,7 +163,7 @@
           }
         },
         "rank": {
-          "type": "text",
+          "type": "keyword",
           "fields": {
             "keyword": {
               "type": "keyword",
@@ -178,7 +178,7 @@
           "type": "long"
         },
         "scientificName": {
-          "type": "text",
+          "type": "keyword",
           "copy_to": [
             "all"
           ],
@@ -190,7 +190,7 @@
           }
         },
         "scientificNameAuthorship": {
-          "type": "text",
+          "type": "keyword",
           "fields": {
             "keyword": {
               "type": "keyword",
@@ -199,7 +199,7 @@
           }
         },
         "species": {
-          "type": "text",
+          "type": "keyword",
           "copy_to": [
             "all"
           ],
@@ -211,7 +211,7 @@
           }
         },
         "speciesGroup": {
-          "type": "text",
+          "type": "keyword",
           "copy_to": [
             "all"
           ],
@@ -223,7 +223,7 @@
           }
         },
         "speciesID": {
-          "type": "text",
+          "type": "keyword",
           "fields": {
             "keyword": {
               "type": "keyword",
@@ -235,7 +235,7 @@
           "type": "boolean"
         },
         "taxonConceptID": {
-          "type": "text",
+          "type": "keyword",
           "fields": {
             "keyword": {
               "type": "keyword",
@@ -244,7 +244,7 @@
           }
         },
         "vernacularName": {
-          "type": "text",
+          "type": "keyword",
           "copy_to": [
             "all"
           ],
@@ -258,7 +258,7 @@
       }
     },
     "classs": {
-      "type": "text",
+      "type": "keyword",
       "fields": {
         "keyword": {
           "type": "keyword",
@@ -267,7 +267,7 @@
       }
     },
     "dataResourceUid": {
-      "type": "text",
+      "type": "keyword",
       "fields": {
         "keyword": {
           "type": "keyword",
@@ -276,7 +276,7 @@
       }
     },
     "family": {
-      "type": "text",
+      "type": "keyword",
       "fields": {
         "keyword": {
           "type": "keyword",
@@ -285,7 +285,7 @@
       }
     },
     "genus": {
-      "type": "text",
+      "type": "keyword",
       "fields": {
         "keyword": {
           "type": "keyword",
@@ -294,7 +294,7 @@
       }
     },
     "id": {
-      "type": "text",
+      "type": "keyword",
       "fields": {
         "keyword": {
           "type": "keyword",
@@ -306,7 +306,7 @@
       "type": "boolean"
     },
     "kingdom": {
-      "type": "text",
+      "type": "keyword",
       "copy_to": [
         "all"
       ],
@@ -318,7 +318,7 @@
       }
     },
     "listType": {
-      "type": "text",
+      "type": "keyword",
       "fields": {
         "keyword": {
           "type": "keyword",
@@ -327,7 +327,7 @@
       }
     },
     "order": {
-      "type": "text",
+      "type": "keyword",
       "copy_to": [
         "all"
       ],
@@ -339,7 +339,7 @@
       }
     },
     "owner": {
-      "type": "text",
+      "type": "keyword",
       "fields": {
         "keyword": {
           "type": "keyword",
@@ -348,7 +348,7 @@
       }
     },
     "phylum": {
-      "type": "text",
+      "type": "keyword",
       "copy_to": [
         "all"
       ],
@@ -360,7 +360,7 @@
       }
     },
     "scientificName": {
-      "type": "text",
+      "type": "keyword",
       "copy_to": [
         "all"
       ],
@@ -372,7 +372,7 @@
       }
     },
     "speciesListID": {
-      "type": "text",
+      "type": "keyword",
       "fields": {
         "keyword": {
           "type": "keyword",
@@ -381,7 +381,7 @@
       }
     },
     "speciesListName": {
-      "type": "text",
+      "type": "keyword",
       "copy_to": [
         "all"
       ],
@@ -393,7 +393,7 @@
       }
     },
     "taxonID": {
-      "type": "text",
+      "type": "keyword",
       "fields": {
         "keyword": {
           "type": "keyword",

@@ -25,6 +25,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -48,6 +49,11 @@ public class ReleaseService {
 
   public Release release(String speciesListID) throws Exception {
     return release(speciesListID, false);
+  }
+
+  @Async("processExecutor")
+  public void asyncRelease(String speciesListID) throws Exception {
+    release(speciesListID, false);
   }
 
   /**
@@ -157,7 +163,7 @@ public class ReleaseService {
       String[] combined = ArrayUtils.addAll(originalClassification, fields.toArray(new String[0]));
       seqW.write(combined);
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.error(e.getMessage(), e);
     }
   }
 

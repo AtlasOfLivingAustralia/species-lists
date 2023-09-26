@@ -9,4 +9,6 @@ public interface SpeciesListIndexElasticRepository
 
   @Query(value = "{'speciesListID' : $0}", delete = true)
   void deleteSpeciesListItemBySpeciesListID(String speciesListID);
+
+  void deleteById(String id);
 }

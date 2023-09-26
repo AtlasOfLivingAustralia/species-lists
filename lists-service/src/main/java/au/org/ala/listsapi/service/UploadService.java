@@ -2,6 +2,7 @@ package au.org.ala.listsapi.service;
 
 import au.org.ala.listsapi.controller.AuthUtils;
 import au.org.ala.listsapi.model.IngestJob;
+import au.org.ala.listsapi.model.InputSpeciesList;
 import au.org.ala.listsapi.model.KeyValue;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListItem;
@@ -67,7 +68,7 @@ public class UploadService {
   }
 
   public SpeciesList ingest(
-      String userId, SpeciesList speciesListMetadata, File fileToLoad, boolean dryRun)
+      String userId, InputSpeciesList speciesListMetadata, File fileToLoad, boolean dryRun)
       throws Exception {
 
     // create the species list in mongo
@@ -78,41 +79,30 @@ public class UploadService {
 
     IngestJob ingestJob = ingest(speciesList.getId(), fileToLoad, dryRun, false);
 
-    speciesList.setFieldList(ingestJob.getFieldList());
     speciesList.setFacetList(ingestJob.getFacetList());
-    speciesList.setRowCount(ingestJob.getRowCount());
+    speciesList.setFieldList(ingestJob.getFieldList());
     speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
+    speciesList.setRowCount(ingestJob.getRowCount());
 
     speciesList = speciesListMongoRepository.save(speciesList);
 
-    releaseService.release(speciesList.getId());
+    releaseService.asyncRelease(speciesList.getId());
     return speciesList;
   }
 
-  private void extractUpdates(SpeciesList speciesListMetadata, SpeciesList speciesList) {
-    speciesList.setTitle(speciesListMetadata.getTitle());
-    speciesList.setDescription(speciesListMetadata.getDescription());
-    speciesList.setListType(speciesListMetadata.getListType());
+  private void extractUpdates(InputSpeciesList speciesListMetadata, SpeciesList speciesList) {
     speciesList.setAuthority(speciesListMetadata.getAuthority());
-    speciesList.setRegion(speciesListMetadata.getRegion());
+    speciesList.setDescription(speciesListMetadata.getDescription());
+    speciesList.setIsAuthoritative(Boolean.parseBoolean(speciesListMetadata.getIsAuthoritative()));
+    speciesList.setIsInvasive(Boolean.parseBoolean(speciesListMetadata.getIsInvasive()));
+    speciesList.setIsPrivate(Boolean.parseBoolean(speciesListMetadata.getIsPrivate()));
+    speciesList.setIsThreatened(Boolean.parseBoolean(speciesListMetadata.getIsThreatened()));
+    speciesList.setIsSDS(Boolean.parseBoolean(speciesListMetadata.getIsSDS()));
+    speciesList.setIsBIE(Boolean.parseBoolean(speciesListMetadata.getIsBIE()));
     speciesList.setLicence(speciesListMetadata.getLicence());
-    speciesList.setIsPrivate(speciesListMetadata.getIsPrivate());
-    speciesList.setIsAuthoritative(speciesListMetadata.getIsAuthoritative());
-    speciesList.setIsInvasive(speciesListMetadata.getIsInvasive());
-    speciesList.setIsThreatened(speciesListMetadata.getIsThreatened());
-  }
-
-  public SpeciesList updateMetadata(SpeciesList speciesList) {
-    if (speciesList.getId() != null) {
-      Optional<SpeciesList> speciesList1 = speciesListMongoRepository.findById(speciesList.getId());
-      if (speciesList1.isPresent()) {
-        extractUpdates(speciesList, speciesList1.get());
-        return speciesListMongoRepository.save(speciesList1.get());
-      } else {
-        return null;
-      }
-    }
-    return null;
+    speciesList.setListType(speciesListMetadata.getListType());
+    speciesList.setRegion(speciesListMetadata.getRegion());
+    speciesList.setTitle(speciesListMetadata.getTitle());
   }
 
   public File getFileTemp(MultipartFile file) {
@@ -209,7 +199,11 @@ public class UploadService {
   }
 
   public IngestJob loadCSV(
-      String speciesListID, InputStream inputStream, boolean dryRun, boolean skipIndexing, boolean isMigration)
+      String speciesListID,
+      InputStream inputStream,
+      boolean dryRun,
+      boolean skipIndexing,
+      boolean isMigration)
       throws Exception {
 
     if (!dryRun && speciesListID != null) {
@@ -233,8 +227,10 @@ public class UploadService {
     int recordsWithoutScientificName = 0;
 
     List<String> originalFieldNames = new ArrayList<>();
+    List<SpeciesListItem> batch = new ArrayList<>();
 
     while (iterator.hasNext()) {
+
       Map<String, String> values = iterator.next();
 
       if (isMigration) {
@@ -245,7 +241,7 @@ public class UploadService {
         values.remove("kingdom");
       }
 
-      if (originalFieldNames.isEmpty()){
+      if (originalFieldNames.isEmpty()) {
         originalFieldNames.addAll(values.keySet());
       }
 
@@ -324,10 +320,21 @@ public class UploadService {
                 keyValues,
                 null);
 
-        speciesListItemMongoRepository.save(speciesListItem);
+        batch.add(speciesListItem);
+
+        if (batch.size() == 1000) {
+          speciesListItemMongoRepository.saveAll(batch);
+          batch.clear();
+        }
       }
       rowCount++;
     }
+
+    if (!batch.isEmpty()) {
+      speciesListItemMongoRepository.saveAll(batch);
+      batch.clear();
+    }
+    logger.info("Species list loaded into database");
 
     IngestJob ingestJob = new IngestJob();
     logger.info("Field names = " + StringUtils.join(fieldNames, ", "));

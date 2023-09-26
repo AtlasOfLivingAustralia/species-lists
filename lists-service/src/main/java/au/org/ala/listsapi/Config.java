@@ -15,7 +15,7 @@ public class Config extends ElasticsearchConfiguration {
 
   @Override
   public ClientConfiguration clientConfiguration() {
-    return ClientConfiguration.builder().connectedTo(elasticHost).build();
+    return ClientConfiguration.builder().connectedTo(elasticHost).withSocketTimeout(20000).build();
   }
 
   @Bean

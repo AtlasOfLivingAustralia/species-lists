@@ -16,6 +16,8 @@ import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.TaxonService;
+import co.elastic.clients.elasticsearch._types.FieldSort;
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
@@ -67,6 +69,19 @@ public class GraphQLController {
   @Value("${bie.url}")
   private String bieTemplateUrl;
 
+  public static final List<String> CORE_FIELDS =
+      List.of(
+          "id",
+          "scientificName",
+          "vernacularName",
+          "taxonID",
+          "kingdom",
+          "phylum",
+          "class",
+          "order",
+          "family",
+          "genus");
+
   public static final String SPECIES_LIST_ID = "speciesListID";
   @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
   @Autowired protected ReleaseMongoRepository releaseMongoRepository;
@@ -74,17 +89,25 @@ public class GraphQLController {
   @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
 
   @Autowired protected TaxonService taxonService;
-  @Autowired
-  private SpeciesListItemMongoRepository speciesListItemMongoRepository;
+  @Autowired private SpeciesListItemMongoRepository speciesListItemMongoRepository;
 
   public static SpeciesListItem convert(SpeciesListIndex index) {
+
     SpeciesListItem speciesListItem = new SpeciesListItem();
+    speciesListItem.setId(index.getId());
     speciesListItem.setSpeciesListID(index.getSpeciesListID());
     speciesListItem.setScientificName(index.getScientificName());
+    speciesListItem.setVernacularName(index.getVernacularName());
+    speciesListItem.setPhylum(index.getPhylum());
+    speciesListItem.setClasss(index.getClasss());
+    speciesListItem.setOrder(index.getOrder());
+    speciesListItem.setFamily(index.getFamily());
+    speciesListItem.setGenus(index.getGenus());
+    speciesListItem.setTaxonID(index.getTaxonID());
+    speciesListItem.setKingdom(index.getKingdom());
     List<KeyValue> keyValues = new ArrayList<>();
     index.getProperties().entrySet().stream()
         .forEach(e -> keyValues.add(new KeyValue(e.getKey(), e.getValue())));
-    speciesListItem.setId(index.getId());
     speciesListItem.setProperties(keyValues);
     speciesListItem.setClassification(index.getClassification());
     return speciesListItem;
@@ -238,12 +261,15 @@ public class GraphQLController {
   @QueryMapping
   public Page<SpeciesListItem> getSpeciesList(
       @Argument String speciesListID, @Argument Integer page, @Argument Integer size) {
-    return filterSpeciesList(speciesListID, null, new ArrayList<>(), page, size);
+    return filterSpeciesList(speciesListID, null, new ArrayList<>(), page, size, null, null);
   }
 
   @SchemaMapping(typeName = "Mutation", field = "addField")
-  public SpeciesList addField(@Argument String id, @Argument String fieldName, @Argument String fieldValue,
-                              @AuthenticationPrincipal Principal principal) {
+  public SpeciesList addField(
+      @Argument String id,
+      @Argument String fieldName,
+      @Argument String fieldValue,
+      @AuthenticationPrincipal Principal principal) {
 
     Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(id);
     if (speciesList.isEmpty()) {
@@ -264,7 +290,8 @@ public class GraphQLController {
 
       boolean finished = false;
       while (!finished) {
-        Page<SpeciesListItem> page = speciesListItemMongoRepository.findBySpeciesListID(id, pageable);
+        Page<SpeciesListItem> page =
+            speciesListItemMongoRepository.findBySpeciesListID(id, pageable);
         List<SpeciesListItem> toSave = new ArrayList<>();
         for (SpeciesListItem item : page) {
           item.getProperties().add(new KeyValue(fieldName, fieldValue));
@@ -289,10 +316,10 @@ public class GraphQLController {
 
   @SchemaMapping(typeName = "Mutation", field = "renameField")
   public SpeciesList renameField(
-          @Argument String id,
-          @Argument String oldName,
-          @Argument String newName,
-          @AuthenticationPrincipal Principal principal) {
+      @Argument String id,
+      @Argument String oldName,
+      @Argument String newName,
+      @AuthenticationPrincipal Principal principal) {
 
     Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(id);
     if (speciesList.isEmpty()) {
@@ -318,8 +345,9 @@ public class GraphQLController {
       List<SpeciesListItem> toSave = new ArrayList<>();
       for (SpeciesListItem item : page) {
 
-        Optional<KeyValue> kv = item.getProperties().stream().filter(k -> k.getKey().equals(oldName)).findFirst();
-        if (kv.isPresent()){
+        Optional<KeyValue> kv =
+            item.getProperties().stream().filter(k -> k.getKey().equals(oldName)).findFirst();
+        if (kv.isPresent()) {
           kv.get().setKey(newName);
           toSave.add(item);
         }
@@ -342,9 +370,9 @@ public class GraphQLController {
 
   @SchemaMapping(typeName = "Mutation", field = "removeField")
   public SpeciesList removeField(
-          @Argument String id,
-          @Argument String fieldName,
-          @AuthenticationPrincipal Principal principal) {
+      @Argument String id,
+      @Argument String fieldName,
+      @AuthenticationPrincipal Principal principal) {
 
     Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(id);
     if (speciesList.isEmpty()) {
@@ -368,8 +396,9 @@ public class GraphQLController {
       List<SpeciesListItem> toSave = new ArrayList<>();
       for (SpeciesListItem item : page) {
 
-        Optional<KeyValue> kv = item.getProperties().stream().filter(k -> k.getKey().equals(fieldName)).findFirst();
-        if (kv.isPresent()){
+        Optional<KeyValue> kv =
+            item.getProperties().stream().filter(k -> k.getKey().equals(fieldName)).findFirst();
+        if (kv.isPresent()) {
           item.getProperties().remove(kv.get());
           toSave.add(item);
         }
@@ -392,21 +421,47 @@ public class GraphQLController {
 
   @SchemaMapping(typeName = "Mutation", field = "updateSpeciesListItem")
   public SpeciesListItem updateSpeciesListItem(
-          @Argument InputSpeciesListItem inputSpeciesListItem,
-          @AuthenticationPrincipal Principal principal) {
+      @Argument InputSpeciesListItem inputSpeciesListItem,
+      @AuthenticationPrincipal Principal principal) {
 
-    Optional<SpeciesListItem> optionalSpeciesListItem = speciesListItemMongoRepository.findById(inputSpeciesListItem.getId());
-    if (optionalSpeciesListItem.isEmpty()){
+    Optional<SpeciesListItem> optionalSpeciesListItem =
+        speciesListItemMongoRepository.findById(inputSpeciesListItem.getId());
+    if (optionalSpeciesListItem.isEmpty()) {
       return null;
     }
 
-    Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findById(inputSpeciesListItem.getSpeciesListID());
+    Optional<SpeciesList> optionalSpeciesList =
+        speciesListMongoRepository.findById(inputSpeciesListItem.getSpeciesListID());
 
-    if (optionalSpeciesList.isEmpty()){
+    if (optionalSpeciesList.isEmpty()) {
       return null;
     }
 
+    if (!AuthUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
+      return null;
+    }
+
+    SpeciesList speciesList = optionalSpeciesList.get();
     SpeciesListItem speciesListItem = optionalSpeciesListItem.get();
+    updateItem(inputSpeciesListItem, speciesListItem);
+
+    // rematch taxonomy
+    try {
+      Classification classification = taxonService.lookupTaxon(speciesListItem);
+      speciesListItem.setClassification(classification);
+    } catch (Exception e) {
+      logger.error(e.getMessage(), e);
+    }
+
+    // reindex the item
+    reindex(speciesListItem, speciesList);
+
+    logger.info("Updated species list item: " + speciesListItem.getId());
+    return speciesListItem;
+  }
+
+  private SpeciesListItem updateItem(
+      InputSpeciesListItem inputSpeciesListItem, SpeciesListItem speciesListItem) {
     speciesListItem.setScientificName(inputSpeciesListItem.getScientificName());
     speciesListItem.setTaxonID(inputSpeciesListItem.getTaxonID());
     speciesListItem.setGenus(inputSpeciesListItem.getGenus());
@@ -416,65 +471,90 @@ public class GraphQLController {
     speciesListItem.setPhylum(inputSpeciesListItem.getPhylum());
     speciesListItem.setKingdom(inputSpeciesListItem.getKingdom());
     speciesListItem.setVernacularName(inputSpeciesListItem.getVernacularName());
-    speciesListItem.setProperties(inputSpeciesListItem.getProperties().stream().map(kv -> new KeyValue(kv.getKey(), kv.getValue())).collect(Collectors.toList()));
-    speciesListItemMongoRepository.save(speciesListItem);
+    speciesListItem.setProperties(
+        inputSpeciesListItem.getProperties().stream()
+            .map(kv -> new KeyValue(kv.getKey(), kv.getValue()))
+            .collect(Collectors.toList()));
+    return speciesListItemMongoRepository.save(speciesListItem);
+  }
 
-    // TODO rematch taxonomy
-    Classification classification = speciesListItem.getClassification();
-    try {
-      classification = taxonService.lookupTaxon(speciesListItem);
-    } catch (Exception e) {
-      logger.error(e.getMessage(), e);
-    }
-
-
+  private void reindex(SpeciesListItem speciesListItem, SpeciesList speciesList) {
     // write the data to Elasticsearch
     SpeciesListIndex speciesListIndex =
-            new SpeciesListIndex(
-                    speciesListItem.getId(),
-                    optionalSpeciesList.get().getDataResourceUid(),
-                    optionalSpeciesList.get().getTitle(),
-                    optionalSpeciesList.get().getListType(),
-                    speciesListItem.getSpeciesListID(),
-                    speciesListItem.getScientificName(),
-                    speciesListItem.getVernacularName(),
-                    speciesListItem.getTaxonID(),
-                    speciesListItem.getKingdom(),
-                    speciesListItem.getPhylum(),
-                    speciesListItem.getClasss(),
-                    speciesListItem.getOrder(),
-                    speciesListItem.getFamily(),
-                    speciesListItem.getGenus(),
-                    speciesListItem.getProperties().stream().collect(Collectors.toMap(KeyValue::getKey, KeyValue::getValue)),
-                    classification,
-                    optionalSpeciesList.get().getIsPrivate() != null ? optionalSpeciesList.get().getIsPrivate() : false,
-                    optionalSpeciesList.get().getOwner(),
-                    optionalSpeciesList.get().getEditors());
+        new SpeciesListIndex(
+            speciesListItem.getId(),
+            speciesList.getDataResourceUid(),
+            speciesList.getTitle(),
+            speciesList.getListType(),
+            speciesListItem.getSpeciesListID(),
+            speciesListItem.getScientificName(),
+            speciesListItem.getVernacularName(),
+            speciesListItem.getTaxonID(),
+            speciesListItem.getKingdom(),
+            speciesListItem.getPhylum(),
+            speciesListItem.getClasss(),
+            speciesListItem.getOrder(),
+            speciesListItem.getFamily(),
+            speciesListItem.getGenus(),
+            speciesListItem.getProperties().stream()
+                .collect(Collectors.toMap(KeyValue::getKey, KeyValue::getValue)),
+            speciesListItem.getClassification(),
+            speciesList.getIsPrivate() != null ? speciesList.getIsPrivate() : false,
+            speciesList.getOwner(),
+            speciesList.getEditors());
 
     speciesListIndexElasticRepository.save(speciesListIndex);
-
-    logger.info("Updated species list item: " + speciesListItem.getId());
-    return speciesListItem;
   }
 
   @SchemaMapping(typeName = "Mutation", field = "addSpeciesListItem")
   public SpeciesListItem addSpeciesListItem(
-          @Argument InputSpeciesListItem inputSpeciesListItem,
-          @AuthenticationPrincipal Principal principal) {
+      @Argument InputSpeciesListItem inputSpeciesListItem,
+      @AuthenticationPrincipal Principal principal) {
 
+    Optional<SpeciesList> optionalSpeciesList =
+        speciesListMongoRepository.findById(inputSpeciesListItem.getSpeciesListID());
+    if (optionalSpeciesList.isEmpty()) {
+      return null;
+    }
 
-    return null;
+    if (!AuthUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
+      return null;
+    }
+
+    // add the new entry
+    SpeciesListItem speciesListItem = new SpeciesListItem();
+    speciesListItem = updateItem(inputSpeciesListItem, speciesListItem);
+
+    // index
+    reindex(speciesListItem, optionalSpeciesList.get());
+    return speciesListItem;
   }
 
   @SchemaMapping(typeName = "Mutation", field = "removeSpeciesListItem")
   public SpeciesListItem removeSpeciesListItem(
-          @Argument SpeciesListItem speciesListItem,
-          @AuthenticationPrincipal Principal principal) {
+      @Argument String id, @AuthenticationPrincipal Principal principal) {
 
+    Optional<SpeciesListItem> optionalSpeciesListItem = speciesListItemMongoRepository.findById(id);
+    if (optionalSpeciesListItem.isEmpty()) {
+      return null;
+    }
 
-    return null;
+    Optional<SpeciesList> optionalSpeciesList =
+        speciesListMongoRepository.findById(optionalSpeciesListItem.get().getSpeciesListID());
+    if (optionalSpeciesList.isEmpty()) {
+      return null;
+    }
+
+    if (!AuthUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
+      return null;
+    }
+
+    // delete the list item
+    speciesListItemMongoRepository.deleteById(id);
+    speciesListIndexElasticRepository.deleteById(id);
+
+    return optionalSpeciesListItem.get();
   }
-
 
   @SchemaMapping(typeName = "Mutation", field = "updateMetadata")
   public SpeciesList updateMetadata(
@@ -541,7 +621,9 @@ public class GraphQLController {
       @Argument String searchQuery,
       @Argument List<Filter> filters,
       @Argument Integer page,
-      @Argument Integer size) {
+      @Argument Integer size,
+      @Argument String sort,
+      @Argument String direction) {
 
     Pageable pageableRequest = PageRequest.of(page, size);
     NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
@@ -552,6 +634,9 @@ public class GraphQLController {
                   buildQuery(cleanRawQuery(searchQuery), speciesListID, null, null, filters, bq);
                   return bq;
                 }));
+
+    builder.withSort(
+        s -> s.field(new FieldSort.Builder().field(sort).order(SortOrder.Asc).build()));
 
     Query query = builder.build();
     query.setPageable(pageableRequest);
@@ -678,6 +763,9 @@ public class GraphQLController {
   }
 
   private static String getPropertiesFacetField(String filter) {
+    if (CORE_FIELDS.contains(filter)) {
+      return filter + ".keyword";
+    }
     if (filter.startsWith("classification.")) {
       return filter + ".keyword";
     }

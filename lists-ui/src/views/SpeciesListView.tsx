@@ -1,20 +1,18 @@
-import { useState } from 'react';
+import {useContext, useState} from 'react';
 import {
     Drawer,
     Grid,
     Pagination,
     ScrollArea,
     Space,
-    Switch,
     Table,
     TextInput,
     Title,
-    Anchor,
     Group,
     Text,
-    Skeleton, Button, List, ThemeIcon, Select, Divider, CloseButton
+    Skeleton, Button, List, ThemeIcon, Select, Divider, CloseButton, Switch
 } from '@mantine/core';
-import { gql, useQuery } from '@apollo/client';
+import {useQuery} from '@apollo/client';
 import {useLocation, useParams} from 'react-router-dom';
 import SpeciesListSideBar from './SpeciesListSideBar';
 import { FormattedMessage } from 'react-intl';
@@ -27,11 +25,15 @@ import {
 } from "@tabler/icons-react";
 import {
     SpeciesListItem,
-    Facet, FacetCount, FilteredSpeciesList, SpeciesList, Classification
+    Facet, FacetCount, FilteredSpeciesList, SpeciesList, Classification, ListsUser
 } from "../api/sources/model";
-import {TaxonImage} from "./TaxonImage";
 import {useDisclosure} from "@mantine/hooks";
-import {FacetProps, SpeciesListItemProps, SpeciesListProps} from "../api/sources/props.ts";
+import {FacetProps, SpeciesListProps} from "../api/sources/props.ts";
+import {SpeciesListItemEditor} from "./SpeciesListItemEditor.tsx";
+import {GET_LIST} from "../api/sources/graphql.ts";
+import {SpeciesListItemView} from "./SpeciesListItemView.tsx";
+import UserContext from "../helpers/UserContext.ts";
+
 
 function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps) {
 
@@ -45,67 +47,17 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
     const [speciesSelected, speciesHandlers] = useDisclosure(false);
     const [filtersSelected, filtersHandlers] = useDisclosure(false);
 
-    const [selectedItem, setSelectedItem] = useState<SpeciesListItem | null>(null);
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
     const [selectedFacets, setSelectedFacets] = useState<any[]>([]);
 
-    const selectRow = (selectedItem: SpeciesListItem, index:number) => {
-        setSelectedItem(selectedItem);
+    const [isEditing, setisEditing] = useState(false);
+
+    const currentUser = useContext(UserContext) as ListsUser;
+
+    const selectRow = (index:number) => {
         setSelectedIndex(index);
         speciesHandlers.open();
     };
-
-    const GET_LIST = gql`
-        query loadList($speciesListID: String!, $searchQuery:String, $filters:[Filter], $page: Int, $size: Int) {
-            getSpeciesListMetadata(speciesListID: $speciesListID) {
-                id
-                title
-                rowCount
-                fieldList
-            }
-            filterSpeciesList(speciesListID: $speciesListID, searchQuery: $searchQuery, page: $page, size: $size, filters: $filters){
-                content {
-                    id
-                    scientificName
-                    properties {
-                        key
-                        value
-                    }
-                    classification {
-                        scientificName
-                        vernacularName
-                        taxonConceptID
-                        kingdom
-                        phylum
-                        classs
-                        order
-                        family
-                        genus
-                        kingdomID
-                        phylumID
-                        classID
-                        orderID
-                        familyID
-                        genusID
-                    }
-                }
-                totalPages
-                totalElements
-            }            
-            facetSpeciesList(
-                speciesListID: $speciesListID
-                searchQuery: $searchQuery
-                filters: $filters
-                facetFields: []
-            ) {
-                key
-                counts {
-                    value
-                    count
-                }
-            }
-        }
-    `;
 
     function addToQuery(facetName: string, facetValue: string) {
         const existing = selectedFacets.find((facet) => facet.key === facetName);
@@ -169,22 +121,25 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
     const totalPages  = data?.filterSpeciesList?.totalPages || 0;
     const totalElements = data?.filterSpeciesList?.totalElements || 0;
     const results = data?.filterSpeciesList?.content || [];
+    const speciesList = data?.getSpeciesListMetadata;
+
+    setSpeciesList(speciesList);
+
+    let selectedItem = selectedIndex != null ? results[selectedIndex] : null;
 
     const selectNextRow = () => {
         if (selectedIndex || selectedIndex == 0) {
-            setSelectedItem(results[selectedIndex + 1]);
+            selectedItem = results[selectedIndex + 1];
             setSelectedIndex(selectedIndex + 1);
         }
     };
 
     const selectPreviousRow = () => {
         if (selectedIndex) {
-            setSelectedItem(results[selectedIndex - 1]);
+            selectedItem = results[selectedIndex - 1];
             setSelectedIndex(selectedIndex - 1);
         }
     };
-
-    setSpeciesList(data?.getSpeciesListMetadata);
 
     return (
         <>
@@ -220,22 +175,65 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                 onClose={speciesHandlers.close}
                 position="right"
                 title={
-                <>
-                    <Title order={2} style={{ fontStyle: 'italic'}}>
-                        <Text>{selectedItem?.scientificName}</Text>
-                    </Title>
-                </>
+                    <>
+                        <Group>
+                        <Title order={2} style={{ fontStyle: 'italic'}}>
+                            <Text>{selectedItem?.scientificName}</Text>
+                        </Title>
+                        <Switch
+                            onLabel="EDIT"
+                            offLabel="EDIT"
+                            checked={isEditing}
+                            size="lg"
+                            disabled={
+                                currentUser?.user?.access_token === undefined
+                                || (!currentUser.isAdmin && currentUser.userId != speciesList?.owner)
+                            }
+                            onChange={(event) => setisEditing(event.currentTarget.checked)}
+                        />
+                        </Group>
+                    </>
                 }
                 padding="xl"
-                size="xl"
-            >
-                <Group style={{ float: 'right'}}>
-                    <Button size="xs" variant="outline" disabled={selectedIndex == 0} onClick={selectPreviousRow}><IconArrowLeftSquare/>Previous</Button>
-                    <Button size="xs" variant="outline" disabled={selectedIndex === undefined || selectedIndex == null || selectedIndex >= results.length -1} onClick={selectNextRow}><Text style={{ paddingRight: '8px'}}>Next</Text><IconArrowRightSquare/></Button>
-                </Group>
-                {selectedItem &&
-                    <SpeciesListItemView selectedItem={selectedItem} customFields={customFields} loading={loading} />
+                size="xl">
+
+                { !selectedItem && isEditing &&
+                    <SpeciesListItemEditor
+                        speciesListID={speciesListID}
+                        selectedItem={ {} as SpeciesListItem}
+                        currentFilters={selectedFacets}
+                        customFields={customFields}
+                        loading={loading}
+                        setIsEditing={setisEditing}
+                        resetSelectedIndex={() => {
+                            setSelectedIndex(null);
+                            speciesHandlers.close();
+                        }}
+                    />
                 }
+
+                { selectedItem && !isEditing && <>
+                    <Group style={{ float: 'right'}}>
+                        <Button size="xs" variant="outline" disabled={selectedIndex == 0} onClick={selectPreviousRow}><IconArrowLeftSquare/>Previous</Button>
+                        <Button size="xs" variant="outline" disabled={selectedIndex === undefined || selectedIndex == null || selectedIndex >= results.length -1} onClick={selectNextRow}><Text style={{ paddingRight: '8px'}}>Next</Text><IconArrowRightSquare/></Button>
+                    </Group>
+                    <SpeciesListItemView selectedItem={selectedItem} customFields={customFields} loading={loading} />
+                </>}
+
+                { selectedItem && isEditing &&
+                    <SpeciesListItemEditor
+                        speciesListID={speciesListID}
+                        selectedItem={selectedItem}
+                        currentFilters={selectedFacets}
+                        customFields={customFields}
+                        loading={loading}
+                        setIsEditing={setisEditing}
+                        resetSelectedIndex={() => {
+                            setSelectedIndex(null);
+                            speciesHandlers.close();
+                        }}
+                    />}
+
             </Drawer>
             <Grid mb="md" align="flex-start">
                 <Grid.Col xs={1} sm={2} style={{ backgroundColor: '#F6F6F6' }}>
@@ -288,10 +286,10 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                                 </Button>
                                 <Divider size="sm" orientation="vertical" />
                                 <>
-                                {(!selectedFacets || selectedFacets.length == 0)  && <Text style={{color: 'gray'}}>No filters selected</Text> }
-                                {selectedFacets && selectedFacets.length > 0 &&
-                                    selectedFacets.map((facet, idx) => <Button variant="outline" color="gray" size="sm" onClick={() => removeFacet(idx)}><IconSquareRoundedXFilled/><FormattedMessage id={facet.key} />: {facet.value}</Button> )
-                                }
+                                    {(!selectedFacets || selectedFacets.length == 0)  && <Text style={{color: 'gray'}}>No filters selected</Text> }
+                                    {selectedFacets && selectedFacets.length > 0 &&
+                                        selectedFacets.map((facet, idx) => <Button variant="outline" color="gray" size="sm" onClick={() => removeFacet(idx)}><IconSquareRoundedXFilled/><FormattedMessage id={facet.key} />: {facet.value}</Button> )
+                                    }
                                 </>
                             </Group>
                         </Grid.Col>
@@ -393,7 +391,7 @@ interface SearchTableProps {
     results: SpeciesListItem[];
     classificationFields?: string[];
     customFields?: string[];
-    selectRow: (selectedItem: SpeciesListItem, index:number) => void;
+    selectRow: (index:number) => void;
     totalPages: number;
     totalElements: number;
 }
@@ -422,29 +420,15 @@ function SearchTable({ results,
     return (
         <>
             {results && results.map((speciesListItem:SpeciesListItem, index:number) => (
-                    <tr key={speciesListItem.id} onClick={() => selectRow(speciesListItem, index)} style={{ cursor: 'pointer' }}>
+                    <tr key={speciesListItem.id} onClick={() => selectRow(index)} style={{ cursor: 'pointer' }}>
                         <td style={{
                                 left: 0,
                                 whiteSpace: 'nowrap',
                             }}>
-                            {/*<HoverCard shadow="xl" >*/}
-                            {/*    <HoverCard.Target>*/}
-                                    <Group noWrap={true}>
-                                        <IconSelect />
-                                        <Text>{speciesListItem?.scientificName}</Text>
-                                    </Group>
-                                {/*</HoverCard.Target>*/}
-                                {/*<HoverCard.Dropdown>*/}
-                                {/*    {speciesListItem?.classification?.scientificName &&*/}
-                                {/*        <>*/}
-                                {/*            <Text fz="xs">Supplied name: {speciesListItem?.scientificName}</Text>*/}
-                                {/*            <Text fz="xs">Matched to: {speciesListItem?.classification?.scientificName}</Text>*/}
-                                {/*            <Text fz="xs">Vernacular name: {speciesListItem?.classification?.vernacularName}</Text>*/}
-                                {/*        </>*/}
-                                {/*    }*/}
-                                {/*    {!speciesListItem?.classification && <Text fz="xs">We have not yet matched this name to our classification</Text>}*/}
-                                {/*</HoverCard.Dropdown>*/}
-                            {/*</HoverCard>*/}
+                            <Group noWrap={true}>
+                                <IconSelect />
+                                <Text>{speciesListItem?.scientificName}</Text>
+                            </Group>
                         </td>
                         {customFields &&
                             customFields.map((customField) => (
@@ -470,175 +454,6 @@ function SearchTable({ results,
     );
 }
 
-function SpeciesListItemView({ selectedItem, customFields }: SpeciesListItemProps) {
-
-    const [showInterpretation, setShowInterpretation] = useState<boolean>(false);
-
-    return (
-        <>
-            <TaxonImage taxonID={selectedItem?.classification?.taxonConceptID || ''} />
-            <Title order={3}>Taxonomy</Title>
-            <Space h="md" />
-
-            {!showInterpretation && selectedItem?.classification && (
-                <Table striped highlightOnHover withBorder>
-                    <tbody>
-                    <tr>
-                        <td>Supplied scientificName</td>
-                        <td>{selectedItem.scientificName}</td>
-                    </tr>
-                    <tr>
-                        <td>scientificName</td>
-                        <td>
-                            <Anchor href={'https://bie.ala.org.au/species/' + selectedItem.classification.taxonConceptID}>
-                                {selectedItem.classification?.scientificName}
-                            </Anchor>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>vernacularName</td>
-                        <td>{selectedItem.classification?.vernacularName}</td>
-                    </tr>
-                    <tr>
-                        <td>family</td>
-                        <td>
-                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem.classification.familyID}>
-                                {selectedItem.classification?.family}
-                            </Anchor>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>kingdom</td>
-                        <td>
-                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem.classification.kingdomID}>
-                                {selectedItem.classification?.kingdom}
-                            </Anchor>
-                        </td>
-                    </tr>
-                    </tbody>
-                </Table>
-            )}
-
-            {showInterpretation && (
-                <Table striped highlightOnHover withBorder>
-                    <thead>
-                        <tr key="interpretation-header">
-                            <th key="no-header"></th>
-                            <th key="supplied-header">Supplied</th>
-                            <th key="matched-header">Matched</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    <tr>
-                        <td>scientificName</td>
-                        <td>{selectedItem?.scientificName}</td>
-                        <td>
-                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem?.classification.taxonConceptID}>
-                                {selectedItem?.classification?.scientificName}
-                            </Anchor>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>vernacularName</td>
-                        <td>{selectedItem?.vernacularName}</td>
-                        <td>{selectedItem?.classification?.vernacularName}</td>
-                    </tr>
-                    <tr>
-                        <td>genus</td>
-                        <td>{selectedItem?.genus}</td>
-                        <td>
-                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem.classification.genusID}>
-                                {selectedItem?.classification?.genus}
-                            </Anchor>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>family</td>
-                        <td>{selectedItem?.family}</td>
-                        <td>
-                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem.classification.familyID}>
-                                {selectedItem?.classification?.family}
-                            </Anchor>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>order</td>
-                        <td>{selectedItem?.order}</td>
-                        <td>
-                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem.classification.orderID}>
-                                {selectedItem?.classification?.order}
-                            </Anchor>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>class</td>
-                        <td>{selectedItem?.classs}</td>
-                        <td>
-                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem.classification.classID}>
-                                {selectedItem?.classification?.classs}
-                            </Anchor>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>phylum</td>
-                        <td>{selectedItem?.phylum}</td>
-                        <td>
-                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem.classification.phylumID}>
-                                {selectedItem?.classification?.phylum}
-                            </Anchor>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>kingdom</td>
-                        <td>{selectedItem?.kingdom}</td>
-                        <td>
-                            <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem.classification.kingdomID}>
-                                {selectedItem?.classification?.kingdom}
-                            </Anchor>
-                        </td>
-                    </tr>
-                    </tbody>
-                </Table>
-            )}
-
-            <Text style={{ paddingTop: '15px', paddingBottom: '15px' }}>
-                <FormattedMessage id="interpreted.values.warning" />
-            </Text>
-
-            <Switch
-                id="interpretation"
-                label="Show full taxonomy"
-                checked={showInterpretation}
-                onChange={() => setShowInterpretation(!showInterpretation)}
-            />
-
-            {customFields && customFields.length > 0 && <>
-                <Space h="md" />
-
-                <Title order={3}>Properties</Title>
-                <Space h="md" />
-                <Table striped highlightOnHover>
-                    <thead>
-                    <tr>
-                        <th key={`customPropertyHdr`}>Property</th>
-                        <th key={`customPropertyValueHdr`}>Value</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {customFields?.map((customField) => (
-                        <tr key={customField}>
-                            <td>{customField}</td>
-                            <td>{selectedItem?.properties.find((element) => element.key === customField)?.value}</td>
-                        </tr>
-                    ))}
-                    </tbody>
-                </Table>
-                <div style={{ height: '300px' }}></div>
-                <Space h="md" />
-            </>}
-        </>
-    );
-}
 
 interface SelectedFacetProps {
     facet: { key: string; value: string };

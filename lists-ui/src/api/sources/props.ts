@@ -17,8 +17,13 @@ interface SpeciesListProps {
 
 interface SpeciesListItemProps {
     loading: boolean;
+    speciesListID?: string;
+    speciesListItemID?: string;
     selectedItem: SpeciesListItem;
     customFields?: string[];
+    currentFilters?: any[];
+    setIsEditing?: (isEditing: boolean) => void;
+    resetSelectedIndex?: () => void;
 }
 
 interface MetadataFormProps {

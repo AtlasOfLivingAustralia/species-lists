@@ -4,7 +4,8 @@ type Query {
   listReleases(speciesListID: String, page:Int = 0, size: Int = 10): [Release]
   getSpeciesListMetadata(speciesListID: String): SpeciesList
   getSpeciesList(speciesListID: String, page:Int = 0, size: Int = 10): SpeciesListItemPage
-  filterSpeciesList(speciesListID: String, searchQuery: String, filters:[Filter], page:Int = 0, size: Int = 10): SpeciesListItemPage
+  filterSpeciesList(speciesListID: String, searchQuery: String, filters:[Filter],
+    page:Int = 0, size: Int = 10, sort: String = "scientificName", dir: String = "asc"): SpeciesListItemPage
   facetSpeciesList(speciesListID: String, searchQuery:String, filters:[Filter], facetFields:[String], page:Int = 0, size: Int = 10): [Facet]
   getTaxonImage(taxonID:String): Image
 }

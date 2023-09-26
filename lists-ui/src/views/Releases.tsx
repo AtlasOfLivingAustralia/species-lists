@@ -5,45 +5,17 @@ import {
     Title,
 } from "@mantine/core";
 import { useParams } from "react-router-dom";
-import { gql, useQuery } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import {ListsUser, ReleasesData} from "../api/sources/model.ts";
 import { IconDownload } from "@tabler/icons-react";
 import {useContext} from "react";
 import UserContext from "../helpers/UserContext.ts";
+import {GET_RELEASES} from "../api/sources/graphql.ts";
 
 export function Releases(){
     const { speciesListID } = useParams<{ speciesListID: string }>();
     const currentUser = useContext(UserContext) as ListsUser;
-
-    const GET_LIST = gql`
-        query loadList($speciesListID: String!) {
-            getSpeciesListMetadata(speciesListID: $speciesListID) {
-                id
-                title
-                licence
-                rowCount
-                fieldList
-                listType
-                doi
-                authority
-                region
-                isAuthoritative
-                isPrivate
-                isInvasive
-                isThreatened
-            }
-            listReleases(speciesListID: $speciesListID) {
-                releasedVersion
-                metadata {
-                    fieldList
-                    rowCount
-                }
-                createdDate
-            }
-        }
-    `;
-
-    const { loading , data } = useQuery<ReleasesData>(GET_LIST, {
+    const { loading , data } = useQuery<ReleasesData>(GET_RELEASES, {
         variables: {
             speciesListID: speciesListID,
         },

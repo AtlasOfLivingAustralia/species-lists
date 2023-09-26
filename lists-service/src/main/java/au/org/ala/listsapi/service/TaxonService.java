@@ -71,12 +71,12 @@ public class TaxonService {
       }
       page++;
     }
-    logger.info("Rematching all datasets complete. " + datasetsIndex + " datasets indexed.");
+    logger.info("Indexing of all datasets complete. " + datasetsIndex + " datasets indexed.");
   }
 
   @Async("processExecutor")
   public void taxonMatchDatasets() {
-    logger.info("Rematching all datasets");
+    logger.info("Taxon matching all datasets");
     int size = 10;
     int page = 0;
     boolean done = false;
@@ -97,7 +97,7 @@ public class TaxonService {
       }
       page++;
     }
-    logger.info("Rematching all datasets complete.");
+    logger.info("Taxon matching all datasets complete.");
   }
 
   public void reindex(String speciesListID) {
@@ -170,12 +170,12 @@ public class TaxonService {
       }
       page++;
     }
-    logger.info("Rematching " + speciesListID + " complete.");
+    logger.info("Indexing " + speciesListID + " complete.");
   }
 
   public void taxonMatchDataset(String speciesListID) {
 
-    logger.info("Rematching " + speciesListID);
+    logger.info("Taxon matching " + speciesListID);
     Optional<SpeciesList> optionalSp = speciesListMongoRepository.findById(speciesListID);
     if (!optionalSp.isPresent()) return;
 
@@ -201,7 +201,7 @@ public class TaxonService {
       }
       page++;
     }
-    logger.info("Rematching " + speciesListID + " complete.");
+    logger.info("Taxon matching " + speciesListID + " complete.");
   }
 
   public List<SpeciesListItem> updateClassifications(List<SpeciesListItem> speciesListItems) {
@@ -216,7 +216,6 @@ public class TaxonService {
     }
     return speciesListItems;
   }
-
 
   public Classification lookupTaxon(SpeciesListItem item) throws Exception {
     return lookupTaxa(List.of(item)).get(0);

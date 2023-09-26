@@ -17,7 +17,6 @@ import {FormattedMessage} from "react-intl";
 import {validateListType} from "../helpers/validation.tsx";
 
 const ACCEPTED_TYPES: string[] = ["text/csv", "application/zip"];
-
 function ReloadList() {
     const navigate = useNavigate();
     const { speciesListID } = useParams();
@@ -47,24 +46,6 @@ function ReloadList() {
     if (loading) return <></>;
 
     const speciesList = data.getSpeciesListMetadata;
-
-    // const validationRules: Record<string, string[]> = {
-    //     "SENSITIVE_LIST": ["generalisation", "category"],
-    //     "CONSERVATION_LIST": ["status"],
-    //     "INVASIVE": ["status"]
-    // }
-    //
-    // function validateListType(suppliedFields:string[]) {
-    //
-    //     if (!validationRules[speciesList.listType])
-    //         return null;
-    //
-    //     return validationRules[speciesList.listType].filter((field) => {
-    //         if (!suppliedFields.includes(field)){
-    //             return `${speciesList.listType}_VALIDATION_FAILED`;
-    //         }
-    //     });
-    // }
 
     function resetUpload() {
         setUploaded(null);

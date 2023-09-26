@@ -204,13 +204,19 @@ export default function App() {
                     <Route
                         path="/"
                         element={
-                            <SpeciesLists />
+                            <SpeciesLists isPrivate={false}  />
                         }
                     />
                     <Route
                         path="/my-lists"
                         element={
                             <MyLists />
+                        }
+                    />
+                    <Route
+                        path="/private-lists"
+                        element={
+                            <SpeciesLists isPrivate={true}  />
                         }
                     />
                     <Route

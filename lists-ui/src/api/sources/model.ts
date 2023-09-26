@@ -55,7 +55,6 @@ interface Facet {
 }
 
 interface SpeciesListItem {
-
     id: string;
     scientificName: string;
     vernacularName: string;
@@ -69,9 +68,30 @@ interface SpeciesListItem {
     classification: Classification;
 }
 
+interface InputSpeciesList {
+    id: string;
+    scientificName: string;
+    vernacularName: string;
+    kingdom: string;
+    phylum: string;
+    classs: string;
+    order: string;
+    family: string;
+    genus: string;
+    // __typename: string;
+    properties: InputKeyValue[];
+}
+
+interface InputKeyValue {
+    key: string;
+    value: string;
+    // __typename: string;
+}
+
 interface KV {
     key: string;
     value: string;
+
 }
 
 interface Classification {
@@ -105,4 +125,4 @@ interface FilteredSpeciesList {
     totalElements: number;
 }
 
-export type {Breadcrumb,  SpeciesList, Facet, FacetCount, FilteredSpeciesList, SpeciesListItem, Release, ReleasesData, ListsUser, Classification, KV}
+export type {Breadcrumb,  InputSpeciesList, SpeciesList, Facet, FacetCount, FilteredSpeciesList, SpeciesListItem, Release, ReleasesData, ListsUser, Classification, KV}

@@ -96,9 +96,18 @@ public class MigrateController {
       speciesList.setWkt((String) list.get("wkt"));
 
       SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-      speciesList.setDateCreated((String) list.get("dateCreated") != null ? sdf.parse((String) list.get("dateCreated")) : null);
-      speciesList.setLastUploaded((String) list.get("lastUploaded") != null ? sdf.parse((String) list.get("lastUploaded")) : null);
-      speciesList.setLastUpdated((String) list.get("lastUpdated") != null ? sdf.parse((String) list.get("lastUpdated")) : null);
+      speciesList.setDateCreated(
+          (String) list.get("dateCreated") != null
+              ? sdf.parse((String) list.get("dateCreated"))
+              : null);
+      speciesList.setLastUploaded(
+          (String) list.get("lastUploaded") != null
+              ? sdf.parse((String) list.get("lastUploaded"))
+              : null);
+      speciesList.setLastUpdated(
+          (String) list.get("lastUpdated") != null
+              ? sdf.parse((String) list.get("lastUpdated"))
+              : null);
 
       return speciesList;
     } catch (Exception e) {

@@ -41,12 +41,18 @@ function UploadList() {
         if (currentUser && currentUser?.user?.access_token) {
             setIngesting(true);
             const formData = new FormData();
-            formData.append("title", values["title"]);
-            formData.append("description", values["description"]);
-            formData.append("listType", values["listType"]);
-            formData.append("region", values["region"]);
-            formData.append("authority", values["authority"]);
-            formData.append("licence", values["licence"]);
+            formData.append("title", values.title);
+            formData.append("description", values.description);
+            formData.append("listType", values.listType);
+            formData.append("region", values.region);
+            formData.append("authority", values.authority);
+            formData.append("licence", values.licence);
+            formData.append("isPrivate", values.isPrivate?.toString());
+            formData.append("isAuthoritative", values.isAuthoritative?.toString());
+            formData.append("isBIE", values.isBIE?.toString());
+            formData.append("isThreatened", values.isThreatened?.toString());
+            formData.append("isInvasive", values.isInvasive?.toString());
+            formData.append("isSDS", values.isSDS?.toString());
             formData.append("file", uploaded.localFile);
 
             fetch(import.meta.env.VITE_INGEST_URL, {

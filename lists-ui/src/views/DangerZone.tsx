@@ -1,5 +1,5 @@
 import {
-    Button, Container, Group, Space, Table, Text, TextInput
+    Button, Container, Group, Modal, Space, Table, Text, TextInput
 } from "@mantine/core";
 import { useNavigate, useParams } from "react-router-dom";
 import {IconAlertHexagon, IconEdit, IconRowRemove} from "@tabler/icons-react";
@@ -7,45 +7,17 @@ import {useContext, useState} from "react";
 import UserContext from "../helpers/UserContext.ts";
 import {ListsUser, SpeciesList} from "../api/sources/model.ts";
 import {gql, useMutation, useQuery} from "@apollo/client";
+import {GET_LIST_METADATA, REMOVE_FIELD, RENAME_FIELD} from "../api/sources/graphql.ts";
 
-
-const GET_LIST = gql`
-    query loadList($speciesListID: String!) {
-        getSpeciesListMetadata(speciesListID: $speciesListID) {
-            id
-            title
-            description
-            licence
-            rowCount
-            fieldList
-            listType
-            doi
-            authority
-            region
-            isAuthoritative
-            isPrivate
-            isInvasive
-            isThreatened
-            isBIE
-            isSDS
-            dateCreated
-            lastUpdated
-            lastUploaded
-            lastUpdatedBy
-            owner
-            editors
-            wkt
-        }
-    }
-`;
 
 function DangerZone() {
     const navigate = useNavigate();
     const { speciesListID } = useParams();
-
     const [newFieldName, setNewFieldName] = useState('');
     const [newFieldValue, setNewFieldValue] = useState('');
     const currentUser = useContext(UserContext) as ListsUser;
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const ADD_FIELD = gql`
         mutation addField(
@@ -84,7 +56,6 @@ function DangerZone() {
         }
     `;
 
-
     const [addField] = useMutation(ADD_FIELD, {
         context: {
             headers: {
@@ -93,12 +64,13 @@ function DangerZone() {
         },
         refetchQueries: [
             {
-                query: GET_LIST,
+                query: GET_LIST_METADATA,
             },
         ],
     });
 
     function addFieldToList() {
+        setIsUpdating(true);
         addField({
             variables: {
                 id: speciesListID,
@@ -106,11 +78,11 @@ function DangerZone() {
                 fieldValue: newFieldValue?.trim()
             }
         }).then(() => {
-            alert('Updated!')
+            setIsUpdating(false);
         });
     }
 
-    const {loading, error, data} = useQuery<{ getSpeciesListMetadata: SpeciesList }>(GET_LIST, {
+    const { data} = useQuery<{ getSpeciesListMetadata: SpeciesList }>(GET_LIST_METADATA, {
         variables: {
             speciesListID: speciesListID,
         },
@@ -120,6 +92,7 @@ function DangerZone() {
     const speciesList = data?.getSpeciesListMetadata ? data?.getSpeciesListMetadata as SpeciesList : {} as SpeciesList;
 
     function deleteList() {
+        setIsDeleting(true);
         fetch( import.meta.env.VITE_DELETE_URL + "/" + speciesListID, {
             method: "DELETE",
             headers: {
@@ -127,12 +100,19 @@ function DangerZone() {
             },
         }).then((res) => {
             console.log(res);
+            setIsDeleting(false);
             navigate(`/`);
         });
     }
 
     return (
         <>
+            <Modal opened={isDeleting} onClose={close} title="Deleting list">
+                Please wait...
+            </Modal>
+            <Modal opened={isUpdating} onClose={close} title="Updating list">
+                Please wait...
+            </Modal>
             <Container>
             <h2>Danger zone</h2>
             <Group>
@@ -188,91 +168,22 @@ export function ExistingField({speciesListID, originalName}: {speciesListID: str
 
     const [fieldName, setFieldName] = useState(originalName);
     const currentUser = useContext(UserContext) as ListsUser;
-
-    const REMOVE_FIELD = gql`
-        mutation removeField(
-            $id: String!
-            $fieldName: String!
-        ) {
-            removeField(
-                id: $id
-                fieldName: $fieldName
-            ) {
-                id
-                title
-                description
-                licence
-                rowCount
-                fieldList
-                listType
-                doi
-                authority
-                region
-                isAuthoritative
-                isPrivate
-                isInvasive
-                isThreatened
-                isSDS
-                isBIE
-                dateCreated
-                lastUpdated
-                lastUploaded
-                owner
-                editors
-                wkt
-            }
-        }
-    `;
-
-    const RENAME_FIELD = gql`
-        mutation renameField(
-            $id: String!
-            $oldName: String!
-            $newName: String!
-        ) {
-            renameField(
-                id: $id
-                oldName: $oldName
-                newName: $newName
-            ) {
-                id
-                title
-                description
-                licence
-                rowCount
-                fieldList
-                listType
-                doi
-                authority
-                region
-                isAuthoritative
-                isPrivate
-                isInvasive
-                isThreatened
-                isSDS
-                isBIE
-                dateCreated
-                lastUpdated
-                lastUploaded
-                owner
-                editors
-                wkt
-            }
-        }
-    `;
+    const [isUpdating, setIsUpdating] = useState(false);
 
     function removeFieldFromList() {
+        setIsUpdating(true);
         removeField({
             variables: {
                 id: speciesListID,
                 fieldName: fieldName.trim()
             }
         }).then(() => {
-            alert('Updated!')
+            setIsUpdating(false);
         });
     }
 
     function renameFieldFromList() {
+        setIsUpdating(true);
         renameField({
             variables: {
                 id: speciesListID,
@@ -280,7 +191,7 @@ export function ExistingField({speciesListID, originalName}: {speciesListID: str
                 newName: fieldName.trim()
             }
         }).then(() => {
-            alert('Updated!')
+            setIsUpdating(false);
         });
     }
 
@@ -292,7 +203,7 @@ export function ExistingField({speciesListID, originalName}: {speciesListID: str
         },
         refetchQueries: [
             {
-                query: GET_LIST,
+                query: GET_LIST_METADATA,
             },
         ],
     });
@@ -305,12 +216,16 @@ export function ExistingField({speciesListID, originalName}: {speciesListID: str
         },
         refetchQueries: [
             {
-                query: GET_LIST,
+                query: GET_LIST_METADATA,
             },
         ],
     });
 
-    return <><tr>
+    return <>
+        <Modal opened={isUpdating} onClose={close} title="Updating list">
+            <p>Please wait...</p>
+        </Modal>
+        <tr>
         <td>
             <TextInput defaultValue={fieldName} onChange={evt => setFieldName(evt.currentTarget.value)}  />
         </td>
@@ -324,6 +239,5 @@ export function ExistingField({speciesListID, originalName}: {speciesListID: str
     </tr>
     </>
 }
-
 
 export default DangerZone;
