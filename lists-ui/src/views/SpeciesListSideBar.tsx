@@ -71,7 +71,7 @@ function SpeciesListSideBar({ selectedView,
 
     return (
         <>
-            <Accordion defaultValue="selected-list" styles={{ chevron: { display: 'none' } }}>
+            <Accordion defaultValue="selected-list" >
                 <AllLists resetSpeciesList={resetSpeciesList} />
                 <UploadListOption resetSpeciesList={resetSpeciesList} />
                 <Accordion.Item value="the-list">
@@ -82,7 +82,6 @@ function SpeciesListSideBar({ selectedView,
             </Accordion>
             <Accordion
                 defaultValue={selectedView}
-                styles={{ chevron: { display: 'none' } }}
                 style={{ marginLeft: '15px', backgroundColor: '#F4F4F4'}}>
                 <Accordion.Item value="view-list">
                     <Link to={'/list/' + speciesListID}>
@@ -128,7 +127,7 @@ function SpeciesListSideBar({ selectedView,
                     </Accordion.Item>
                 }
                 {currentUser && speciesList && (currentUser.isAdmin || currentUser.userId == speciesList?.owner) &&
-                    <Accordion.Item value="reload">
+                    <Accordion.Item value="dangerzone">
                         <Link to={`/dangerzone/${speciesListID}`}>
                             <Accordion.Control>
                                 <Group>
@@ -148,7 +147,9 @@ export function AllLists({ resetSpeciesList }: { resetSpeciesList: () => void })
     return (
         <Accordion.Item value="species-lists" onClick={resetSpeciesList}>
             <Link to={`/`}>
-                <Accordion.Control icon={<IconList />}>All species lists</Accordion.Control>
+                <Accordion.Control icon={<IconList />} >
+                    All species lists
+                </Accordion.Control>
             </Link>
         </Accordion.Item>
     );

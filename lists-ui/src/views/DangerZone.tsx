@@ -1,13 +1,13 @@
 import {
-    Button, Container, Group, Modal, Space, Table, Text, TextInput
+    Button, Container, Group, Loader, Modal, Space, Table, Text, TextInput
 } from "@mantine/core";
 import { useNavigate, useParams } from "react-router-dom";
 import {IconAlertHexagon, IconEdit, IconRowRemove} from "@tabler/icons-react";
 import {useContext, useState} from "react";
 import UserContext from "../helpers/UserContext.ts";
 import {ListsUser, SpeciesList} from "../api/sources/model.ts";
-import {gql, useMutation, useQuery} from "@apollo/client";
-import {GET_LIST_METADATA, REMOVE_FIELD, RENAME_FIELD} from "../api/sources/graphql.ts";
+import {useMutation, useQuery} from "@apollo/client";
+import {ADD_FIELD, GET_LIST_METADATA, REMOVE_FIELD, RENAME_FIELD} from "../api/sources/graphql.ts";
 
 
 function DangerZone() {
@@ -18,43 +18,8 @@ function DangerZone() {
     const currentUser = useContext(UserContext) as ListsUser;
     const [isUpdating, setIsUpdating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-
-    const ADD_FIELD = gql`
-        mutation addField(
-            $id: String!
-            $fieldName: String!,
-            $fieldValue: String
-        ) {
-            addField(
-                id: $id
-                fieldName: $fieldName
-                fieldValue: $fieldValue
-            ) {
-                id
-                title
-                description
-                licence
-                rowCount
-                fieldList
-                listType
-                doi
-                authority
-                region
-                isAuthoritative
-                isPrivate
-                isInvasive
-                isThreatened
-                isSDS
-                isBIE
-                dateCreated
-                lastUpdated
-                lastUploaded
-                owner
-                editors
-                wkt
-            }
-        }
-    `;
+    const [isReindexing, setIsReindexing] = useState(false);
+    const [isRematching, setIsRematching] = useState(false);
 
     const [addField] = useMutation(ADD_FIELD, {
         context: {
@@ -105,60 +70,121 @@ function DangerZone() {
         });
     }
 
+    function rematchList() {
+        setIsRematching(true);
+        fetch( import.meta.env.VITE_REMATCH_URL + "/" + speciesListID, {
+            method: "GET",
+            headers: {
+                'Authorization': `Bearer ${currentUser?.user?.access_token}`
+            },
+        }).then((res) => {
+            console.log(res);
+            setIsRematching(false);
+
+            setIsReindexing(true);
+            fetch( import.meta.env.VITE_REINDEX_URL + "/" + speciesListID, {
+                method: "GET",
+                headers: {
+                    'Authorization': `Bearer ${currentUser?.user?.access_token}`
+                },
+            }).then((res) => {
+                console.log(res);
+                setIsReindexing(false);
+            });
+        });
+    }
+
     return (
         <>
             <Modal opened={isDeleting} onClose={close} title="Deleting list">
-                Please wait...
+                <Group>
+                    <Loader color="orange" />
+                    <Text>Deleting this list. Please wait...</Text>
+                </Group>
             </Modal>
-            <Modal opened={isUpdating} onClose={close} title="Updating list">
-                Please wait...
-            </Modal>
-            <Container>
-            <h2>Danger zone</h2>
-            <Group>
-                <Button variant="outline" onClick={deleteList}>
-                    <IconAlertHexagon />
-                    Delete this list
-                </Button>
-                <Text>Click here to delete this list. This action cannot be undone.
-                    <br/>
-                    <span style={{ color: 'red'}}>Please be aware if this list is in use by any downstream applications
-                        before proceeding.</span>
-                </Text>
-            </Group>
 
-            {speciesList && <>
-                <Space h="lg" />
-                <h3>Manage fields</h3>
-                <p>
-                    Here you can change the structure of the list by removing or adding fields.
-                </p>
-                <Table verticalSpacing="md" horizontalSpacing="lg" withBorder>
-                    <thead>
-                    <tr>
-                        <th>Field name</th>
-                        <th></th>
-                        <th>Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                        {speciesList?.fieldList?.map((field) => <ExistingField speciesListID={speciesList.id} originalName={field} />)}
+            <Modal opened={isUpdating} onClose={close} title="Updating list">
+                <Group>
+                    <Loader color="orange" />
+                    <Text>Adding the new field to this list. Please wait...</Text>
+                </Group>
+            </Modal>
+
+            <Modal opened={isReindexing} onClose={close} title="Reindexing list">
+                <Group>
+                    <Loader color="orange" />
+                    <Text>Please wait while reindexing...</Text>
+                </Group>
+            </Modal>
+
+            <Modal opened={isRematching} onClose={close} title="Rematching list">
+                <Group>
+                    <Loader color="orange" />
+                    <Text>Please wait while rematching runs...</Text>
+                </Group>
+            </Modal>
+
+            <Container>
+                <h2>Danger zone</h2>
+                <Group>
+                    <Button variant="outline" onClick={deleteList}>
+                        <IconAlertHexagon />
+                        Delete this list
+                    </Button>
+                    <Text>Click here to delete this list. This action cannot be undone.
+                        <br/>
+                        <span style={{ color: 'red'}}>Please be aware if this list is in use by any downstream applications
+                            before proceeding.</span>
+                    </Text>
+                </Group>
+
+                {currentUser && currentUser.isAdmin && <>
+                    <Space h="lg" />
+                    <h3>Processing</h3>
+                    <Group>
+                        <Button variant="outline" onClick={rematchList}>
+                            <IconAlertHexagon />
+                            Re-match this list
+                        </Button>
+                        <Text>
+                            Rematching this list will update the taxonomy for this list.
+                        </Text>
+                    </Group>
+                    <Space h="lg" />
+                </>}
+
+                {speciesList && <>
+                    <Space h="lg" />
+                    <h3>Manage fields</h3>
+                    <p>
+                        Here you can change the structure of the list by removing or adding fields.
+                    </p>
+                    <Table verticalSpacing="md" horizontalSpacing="lg" withBorder>
+                        <thead>
                         <tr>
-                            <td>
-                                <label>New field name</label>
-                                <TextInput onChange={evt => setNewFieldName(evt.currentTarget.value)} placeholder="Add field" />
-                            </td>
-                            <td>
-                                <label>Default value (Optional)</label>
-                                <TextInput onChange={evt => setNewFieldValue(evt.currentTarget.value)} placeholder="default value" />
-                            </td>
-                            <td>
-                                <Button size={`sm`} variant="outline" style={{ marginTop: '20px' }} onClick={addFieldToList}>Add new field</Button>
-                            </td>
+                            <th>Field name</th>
+                            <th></th>
+                            <th>Actions</th>
                         </tr>
-                    </tbody>
-                </Table>
-            </>}
+                        </thead>
+                        <tbody>
+                            {speciesList?.fieldList?.map((field) => <ExistingField speciesListID={speciesList.id} originalName={field} />)}
+                            <tr>
+                                <td>
+                                    <label>New field name</label>
+                                    <TextInput onChange={evt => setNewFieldName(evt.currentTarget.value)} placeholder="Add field" />
+                                </td>
+                                <td>
+                                    <label>Default value (Optional)</label>
+                                    <TextInput onChange={evt => setNewFieldValue(evt.currentTarget.value)} placeholder="default value" />
+                                </td>
+                                <td>
+                                    <Button size={`sm`} variant="outline" style={{ marginTop: '20px' }} onClick={addFieldToList}>Add new field</Button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </Table>
+                </>}
             </Container>
         </>
     );
@@ -223,7 +249,10 @@ export function ExistingField({speciesListID, originalName}: {speciesListID: str
 
     return <>
         <Modal opened={isUpdating} onClose={close} title="Updating list">
-            <p>Please wait...</p>
+            <Group>
+                <Loader color="orange" />
+                <Text>Updating the list with the changes to fields....</Text>
+            </Group>
         </Modal>
         <tr>
         <td>

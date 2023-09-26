@@ -129,6 +129,8 @@ export function SpeciesListItemEditor({ speciesListID, selectedItem, customField
 
     return <>
         <form onSubmit={form.onSubmit((values) => updateSpeciesListItemForm(values)) }>
+
+            <Button style={{ float: 'right'}} onClick={deleteSpeciesListItemForm} disabled={isUpdating}>Delete</Button>
             <h2>Taxonomy</h2>
             <Table striped highlightOnHover withBorder>
                 <tbody>
@@ -167,9 +169,12 @@ export function SpeciesListItemEditor({ speciesListID, selectedItem, customField
                 </tbody>
             </Table>
 
+
             <Group mt="md">
+                {setIsEditing &&
+                <Button variant="default" onClick={() => setIsEditing(false)} disabled={isUpdating}>Cancel</Button>
+                }
                 <Button type="submit" disabled={isUpdating}>Update</Button>
-                <Button onClick={deleteSpeciesListItemForm} disabled={isUpdating}>Delete</Button>
             </Group>
         </form>
     </>;

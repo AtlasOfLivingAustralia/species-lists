@@ -6,11 +6,17 @@ import {useContext} from "react";
 import UserContext from "../helpers/UserContext.ts";
 import {ListsUser} from "../api/sources/model.ts";
 
-export function SpeciesListsSideBar({ resetSpeciesList }: { resetSpeciesList: () => void }) {
+interface SpeciesListsSideBarProps {
+    resetSpeciesList: () => void;
+    selectedView: string;
+}
+
+export function SpeciesListsSideBar( {resetSpeciesList, selectedView} : SpeciesListsSideBarProps){
+
     const currentUser = useContext(UserContext) as ListsUser;
 
     return (
-        <Accordion defaultValue="selected-list" styles={{ chevron: { display: "none" } }}>
+        <Accordion className={`speciesListsSideBar`} defaultValue={selectedView}>
             <AllLists resetSpeciesList={resetSpeciesList} />
             <UploadListOption resetSpeciesList={resetSpeciesList} />
             {currentUser &&

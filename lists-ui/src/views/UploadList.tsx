@@ -174,7 +174,6 @@ function UploadList() {
             <Dropzone
                 onDrop={(files) => {
                     setUploading(true);
-                    console.log("accepted files", files);
 
                     const formData = new FormData();
                     formData.append("file", files[0]);

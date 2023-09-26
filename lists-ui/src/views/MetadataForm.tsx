@@ -170,6 +170,7 @@ export function MetadataForm({ speciesList,
                     {...form.getInputProps("region")}
                 />
                 <Space h="md" />
+
                 <Textarea h={100} label="Well known text" disabled={!edit} placeholder="" {...form.getInputProps("wkt")} />
 
                 { listTypeValidation &&

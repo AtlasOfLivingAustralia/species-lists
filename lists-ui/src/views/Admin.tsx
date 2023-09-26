@@ -46,7 +46,6 @@ function Admin() {
         }
     }
 
-
     function migrate() {
         if (window.confirm('Are you sure you want to migrate all lists?')) {
             fetch(import.meta.env.VITE_MIGRATE_URL, {
@@ -68,7 +67,10 @@ function Admin() {
         <>
             <Grid mb="md">
                 <Grid.Col xs={1} sm={2}>
-                    <SpeciesListsSideBar resetSpeciesList={() => console.log('reset list')} />
+                    <SpeciesListsSideBar
+                        resetSpeciesList={() => console.log('reset list')}
+                        selectedView="admin"
+                    />
                 </Grid.Col>
                 <Grid.Col xs={12} sm={10}>
                     <>

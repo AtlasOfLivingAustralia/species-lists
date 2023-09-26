@@ -37,7 +37,7 @@ function MyLists() {
         <>
             <Grid mb="md">
                 <Grid.Col xs={1} sm={2}>
-                    <SpeciesListsSideBar resetSpeciesList={() => console.log('reset list')} />
+                    <SpeciesListsSideBar resetSpeciesList={() => console.log('reset list')} selectedView="my-lists" />
                 </Grid.Col>
                 <Grid.Col xs={12} sm={10}>
                     <Grid align="center" mb="md">

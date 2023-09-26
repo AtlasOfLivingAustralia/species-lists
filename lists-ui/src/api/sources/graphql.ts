@@ -324,3 +324,40 @@ export const RENAME_FIELD = gql`
         }
     }
 `;
+
+export const ADD_FIELD = gql`
+    mutation addField(
+        $id: String!
+        $fieldName: String!,
+        $fieldValue: String
+    ) {
+        addField(
+            id: $id
+            fieldName: $fieldName
+            fieldValue: $fieldValue
+        ) {
+            id
+            title
+            description
+            licence
+            rowCount
+            fieldList
+            listType
+            doi
+            authority
+            region
+            isAuthoritative
+            isPrivate
+            isInvasive
+            isThreatened
+            isSDS
+            isBIE
+            dateCreated
+            lastUpdated
+            lastUploaded
+            owner
+            editors
+            wkt
+        }
+    }
+`;

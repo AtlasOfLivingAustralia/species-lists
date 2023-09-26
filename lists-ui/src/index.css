@@ -59,3 +59,15 @@ dd {
 .mantine-Button-root:hover {
   border: #FFFFFF solid 1px;
 }
+
+.mantine-Accordion-item[data-active="true"] .mantine-Accordion-label {
+  font-weight: bold;
+}
+
+.speciesListsSideBar {
+  background-color: #f6f6f6;
+}
+
+.mantine-Accordion-chevron {
+  display: none;
+}

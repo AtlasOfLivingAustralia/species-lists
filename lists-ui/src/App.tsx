@@ -278,7 +278,10 @@ export default function App() {
                         element={
                             <Grid mb="md" align="flex-start">
                                 <Grid.Col xs={1} sm={2}>
-                                    <SpeciesListsSideBar  resetSpeciesList={resetSpeciesList} />
+                                    <SpeciesListsSideBar
+                                        resetSpeciesList={resetSpeciesList}
+                                        selectedView="upload-new"
+                                    />
                                 </Grid.Col>
                                 <Grid.Col xs={12} sm={10}>
                                     <UploadList />
