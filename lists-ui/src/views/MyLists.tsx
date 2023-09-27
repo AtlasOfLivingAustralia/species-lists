@@ -5,7 +5,7 @@ import {
     Grid,
     TextInput,
     Group,
-    Text, Skeleton, CloseButton
+    Text, Skeleton, CloseButton, Select
 } from "@mantine/core";
 import { useQuery } from "@apollo/client";
 import {useContext, useState} from "react";
@@ -26,72 +26,14 @@ function MyLists() {
 
     const navigate = useNavigate();
     const [activePage, setPage] = useState<number>(1);
-    const [pageSize] = useState<number>(15);
+    const [pageSize, setPageSize] = useState<number>(12);
     const [searchQuery, setSearchQuery] = useState<string>("");
+    const currentUser = useContext(UserContext) as ListsUser;
 
     function selectSpeciesList(speciesList: SpeciesList) {
         navigate(`/list/` + speciesList.id + '?q=' + searchQuery);
     }
 
-    return (
-        <>
-            <Grid mb="md">
-                <Grid.Col xs={1} sm={2}>
-                    <SpeciesListsSideBar resetSpeciesList={() => console.log('reset list')} selectedView="my-lists" />
-                </Grid.Col>
-                <Grid.Col xs={12} sm={10}>
-                    <Grid align="center" mb="md">
-                        <Grid.Col xs={8} sm={9}>
-                            <TextInput
-                                h={"lg"}
-                                sx={{ flexBasis: "60%" }}
-                                placeholder="Search across lists..."
-                                icon={<IconSearch size={16} />}
-                                value={searchQuery}
-                                rightSection={
-                                    <CloseButton
-                                        aria-label="Clear input"
-                                        onClick={() => setSearchQuery('')}
-                                        style={{ display: searchQuery ? undefined : 'none' }}
-                                    />
-                                }
-                                onChange={(e) => setSearchQuery(e.currentTarget.value)}
-                            />
-                        </Grid.Col>
-                        <Grid.Col xs={4} sm={3}>
-
-                        </Grid.Col>
-                    </Grid>
-                    <SearchTable
-                        searchQuery={searchQuery}
-                        activePage={activePage}
-                        pageSize={pageSize}
-                        setPage={setPage}
-                        selectSpeciesList={selectSpeciesList}
-                    />
-                </Grid.Col>
-            </Grid>
-        </>
-    );
-}
-
-interface SearchTableProps {
-    searchQuery: string;
-    activePage: number;
-    pageSize: number;
-    setPage: Dispatch<SetStateAction<number>>;
-    selectSpeciesList: (speciesList: SpeciesList) => void;
-}
-
-export function SearchTable({
-                                searchQuery,
-                                activePage,
-                                pageSize,
-                                setPage,
-                                selectSpeciesList
-                            }: SearchTableProps) {
-
-    const currentUser = useContext(UserContext) as ListsUser;
     const { loading, error, data} = useQuery(GET_MY_LISTS, {
         fetchPolicy: "no-cache",
         context: {
@@ -106,6 +48,83 @@ export function SearchTable({
             userId: currentUser?.userId
         },
     });
+
+    return (
+        <>
+            <Grid mb="md">
+                <Grid.Col xs={1} sm={2}>
+                    <SpeciesListsSideBar resetSpeciesList={() => console.log('reset list')} selectedView="my-lists" />
+                </Grid.Col>
+                <Grid.Col xs={12} sm={10}>
+                    <Grid align="center" mb="md">
+                        <Grid.Col xs={8} sm={9}>
+                            <Group>
+                                <Select
+                                    value={pageSize.toString()}
+                                    onChange={(value:string) => setPageSize(parseInt(value || "12"))}
+                                    size="sm"
+                                    data={[
+                                        { value: "12", label: '12 results' },
+                                        { value: "50", label: '50 results' },
+                                        { value: "100", label: '100 results' },
+                                    ]}
+                                />
+                                <TextInput
+                                    sx={{ flexBasis: "60%" }}
+                                    placeholder="Search across lists..."
+                                    icon={<IconSearch size={16} />}
+                                    value={searchQuery}
+                                    rightSection={
+                                        <CloseButton
+                                            aria-label="Clear input"
+                                            onClick={() => setSearchQuery('')}
+                                            style={{ display: searchQuery ? undefined : 'none' }}
+                                        />
+                                    }
+                                    onChange={(e) => setSearchQuery(e.currentTarget.value)}
+                                />
+                                <Group style={{paddingRight:"40px"}}>
+                                    {loading && <><Skeleton height={30} width={50} /></>}
+                                    {!loading && <><Text>{data.lists.totalElements} lists</Text></>}
+                                </Group>
+                            </Group>
+                        </Grid.Col>
+                    </Grid>
+                    <SearchTable
+                        searchQuery={searchQuery}
+                        activePage={activePage}
+                        pageSize={pageSize}
+                        setPage={setPage}
+                        selectSpeciesList={selectSpeciesList}
+                        loading={loading}
+                        error={error}
+                        data={data}
+                    />
+                </Grid.Col>
+            </Grid>
+        </>
+    );
+}
+
+interface SearchTableProps {
+    searchQuery: string;
+    activePage: number;
+    pageSize: number;
+    loading: boolean;
+    error: any;
+    data: any;
+    setPage: Dispatch<SetStateAction<number>>;
+    selectSpeciesList: (speciesList: SpeciesList) => void;
+}
+
+export function SearchTable({
+                                activePage,
+                                setPage,
+                                selectSpeciesList,
+                                loading,
+                                error,
+                                data,
+                            }: SearchTableProps) {
 
     if (loading) return <>
         <Table verticalSpacing="xs" fontSize="md">

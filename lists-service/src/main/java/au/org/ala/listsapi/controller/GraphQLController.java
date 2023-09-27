@@ -87,9 +87,10 @@ public class GraphQLController {
   @Autowired protected ReleaseMongoRepository releaseMongoRepository;
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
   @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
+  @Autowired private SpeciesListItemMongoRepository speciesListItemMongoRepository;
 
   @Autowired protected TaxonService taxonService;
-  @Autowired private SpeciesListItemMongoRepository speciesListItemMongoRepository;
+  @Autowired protected AuthUtils authUtils;
 
   public static SpeciesListItem convert(SpeciesListIndex index) {
 
@@ -137,7 +138,7 @@ public class GraphQLController {
       @AuthenticationPrincipal Principal principal) {
 
     // if searching private lists, check user is authorized
-    if (isPrivate && !AuthUtils.isAuthorized(principal)) {
+    if (isPrivate && !authUtils.isAuthorized(principal)) {
       return null;
     }
 
@@ -151,10 +152,14 @@ public class GraphQLController {
                   return bq;
                 }));
 
+    builder.withAggregation(
+        "types_count",
+        Aggregation.of(a -> a.cardinality(ca -> ca.field(SPECIES_LIST_ID + ".keyword"))));
+
     // aggregation on species list ID
     builder.withAggregation(
         SPECIES_LIST_ID,
-        Aggregation.of(a -> a.terms(ta -> ta.field(SPECIES_LIST_ID + ".keyword").size(1000))));
+        Aggregation.of(a -> a.terms(ta -> ta.field(SPECIES_LIST_ID + ".keyword").size(10000))));
 
     Query aggQuery = builder.build();
 
@@ -162,7 +167,11 @@ public class GraphQLController {
         elasticsearchOperations.search(aggQuery, SpeciesListIndex.class);
 
     ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
-    ElasticsearchAggregation agg1 = agg.aggregations().get(0); // get(SPECIES_LIST_ID);
+
+    ElasticsearchAggregation cardinality = agg.aggregations().get(0);
+    Long noOfLists = cardinality.aggregation().getAggregate().cardinality().value();
+
+    ElasticsearchAggregation agg1 = agg.aggregations().get(1);
     List<StringTermsBucket> array = agg1.aggregation().getAggregate().sterms().buckets().array();
 
     Map<String, Long> speciesListIDs =
@@ -173,6 +182,7 @@ public class GraphQLController {
                 Collectors.toMap(
                     bucket -> bucket.key().stringValue(), bucket -> bucket.docCount()));
 
+    // lookup species list metadata
     Iterable<SpeciesList> speciesLists =
         speciesListMongoRepository.findAllById(speciesListIDs.keySet());
     for (SpeciesList speciesList : speciesLists) {
@@ -182,7 +192,7 @@ public class GraphQLController {
     List<SpeciesList> result = new ArrayList<>();
     speciesLists.forEach(result::add);
 
-    return new PageImpl<>(result, PageRequest.of(page, size), array.size());
+    return new PageImpl<>(result, PageRequest.of(page, size), noOfLists);
   }
 
   private static BoolQuery.Builder buildQuery(
@@ -276,7 +286,7 @@ public class GraphQLController {
       return null;
     }
 
-    if (!AuthUtils.isAuthorized(speciesList.get(), principal)) {
+    if (!authUtils.isAuthorized(speciesList.get(), principal)) {
       return null;
     }
 
@@ -326,7 +336,7 @@ public class GraphQLController {
       return null;
     }
 
-    if (!AuthUtils.isAuthorized(speciesList.get(), principal)) {
+    if (!authUtils.isAuthorized(speciesList.get(), principal)) {
       return null;
     }
 
@@ -379,7 +389,7 @@ public class GraphQLController {
       return null;
     }
 
-    if (!AuthUtils.isAuthorized(speciesList.get(), principal)) {
+    if (!authUtils.isAuthorized(speciesList.get(), principal)) {
       return null;
     }
 
@@ -437,7 +447,7 @@ public class GraphQLController {
       return null;
     }
 
-    if (!AuthUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
+    if (!authUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
       return null;
     }
 
@@ -517,7 +527,7 @@ public class GraphQLController {
       return null;
     }
 
-    if (!AuthUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
+    if (!authUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
       return null;
     }
 
@@ -545,7 +555,7 @@ public class GraphQLController {
       return null;
     }
 
-    if (!AuthUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
+    if (!authUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
       return null;
     }
 
@@ -578,7 +588,7 @@ public class GraphQLController {
       return null;
     }
 
-    if (AuthUtils.isAuthorized(speciesList.get(), principal)) {
+    if (authUtils.isAuthorized(speciesList.get(), principal)) {
       boolean reindexRequired = false;
 
       SpeciesList toUpdate = speciesList.get();

@@ -1,7 +1,7 @@
 import {useContext, useEffect, useRef, useState} from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@apollo/client";
-import { useIntl } from "react-intl";
+import {FormattedMessage, useIntl} from "react-intl";
 import {
     Affix,
     Button,
@@ -251,7 +251,7 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                             <dd>{speciesList?.region ? speciesList?.region: 'Not specified'}</dd>
 
                             <Space h="md"/>
-                            <dt>Well Known Text</dt>
+                            <dt><FormattedMessage id="wkt"/></dt>
                             <dd>
                                 { !speciesList.wkt &&
                                     <>Not specified</>

@@ -48,6 +48,7 @@ public class UploadService {
   @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
   @Autowired protected TaxonService taxonService;
   @Autowired protected ReleaseService releaseService;
+  @Autowired protected AuthUtils authUtils;
 
   @Value("${temp.dir:/tmp}")
   private String tempDir;
@@ -55,7 +56,7 @@ public class UploadService {
   public boolean deleteList(String speciesListID, AlaUserProfile userProfile) {
 
     Optional<SpeciesList> list = speciesListMongoRepository.findById(speciesListID);
-    if (list.isPresent() && AuthUtils.isAuthorized(list.get(), userProfile)) {
+    if (list.isPresent() && authUtils.isAuthorized(list.get(), userProfile)) {
       logger.info("Deleting speciesListID " + speciesListID);
       speciesListIndexElasticRepository.deleteSpeciesListItemBySpeciesListID(speciesListID);
       speciesListItemMongoRepository.deleteBySpeciesListID(speciesListID);

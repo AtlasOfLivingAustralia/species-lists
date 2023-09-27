@@ -13,6 +13,7 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.zip.ZipEntry;
@@ -37,6 +38,21 @@ public class DownloadController {
   private static final Logger logger = LoggerFactory.getLogger(DownloadController.class);
   @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
   @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
+  @Autowired protected AuthUtils authUtils;
+
+  public static final String[] CLASSIFICATION_HEADER_NAMES = {
+    "taxonID",
+    "scientificName",
+    "genus",
+    "family",
+    "order",
+    "class",
+    "phylum",
+    "kingdom",
+    "vernacularName",
+    "matchType",
+    "nameType"
+  };
 
   @SecurityRequirement(name = "JWT")
   @Operation(summary = "Download a species list", tags = "Download")
@@ -55,6 +71,7 @@ public class DownloadController {
 
       SpeciesList speciesList = speciesListOptional.get();
       if (speciesList.getIsPrivate()) {
+        // if private, check user is logged in and authorised
         ResponseEntity<Object> errorResponse = checkAuthorizedToDownload(speciesList, principal);
         if (errorResponse != null) {
           return errorResponse;
@@ -62,8 +79,9 @@ public class DownloadController {
       }
 
       List<String> csvHeaders = new ArrayList<>();
-      csvHeaders.add("scientificName");
+      csvHeaders.add("Supplied name");
       csvHeaders.addAll(speciesList.getFieldList());
+      csvHeaders.addAll(Arrays.asList(CLASSIFICATION_HEADER_NAMES));
 
       setupResponseHeaders(response, speciesListID);
 
@@ -130,7 +148,9 @@ public class DownloadController {
     page.forEach(
         speciesListItem -> {
           List<String> csvRow = new ArrayList<>();
+          // add the supplied name
           csvRow.add(speciesListItem.getScientificName());
+
           fieldList.forEach(
               field -> {
                 speciesListItem.getProperties().stream()
@@ -138,6 +158,19 @@ public class DownloadController {
                     .findFirst()
                     .ifPresent(keyValue -> csvRow.add(keyValue.getValue()));
               });
+
+          //
+          csvRow.add(speciesListItem.getClassification().getTaxonConceptID());
+          csvRow.add(speciesListItem.getClassification().getScientificName());
+          csvRow.add(speciesListItem.getClassification().getGenus());
+          csvRow.add(speciesListItem.getClassification().getFamily());
+          csvRow.add(speciesListItem.getClassification().getOrder());
+          csvRow.add(speciesListItem.getClassification().getClasss());
+          csvRow.add(speciesListItem.getClassification().getPhylum());
+          csvRow.add(speciesListItem.getClassification().getKingdom());
+          csvRow.add(speciesListItem.getClassification().getVernacularName());
+          csvRow.add(speciesListItem.getClassification().getMatchType());
+          csvRow.add(speciesListItem.getClassification().getNameType());
           csvWriter.writeNext(csvRow.toArray(new String[0]));
         });
   }
@@ -153,7 +186,7 @@ public class DownloadController {
     }
 
     // check authorised
-    if (!AuthUtils.isAuthorized(speciesList, principal)) {
+    if (!authUtils.isAuthorized(speciesList, principal)) {
       return ResponseEntity.badRequest().body("User not authorized");
     }
     return null;

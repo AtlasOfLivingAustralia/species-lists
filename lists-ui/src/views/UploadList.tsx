@@ -12,6 +12,7 @@ import { MetadataForm } from "./MetadataForm";
 import {ListsUser, SpeciesList} from "../api/sources/model";
 import UserContext from "../helpers/UserContext.ts";
 import {FormattedMessage} from "react-intl";
+import {notifications} from "@mantine/notifications";
 
 const ACCEPTED_TYPES: string[] = ["text/csv", "application/zip"];
 
@@ -35,7 +36,12 @@ function UploadList() {
     function ingest(values: SpeciesList) {
 
         if (!currentUser?.user?.access_token){
-            alert('Access token empty');
+            notifications.show({
+                icon: <IconX />,
+                className: 'fail-notification',
+                title: 'Unable to start ingest process',
+                message: 'Authenticaiton error. User access token empty'
+            });
             return;
         }
 

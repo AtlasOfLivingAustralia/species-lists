@@ -54,6 +54,8 @@ public class IngressController {
   @Autowired protected ReleaseService releaseService;
   @Autowired protected UploadService uploadService;
 
+  @Autowired protected AuthUtils authUtils;
+
   @Value("${temp.dir:/tmp}")
   private String tempDir;
 
@@ -87,7 +89,8 @@ public class IngressController {
       if (success) return new ResponseEntity<>(HttpStatus.OK);
       else return ResponseEntity.badRequest().body("Unable to delete species list");
     } catch (Exception e) {
-      return ResponseEntity.badRequest().body("Error while deleting species list: " + e.getMessage());
+      return ResponseEntity.badRequest()
+          .body("Error while deleting species list: " + e.getMessage());
     }
   }
 
@@ -106,7 +109,8 @@ public class IngressController {
       return new ResponseEntity<>(HttpStatus.OK);
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
-      return ResponseEntity.badRequest().body("Error while rematching the taxonomy for a list: " + e.getMessage());
+      return ResponseEntity.badRequest()
+          .body("Error while rematching the taxonomy for a list: " + e.getMessage());
     }
   }
 
@@ -121,7 +125,8 @@ public class IngressController {
       return new ResponseEntity<>(HttpStatus.OK);
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
-      return ResponseEntity.badRequest().body("Error while rematch the taxonomy for all lists: " + e.getMessage());
+      return ResponseEntity.badRequest()
+          .body("Error while rematch the taxonomy for all lists: " + e.getMessage());
     }
   }
 
@@ -253,7 +258,7 @@ public class IngressController {
     }
 
     // check authorised
-    if (!AuthUtils.isAuthorized(speciesListOptional.get(), principal)) {
+    if (!authUtils.isAuthorized(speciesListOptional.get(), principal)) {
       return ResponseEntity.badRequest().body("User not authorized");
     }
     return null;
@@ -268,7 +273,7 @@ public class IngressController {
     }
 
     // check authorised
-    if (!AuthUtils.isAuthorized(principal)) {
+    if (!authUtils.isAuthorized(principal)) {
       return ResponseEntity.badRequest().body("User not authorized");
     }
     return null;

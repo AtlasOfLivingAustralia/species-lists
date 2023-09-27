@@ -7,6 +7,8 @@ import {SpeciesListsSideBar} from "./SpeciesListsSideBar.tsx";
 import UserContext from "../helpers/UserContext.ts";
 import {useContext} from "react";
 import {ListsUser} from "../api/sources/model.ts";
+import {notifications} from "@mantine/notifications";
+import {IconCheck, IconX} from "@tabler/icons-react";
 
 function Admin() {
 
@@ -21,9 +23,20 @@ function Admin() {
                 }
             }).then(response => {
                 if (response.ok) {
-                    alert('Reindexing started.');
+                    notifications.show({
+                        icon: <IconCheck />,
+                        className: 'success-notification',
+                        title: 'Reindexing started',
+                        message: 'This will will take a while to finish.'
+                    })
+
                 } else {
-                    alert('Reindexing failed.');
+                    notifications.show({
+                        icon: <IconX />,
+                        className: 'fail-notification',
+                        title: 'Reindexing was not started due to an error',
+                        message: 'Unable to start reindexing. Please try again later'
+                    })
                 }
             });
         }
@@ -38,9 +51,19 @@ function Admin() {
                 }
             }).then(response => {
                 if (response.ok) {
-                    alert('Rematching started.');
+                    notifications.show({
+                        icon: <IconCheck />,
+                        className: 'success-notification',
+                        title: 'Rematching started',
+                        message: 'This will  take a while to finish.'
+                    })
                 } else {
-                    alert('Rematching failed.');
+                    notifications.show({
+                        icon: <IconX />,
+                        className: 'fail-notification',
+                        title: 'Rematching failed to start',
+                        message: 'Unable to start rematching. Please try again later'
+                    })
                 }
             });
         }
@@ -55,9 +78,19 @@ function Admin() {
                 }
             }).then(response => {
                 if (response.ok) {
-                    alert('Migration started.');
+                    notifications.show({
+                        icon: <IconCheck />,
+                        className: 'success-notification',
+                        title: 'Migration started',
+                        message: 'This will will take a while to finish.'
+                    })
                 } else {
-                    alert('Migration failed.');
+                    notifications.show({
+                        icon: <IconX />,
+                        className: 'fail-notification',
+                        title: 'Migration failed!',
+                        message: 'Migration failed to start. Please try again later'
+                    })
                 }
             });
         }
@@ -96,14 +129,6 @@ function Admin() {
                                 <td><Text>Migrate data from existing list tool.
                                     <br/>Note: this does not perform taxon matching and re-indexing the data.
                                 </Text></td>
-                            </tr>
-                            <tr>
-                                <td><Button variant="outline"  onClick={() => alert('Not implemented! ')}>Manage licences</Button></td>
-                                <td><Text>Manage the CC licences available to assign to lists</Text></td>
-                            </tr>
-                            <tr>
-                                <td><Button variant="outline"  onClick={() => alert('Not implemented! ')}>Manage list types</Button></td>
-                                <td><Text>Manage the list type vocabulary</Text></td>
                             </tr>
                             </tbody>
                         </Table>

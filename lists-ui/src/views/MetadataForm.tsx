@@ -172,7 +172,7 @@ export function MetadataForm({ speciesList,
                 />
                 <Space h="md" />
 
-                <Textarea h={100} label="Geographic coordinates (Well Known Text format)" disabled={!edit} placeholder="" {...form.getInputProps("wkt")} />
+                <Textarea h={100} label={<FormattedMessage id='wkt'/>} disabled={!edit} placeholder="" {...form.getInputProps("wkt")} />
 
                 { listTypeValidation &&
                     <>
