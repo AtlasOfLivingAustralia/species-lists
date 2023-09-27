@@ -1,6 +1,6 @@
 
 const validationRules: Record<string, string[]> = {
-    "SENSITIVE_LIST": ["generalisation", "category"],
+    "SENSITIVE_LIST": ["generalisation"],
     "CONSERVATION_LIST": ["status"],
     "INVASIVE": ["status"]
 }
