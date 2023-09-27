@@ -2,13 +2,14 @@ import {
     Button, Container, Group, Loader, Modal, Space, Table, Text, TextInput
 } from "@mantine/core";
 import { useNavigate, useParams } from "react-router-dom";
-import {IconAlertHexagon, IconEdit, IconRowRemove} from "@tabler/icons-react";
+import {IconAlertHexagon, IconCheck, IconEdit, IconRowRemove, IconX} from "@tabler/icons-react";
 import {useContext, useState} from "react";
 import UserContext from "../helpers/UserContext.ts";
 import {ListsUser, SpeciesList} from "../api/sources/model.ts";
 import {useMutation, useQuery} from "@apollo/client";
 import {ADD_FIELD, GET_LIST_METADATA, REMOVE_FIELD, RENAME_FIELD} from "../api/sources/graphql.ts";
 
+import { notifications } from '@mantine/notifications';
 
 function DangerZone() {
     const navigate = useNavigate();
@@ -44,6 +45,21 @@ function DangerZone() {
             }
         }).then(() => {
             setIsUpdating(false);
+            notifications.show({
+                icon: <IconCheck />,
+                title: 'The field added to list',
+                className: 'success-notification',
+                message: 'The field '+ newFieldName.trim() + ' has been added to the list ' + speciesList.title
+            })
+        }).catch((err) => {
+            console.log(err);
+            setIsUpdating(false);
+            notifications.show({
+                icon: <IconX />,
+                className: 'fail-notification',
+                title: 'The field was not added',
+                message: 'The adding of the field has failed due to a system problem',
+            });
         });
     }
 
@@ -66,7 +82,23 @@ function DangerZone() {
         }).then((res) => {
             console.log(res);
             setIsDeleting(false);
+            notifications.show({
+                icon: <IconCheck />,
+                className: 'success-notification',
+                title: 'List ' + speciesList.title + ' has been deleted',
+                message: 'The dataset was removed from the system',
+            })
+
             navigate(`/`);
+        }).catch((err) => {
+            console.log(err);
+            setIsDeleting(false);
+            notifications.show({
+                icon: <IconX />,
+                className: 'fail-notification',
+                title: 'List ' + speciesList.title + ' has not been deleted',
+                message: 'The dataset was not removed from the system due to a system problem',
+            });
         });
     }
 
@@ -90,6 +122,30 @@ function DangerZone() {
             }).then((res) => {
                 console.log(res);
                 setIsReindexing(false);
+                notifications.show({
+                    icon: <IconCheck />,
+                    className: 'success-notification',
+                    title: 'List rematched',
+                    message: 'The taxonomy of the list ' + speciesList.title + ' has been rematched'
+                })
+            }).catch((err) => {
+                console.log(err);
+                setIsDeleting(false);
+                notifications.show({
+                    icon: <IconX />,
+                    className: 'fail-notification',
+                    title: 'Rematching the list ' + speciesList.title + ' has failed',
+                    message: 'The dataset was not rematched from the system due to a system problem',
+                });
+            });
+        }).catch((err) => {
+            console.log(err);
+            setIsDeleting(false);
+            notifications.show({
+                icon: <IconX />,
+                className: 'fail-notification',
+                title: 'Rematching the list ' + speciesList.title + ' has failed',
+                message: 'The dataset was not rematched from the system due to a system problem',
             });
         });
     }
@@ -205,6 +261,21 @@ export function ExistingField({speciesListID, originalName}: {speciesListID: str
             }
         }).then(() => {
             setIsUpdating(false);
+            notifications.show({
+                icon: <IconCheck />,
+                title: 'The field removed from list',
+                className: 'success-notification',
+                message: 'The field '+ fieldName.trim + ' has been removed from the list'
+            })
+        }).catch((err) => {
+            console.log(err);
+            setIsUpdating(false);
+            notifications.show({
+                icon: <IconX />,
+                className: 'fail-notification',
+                title: 'The field was not removed',
+                message: 'The removal of the field has failed due to a system problem',
+            });
         });
     }
 
@@ -218,6 +289,21 @@ export function ExistingField({speciesListID, originalName}: {speciesListID: str
             }
         }).then(() => {
             setIsUpdating(false);
+            notifications.show({
+                icon: <IconCheck />,
+                title: 'The field renamed',
+                className: 'success-notification',
+                message: 'The field '+ originalName.trim() + ' has been renamed to ' + fieldName +' in the list '
+            })
+        }).catch((err) => {
+            console.log(err);
+            setIsUpdating(false);
+            notifications.show({
+                icon: <IconX />,
+                className: 'fail-notification',
+                title: 'The field was not renamed',
+                message: 'The rename of the field has failed due to a system problem',
+            });
         });
     }
 

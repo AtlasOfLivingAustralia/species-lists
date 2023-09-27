@@ -10,6 +10,7 @@ import {IntlProvider} from "react-intl";
 import {UserManager, WebStorageStateStore} from "oidc-client-ts";
 import AuthContext from "./helpers/AuthContext.ts";
 import {setContext} from "@apollo/client/link/context";
+import {Notifications} from "@mantine/notifications";
 
 const httpLink = createHttpLink({
     uri: import.meta.env.VITE_GRAPHQL_URL,
@@ -85,6 +86,7 @@ root.render(
                 <AuthContext.Provider value={userManager}>
                     <ApolloProvider client={client}>
                         <IntlProvider messages={messages_en} locale="en" defaultLocale="en" onError={silence}>
+                            <Notifications position="top-center" />
                             <App />
                         </IntlProvider>
                     </ApolloProvider>

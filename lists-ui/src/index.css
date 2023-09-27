@@ -68,6 +68,24 @@ dd {
   background-color: #f6f6f6;
 }
 
+.speciesListSideBar {
+  background-color: #f6f6f6;
+}
+
+.sideBarColumn {
+  background-color: #f6f6f6;
+}
+
 .mantine-Accordion-chevron {
   display: none;
+}
+
+.fail-notification {
+  color: darkred;
+  background-color: red;
+}
+
+.success-notification {
+  color: dimgray;
+  background-color: dimgray;
 }

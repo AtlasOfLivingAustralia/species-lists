@@ -96,6 +96,7 @@ export function SearchTable({
                             }: SearchTableProps) {
 
     const { loading, error, data} = useQuery(SEARCH_SPECIES_LISTS, {
+        fetchPolicy: "no-cache",
         variables: {
             searchQuery: searchQuery,
             page: activePage - 1,

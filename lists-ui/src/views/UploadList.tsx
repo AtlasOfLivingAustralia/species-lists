@@ -23,7 +23,8 @@ function UploadList() {
     const [rejectedMessage, setRejectedMessage] = useState<string | null>(null);
     const currentUser = useContext(UserContext) as ListsUser;
 
-    let speciesList:SpeciesList = {} as SpeciesList;
+    // default to isPrivate = true
+    let speciesList:SpeciesList = {isPrivate : true} as SpeciesList;
 
     function resetUpload() {
         setUploaded(null);

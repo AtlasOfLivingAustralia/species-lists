@@ -93,6 +93,7 @@ export function SearchTable({
 
     const currentUser = useContext(UserContext) as ListsUser;
     const { loading, error, data} = useQuery(GET_MY_LISTS, {
+        fetchPolicy: "no-cache",
         context: {
             headers: {
                 "Authorization": "Bearer " + currentUser?.user?.access_token

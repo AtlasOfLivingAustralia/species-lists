@@ -14,6 +14,7 @@ import {SpeciesListItemProps} from "../api/sources/props.ts";
 import {useForm} from "@mantine/form";
 import UserContext from "../helpers/UserContext.ts";
 import {DELETE_SPECIES_LIST_ITEM, GET_LIST, UPDATE_SPECIES_LIST_ITEM} from "../api/sources/graphql.ts";
+import {IconRowRemove} from "@tabler/icons-react";
 export function SpeciesListItemEditor({ speciesListID, selectedItem, customFields,  currentFilters, setIsEditing, resetSelectedIndex }: SpeciesListItemProps) {
 
     const currentUser = useContext(UserContext) as ListsUser;
@@ -130,7 +131,7 @@ export function SpeciesListItemEditor({ speciesListID, selectedItem, customField
     return <>
         <form onSubmit={form.onSubmit((values) => updateSpeciesListItemForm(values)) }>
 
-            <Button style={{ float: 'right'}} onClick={deleteSpeciesListItemForm} disabled={isUpdating}>Delete</Button>
+            <Button style={{ float: 'right'}} onClick={deleteSpeciesListItemForm} disabled={isUpdating}><IconRowRemove/> Remove taxon from list</Button>
             <h2>Taxonomy</h2>
             <Table striped highlightOnHover withBorder>
                 <tbody>

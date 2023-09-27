@@ -53,7 +53,7 @@ function SpeciesListSideBar({ selectedView,
 
     if (loading) {
         return (
-            <Accordion>
+            <Accordion className={`speciesListSideBar`}>
                 <AllLists resetSpeciesList={resetSpeciesList} />
                 <UploadListOption resetSpeciesList={resetSpeciesList} />
                 <Accordion.Item value="the-list">
@@ -71,7 +71,7 @@ function SpeciesListSideBar({ selectedView,
 
     return (
         <>
-            <Accordion defaultValue="selected-list" >
+            <Accordion className={`speciesListSideBar`} defaultValue="selected-list" >
                 <AllLists resetSpeciesList={resetSpeciesList} />
                 <UploadListOption resetSpeciesList={resetSpeciesList} />
                 <Accordion.Item value="the-list">

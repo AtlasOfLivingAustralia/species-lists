@@ -139,7 +139,7 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
 
     return (
         <Grid mb="md" align="flex-start">
-            <Grid.Col xs={1}  sm={2} style={{backgroundColor: "#F6F6F6"}}>
+            <Grid.Col xs={1}  sm={2} className={`sideBarColumn`}>
                 <SpeciesListSideBar selectedView="metadata"
                                     resetSpeciesList={() => setSpeciesList(null)}/>
             </Grid.Col>

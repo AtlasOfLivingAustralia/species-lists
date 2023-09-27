@@ -142,6 +142,7 @@ export function MetadataForm({ speciesList,
                 </Group>
                 <Space h="md" />
                 <TextInput mt="md" label="Authority" disabled={!edit} placeholder="" {...form.getInputProps("authority")} />
+
                 <Space h="md" />
                 <Select
                     label="Region"
@@ -171,7 +172,7 @@ export function MetadataForm({ speciesList,
                 />
                 <Space h="md" />
 
-                <Textarea h={100} label="Well known text" disabled={!edit} placeholder="" {...form.getInputProps("wkt")} />
+                <Textarea h={100} label="Geographic coordinates (Well Known Text format)" disabled={!edit} placeholder="" {...form.getInputProps("wkt")} />
 
                 { listTypeValidation &&
                     <>

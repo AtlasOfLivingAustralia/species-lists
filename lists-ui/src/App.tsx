@@ -154,8 +154,7 @@ export default function App() {
                                     paddingLeft: 0,
                                     paddingRight: 0
                                 }}
-                                size="100%"
-                            >
+                                size="100%">
                                     <Image
                                         radius="md"
                                         src={import.meta.env.VITE_LOGO_URL}
@@ -186,8 +185,7 @@ export default function App() {
                                         paddingRight: 0,
                                         marginTop: '20px',
                                     }}
-                                    size="100%"
-                                >
+                                    size="100%">
                                     <Text style={{ padding: '16px 12px 16px 22px', color: '#000', paddingLeft: '22px' }}>
                                         <Breadcrumbs id={`breadcrumbs`} separator="&#x276F;" style={{ fontFamily: '"Roboto",sans-serif', fontSize: '14px' }}>
                                             {breadcrumbItems}
@@ -238,7 +236,7 @@ export default function App() {
                         path="/releases/:speciesListID"
                         element={
                             <Grid mb="md" align="flex-start">
-                                <Grid.Col xs={1} sm={2} style={{ backgroundColor: '#F6F6F6' }}>
+                                <Grid.Col xs={1} sm={2} className={`sideBarColumn`}>
                                     <SpeciesListSideBar selectedView="releases" resetSpeciesList={resetSpeciesList} />
                                 </Grid.Col>
                                 <Grid.Col xs={12} sm={10}>
@@ -251,8 +249,8 @@ export default function App() {
                         path="/reload/:speciesListID"
                         element={
                             <Grid mb="md" align="flex-start">
-                                <Grid.Col xs={1} sm={2} style={{ backgroundColor: '#F6F6F6' }}>
-                                    <SpeciesListSideBar selectedView="metadata" resetSpeciesList={resetSpeciesList} />
+                                <Grid.Col xs={1} sm={2} className={`sideBarColumn`}>
+                                    <SpeciesListSideBar selectedView="reload" resetSpeciesList={resetSpeciesList} />
                                 </Grid.Col>
                                 <Grid.Col xs={12} sm={10}>
                                     <ReloadList/>
@@ -264,8 +262,8 @@ export default function App() {
                         path="/dangerzone/:speciesListID"
                         element={
                             <Grid mb="md" align="flex-start">
-                                <Grid.Col xs={1} sm={2} style={{ backgroundColor: '#F6F6F6' }}>
-                                    <SpeciesListSideBar selectedView="metadata" resetSpeciesList={resetSpeciesList} />
+                                <Grid.Col xs={1} sm={2} className={`sideBarColumn`}>
+                                    <SpeciesListSideBar selectedView="dangerzone" resetSpeciesList={resetSpeciesList} />
                                 </Grid.Col>
                                 <Grid.Col xs={12} sm={10}>
                                     <DangerZone />
