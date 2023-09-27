@@ -87,7 +87,7 @@ public class IngressController {
       if (success) return new ResponseEntity<>(HttpStatus.OK);
       else return ResponseEntity.badRequest().body("Unable to delete species list");
     } catch (Exception e) {
-      return ResponseEntity.badRequest().body("Error while releasing the file: " + e.getMessage());
+      return ResponseEntity.badRequest().body("Error while deleting species list: " + e.getMessage());
     }
   }
 
@@ -99,12 +99,14 @@ public class IngressController {
       @AuthenticationPrincipal Principal principal) {
     try {
       ResponseEntity<Object> errorResponse = checkAuthorized(speciesListID, principal);
-      if (errorResponse != null) return errorResponse;
-
+      if (errorResponse != null) {
+        return errorResponse;
+      }
       taxonService.taxonMatchDataset(speciesListID);
       return new ResponseEntity<>(HttpStatus.OK);
     } catch (Exception e) {
-      return ResponseEntity.badRequest().body("Error while releasing the file: " + e.getMessage());
+      logger.error(e.getMessage(), e);
+      return ResponseEntity.badRequest().body("Error while rematching the taxonomy for a list: " + e.getMessage());
     }
   }
 
@@ -118,7 +120,8 @@ public class IngressController {
       taxonService.taxonMatchDatasets();
       return new ResponseEntity<>(HttpStatus.OK);
     } catch (Exception e) {
-      return ResponseEntity.badRequest().body("Error while releasing the file: " + e.getMessage());
+      logger.error(e.getMessage(), e);
+      return ResponseEntity.badRequest().body("Error while rematch the taxonomy for all lists: " + e.getMessage());
     }
   }
 
@@ -192,7 +195,7 @@ public class IngressController {
       logger.info("Ingestion started...");
       File tempFile = new File(tempDir + "/" + fileName);
       if (!tempFile.exists()) {
-        return ResponseEntity.badRequest().body("Temp file not found");
+        return ResponseEntity.badRequest().body("File not uploaded yet");
       }
 
       SpeciesList updatedSpeciesList =
@@ -220,7 +223,7 @@ public class IngressController {
       logger.info("Re-Ingestion started...");
       File tempFile = new File(tempDir + "/" + fileName);
       if (!tempFile.exists()) {
-        return ResponseEntity.badRequest().body("Temp file not found");
+        return ResponseEntity.badRequest().body("File not uploaded yet");
       }
       SpeciesList speciesList = uploadService.reload(speciesListID, tempFile, false);
       if (speciesList != null) {

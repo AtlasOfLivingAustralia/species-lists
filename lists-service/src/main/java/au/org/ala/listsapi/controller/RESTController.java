@@ -8,6 +8,8 @@ import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
@@ -25,6 +27,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 @CrossOrigin(origins = "*", maxAge = 3600)
 @org.springframework.web.bind.annotation.RestController
 public class RESTController {
+
+  private static final Logger logger = LoggerFactory.getLogger(RESTController.class);
 
   @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
 
@@ -62,7 +66,7 @@ public class RESTController {
       Page<SpeciesList> results = speciesListMongoRepository.findAll(example, paging);
       return new ResponseEntity<>(results.getContent(), HttpStatus.OK);
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.error(e.getMessage(), e);
       return ResponseEntity.badRequest().body(e.getMessage());
     }
   }

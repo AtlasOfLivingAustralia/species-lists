@@ -70,7 +70,7 @@ public class MigrateController {
         return lists.stream().map(this::mapListToSpeciesList).filter(Objects::nonNull).toList();
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.error(e.getMessage(), e);
     }
     return Collections.emptyList();
   }
@@ -111,7 +111,7 @@ public class MigrateController {
 
       return speciesList;
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.error(e.getMessage(), e);
     }
     return null;
   }
@@ -152,7 +152,7 @@ public class MigrateController {
             speciesListMongoRepository.save(speciesList);
             releaseService.release(speciesList.getId());
           } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
           }
         });
     return new ResponseEntity<>(HttpStatus.OK);
@@ -178,7 +178,7 @@ public class MigrateController {
             speciesListMongoRepository.save(speciesList);
             releaseService.release(speciesList.getId());
           } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
           }
         });
     return new ResponseEntity<>(HttpStatus.OK);
