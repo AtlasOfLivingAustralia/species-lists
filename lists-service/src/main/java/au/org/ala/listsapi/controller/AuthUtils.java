@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class AuthUtils {
 
-  @Value("#{'${security.admin.role}'.split(',')}:ROLE_ADMIN")
+  @Value("#{'${security.admin.role}'.split(',')}")
   private List<String> adminRoles;
 
   public boolean isAuthorized(Principal principal) {
