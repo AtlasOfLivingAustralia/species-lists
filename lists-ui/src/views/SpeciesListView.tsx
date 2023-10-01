@@ -15,7 +15,7 @@ import {
 import {useQuery} from '@apollo/client';
 import {useLocation, useParams} from 'react-router-dom';
 import SpeciesListSideBar from './SpeciesListSideBar';
-import { FormattedMessage } from 'react-intl';
+import {FormattedMessage, FormattedNumber} from 'react-intl';
 import {
     IconAdjustmentsHorizontal,
     IconSearch,
@@ -275,7 +275,7 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                                 />
                                 <Group style={{paddingRight:"40px"}}>
                                     {loading && <><Skeleton height={30} width={50} /></>}
-                                    {!loading && <><Text>{totalElements} taxa</Text></>}
+                                    {!loading && <><Text><FormattedNumber value={totalElements} /> taxa</Text></>}
                                 </Group>
                                 <Button variant="outline" onClick={download}><IconDownload />Download</Button>
                             </Group>
@@ -367,7 +367,7 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                                     <SearchTable
                                         results={results}
                                         classificationFields={classificationFields}
-                                        customFields={data?.getSpeciesListMetadata.fieldList}
+                                        customFields={data?.getSpeciesListMetadata?.fieldList}
                                         selectRow={selectRow}
                                         totalPages={totalPages}
                                         totalElements={totalElements}

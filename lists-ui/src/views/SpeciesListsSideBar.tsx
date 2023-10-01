@@ -1,6 +1,6 @@
 import {Accordion} from "@mantine/core";
 import {Link} from "react-router-dom";
-import {IconEyeClosed, IconHomeCog, IconSettings} from "@tabler/icons-react";
+import {IconHomeCog, IconLock, IconSettings} from "@tabler/icons-react";
 import {AllLists, UploadListOption} from "./SpeciesListSideBar.tsx";
 import {useContext} from "react";
 import UserContext from "../helpers/UserContext.ts";
@@ -14,7 +14,6 @@ interface SpeciesListsSideBarProps {
 export function SpeciesListsSideBar( {resetSpeciesList, selectedView} : SpeciesListsSideBarProps){
 
     const currentUser = useContext(UserContext) as ListsUser;
-
     return (
         <Accordion className={`speciesListsSideBar`} defaultValue={selectedView}>
             <AllLists resetSpeciesList={resetSpeciesList} />
@@ -29,7 +28,7 @@ export function SpeciesListsSideBar( {resetSpeciesList, selectedView} : SpeciesL
             {currentUser?.isAdmin &&
                 <Accordion.Item value="private-lists">
                     <Link to={`/private-lists`}>
-                        <Accordion.Control icon={<IconEyeClosed />}>Private lists</Accordion.Control>
+                        <Accordion.Control icon={<IconLock />}>Private lists</Accordion.Control>
                     </Link>
                 </Accordion.Item>
             }

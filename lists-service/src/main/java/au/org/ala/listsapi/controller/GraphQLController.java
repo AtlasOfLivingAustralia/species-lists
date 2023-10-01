@@ -53,6 +53,7 @@ import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -149,7 +150,7 @@ public class GraphQLController {
 
     // if searching private lists, check user is authorized
     if (isPrivate && !authUtils.isAuthorized(principal)) {
-      return null;
+      throw new AccessDeniedException("You dont have access to this list");
     }
 
     NativeQueryBuilder builder = NativeQuery.builder().withPageable(PageRequest.of(1, 1));
@@ -261,9 +262,19 @@ public class GraphQLController {
   }
 
   @QueryMapping
-  public SpeciesList getSpeciesListMetadata(@Argument String speciesListID) {
+  public SpeciesList getSpeciesListMetadata(@Argument String speciesListID, @AuthenticationPrincipal Principal principal) {
     Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findById(speciesListID);
     if (optionalSpeciesList.isPresent()) {
+      Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListID);
+      if (speciesList.isEmpty()) {
+        return null;
+      }
+
+      // private list, check user is authorized
+      if (!authUtils.isAuthorized(speciesList.get(), principal)) {
+        throw new AccessDeniedException("You dont have access to this list");
+      }
+
       return optionalSpeciesList.get();
     }
     return null;
@@ -271,8 +282,8 @@ public class GraphQLController {
 
   @QueryMapping
   public Page<SpeciesListItem> getSpeciesList(
-      @Argument String speciesListID, @Argument Integer page, @Argument Integer size) {
-    return filterSpeciesList(speciesListID, null, new ArrayList<>(), page, size, null, null);
+      @Argument String speciesListID, @Argument Integer page, @Argument Integer size, @AuthenticationPrincipal Principal principal) {
+    return filterSpeciesList(speciesListID, null, new ArrayList<>(), page, size, null, null, principal);
   }
 
   @SchemaMapping(typeName = "Mutation", field = "addField")
@@ -288,7 +299,7 @@ public class GraphQLController {
     }
 
     if (!authUtils.isAuthorized(speciesList.get(), principal)) {
-      return null;
+      throw new AccessDeniedException("You dont have access to this list");
     }
 
     SpeciesList toUpdate = speciesList.get();
@@ -338,7 +349,7 @@ public class GraphQLController {
     }
 
     if (!authUtils.isAuthorized(speciesList.get(), principal)) {
-      return null;
+      throw new AccessDeniedException("You dont have access to this list");
     }
 
     // remove from species list metadata
@@ -391,7 +402,7 @@ public class GraphQLController {
     }
 
     if (!authUtils.isAuthorized(speciesList.get(), principal)) {
-      return null;
+      throw new AccessDeniedException("You dont have access to this list");
     }
 
     SpeciesList toUpdate = speciesList.get();
@@ -449,7 +460,7 @@ public class GraphQLController {
     }
 
     if (!authUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
-      return null;
+      throw new AccessDeniedException("You dont have access to this list");
     }
 
     SpeciesList speciesList = optionalSpeciesList.get();
@@ -533,7 +544,7 @@ public class GraphQLController {
     }
 
     if (!authUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
-      return null;
+      throw new AccessDeniedException("You dont have access to this list");
     }
 
     // add the new entry
@@ -561,7 +572,7 @@ public class GraphQLController {
     }
 
     if (!authUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
-      return null;
+      throw new AccessDeniedException("You dont have access to this list");
     }
 
     // delete the list item
@@ -632,8 +643,9 @@ public class GraphQLController {
       }
 
       return updatedList;
+    } else {
+      throw new AccessDeniedException("You dont have access to this list");
     }
-    return null;
   }
 
   @QueryMapping
@@ -644,7 +656,23 @@ public class GraphQLController {
       @Argument Integer page,
       @Argument Integer size,
       @Argument String sort,
-      @Argument String direction) {
+      @Argument String direction,
+      @AuthenticationPrincipal Principal principal
+      ) {
+
+    if (speciesListID != null){
+
+      Optional<SpeciesList> speciesListOptional = speciesListMongoRepository.findById(speciesListID);
+      if (speciesListOptional.isEmpty()) {
+        return null;
+      }
+      if (speciesListOptional.get().getIsPrivate()){
+        // private list, check user is authorized
+        if (!authUtils.isAuthorized(speciesListOptional.get(), principal)) {
+          throw new AccessDeniedException("You dont have access to this list");
+        }
+      }
+    }
 
     Pageable pageableRequest = PageRequest.of(page, size);
     NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
@@ -768,14 +796,22 @@ public class GraphQLController {
       @Argument List<Filter> filters,
       @Argument List<String> facetFields,
       @Argument Integer page,
-      @Argument Integer size) {
+      @Argument Integer size,
+      @AuthenticationPrincipal Principal principal) {
+
+    Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListID);
+    if (speciesList.isEmpty()) {
+      return null;
+    }
+
+    // private list, check user is authorized
+    if (!authUtils.isAuthorized(speciesList.get(), principal)) {
+      throw new AccessDeniedException("You dont have access to this list");
+    }
 
     // get facet fields unique to this list
     if (facetFields == null || facetFields.isEmpty()) {
-      Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListID);
-      if (speciesList.isEmpty()) {
-        return null;
-      }
+
       facetFields = speciesList.get().getFacetList();
     }
 

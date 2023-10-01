@@ -39,5 +39,27 @@
   "interpreted.values.warning" : "Note: Interpreted values are matched against the national checklists. These may differ from the original values supplied.",
 
   "wkt": "Geographic coordinates (Well Known Text format)",
-  "wkt.help": "Well Known Text (WKT) is a text markup language for representing vector geometry objects on a map. For example, a point in WKT looks like this: POINT (30 10)."
+  "wkt.help": "Well Known Text (WKT) is a text markup language for representing vector geometry objects on a map. For example, a point in WKT looks like this: POINT (30 10).",
+
+  "visiblility.private": "This list is private. It is only accessible to the owner, editors and administrators.",
+  "visiblility.public": "This list is public. It is accessible to everyone.",
+
+  "region.AUS": "Australia",
+  "region.NZ": "New Zealand",
+  "region.NOTAUS": "Outside Australia",
+  "region.ACT": "Australian Capital Territory",
+  "region.NSW": "New South Wales",
+  "region.NT": "Northern Territory",
+  "region.QLD": "Queensland",
+  "region.SA": "South Australia",
+  "region.TAS": "Tasmania",
+  "region.VIC": "Victoria",
+  "region.WA": "Western Australia",
+  "region.CC": "Cocos (Keeling) Islands",
+  "region.CX": "Christmas Island",
+  "region.AC": "Ashmore and Cartier Islands",
+  "region.CS": "Coral Sea Islands",
+  "region.NF": "Norfolk Island",
+  "region.HM": "Heard and McDonald Islands",
+  "region.AQ": "Australian Antarctic Territory"
 }

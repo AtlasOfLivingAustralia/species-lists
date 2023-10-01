@@ -5,7 +5,7 @@ import {
     Grid,
     TextInput,
     Group,
-    Text, Skeleton, CloseButton, Select
+    Text, Skeleton, CloseButton, Select, HoverCard
 } from "@mantine/core";
 import { useQuery } from "@apollo/client";
 import {useContext, useState} from "react";
@@ -15,7 +15,7 @@ import {
     IconSearch
 } from '@tabler/icons-react';
 import {useNavigate} from "react-router-dom";
-import { FormattedMessage } from "react-intl";
+import {FormattedMessage, FormattedNumber} from "react-intl";
 import { Dispatch, SetStateAction } from "react";
 import {ListsUser, SpeciesList} from "../api/sources/model.ts";
 import {SpeciesListsSideBar} from "./SpeciesListsSideBar.tsx";
@@ -173,9 +173,20 @@ export function SearchTable({
             <td onClick={() => selectSpeciesList(dataset)}>
                 <FormattedMessage id={dataset.listType} />
             </td>
-            <td onClick={() => selectSpeciesList(dataset)}>{dataset.rowCount}</td>
             <td onClick={() => selectSpeciesList(dataset)}>
-                {dataset.isPrivate ? <IconLock /> : <IconEye/>}
+                <FormattedNumber value={dataset.rowCount} />
+            </td>
+            <td onClick={() => selectSpeciesList(dataset)}>
+                <HoverCard width={280} shadow="md">
+                    <HoverCard.Target>
+                        {dataset.isPrivate ? <IconLock /> : <IconEye/>}
+                    </HoverCard.Target>
+                    <HoverCard.Dropdown>
+                        <Text size="sm">
+                            {dataset.isPrivate ? <FormattedMessage id="visiblility.private"/> : <FormattedMessage id="visiblility.public"/>}
+                        </Text>
+                    </HoverCard.Dropdown>
+                </HoverCard>
             </td>
         </tr>
     ));

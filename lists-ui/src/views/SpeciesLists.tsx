@@ -15,7 +15,7 @@ import {
     IconSearch, IconSquareRoundedXFilled
 } from '@tabler/icons-react';
 import {useNavigate} from "react-router-dom";
-import { FormattedMessage } from "react-intl";
+import {FormattedMessage, FormattedNumber} from "react-intl";
 import { Dispatch, SetStateAction } from "react";
 import {Facet, SpeciesList, SpeciesListPage} from "../api/sources/model.ts";
 import {SpeciesListsSideBar} from "./SpeciesListsSideBar.tsx";
@@ -247,7 +247,9 @@ export function SearchTable({
             <td onClick={() => selectSpeciesList(dataset)}>
                 <FormattedMessage id={dataset.listType} />
             </td>
-            <td onClick={() => selectSpeciesList(dataset)}>{dataset.rowCount}</td>
+            <td onClick={() => selectSpeciesList(dataset)}>
+                <FormattedNumber value={dataset.rowCount} />
+            </td>
         </tr>
     ));
 

@@ -4,9 +4,9 @@ import { useMutation, useQuery } from "@apollo/client";
 import {FormattedMessage, useIntl} from "react-intl";
 import {
     Affix,
-    Button,
+    Button, Checkbox,
     Grid,
-    Group, Loader, Modal,
+    Group, HoverCard, Loader, Modal,
     Skeleton,
     Space,
     Switch, Text,
@@ -201,6 +201,19 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                         <dd><Skeleton height={25} width={200} /></dd>
 
                         <Space h="md"/>
+                        <dt>Wider visibility in ALA</dt>
+                        <dd>
+                            <Group>
+                            <Skeleton height={25} width={25} />
+                            <Skeleton height={25} width={120} />
+                            <Skeleton height={25} width={25} />
+                            <Skeleton height={25} width={180} />
+                            <Skeleton height={25} width={25} />
+                            <Skeleton height={25} width={160} />
+                            </Group>
+                        </dd>
+
+                        <Space h="md"/>
                         <dt>Authority</dt>
                         <dd><Skeleton height={25} width={600} /></dd>
 
@@ -256,7 +269,39 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
 
                             <Space h="md"/>
                             <dt>Visibility</dt>
-                            <dd>{speciesList.isPrivate ? <IconLock/> : <IconLockOpen/>} {speciesList?.isPrivate ? 'Private' : 'Public'}</dd>
+                            <dd>
+                                <HoverCard width={280} shadow="md">
+                                    <HoverCard.Target>
+                                        {speciesList.isPrivate ? <IconLock/> : <IconLockOpen/>}
+                                    </HoverCard.Target>
+                                    <HoverCard.Dropdown>
+                                        {speciesList.isPrivate ? <FormattedMessage id="visiblility.private"/> : <FormattedMessage id="visiblility.public"/>}
+                                    </HoverCard.Dropdown>
+                                </HoverCard>
+                            </dd>
+
+                            {currentUser?.isAdmin && <>
+                                <dt>Wider visibility in ALA</dt>
+                                <dd>
+                                    <Group>
+                                        <Checkbox size="md"
+                                                  label="Is Authoritative"
+                                                  checked={speciesList.isAuthoritative}
+                                                  disabled={true}
+                                        />
+                                        <Checkbox size="md"
+                                                  label="Use in Sensitive data service"
+                                                  checked={speciesList.isSDS}
+                                                  disabled={true}
+                                        />
+                                        <Checkbox size="md"
+                                                  label="Display on species pages"
+                                                  checked={speciesList.isBIE}
+                                                  disabled={true}
+                                        />
+                                    </Group>
+                                </dd>
+                            </>}
 
                             <Space h="md"/>
                             <dt>Authority</dt>
@@ -264,7 +309,7 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
 
                             <Space h="md"/>
                             <dt>Region</dt>
-                            <dd>{speciesList?.region ? speciesList?.region: 'Not specified'}</dd>
+                            <dd>{speciesList?.region ? <FormattedMessage id={`region.${speciesList?.region}`}/>: 'Not specified'}</dd>
 
                             <Space h="md"/>
                             <dt><FormattedMessage id="wkt"/></dt>
