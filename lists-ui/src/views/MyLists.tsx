@@ -36,11 +36,6 @@ function MyLists() {
 
     const { loading, error, data} = useQuery(GET_MY_LISTS, {
         fetchPolicy: "no-cache",
-        context: {
-            headers: {
-                "Authorization": "Bearer " + currentUser?.user?.access_token
-            }
-        },
         variables: {
             searchQuery: searchQuery,
             page: activePage - 1,

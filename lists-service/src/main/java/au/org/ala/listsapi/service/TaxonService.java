@@ -142,6 +142,12 @@ public class TaxonService {
                         map,
                         speciesListItem.getClassification(),
                         speciesList.getIsPrivate() != null ? speciesList.getIsPrivate() : false,
+                        speciesList.getIsAuthoritative() != null
+                            ? speciesList.getIsAuthoritative()
+                            : false,
+                        speciesList.getIsBIE() != null ? speciesList.getIsBIE() : false,
+                        speciesList.getIsSDS() != null ? speciesList.getIsSDS() : false,
+                        speciesList.getRegion() != null || speciesList.getWkt() != null,
                         speciesList.getOwner(),
                         speciesList.getEditors());
 

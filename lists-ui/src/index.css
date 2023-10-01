@@ -39,8 +39,19 @@ dd {
   color: #FFFFFF;
 }
 
+.loginButtons .mantine-Button-label:hover {
+  background-color: #000000;
+}
+
+
+.loginButtons .mantine-Button-root:hover {
+  border: #FFFFFF solid 1px;
+  background-color: #000000;
+}
+
 .loginButtons .mantine-Button-root {
   border: #FFFFFF solid 1px;
+  background-color: #000000;
 }
 
 .filterQueryBtn {
@@ -48,16 +59,18 @@ dd {
   border: 1px solid rgb(128, 128, 128);
 }
 
-.filterQueryBtn:hover {
-  color: white;
-}
+/*.filterQueryBtn:hover {*/
+/*  color: white;*/
+/*}*/
 
-.mantine-Button-inner:hover {
-  color: white;
-}
+/*.mantine-Button-inner:hover {*/
+/*  color: white;*/
+/*}*/
 
 .mantine-Button-root:hover {
-  border: #FFFFFF solid 1px;
+  color:#c44d34;
+  background-color: #f6f6f6;
+  border: #c44d34 solid 1px;
 }
 
 .mantine-Accordion-item[data-active="true"] .mantine-Accordion-label {

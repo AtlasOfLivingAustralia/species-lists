@@ -25,14 +25,16 @@ import {
 } from "@tabler/icons-react";
 import {
     SpeciesListItem,
-    Facet, FacetCount, FilteredSpeciesList, SpeciesList, Classification, ListsUser
+    Facet, FilteredSpeciesList, SpeciesList, Classification, ListsUser
 } from "../api/sources/model";
 import {useDisclosure} from "@mantine/hooks";
-import {FacetProps, SpeciesListProps} from "../api/sources/props.ts";
+import { SpeciesListProps} from "../api/sources/props.ts";
 import {SpeciesListItemEditor} from "./SpeciesListItemEditor.tsx";
 import {GET_LIST} from "../api/sources/graphql.ts";
 import {SpeciesListItemView} from "./SpeciesListItemView.tsx";
 import UserContext from "../helpers/UserContext.ts";
+import {SelectedFacet} from "../components/SelectedFacet.tsx";
+import {FacetList} from "../components/FacetList.tsx";
 
 
 function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps) {
@@ -454,41 +456,5 @@ function SearchTable({ results,
     );
 }
 
-
-interface SelectedFacetProps {
-    facet: { key: string; value: string };
-    idx: number;
-    removeFacet: (idx: number) => void;
-}
-
-export function SelectedFacet({ facet, idx, removeFacet }: SelectedFacetProps) {
-    return (
-        <Button variant={"outline"} onClick={() => removeFacet(idx)}>
-            <IconSquareRoundedXFilled />
-            <FormattedMessage id={facet.key} /> : {facet.value || 'Not supplied'}
-        </Button>
-    );
-}
-
-export function FacetList({ facet, addToQuery }: FacetProps) {
-    if (facet.counts.length === 0) return null;
-
-    return (
-        <>
-            <Title order={6}>
-                <FormattedMessage id={facet.key} />
-            </Title>
-            <List>
-                {facet.counts.map((facetCount: FacetCount) => (
-                    <List.Item onClick={() => addToQuery(facet.key, facetCount.value)}>
-                        <Text fz="sm" style={{ color: '#c44d34', cursor: 'pointer' }}>
-                            {facetCount.value || 'Not supplied'} ({facetCount.count})
-                        </Text>
-                    </List.Item>
-                ))}
-            </List>
-        </>
-    );
-}
 
 export default SpeciesListView;

@@ -5,20 +5,24 @@ import {
     Grid,
     TextInput,
     Group,
-    Text, Skeleton, CloseButton, Select
+    Text, Skeleton, CloseButton, Select, Drawer, Title, ThemeIcon, Button, Divider, List
 } from "@mantine/core";
 import { useQuery } from "@apollo/client";
 import {useState} from "react";
 import {
+    IconAdjustmentsHorizontal,
     IconList,
-    IconSearch
+    IconSearch, IconSquareRoundedXFilled
 } from '@tabler/icons-react';
 import {useNavigate} from "react-router-dom";
 import { FormattedMessage } from "react-intl";
 import { Dispatch, SetStateAction } from "react";
-import {SpeciesList} from "../api/sources/model.ts";
+import {Facet, SpeciesList, SpeciesListPage} from "../api/sources/model.ts";
 import {SpeciesListsSideBar} from "./SpeciesListsSideBar.tsx";
 import {SEARCH_SPECIES_LISTS} from "../api/sources/graphql.ts";
+import {useDisclosure} from "@mantine/hooks";
+import {FacetList} from "../components/FacetList.tsx";
+import {SelectedFacet} from "../components/SelectedFacet.tsx";
 
 
 function SpeciesLists({isPrivate}: {isPrivate: boolean})  {
@@ -27,23 +31,83 @@ function SpeciesLists({isPrivate}: {isPrivate: boolean})  {
     const [activePage, setPage] = useState<number>(1);
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [pageSize, setPageSize] = useState<number>(12);
+    const [filtersSelected, filtersHandlers] = useDisclosure(false);
+    const [selectedFacets, setSelectedFacets] = useState<any[]>([]);
 
-    function selectSpeciesList(speciesList: SpeciesList) {
-        navigate(`/list/` + speciesList.id, {state: {searchQuery: searchQuery}} );
-    }
 
-    const { loading, error, data} = useQuery(SEARCH_SPECIES_LISTS, {
+    const { loading, error, data, refetch} = useQuery<{
+        lists: SpeciesListPage;
+        facetSpeciesLists: Facet[];
+    }>(SEARCH_SPECIES_LISTS, {
         fetchPolicy: "no-cache",
         variables: {
             searchQuery: searchQuery,
             page: activePage - 1,
             size: pageSize,
+            filters: [],
             isPrivate: isPrivate,
         },
     });
 
+    refetch({
+        searchQuery: searchQuery,
+        page: activePage - 1,
+        size: pageSize,
+        filters: selectedFacets,
+        isPrivate: isPrivate,
+    });
+
+    const facets = data?.facetSpeciesLists;
+
+    function selectSpeciesList(speciesList: SpeciesList) {
+        navigate(`/list/` + speciesList.id, {state: {searchQuery: searchQuery}} );
+    }
+
+    function addToQuery(facetName: string, facetValue: string) {
+        const existing = selectedFacets.find((facet) => facet.key === facetName);
+        if (existing === undefined) {
+            const updatedArray = selectedFacets.concat([
+                { key: facetName, value: facetValue },
+            ]);
+            setSelectedFacets(updatedArray);
+        }
+    }
+
+    function removeFacet(idx: number) {
+        const array3 = selectedFacets.concat([]);
+        array3.splice(idx, 1);
+        setSelectedFacets(array3);
+    }
+
     return (
         <>
+            <Drawer
+                opened={filtersSelected}
+                onClose={filtersHandlers.close}
+                position="left"
+                title={
+                    <Title order={2}><ThemeIcon color={`gray`}><IconAdjustmentsHorizontal /></ThemeIcon>Query filters</Title>
+                }
+                padding="xl"
+                size="md"
+            >
+                {selectedFacets && selectedFacets.length > 0 && (
+                    <>
+                        <Text weight={'bold'}>Selected filters</Text>
+                        <List>
+                            {selectedFacets.map((facet, idx) => (
+                                <SelectedFacet
+                                    facet={facet}
+                                    idx={idx}
+                                    removeFacet={removeFacet}
+                                />
+                            ))}
+                        </List>
+                        <Space h="md" />
+                    </>
+                )}
+                <>{facets && facets.map((facet) => <FacetList facet={facet} addToQuery={addToQuery} hideCount={true} />)}</>
+            </Drawer>
             <Grid mb="md">
                 <Grid.Col xs={1} sm={2}>
                     <SpeciesListsSideBar resetSpeciesList={() => console.log('reset list')}
@@ -80,8 +144,22 @@ function SpeciesLists({isPrivate}: {isPrivate: boolean})  {
                                 />
                                 <Group style={{paddingRight:"40px"}}>
                                     {loading && <><Skeleton height={30} width={50} /></>}
-                                    {!loading && <><Text>{data.lists.totalElements} lists</Text></>}
+                                    {!loading && <><Text>{data?.lists?.totalElements} lists</Text></>}
                                 </Group>
+                            </Group>
+                            <Space h={"md"}/>
+                            <Group>
+                                <Button className={`filterQueryBtn`} variant="outline"  onClick={filtersHandlers.open}>
+                                    <IconAdjustmentsHorizontal />
+                                    <Text>Filters</Text>
+                                </Button>
+                                <Divider size="sm" orientation="vertical" />
+                                <>
+                                    {(!selectedFacets || selectedFacets.length == 0)  && <Text style={{color: 'gray'}}>No filters selected</Text> }
+                                    {selectedFacets && selectedFacets.length > 0 &&
+                                        selectedFacets.map((facet, idx) => <Button variant="outline" color="gray" size="sm" onClick={() => removeFacet(idx)}><IconSquareRoundedXFilled/><FormattedMessage id={facet.key} />: <FormattedMessage id={facet.value} defaultMessage={facet.value} /></Button> )
+                                    }
+                                </>
                             </Group>
                         </Grid.Col>
                     </Grid>

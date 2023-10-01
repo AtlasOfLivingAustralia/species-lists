@@ -7,6 +7,7 @@ interface SpeciesListSideBarProps {
 
 interface FacetProps {
     facet: Facet;
+    hideCount?: boolean;
     addToQuery: (facetName: string, facetValue: string) => void;
 }
 

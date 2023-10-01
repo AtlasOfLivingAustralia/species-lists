@@ -28,7 +28,7 @@ services:
       timeout: 10s
       retries: 5
   mongodb:
-    image: mongo:latest
+    image: mongo:6.0
     container_name: species-lists-mongo
     restart: on-failure
     ports:

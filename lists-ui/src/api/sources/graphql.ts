@@ -62,6 +62,28 @@ export const GET_LIST = gql`
 `;
 
 export const SEARCH_SPECIES_LISTS = gql`
+    query findList($searchQuery: String, $page: Int, $size: Int, $isPrivate: Boolean, $filters:[Filter]) {
+        lists(searchQuery: $searchQuery, page: $page, size: $size, isPrivate: $isPrivate, filters:$filters) {
+            content {
+                id
+                title
+                rowCount
+                listType
+            }
+            totalPages
+            totalElements
+        }
+        facetSpeciesLists (searchQuery: $searchQuery, isPrivate: $isPrivate) {
+            key
+            counts {
+                value
+                count
+            }
+        }        
+    }
+`;
+
+export const SEARCH_PRIVATE_SPECIES_LISTS = gql`
     query findList($searchQuery: String, $page: Int, $size: Int, $isPrivate: Boolean) {
         lists(searchQuery: $searchQuery, page: $page, size: $size, isPrivate: $isPrivate) {
             content {
@@ -73,8 +95,16 @@ export const SEARCH_SPECIES_LISTS = gql`
             totalPages
             totalElements
         }
+        facetSpeciesLists (searchQuery: $searchQuery, isPrivate: $isPrivate) {
+            key
+            counts {
+                value
+                count
+            }
+        }
     }
 `;
+
 
 export const UPDATE_SPECIES_LIST_ITEM = gql`
     mutation update(

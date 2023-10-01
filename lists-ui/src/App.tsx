@@ -5,7 +5,7 @@ import {
     Space,
     Image,
     Text,
-    Breadcrumbs, Button, Anchor
+    Breadcrumbs, Button, Anchor, Group, Loader, Modal
 } from '@mantine/core';
 import {Route, Routes} from "react-router-dom";
 import SpeciesLists from "./views/SpeciesLists";
@@ -15,22 +15,20 @@ import {Metadata} from "./views/Metadata";
 import SpeciesListSideBar from "./views/SpeciesListSideBar";
 import UploadList from "./views/UploadList";
 import ReloadList from "./views/ReloadList";
-import {useContext, useEffect, useState} from "react";
+import {useState} from "react";
 import {Releases} from "./views/Releases";
 import Admin from "./views/Admin.tsx";
-import {User, UserManager} from "oidc-client-ts";
-import AuthContext from "./helpers/AuthContext.ts";
 import DangerZone from "./views/DangerZone.tsx";
 import {SpeciesListsSideBar} from "./views/SpeciesListsSideBar.tsx";
 import MyLists from "./views/MyLists.tsx";
 import UserContext from "./helpers/UserContext.ts";
+import {useAuth} from "react-oidc-context";
 
 export default function App() {
 
     const [speciesList, setSpeciesList] = useState<SpeciesList | null | undefined>(null);
-    const userManager: UserManager = useContext(AuthContext) as UserManager;
     const [currentUser, setCurrentUser] = useState<ListsUser | null>(null);
-    const { search } = window.location;
+    const auth = useAuth();
 
     const resetSpeciesList = () => {
         setSpeciesList(null);
@@ -48,92 +46,38 @@ export default function App() {
     // const breadcrumbItems = breadcrumbMap.map(item => item.title);
     const breadcrumbItems = breadcrumbs.map( (breadcrumb: Breadcrumb) => <Anchor href={breadcrumb.href ? breadcrumb.href : '#'  }>{breadcrumb.title}</Anchor> );
 
-    const signIn = () => {
-        // @ts-ignore
-        let redirectUri = {
-            redirect_uri: window.location.href,
-            expiry: new Date().getTime() + 300000
-        };
-        console.log(redirectUri);
-        localStorage.setItem("redirectUri", JSON.stringify(redirectUri))
-        userManager.signinRedirect(redirectUri);
-    };
-    const signOut = () => {
-        userManager.signoutRedirect({"post_logout_redirect_uri": window.location.href})
-    };
+
+    // if (auth.isLoading) {
+    //     return <>Loading...</>;
+    // }
+
+    if (auth.error) {
+        return <div>Configuration error... {auth.error.message}</div>;
+    }
 
     const myProfile = () => {
         window.location.href = import.meta.env.VITE_PROFILE_URL
     };
 
-    useEffect(() => {
-        let result = userManager.getUser();
-        result.then((user:User | null) => {
+    const logout = () => {
+        setCurrentUser(null);
+        localStorage.removeItem('access_token');
+        auth.removeUser();
+    }
 
-            if (user) {
-
-                if (!user.expired) {
-                    const roles = (user?.profile?.role || []) as string[];
-                    const userId = user?.profile?.userid as string || '';
-                    setCurrentUser({
-                        user: user,
-                        userId: userId,
-                        isAdmin: roles.includes('ROLE_ADMIN'),
-                        roles: roles
-                    });
-                    localStorage.setItem('access_token', user.access_token);
-                    console.log('Setting current user');
-                } else {
-
-                    // TODO use refresh token
-                    userManager.removeUser();
-                    setCurrentUser(null);
-                    localStorage.removeItem('access_token');
-                    console.log('Setting current user to null');
-                }
-            } else if (search.includes('code=') && search.includes('state=')) {
-                const params = new URLSearchParams(window.location.search);
-
-                (async () => {
-                    // Attempt to retrieve an access token
-                    try {
-                        const user = await userManager.signinRedirectCallback();
-                        await userManager.storeUser(user);
-                        const roles = (user?.profile?.role || []) as string[];
-                        const userId = user?.profile?.userid as string || '';
-                        setCurrentUser({
-                            user: user,
-                            userId: userId,
-                            isAdmin: roles.includes('ROLE_ADMIN'),
-                            roles: roles
-                        });
-                        localStorage.setItem('access_token', user.access_token);
-                        console.log('Setting current user');
-                    } catch (error) {
-                        console.log("Problem retrieving access token: " + error);
-                    }
-
-                    // Replace the URL to one without the auth query params
-                    params.delete('code');
-                    params.delete('state');
-                    params.delete('client_id');
-
-                    let paramStr = (params.toString() ? "?" : "") + params.toString()
-
-                    window.history.replaceState(
-                        null,
-                        '',
-                        `${window.location.origin}${window.location.pathname}${paramStr}`
-                    );
-                })();
-            } else {
-                userManager.removeUser();
-                localStorage.removeItem('access_token');
-                setCurrentUser(null);
-                console.log('Setting current user to null');
-            }
+    if (auth.isAuthenticated && auth.user && !currentUser) {
+        // set the current user
+        const user = auth.user;
+        const roles = (user?.profile?.role || []) as string[];
+        const userId = user?.profile?.userid as string || '';
+        setCurrentUser({
+            user: auth.user,
+            userId: userId,
+            isAdmin: roles.includes('ROLE_ADMIN'),
+            roles: roles
         });
-    }, []);
+        localStorage.setItem('access_token', user.access_token);
+    }
 
     return (
         <UserContext.Provider value={currentUser}>
@@ -145,6 +89,12 @@ export default function App() {
                 }}
                 header={
                     <>
+                        <Modal title="About" opened={auth.isLoading} onClose={() => console.log("auth checked")} >
+                            <Group>
+                                <Loader color="orange" />
+                                <Text>Logging in...</Text>
+                            </Group>
+                        </Modal>
                         <Header height={{ base: 140, md: 140, padding: 0, margin: 0 }}>
                             <Container
                                 style={{
@@ -166,13 +116,13 @@ export default function App() {
                                     <div className={`loginButtons`} style={{ position: 'absolute', right: '20px', top: '20px', color: 'white'}}>
                                         { currentUser ? (
                                             <>
-                                                <Button onClick={myProfile} variant="outline" size="md" style={{ marginRight: '10px'}} compact>
-                                                    Profile - {currentUser?.user?.profile?.name} {currentUser.isAdmin ? '(ADMIN)' : ''}
+                                                <Button  onClick={myProfile} variant="outline" size="md" style={{ marginRight: '10px'}} compact>
+                                                    Profile - {currentUser?.user?.profile?.name} {currentUser?.isAdmin ? '(ADMIN)' : ''}
                                                 </Button>
-                                                <Button onClick={signOut} variant="outline" size="md" compact>Logout</Button>
+                                                <Button onClick={logout} variant="outline" size="md" compact>Logout</Button>
                                             </>
                                         ) : (
-                                            <Button onClick={signIn} variant="outline" color="gray" size="md" compact>Sign In</Button>
+                                            <Button onClick={() => void auth.signinRedirect()} variant="outline" color="gray" size="md" compact>Sign In</Button>
                                         )}
                                     </div>
 

@@ -36,6 +36,10 @@ public class SpeciesListIndex {
   private Map<String, String> properties;
   private Classification classification;
   private boolean isPrivate;
+  private boolean isAuthoritative;
+  private boolean isBIE;
+  private boolean isSDS;
+  private boolean hasRegion;
   private String owner;
   private List<String> editors;
 }

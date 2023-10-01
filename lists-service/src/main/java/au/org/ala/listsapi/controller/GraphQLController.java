@@ -19,6 +19,7 @@ import au.org.ala.listsapi.service.TaxonService;
 import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
+import co.elastic.clients.elasticsearch._types.aggregations.LongTermsBucket;
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
@@ -80,7 +81,15 @@ public class GraphQLController {
           "class",
           "order",
           "family",
-          "genus");
+          "genus",
+          "isBIE",
+          "listType",
+          "isAuthoritative",
+          "hasRegion",
+          "isSDS");
+
+  public static final List<String> CORE_BOOL_FIELDS =
+      List.of("isBIE", "isAuthoritative", "hasRegion", "isSDS");
 
   public static final String SPECIES_LIST_ID = "speciesListID";
   @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
@@ -131,6 +140,7 @@ public class GraphQLController {
   @QueryMapping
   public Page<SpeciesList> lists(
       @Argument String searchQuery,
+      @Argument List<Filter> filters,
       @Argument Integer page,
       @Argument Integer size,
       @Argument String userId,
@@ -147,8 +157,7 @@ public class GraphQLController {
         q ->
             q.bool(
                 bq -> {
-                  buildQuery(
-                      cleanRawQuery(searchQuery), null, userId, isPrivate, new ArrayList<>(), bq);
+                  buildQuery(cleanRawQuery(searchQuery), null, userId, isPrivate, filters, bq);
                   return bq;
                 }));
 
@@ -202,54 +211,46 @@ public class GraphQLController {
       Boolean isPrivate,
       List<Filter> filters,
       BoolQuery.Builder bq) {
+
     bq.should(
         m ->
             m.matchPhrase(
                 mq -> mq.field("all").query(searchQuery.toLowerCase() + "*").boost(2.0f)));
+
     if (StringUtils.trimToNull(searchQuery) != null && searchQuery.length() > 1) {
       bq.minimumShouldMatch("1");
     }
+
     if (userId != null) {
+      // return all lists for this user
       bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
     } else if (isPrivate != null) {
+      // return all private lists
       bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
     } else if (speciesListID != null) {
+      // return this one list
       bq.filter(f -> f.term(t -> t.field("speciesListID").value(speciesListID)));
     }
 
     if (filters != null) {
-      filters.forEach(
-          filter ->
-              bq.filter(
-                  f ->
-                      f.queryString(
-                          qs ->
-                              qs.defaultOperator(Operator.And)
-                                  .fields(getPropertiesFacetField(filter.getKey()))
-                                  .query(filter.getValue()))));
+      filters.forEach(filter -> addFilter(filter, bq));
     }
-
     return bq;
   }
 
-  @QueryMapping
-  public Facet listsFacet() {
-    Facet facet = new Facet();
-    facet.setKey("listTypes");
-    facet.setCounts(new ArrayList<>());
-    facet
-        .getCounts()
-        .add(
-            new FacetCount(
-                "authoritative",
-                (long) speciesListMongoRepository.countSpeciesListByIsAuthoritative(true)));
-    facet
-        .getCounts()
-        .add(
-            new FacetCount(
-                "private", (long) speciesListMongoRepository.countSpeciesListByIsPrivate(true)));
-    facet.getCounts().add(new FacetCount("total", (long) speciesListMongoRepository.count()));
-    return facet;
+  static void addFilter(Filter filter, BoolQuery.Builder bq) {
+    if (!CORE_BOOL_FIELDS.contains(filter.getKey())) {
+      bq.filter(
+          f ->
+              f.queryString(
+                  qs ->
+                      qs.defaultOperator(Operator.And)
+                          .fields(getPropertiesFacetField(filter.getKey()))
+                          .query(filter.getValue())));
+
+    } else {
+      bq.filter(f -> f.term(t -> t.field(filter.getKey()).value(filter.getValue())));
+    }
   }
 
   @QueryMapping
@@ -510,6 +511,10 @@ public class GraphQLController {
                 .collect(Collectors.toMap(KeyValue::getKey, KeyValue::getValue)),
             speciesListItem.getClassification(),
             speciesList.getIsPrivate() != null ? speciesList.getIsPrivate() : false,
+            speciesList.getIsAuthoritative() != null ? speciesList.getIsAuthoritative() : false,
+            speciesList.getIsBIE() != null ? speciesList.getIsBIE() : false,
+            speciesList.getIsSDS() != null ? speciesList.getIsSDS() : false,
+            speciesList.getRegion() != null || speciesList.getWkt() != null,
             speciesList.getOwner(),
             speciesList.getEditors());
 
@@ -594,7 +599,13 @@ public class GraphQLController {
       SpeciesList toUpdate = speciesList.get();
       if (title != null && !title.equalsIgnoreCase(toUpdate.getTitle())
           || listType != null && !listType.equalsIgnoreCase(toUpdate.getListType())
-          || isPrivate != null && !isPrivate.equals(toUpdate.getIsPrivate())) {
+          || isPrivate != null && !isPrivate.equals(toUpdate.getIsPrivate())
+          || isAuthoritative != null && !isAuthoritative.equals(toUpdate.getIsAuthoritative())
+          || isBIE != null && !isBIE.equals(toUpdate.getIsBIE())
+          || isSDS != null && !isSDS.equals(toUpdate.getIsSDS())
+          || wkt != null && !wkt.equals(toUpdate.getWkt())
+          || region != null && !region.equals(toUpdate.getRegion())) {
+
         reindexRequired = true;
       }
 
@@ -646,7 +657,12 @@ public class GraphQLController {
                 }));
 
     builder.withSort(
-        s -> s.field(new FieldSort.Builder().field(sort).order(SortOrder.Asc).build()));
+        s ->
+            s.field(
+                new FieldSort.Builder()
+                    .field(sort)
+                    .order(SortOrder.valueOf(direction != null ? direction : "Asc"))
+                    .build()));
 
     Query query = builder.build();
     query.setPageable(pageableRequest);
@@ -663,6 +679,86 @@ public class GraphQLController {
   private static String cleanRawQuery(String searchQuery) {
     if (searchQuery != null) return searchQuery.trim().replace("\"", "\\\"");
     return "";
+  }
+
+  @QueryMapping
+  public List<Facet> facetSpeciesLists(
+      @Argument String searchQuery,
+      @Argument List<Filter> filters,
+      @Argument String userId,
+      @Argument Boolean isPrivate,
+      @Argument Integer page,
+      @Argument Integer size) {
+
+    // retrieve field list from species_list
+    NativeQueryBuilder builder = NativeQuery.builder();
+    if (searchQuery != null) {
+      builder.withQuery(
+          q ->
+              q.bool(
+                  bq -> {
+                    buildQuery(cleanRawQuery(searchQuery), null, userId, isPrivate, filters, bq);
+                    return bq;
+                  }));
+    }
+
+    List<String> facetFields = new ArrayList<>();
+    facetFields.add("isAuthoritative");
+    facetFields.add("listType");
+    facetFields.add("isBIE");
+    facetFields.add("isSDS");
+    facetFields.add("hasRegion");
+
+    for (String facetField : facetFields) {
+      builder.withAggregation(
+          facetField, Aggregation.of(a -> a.terms(ta -> ta.field(facetField).size(10))));
+    }
+
+    Query aggQuery = builder.build();
+    SearchHits<SpeciesListIndex> results =
+        elasticsearchOperations.search(aggQuery, SpeciesListIndex.class);
+
+    ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
+
+    List<Facet> facets = new ArrayList<>();
+    facetFields.forEach(
+        facetField -> {
+          ElasticsearchAggregation agg1 =
+              agg.aggregations().stream()
+                  .filter(
+                      elasticsearchAggregation ->
+                          elasticsearchAggregation.aggregation().getName().equals(facetField))
+                  .findFirst()
+                  .get();
+
+          if (agg1.aggregation().getAggregate().isSterms()) {
+            List<StringTermsBucket> array =
+                agg1.aggregation().getAggregate().sterms().buckets().array();
+            Facet facet = new Facet();
+            facet.setCounts(new ArrayList<>());
+            facet.setKey(facetField);
+            array.forEach(
+                bucket -> {
+                  facet
+                      .getCounts()
+                      .add(new FacetCount(bucket.key().stringValue(), bucket.docCount()));
+                });
+            facets.add(facet);
+          } else if (agg1.aggregation().getAggregate().isLterms()) {
+            List<LongTermsBucket> array =
+                agg1.aggregation().getAggregate().lterms().buckets().array();
+            Facet facet = new Facet();
+            facet.setCounts(new ArrayList<>());
+            facet.setKey(facetField);
+            array.forEach(
+                bucket -> {
+                  facet.getCounts().add(new FacetCount(bucket.keyAsString(), bucket.docCount()));
+                });
+            facets.add(facet);
+          }
+        });
+
+    return facets;
   }
 
   @QueryMapping

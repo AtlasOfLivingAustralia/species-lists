@@ -23,11 +23,6 @@ function DangerZone() {
     const [isRematching, setIsRematching] = useState(false);
 
     const [addField] = useMutation(ADD_FIELD, {
-        context: {
-            headers: {
-                "Authorization": "Bearer " + currentUser?.user?.access_token,
-            }
-        },
         refetchQueries: [
             {
                 query: GET_LIST_METADATA,
@@ -242,7 +237,6 @@ function DangerZone() {
 export function ExistingField({speciesListID, originalName}: {speciesListID: string, originalName: string}) {
 
     const [fieldName, setFieldName] = useState(originalName);
-    const currentUser = useContext(UserContext) as ListsUser;
     const [isUpdating, setIsUpdating] = useState(false);
 
     function removeFieldFromList() {
@@ -301,11 +295,6 @@ export function ExistingField({speciesListID, originalName}: {speciesListID: str
     }
 
     const [removeField] = useMutation(REMOVE_FIELD, {
-        context: {
-            headers: {
-                "Authorization": "Bearer " + currentUser?.user?.access_token,
-            }
-        },
         refetchQueries: [
             {
                 query: GET_LIST_METADATA,
@@ -314,11 +303,6 @@ export function ExistingField({speciesListID, originalName}: {speciesListID: str
     });
 
     const [renameField] = useMutation(RENAME_FIELD, {
-        context: {
-            headers: {
-                "Authorization": "Bearer " + currentUser?.user?.access_token,
-            }
-        },
         refetchQueries: [
             {
                 query: GET_LIST_METADATA,

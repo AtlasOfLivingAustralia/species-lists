@@ -6,6 +6,7 @@
   "SPECIES_CHARACTERS": "Character list",
   "INVASIVE": "Invasive species list",
   "COMMON_HABITAT": "Common habitat",
+  "OTHER": "Not specified",
 
   "classification.kingdom" : "Kingdom (matched)",
   "classification.phylum" : "Phylum (matched)",
@@ -15,6 +16,14 @@
   "classification.genus" : "Genus (matched)",
   "classification.scientificName" : "Scientific name (matched)",
   "classification.vernacularName" : "Vernacular name (matched)",
+
+  "isAuthoritative": "Authoritative list",
+  "listType": "List type",
+  "isBIE": "Visible on species pages",
+  "isSDS": "Used by sensitive data service",
+  "hasRegion": "Region specified",
+  "true": "yes",
+  "false": "no",
 
   "scientificName" : "Scientific name",
   "scientificNameAuthority" : "Scientific name authority",

@@ -1,5 +1,12 @@
 import {User} from "oidc-client-ts";
 
+interface SpeciesListPage {
+    content: SpeciesList[]
+    currentPage: number
+    totalElements: number
+    totalPages: number
+}
+
 interface SpeciesList {
     authority: string;
     dateCreated: string;
@@ -125,4 +132,4 @@ interface FilteredSpeciesList {
     totalElements: number;
 }
 
-export type {Breadcrumb,  InputSpeciesList, SpeciesList, Facet, FacetCount, FilteredSpeciesList, SpeciesListItem, Release, ReleasesData, ListsUser, Classification, KV}
+export type {Breadcrumb,  InputSpeciesList, SpeciesList, SpeciesListPage,  Facet, FacetCount, FilteredSpeciesList, SpeciesListItem, Release, ReleasesData, ListsUser, Classification, KV}

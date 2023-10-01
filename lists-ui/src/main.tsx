@@ -7,10 +7,9 @@ import {HashRouter as Router} from 'react-router-dom';
 import {Global, MantineProvider} from "@mantine/core";
 import messages_en from "./translations/en.json";
 import {IntlProvider} from "react-intl";
-import {UserManager, WebStorageStateStore} from "oidc-client-ts";
-import AuthContext from "./helpers/AuthContext.ts";
 import {setContext} from "@apollo/client/link/context";
 import {Notifications} from "@mantine/notifications";
+import { AuthProvider } from "react-oidc-context";
 
 const httpLink = createHttpLink({
     uri: import.meta.env.VITE_GRAPHQL_URL,
@@ -36,13 +35,12 @@ const root = ReactDOM.createRoot(
     document.getElementById('root') as HTMLElement
 );
 
-const userManager = new UserManager({
-    client_id: import.meta.env.VITE_OIDC_CLIENT_ID,
+const oidcConfig = {
     authority: import.meta.env.VITE_OIDC_AUTH_SERVER,
-    userStore: new WebStorageStateStore({ store: localStorage }),
-    redirect_uri: import.meta.env.VITE_OIDC_REDIRECT_URI,
+    client_id:  import.meta.env.VITE_OIDC_CLIENT_ID,
+    redirect_uri: import.meta.env.VITE_OIDC_REDIRECT_URL,
     scope: import.meta.env.VITE_OIDC_SCOPE
-});
+};
 
 function silence(){}
 
@@ -83,14 +81,14 @@ root.render(
         />
         <React.StrictMode>
             <Router>
-                <AuthContext.Provider value={userManager}>
+                <AuthProvider {...oidcConfig}>
                     <ApolloProvider client={client}>
                         <IntlProvider messages={messages_en} locale="en" defaultLocale="en" onError={silence}>
                             <Notifications position="top-center" />
                             <App />
                         </IntlProvider>
                     </ApolloProvider>
-                </AuthContext.Provider>
+                </AuthProvider>
             </Router>
         </React.StrictMode>
     </MantineProvider>
