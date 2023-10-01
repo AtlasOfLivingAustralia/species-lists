@@ -29,6 +29,7 @@ export default function App() {
     const [speciesList, setSpeciesList] = useState<SpeciesList | null | undefined>(null);
     const [currentUser, setCurrentUser] = useState<ListsUser | null>(null);
     const auth = useAuth();
+    const { search } = window.location;
 
     const resetSpeciesList = () => {
         setSpeciesList(null);
@@ -46,11 +47,6 @@ export default function App() {
     // const breadcrumbItems = breadcrumbMap.map(item => item.title);
     const breadcrumbItems = breadcrumbs.map( (breadcrumb: Breadcrumb) => <Anchor href={breadcrumb.href ? breadcrumb.href : '#'  }>{breadcrumb.title}</Anchor> );
 
-
-    // if (auth.isLoading) {
-    //     return <>Loading...</>;
-    // }
-
     if (auth.error) {
         return <div>Configuration error... {auth.error.message}</div>;
     }
@@ -60,10 +56,11 @@ export default function App() {
     };
 
     const logout = () => {
-        setCurrentUser(null);
         localStorage.removeItem('access_token');
         auth.removeUser();
-    }
+        setCurrentUser(null);
+        window.location.href = import.meta.env.VITE_LOGOUT_URL
+    };
 
     if (auth.isAuthenticated && auth.user && !currentUser) {
         // set the current user
@@ -77,6 +74,19 @@ export default function App() {
             roles: roles
         });
         localStorage.setItem('access_token', user.access_token);
+
+        if (search.includes('code=') && search.includes('state=')) {
+            const params = new URLSearchParams(window.location.search);
+            params.delete('code');
+            params.delete('state');
+            params.delete('client_id');
+            let paramStr = (params.toString() ? "?" : "") + params.toString()
+            window.history.replaceState(
+                null,
+                '',
+                `${window.location.origin}${window.location.pathname}${paramStr}`
+            );
+        }
     }
 
     return (

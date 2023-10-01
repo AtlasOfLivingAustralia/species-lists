@@ -6,10 +6,10 @@ import {
     Affix,
     Button,
     Grid,
-    Group,
+    Group, Loader, Modal,
     Skeleton,
     Space,
-    Switch,
+    Switch, Text,
     Title,
 } from "@mantine/core";
 import { MetadataForm } from "./MetadataForm";
@@ -17,7 +17,7 @@ import SpeciesListSideBar from "./SpeciesListSideBar";
 import {ListsUser, SpeciesList} from "../api/sources/model";
 import {MetadataProps} from "../api/sources/props";
 import LicenceLink from "../components/LicenceLink.tsx";
-import {IconLock, IconLockOpen} from "@tabler/icons-react";
+import {IconCheck, IconLock, IconLockOpen} from "@tabler/icons-react";
 import UserContext from "../helpers/UserContext.ts";
 import mapboxgl from 'mapbox-gl';
 import * as wkt from 'wkt';
@@ -26,6 +26,7 @@ import geojsonExtent from '@mapbox/geojson-extent';
 import { useClipboard } from '@mantine/hooks';
 import {Geometry} from "geojson";
 import {GET_LIST_METADATA, UPDATE_LIST} from "../api/sources/graphql.ts";
+import {notifications} from "@mantine/notifications";
 
 mapboxgl.accessToken = import.meta.env.VITE_APP_MAPBOX_TOKEN;
 
@@ -35,12 +36,13 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
     const {speciesListID} = useParams<{ speciesListID: string }>();
     const [edit, setEdit] = useState(false);
     const currentUser = useContext(UserContext) as ListsUser;
-
+    const [isUpdating, setIsUpdating] = useState(false);
     const mapContainer = useRef<HTMLDivElement | null>(null);
     const map = useRef<mapboxgl.Map | null>(null);
     const [lng ] = useState(133);
     const [lat ] = useState(-24.5);
     const [zoom] = useState(3);
+
 
     const intl = useIntl();
 
@@ -65,8 +67,15 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
     });
 
     function updateMetadata(values: SpeciesList) {
+        setIsUpdating(true);
         updateList({variables: values}).then(() => {
             setEdit(false);
+            setIsUpdating(false);
+            notifications.show({
+                icon: <IconCheck />,
+                title: 'The metadata for the list was updated',
+                message: 'The metadata for "'+ values.title.trim() + '" has been updated'
+            })
         });
     }
 
@@ -162,6 +171,13 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                     </Affix>
                 }
                 <Space h="md"/>
+
+                <Modal opened={isUpdating} onClose={close} title="Updating this list">
+                    <Group>
+                        <Loader color="orange" />
+                        <Text>Updating this list. Please wait...</Text>
+                    </Group>
+                </Modal>
 
                 {loading &&
                     <dl>
