@@ -14,7 +14,8 @@ import {SpeciesListItemProps} from "../api/sources/props.ts";
 import {useForm} from "@mantine/form";
 import UserContext from "../helpers/UserContext.ts";
 import {DELETE_SPECIES_LIST_ITEM, GET_LIST, UPDATE_SPECIES_LIST_ITEM} from "../api/sources/graphql.ts";
-import {IconRowRemove} from "@tabler/icons-react";
+import {IconCheck, IconRowRemove} from "@tabler/icons-react";
+import {notifications} from "@mantine/notifications";
 export function SpeciesListItemEditor({ speciesListID, selectedItem, customFields,  currentFilters, setIsEditing, resetSelectedIndex }: SpeciesListItemProps) {
 
     const currentUser = useContext(UserContext) as ListsUser;
@@ -55,7 +56,6 @@ export function SpeciesListItemEditor({ speciesListID, selectedItem, customField
         ]
     });
 
-
     function deleteSpeciesListItemForm() {
         if (window.confirm('Are you sure you want to delete this item')) {
             setIsUpdating(true);
@@ -72,6 +72,12 @@ export function SpeciesListItemEditor({ speciesListID, selectedItem, customField
                 if (resetSelectedIndex) {
                     resetSelectedIndex();
                 }
+
+                notifications.show({
+                    icon: <IconCheck />,
+                    title: 'Record removed from list',
+                    message: 'The record for ' + selectedItem.scientificName + ' has been removed from this list'
+                })
             });
         }
     }
@@ -169,7 +175,6 @@ export function SpeciesListItemEditor({ speciesListID, selectedItem, customField
                 ))}
                 </tbody>
             </Table>
-
 
             <Group mt="md">
                 {setIsEditing &&

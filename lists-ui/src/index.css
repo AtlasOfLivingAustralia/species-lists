@@ -80,12 +80,6 @@ dd {
   display: none;
 }
 
-.fail-notification {
-  color: darkred;
-  background-color: red;
-}
-
-.success-notification {
-  color: dimgray;
+.mantine-Notification-icon {
   background-color: dimgray;
 }

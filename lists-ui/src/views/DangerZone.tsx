@@ -48,15 +48,13 @@ function DangerZone() {
             notifications.show({
                 icon: <IconCheck />,
                 title: 'The field added to list',
-                className: 'success-notification',
                 message: 'The field '+ newFieldName.trim() + ' has been added to the list ' + speciesList.title
             })
         }).catch((err) => {
             console.log(err);
             setIsUpdating(false);
             notifications.show({
-                icon: <IconX />,
-                className: 'fail-notification',
+                icon: <IconX color={`red`}/>,
                 title: 'The field was not added',
                 message: 'The adding of the field has failed due to a system problem',
             });
@@ -84,7 +82,6 @@ function DangerZone() {
             setIsDeleting(false);
             notifications.show({
                 icon: <IconCheck />,
-                className: 'success-notification',
                 title: 'List ' + speciesList.title + ' has been deleted',
                 message: 'The dataset was removed from the system',
             })
@@ -94,9 +91,8 @@ function DangerZone() {
             console.log(err);
             setIsDeleting(false);
             notifications.show({
-                icon: <IconX />,
-                className: 'fail-notification',
-                title: 'List ' + speciesList.title + ' has not been deleted',
+                icon: <IconX color={`red`}/>,
+                title: 'List has not been deleted',
                 message: 'The dataset was not removed from the system due to a system problem',
             });
         });
@@ -112,7 +108,6 @@ function DangerZone() {
         }).then((res) => {
             console.log(res);
             setIsRematching(false);
-
             setIsReindexing(true);
             fetch( import.meta.env.VITE_REINDEX_URL + "/" + speciesListID, {
                 method: "GET",
@@ -124,7 +119,6 @@ function DangerZone() {
                 setIsReindexing(false);
                 notifications.show({
                     icon: <IconCheck />,
-                    className: 'success-notification',
                     title: 'List rematched',
                     message: 'The taxonomy of the list ' + speciesList.title + ' has been rematched'
                 })
@@ -132,18 +126,17 @@ function DangerZone() {
                 console.log(err);
                 setIsDeleting(false);
                 notifications.show({
-                    icon: <IconX />,
-                    className: 'fail-notification',
+                    icon: <IconX color={`red`} />,
                     title: 'Rematching the list ' + speciesList.title + ' has failed',
                     message: 'The dataset was not rematched from the system due to a system problem',
                 });
             });
         }).catch((err) => {
             console.log(err);
-            setIsDeleting(false);
+            setIsRematching(false);
+            setIsReindexing(false);
             notifications.show({
-                icon: <IconX />,
-                className: 'fail-notification',
+                icon: <IconX color={`red`} />,
                 title: 'Rematching the list ' + speciesList.title + ' has failed',
                 message: 'The dataset was not rematched from the system due to a system problem',
             });
@@ -271,7 +264,7 @@ export function ExistingField({speciesListID, originalName}: {speciesListID: str
             console.log(err);
             setIsUpdating(false);
             notifications.show({
-                icon: <IconX />,
+                icon: <IconX color={`red`}/>,
                 className: 'fail-notification',
                 title: 'The field was not removed',
                 message: 'The removal of the field has failed due to a system problem',
@@ -299,7 +292,7 @@ export function ExistingField({speciesListID, originalName}: {speciesListID: str
             console.log(err);
             setIsUpdating(false);
             notifications.show({
-                icon: <IconX />,
+                icon: <IconX color={`red`}/>,
                 className: 'fail-notification',
                 title: 'The field was not renamed',
                 message: 'The rename of the field has failed due to a system problem',
