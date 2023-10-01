@@ -10,6 +10,7 @@ import {IntlProvider} from "react-intl";
 import {setContext} from "@apollo/client/link/context";
 import {Notifications} from "@mantine/notifications";
 import { AuthProvider } from "react-oidc-context";
+import {WebStorageStateStore} from "oidc-client-ts";
 
 const httpLink = createHttpLink({
     uri: import.meta.env.VITE_GRAPHQL_URL,
@@ -39,7 +40,8 @@ const oidcConfig = {
     authority: import.meta.env.VITE_OIDC_AUTH_SERVER,
     client_id:  import.meta.env.VITE_OIDC_CLIENT_ID,
     redirect_uri: import.meta.env.VITE_OIDC_REDIRECT_URL,
-    scope: import.meta.env.VITE_OIDC_SCOPE
+    scope: import.meta.env.VITE_OIDC_SCOPE,
+    userStore: new WebStorageStateStore({ store: window.localStorage })
 };
 
 function silence(){}
