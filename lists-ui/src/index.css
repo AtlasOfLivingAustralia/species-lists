@@ -35,14 +35,19 @@ dd {
   margin-left: 0.5em;
 }
 
+.contactUsLink {
+  color: #FFFFFF;
+  font-size: 14px;
+}
+
 .loginButtons .mantine-Button-label {
   color: #FFFFFF;
+  font-size: 14px;
 }
 
 .loginButtons .mantine-Button-label:hover {
   background-color: #000000;
 }
-
 
 .loginButtons .mantine-Button-root:hover {
   border: #FFFFFF solid 1px;

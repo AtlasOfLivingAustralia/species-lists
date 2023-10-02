@@ -130,7 +130,7 @@ function SpeciesLists({isPrivate}: {isPrivate: boolean})  {
                                 />
                                 <TextInput
                                     sx={{ flexBasis: "60%" }}
-                                    placeholder="Search across lists..."
+                                    placeholder="Search by species list name or taxa..."
                                     icon={<IconSearch size={16} />}
                                     value={searchQuery}
                                     rightSection={

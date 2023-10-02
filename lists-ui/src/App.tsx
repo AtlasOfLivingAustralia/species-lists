@@ -5,7 +5,7 @@ import {
     Space,
     Image,
     Text,
-    Breadcrumbs, Button, Anchor, Group, Loader, Modal
+    Breadcrumbs, Button, Anchor, Group, Loader, Modal, Divider
 } from '@mantine/core';
 import {Route, Routes} from "react-router-dom";
 import SpeciesLists from "./views/SpeciesLists";
@@ -51,13 +51,17 @@ export default function App() {
     }
 
     const myProfile = () => {
-        window.location.href = import.meta.env.VITE_PROFILE_URL
+        window.location.href = import.meta.env.VITE_OIDC_AUTH_PROFILE
+    };
+
+    const signUp = () => {
+        window.location.href = import.meta.env.VITE_SIGNUP_URL
     };
 
     const logout = () => {
         auth.removeUser();
         setCurrentUser(null);
-        window.location.href = import.meta.env.VITE_LOGOUT_URL
+        window.location.href = import.meta.env.VITE_OIDC_REDIRECT_URL
     };
 
     if (auth.isAuthenticated && auth.user && !currentUser) {
@@ -107,17 +111,29 @@ export default function App() {
                                         style={{ marginTop: '10px', marginLeft: '30px' }}
                                     />
 
-                                    <div className={`loginButtons`} style={{ position: 'absolute', right: '20px', top: '20px', color: 'white'}}>
-                                        { currentUser ? (
-                                            <>
-                                                <Button  onClick={myProfile} variant="outline" size="md" style={{ marginRight: '10px'}} compact>
-                                                    Profile - {currentUser?.user?.profile?.name} {currentUser?.isAdmin ? '(ADMIN)' : ''}
-                                                </Button>
-                                                <Button onClick={logout} variant="outline" size="md" compact>Logout</Button>
-                                            </>
-                                        ) : (
-                                            <Button onClick={() => void auth.signinRedirect()} variant="outline" color="gray" size="md" compact>Sign In</Button>
-                                        )}
+                                    <div className={`loginButtons`} style={{ position: 'absolute', right: '40px', top: '20px', color: 'white'}}>
+
+                                        <Group>
+                                            <a className={`contactUsLink`} href="https://www.ala.org.au/contact-us/">Contact us</a>
+
+                                            <Divider size="sm" orientation="vertical" />
+
+                                            { currentUser ? (
+                                                <>
+                                                    <Button radius="xs" onClick={myProfile} variant="outline" size="sm" style={{ marginRight: '10px'}} compact>
+                                                        Profile - {currentUser?.user?.profile?.name} {currentUser?.isAdmin ? '(ADMIN)' : ''}
+                                                    </Button>
+                                                    <Button radius="xs" onClick={logout} variant="outline" size="sm" compact>Logout</Button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Group>
+                                                        <Button radius="xs" onClick={signUp} size="md" compact>Sign up</Button>
+                                                        <Button className={`loginButton`} radius="xs" onClick={() => void auth.signinRedirect()} color="orange" size="md" compact>Login</Button>
+                                                    </Group>
+                                                </>
+                                            )}
+                                        </Group>
                                     </div>
 
                                 <Container

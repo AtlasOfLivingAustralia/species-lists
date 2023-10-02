@@ -52,6 +52,7 @@ const oidcConfig = {
     client_id:  import.meta.env.VITE_OIDC_CLIENT_ID,
     redirect_uri: import.meta.env.VITE_OIDC_REDIRECT_URL,
     scope: import.meta.env.VITE_OIDC_SCOPE,
+    post_logout_redirect_uri: import.meta.env.VITE_OIDC_REDIRECT_URL,
     userStore: new WebStorageStateStore({ store: window.localStorage }),
     onSigninCallback: () => {
         const { search } = window.location;
@@ -67,7 +68,11 @@ const oidcConfig = {
                 `${window.location.origin}${window.location.pathname}${paramStr}`
             );
         }
+    },
+    onSignoutCallback: () => {
+        console.log("onSignoutCallback");
     }
+
 };
 
 root.render(
