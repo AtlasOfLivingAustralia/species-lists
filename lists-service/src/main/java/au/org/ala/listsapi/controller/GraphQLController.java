@@ -150,6 +150,7 @@ public class GraphQLController {
 
     // if searching private lists, check user is authorized
     if (isPrivate && !authUtils.isAuthorized(principal)) {
+      logger.info("User not authorized to private access lists");
       throw new AccessDeniedException("You dont have access to this list");
     }
 
@@ -271,7 +272,8 @@ public class GraphQLController {
       }
 
       // private list, check user is authorized
-      if (!authUtils.isAuthorized(speciesList.get(), principal)) {
+      if (speciesList.get().getIsPrivate() && !authUtils.isAuthorized(speciesList.get(), principal)) {
+        logger.info("User not authorized to private access list: " + speciesListID);
         throw new AccessDeniedException("You dont have access to this list");
       }
 
@@ -299,7 +301,8 @@ public class GraphQLController {
     }
 
     if (!authUtils.isAuthorized(speciesList.get(), principal)) {
-      throw new AccessDeniedException("You dont have access to this list");
+      logger.info("User not authorized to modify access list: " + id);
+      throw new AccessDeniedException("You dont have authorisation to modify this list");
     }
 
     SpeciesList toUpdate = speciesList.get();
@@ -349,6 +352,7 @@ public class GraphQLController {
     }
 
     if (!authUtils.isAuthorized(speciesList.get(), principal)) {
+      logger.info("User not authorized to modify access list: " + id);
       throw new AccessDeniedException("You dont have access to this list");
     }
 
@@ -402,6 +406,7 @@ public class GraphQLController {
     }
 
     if (!authUtils.isAuthorized(speciesList.get(), principal)) {
+      logger.info("User not authorized to modify access list: " + id);
       throw new AccessDeniedException("You dont have access to this list");
     }
 
@@ -460,6 +465,7 @@ public class GraphQLController {
     }
 
     if (!authUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
+      logger.info("User not authorized to modify access list: " + optionalSpeciesList.get().getId());
       throw new AccessDeniedException("You dont have access to this list");
     }
 
@@ -669,6 +675,7 @@ public class GraphQLController {
       if (speciesListOptional.get().getIsPrivate()){
         // private list, check user is authorized
         if (!authUtils.isAuthorized(speciesListOptional.get(), principal)) {
+          logger.info("User not authorized to private access list: " + speciesListID);
           throw new AccessDeniedException("You dont have access to this list");
         }
       }
@@ -805,8 +812,11 @@ public class GraphQLController {
     }
 
     // private list, check user is authorized
-    if (!authUtils.isAuthorized(speciesList.get(), principal)) {
-      throw new AccessDeniedException("You dont have access to this list");
+    if (speciesList.get().getIsPrivate()) {
+      if (!authUtils.isAuthorized(speciesList.get(), principal)) {
+        logger.info("User not authorized to private access list: " + speciesListID);
+        throw new AccessDeniedException("You dont have access to this list");
+      }
     }
 
     // get facet fields unique to this list
