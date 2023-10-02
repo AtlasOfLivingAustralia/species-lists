@@ -29,7 +29,6 @@ export default function App() {
     const [speciesList, setSpeciesList] = useState<SpeciesList | null | undefined>(null);
     const [currentUser, setCurrentUser] = useState<ListsUser | null>(null);
     const auth = useAuth();
-    const { search } = window.location;
 
     const resetSpeciesList = () => {
         setSpeciesList(null);
@@ -56,7 +55,6 @@ export default function App() {
     };
 
     const logout = () => {
-        localStorage.removeItem('access_token');
         auth.removeUser();
         setCurrentUser(null);
         window.location.href = import.meta.env.VITE_LOGOUT_URL
@@ -73,20 +71,6 @@ export default function App() {
             isAdmin: roles.includes('ROLE_ADMIN'),
             roles: roles
         });
-        localStorage.setItem('access_token', user.access_token);
-
-        if (search.includes('code=') && search.includes('state=')) {
-            const params = new URLSearchParams(window.location.search);
-            params.delete('code');
-            params.delete('state');
-            params.delete('client_id');
-            let paramStr = (params.toString() ? "?" : "") + params.toString()
-            window.history.replaceState(
-                null,
-                '',
-                `${window.location.origin}${window.location.pathname}${paramStr}`
-            );
-        }
     }
 
     return (
