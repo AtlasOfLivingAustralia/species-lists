@@ -24,6 +24,8 @@ import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URL;
 import java.security.Principal;
 import java.util.ArrayList;
@@ -61,6 +63,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 /** GraphQL API for lists */
 @Controller
 @CrossOrigin(origins = "*", maxAge = 3600)
+@Tag(name = "GraphQL", description = "GraphQL Services for species lists lookups")
 public class GraphQLController {
 
   private static final Logger logger = LoggerFactory.getLogger(GraphQLController.class);

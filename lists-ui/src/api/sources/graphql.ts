@@ -27,6 +27,7 @@ export const GET_LIST = gql`
                 }
                 classification {
                     scientificName
+                    scientificNameAuthorship
                     vernacularName
                     taxonConceptID
                     kingdom
@@ -127,6 +128,8 @@ export const UPDATE_SPECIES_LIST_ITEM = gql`
                 value
             }
             classification {
+                scientificNameAuthorship
+                scientificName
                 kingdom
                 phylum
                 classs

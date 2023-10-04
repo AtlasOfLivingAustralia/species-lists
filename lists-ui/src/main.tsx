@@ -21,13 +21,18 @@ const authLink = setContext((_, { headers }) => {
     // get the authentication token from local storage if it exists
     const oidcStorage = localStorage.getItem(`oidc.user:${import.meta.env.VITE_OIDC_AUTH_SERVER}:${import.meta.env.VITE_OIDC_CLIENT_ID}`);
     if (oidcStorage) {
-        const user =  User.fromStorageString(oidcStorage);
-        const token = user?.access_token;
-        return {
-            headers: {
-                ...headers,
-                authorization: token ? `Bearer ${token}` : "",
+        const user = User.fromStorageString(oidcStorage);
+        if (!user.expired){
+            const token = user?.access_token;
+            return {
+                headers: {
+                    ...headers,
+                    authorization: token ? `Bearer ${token}` : "",
+                }
             }
+        } else {
+            // TODO look into refresh token
+            localStorage.removeItem(`oidc.user:${import.meta.env.VITE_OIDC_AUTH_SERVER}:${import.meta.env.VITE_OIDC_CLIENT_ID}`);
         }
     }
 

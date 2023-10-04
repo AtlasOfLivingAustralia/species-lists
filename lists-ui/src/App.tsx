@@ -5,7 +5,7 @@ import {
     Space,
     Image,
     Text,
-    Breadcrumbs, Button, Anchor, Group, Loader, Modal, Divider
+    Breadcrumbs, Button, Anchor, Group, Loader, Modal, Divider, Box
 } from '@mantine/core';
 import {Route, Routes} from "react-router-dom";
 import SpeciesLists from "./views/SpeciesLists";
@@ -23,6 +23,7 @@ import {SpeciesListsSideBar} from "./views/SpeciesListsSideBar.tsx";
 import MyLists from "./views/MyLists.tsx";
 import UserContext from "./helpers/UserContext.ts";
 import {useAuth} from "react-oidc-context";
+import {IconLogin, IconLogout} from "@tabler/icons-react";
 
 export default function App() {
 
@@ -104,32 +105,89 @@ export default function App() {
                                 }}
                                 size="100%">
                                     <Image
+                                        className={`logoImage`}
                                         radius="md"
                                         src={import.meta.env.VITE_LOGO_URL}
                                         alt="ALA logo"
                                         width={'335px'}
+                                        fit="contain"
+                                        style={{ marginTop: '10px', marginLeft: '30px' }}
+                                    />
+
+                                    <Image
+                                        className={`logoImageSmall`}
+                                        radius="md"
+                                        src={import.meta.env.VITE_LOGO_URL}
+                                        alt="ALA logo"
+                                        width={'250px'}
+                                        fit="contain"
                                         style={{ marginTop: '10px', marginLeft: '30px' }}
                                     />
 
                                     <div className={`loginButtons`} style={{ position: 'absolute', right: '40px', top: '20px', color: 'white'}}>
 
                                         <Group>
-                                            <a className={`contactUsLink`} href="https://www.ala.org.au/contact-us/">Contact us</a>
+                                            <Anchor className={`contactUsLink`} href="https://www.ala.org.au/contact-us/" target="_blank"
+                                                    sx={() => ({
+                                                        '@media (max-width: 800px)': {
+                                                            display: 'none'
+                                                        },
+                                                    })}
+                                            >
+                                                Contact us
+                                            </Anchor>
 
-                                            <Divider size="sm" orientation="vertical" />
+                                            <Divider size="xs" orientation="vertical" style={{ borderLeft: '#808080 1px solid'}} />
 
                                             { currentUser ? (
                                                 <>
-                                                    <Button radius="xs" onClick={myProfile} variant="outline" size="sm" style={{ marginRight: '10px'}} compact>
-                                                        Profile - {currentUser?.user?.profile?.name} {currentUser?.isAdmin ? '(ADMIN)' : ''}
+                                                    <Button radius="xs" onClick={myProfile} variant="outline" size="md" compact sx={() => ({
+                                                        '@media (max-width: 800px)': {
+                                                            display: 'none'
+                                                        },
+                                                    })}>
+                                                        <Text>
+                                                            Profile - {currentUser?.user?.profile?.name} {currentUser?.isAdmin ? '(ADMIN)' : ''}
+                                                        </Text>
                                                     </Button>
-                                                    <Button radius="xs" onClick={logout} variant="outline" size="sm" compact>Logout</Button>
+                                                    <Button radius="xs" onClick={logout} variant="outline" size="md" compact sx={() => ({
+                                                        '@media (max-width: 800px)': {
+                                                            display: 'none'
+                                                        },
+                                                    })}>
+                                                        <Text >Logout</Text>
+                                                    </Button>
+                                                    <Box  sx={() => ({
+                                                        '@media (min-width: 800px)': {
+                                                            display: 'none'
+                                                        },
+                                                    })}>
+                                                        <IconLogout onClick={logout}/>
+                                                    </Box>
                                                 </>
                                             ) : (
                                                 <>
                                                     <Group>
-                                                        <Button radius="xs" onClick={signUp} size="md" compact>Sign up</Button>
-                                                        <Button className={`loginButton`} radius="xs" onClick={() => void auth.signinRedirect()} color="orange" size="md" compact>Login</Button>
+                                                        <Button radius="xs" onClick={signUp} size="md" compact sx={() => ({
+                                                            '@media (max-width: 800px)': {
+                                                                display: 'none'
+                                                            },
+                                                        })}>Sign up</Button>
+                                                        <Button className={`loginButton`} radius="xs" onClick={() => void auth.signinRedirect()}
+                                                                color="orange" size="md" compact sx={() => ({
+                                                            '@media (max-width: 800px)': {
+                                                                display: 'none'
+                                                            },
+                                                        })}>Login</Button>
+
+                                                        <Box  sx={() => ({
+                                                            '@media (min-width: 800px)': {
+                                                                display: 'none'
+                                                            },
+                                                        })}>
+                                                           <IconLogin onClick={() => void auth.signinRedirect()} />
+                                                        </Box>
+
                                                     </Group>
                                                 </>
                                             )}

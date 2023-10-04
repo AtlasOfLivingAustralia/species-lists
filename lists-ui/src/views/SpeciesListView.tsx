@@ -10,7 +10,7 @@ import {
     Title,
     Group,
     Text,
-    Skeleton, Button, List, ThemeIcon, Select, Divider, CloseButton, Switch
+    Skeleton, Button, List, ThemeIcon, Select, Divider, CloseButton, Switch, HoverCard
 } from '@mantine/core';
 import {useQuery} from '@apollo/client';
 import {useLocation, useParams} from 'react-router-dom';
@@ -115,8 +115,7 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
 
     if (error) return <>`Error! ${error.message}`</>;
 
-    const standardFields: string[] = ['scientificName'];
-    const classificationFields: string[] = ['scientificName', 'family', 'kingdom', 'vernacularName'];
+    const classificationFields: string[] = ['family', 'kingdom', 'vernacularName'];
     const customFields: string[] | undefined = data?.getSpeciesListMetadata?.fieldList;
     const facets: Facet[] | undefined = data?.facetSpeciesList;
 
@@ -153,8 +152,7 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                     <Title order={2}><ThemeIcon color={`gray`}><IconAdjustmentsHorizontal /></ThemeIcon>Query filters</Title>
                 }
                 padding="xl"
-                size="md"
-            >
+                size="md">
                 {selectedFacets && selectedFacets.length > 0 && (
                     <>
                         <Text weight={'bold'}>Selected filters</Text>
@@ -178,21 +176,21 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                 position="right"
                 title={
                     <>
-                        <Group>
-                        <Title order={2} style={{ fontStyle: 'italic'}}>
-                            <Text>{selectedItem?.scientificName}</Text>
-                        </Title>
-                        <Switch
-                            onLabel="EDIT"
-                            offLabel="EDIT"
-                            checked={isEditing}
-                            size="lg"
-                            disabled={
-                                currentUser?.user?.access_token === undefined
-                                || (!currentUser.isAdmin && currentUser.userId != speciesList?.owner)
-                            }
-                            onChange={(event) => setisEditing(event.currentTarget.checked)}
-                        />
+                        <Group noWrap={true}>
+                            <Title order={2} style={{ fontStyle: 'italic'}}>
+                                <Text>{selectedItem?.scientificName}</Text>
+                            </Title>
+                            <Switch
+                                onLabel="EDIT"
+                                offLabel="EDIT"
+                                checked={isEditing}
+                                size="lg"
+                                disabled={
+                                    currentUser?.user?.access_token === undefined
+                                    || (!currentUser.isAdmin && currentUser.userId != speciesList?.owner)
+                                }
+                                onChange={(event) => setisEditing(event.currentTarget.checked)}
+                            />
                         </Group>
                     </>
                 }
@@ -215,10 +213,23 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                 }
 
                 { selectedItem && !isEditing && <>
-                    <Group style={{ float: 'right'}}>
-                        <Button size="xs" variant="outline" disabled={selectedIndex == 0} onClick={selectPreviousRow}><IconArrowLeftSquare/>Previous</Button>
-                        <Button size="xs" variant="outline" disabled={selectedIndex === undefined || selectedIndex == null || selectedIndex >= results.length -1} onClick={selectNextRow}><Text style={{ paddingRight: '8px'}}>Next</Text><IconArrowRightSquare/></Button>
+                    <Group>
+                        <Button size="xs" variant="outline" disabled={selectedIndex == 0} onClick={selectPreviousRow}>
+                            <IconArrowLeftSquare/>
+                            <Text>Previous</Text>
+                        </Button>
+                        <Button size="xs" variant="outline" disabled={selectedIndex === undefined || selectedIndex == null || selectedIndex >= results.length -1} onClick={selectNextRow}>
+                            <Text style={{ paddingRight: '8px'}}>Next</Text>
+                            <IconArrowRightSquare/>
+                        </Button>
                     </Group>
+                    {/*<Box sx={() => ({*/}
+                    {/*    '@media (min-width: 800px)': {*/}
+                    {/*        display: 'none'*/}
+                    {/*    },*/}
+                    {/*})}>*/}
+                       <Space h="xl" />
+                    {/*</Box>*/}
                     <SpeciesListItemView selectedItem={selectedItem} customFields={customFields} loading={loading} />
                 </>}
 
@@ -328,16 +339,15 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                             <Table striped highlightOnHover withColumnBorders>
                                 <thead>
                                 <tr key={`table-hdr`}>
-                                    {standardFields &&
-                                        standardFields.map((header) => (
-                                            <th style={{
-                                                    left: 0,
-                                                    whiteSpace: 'nowrap',
-                                                }}>
-                                                <FormattedMessage id={header} defaultMessage={header} />
-                                            </th>
-                                        ))}
-
+                                    <th style={{
+                                            left: 0,
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                        Supplied name
+                                    </th>
+                                    <th>
+                                        Scientific name (matched)
+                                    </th>
                                     {customFields &&
                                         customFields.map((header) => (
                                             <th key={header}
@@ -431,6 +441,33 @@ function SearchTable({ results,
                                 <IconSelect />
                                 <Text>{speciesListItem?.scientificName}</Text>
                             </Group>
+                        </td>
+                        <td style={{
+                            left: 0,
+                            whiteSpace: 'nowrap',
+                        }}>
+                                <HoverCard shadow="md">
+                                    <HoverCard.Target>
+                                      <Text>{speciesListItem?.classification?.scientificName}</Text>
+                                    </HoverCard.Target>
+                                    <HoverCard.Dropdown>
+                                        <Text size="md">{speciesListItem?.classification?.scientificName}</Text>
+                                        { speciesListItem?.classification?.scientificNameAuthorship &&
+                                            <Text size="sm" style={{  marginTop: '10px'}}>Author(s): {speciesListItem?.classification?.scientificNameAuthorship}</Text>
+                                        }
+                                        <Text size={`sm`}>
+                                            <ul style={{ listStyle: 'none', marginLeft: '0', paddingLeft: '0'}}>
+                                                <li style={{ display: 'inline-block', marginRight: '8px'}}>{speciesListItem?.classification?.kingdom}</li>
+                                                <li style={{ display: 'inline-block', marginRight: '8px'}}>{speciesListItem?.classification?.phylum}</li>
+                                                <li style={{ display: 'inline-block', marginRight: '8px'}}>{speciesListItem?.classification?.classs}</li>
+                                                <li style={{ display: 'inline-block', marginRight: '8px'}}>{speciesListItem?.classification?.order}</li>
+                                                <li style={{ display: 'inline-block', marginRight: '8px'}}>{speciesListItem?.classification?.family}</li>
+                                                <li style={{ display: 'inline-block', marginRight: '8px'}}>{speciesListItem?.classification?.genus}</li>
+                                            </ul>
+                                        </Text>
+                                    </HoverCard.Dropdown>
+                                </HoverCard>
+
                         </td>
                         {customFields &&
                             customFields.map((customField) => (

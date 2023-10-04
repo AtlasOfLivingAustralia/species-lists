@@ -119,6 +119,7 @@ type SpeciesListItemPage {
 
 type Classification {
   scientificName: String
+  scientificNameAuthorship: String
   vernacularName: String
   taxonConceptID: String
   kingdom: String

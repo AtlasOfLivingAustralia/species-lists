@@ -43,34 +43,44 @@ dd {
 .loginButtons .mantine-Button-label {
   color: #FFFFFF;
   font-size: 14px;
+  font-weight: 400;
+}
+
+@media screen and (max-width: 800px) {
+  .logoImage {
+    display: none;
+  }
+  .logoImageSmall {
+    display: block;
+  }
+}
+@media screen and (min-width: 800px) {
+  .logoImage {
+    display: block;
+  }
+  .logoImageSmall {
+    display: none;
+  }
 }
 
 .loginButtons .mantine-Button-label:hover {
-  background-color: #000000;
+  background-color: #212121 ;
 }
 
 .loginButtons .mantine-Button-root:hover {
   border: #FFFFFF solid 1px;
-  background-color: #000000;
+  background-color: #212121 ;
 }
 
 .loginButtons .mantine-Button-root {
   border: #FFFFFF solid 1px;
-  background-color: #000000;
+  background-color: #212121 ;
 }
 
 .filterQueryBtn {
   color: rgb(128, 128, 128);
   border: 1px solid rgb(128, 128, 128);
 }
-
-/*.filterQueryBtn:hover {*/
-/*  color: white;*/
-/*}*/
-
-/*.mantine-Button-inner:hover {*/
-/*  color: white;*/
-/*}*/
 
 .mantine-Button-root:hover {
   color:#c44d34;

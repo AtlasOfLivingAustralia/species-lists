@@ -103,6 +103,7 @@ interface KV {
 
 interface Classification {
     scientificName: string;
+    scientificNameAuthorship: string;
     vernacularName: string;
     taxonConceptID: string;
     kingdom: string;

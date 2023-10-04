@@ -239,7 +239,7 @@ export function SearchTable({
             key={dataset.id}
             style={{ cursor: "pointer" }}>
             <td onClick={() => selectSpeciesList(dataset)}>
-                <Group>
+                <Group noWrap={true}>
                     <IconList />
                     <Text>{dataset.title}</Text>
                 </Group>
