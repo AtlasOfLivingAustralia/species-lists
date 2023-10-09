@@ -72,7 +72,7 @@ public class DownloadController {
     try {
       logger.info("Downloading species list " + speciesListID);
       Optional<SpeciesList> speciesListOptional =
-          speciesListMongoRepository.findById(speciesListID);
+          speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
       if (speciesListOptional.isEmpty()) {
         return ResponseEntity.badRequest().body("Unrecognized ID while downloading dataset");
       }
@@ -91,23 +91,23 @@ public class DownloadController {
       csvHeaders.addAll(speciesList.getFieldList());
       csvHeaders.addAll(Arrays.asList(CLASSIFICATION_HEADER_NAMES));
 
-      setupResponseHeaders(response, speciesListID, zipped);
+      setupResponseHeaders(response, speciesList.getId(), zipped);
 
       if (zipped) {
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(response.getOutputStream())) {
           ZipEntry zipEntry = new ZipEntry("taxa.csv");
           zipOutputStream.putNextEntry(zipEntry);
-          writeCSV(speciesListID, zipOutputStream, csvHeaders, speciesList);
+          writeCSV(speciesList.getId(), zipOutputStream, csvHeaders, speciesList);
         } catch (Exception ex) {
           logger.error(ex.getMessage(), ex);
           return ResponseEntity.badRequest()
                   .body("Error while attempting to download dataset: " + ex.getMessage());
         }
       } else {
-        writeCSV(speciesListID, response.getOutputStream(), csvHeaders, speciesList);
+        writeCSV(speciesList.getId(), response.getOutputStream(), csvHeaders, speciesList);
       }
 
-      logger.info("Finished writing zip download data for species list " + speciesListID);
+      logger.info("Finished writing zip download data for species list " + speciesList.getId());
       return new ResponseEntity<>(HttpStatus.OK);
     } catch (Exception e) {
       return ResponseEntity.badRequest()
