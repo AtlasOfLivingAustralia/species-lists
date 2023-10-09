@@ -1,6 +1,6 @@
 import {SpeciesListItemProps} from "../api/sources/props.ts";
 import {useState} from "react";
-import {TaxonImage} from "./TaxonImage.tsx";
+import {TaxonImages} from "./TaxonImage.tsx";
 import {Anchor, Space, Switch, Table, Text, Title} from "@mantine/core";
 import {FormattedMessage} from "react-intl";
 
@@ -10,7 +10,10 @@ export function SpeciesListItemView({ selectedItem, customFields }: SpeciesListI
 
     return (
         <>
-            <TaxonImage taxonID={selectedItem?.classification?.taxonConceptID || ''} />
+            <TaxonImages taxonID={selectedItem?.classification?.taxonConceptID || ''} />
+
+            <Space h="lg" />
+
             <Title order={3}>Taxonomy</Title>
             <Space h="md" />
 
@@ -25,7 +28,7 @@ export function SpeciesListItemView({ selectedItem, customFields }: SpeciesListI
                         <td>scientificName</td>
                         <td>
                             <Anchor href={'https://bie.ala.org.au/species/' + selectedItem.classification.taxonConceptID}>
-                                {selectedItem.classification?.scientificName}
+                                <i>{selectedItem.classification?.scientificName}</i>
                             </Anchor>
                         </td>
                     </tr>
@@ -68,7 +71,7 @@ export function SpeciesListItemView({ selectedItem, customFields }: SpeciesListI
                         <td>{selectedItem?.scientificName}</td>
                         <td>
                             <Anchor href={import.meta.env.VITE_APP_BIE_URL + '/species/' + selectedItem?.classification.taxonConceptID}>
-                                {selectedItem?.classification?.scientificName}
+                                <i>{selectedItem?.classification?.scientificName}</i>
                             </Anchor>
                         </td>
                     </tr>

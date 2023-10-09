@@ -10,7 +10,7 @@ import {
     Title,
     Group,
     Text,
-    Skeleton, Button, List, ThemeIcon, Select, Divider, CloseButton, Switch, HoverCard
+    Skeleton, Button, List, ThemeIcon, Select, Divider, CloseButton, Switch, HoverCard, Card
 } from '@mantine/core';
 import {useQuery} from '@apollo/client';
 import {useLocation, useParams} from 'react-router-dom';
@@ -35,6 +35,7 @@ import {SpeciesListItemView} from "./SpeciesListItemView.tsx";
 import UserContext from "../helpers/UserContext.ts";
 import {SelectedFacet} from "../components/SelectedFacet.tsx";
 import {FacetList} from "../components/FacetList.tsx";
+import {TaxonImage} from "./TaxonImage.tsx";
 
 
 function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps) {
@@ -106,7 +107,7 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
             var url = window.URL.createObjectURL(blob);
             var a = document.createElement('a');
             a.href = url;
-            a.download = "species-list-" + speciesListID + ".zip";
+            a.download = "species-list-" + speciesListID + ".csv";
             document.body.appendChild(a); // we need to append the element to the dom -> otherwise it will not work in firefox
             a.click();
             a.remove();
@@ -446,28 +447,39 @@ function SearchTable({ results,
                             left: 0,
                             whiteSpace: 'nowrap',
                         }}>
-                                <HoverCard shadow="md">
-                                    <HoverCard.Target>
-                                      <Text>{speciesListItem?.classification?.scientificName}</Text>
-                                    </HoverCard.Target>
-                                    <HoverCard.Dropdown>
-                                        <Text size="md">{speciesListItem?.classification?.scientificName}</Text>
-                                        { speciesListItem?.classification?.scientificNameAuthorship &&
-                                            <Text size="sm" style={{  marginTop: '10px'}}>Author(s): {speciesListItem?.classification?.scientificNameAuthorship}</Text>
-                                        }
-                                        <Text size={`sm`}>
-                                            <ul style={{ listStyle: 'none', marginLeft: '0', paddingLeft: '0'}}>
-                                                <li style={{ display: 'inline-block', marginRight: '8px'}}>{speciesListItem?.classification?.kingdom}</li>
-                                                <li style={{ display: 'inline-block', marginRight: '8px'}}>{speciesListItem?.classification?.phylum}</li>
-                                                <li style={{ display: 'inline-block', marginRight: '8px'}}>{speciesListItem?.classification?.classs}</li>
-                                                <li style={{ display: 'inline-block', marginRight: '8px'}}>{speciesListItem?.classification?.order}</li>
-                                                <li style={{ display: 'inline-block', marginRight: '8px'}}>{speciesListItem?.classification?.family}</li>
-                                                <li style={{ display: 'inline-block', marginRight: '8px'}}>{speciesListItem?.classification?.genus}</li>
-                                            </ul>
+                            <HoverCard shadow="md"  openDelay={1000} position={`right-end`}>
+                                <HoverCard.Target>
+                                  <Text><i>{speciesListItem?.classification?.scientificName}</i></Text>
+                                </HoverCard.Target>
+                                <HoverCard.Dropdown styles={{ padding: '0', margin: '0'}}>
+                                    <Card radius="md" >
+                                        <Card.Section>
+                                            <TaxonImage taxonID={speciesListItem?.classification?.taxonConceptID} />
+                                        </Card.Section>
+                                        <Group>
+                                            <Text size="sm">
+                                                <i>{speciesListItem?.classification?.scientificName}</i>
+                                            </Text>
+                                            <Text size="sm">
+                                                {speciesListItem?.classification?.scientificNameAuthorship}
+                                            </Text>
+                                        </Group>
+                                        <Text size="sm">
+                                            {speciesListItem?.classification?.vernacularName}
                                         </Text>
-                                    </HoverCard.Dropdown>
-                                </HoverCard>
-
+                                        {/*<Text size="sm" style={{ maxWidth: "250px", wordWrap: 'break-word'}}>*/}
+                                        {/*    <ul>*/}
+                                        {/*        <li>{speciesListItem?.classification?.kingdom}</li>*/}
+                                        {/*        <li>{speciesListItem?.classification?.phylum}</li>*/}
+                                        {/*        <li>{speciesListItem?.classification?.classs}</li>*/}
+                                        {/*        <li>{speciesListItem?.classification?.order}</li>*/}
+                                        {/*        <li>{speciesListItem?.classification?.family}</li>*/}
+                                        {/*        <li>{speciesListItem?.classification?.genus}</li>*/}
+                                        {/*    </ul>*/}
+                                        {/*</Text>*/}
+                                    </Card>
+                                </HoverCard.Dropdown>
+                            </HoverCard>
                         </td>
                         {customFields &&
                             customFields.map((customField) => (

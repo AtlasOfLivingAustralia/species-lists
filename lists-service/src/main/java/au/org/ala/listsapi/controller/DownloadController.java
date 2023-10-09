@@ -9,6 +9,7 @@ import com.opencsv.CSVWriter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
@@ -21,7 +22,6 @@ import java.util.zip.ZipOutputStream;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,17 +31,18 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 public class DownloadController {
 
   private static final Logger logger = LoggerFactory.getLogger(DownloadController.class);
-  @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
-  @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
-  @Autowired protected AuthUtils authUtils;
+  protected final SpeciesListMongoRepository speciesListMongoRepository;
+  protected final SpeciesListItemMongoRepository speciesListItemMongoRepository;
+  protected final AuthUtils authUtils;
 
   public static final String[] CLASSIFICATION_HEADER_NAMES = {
-    "taxonID",
+    "guid", //taxonID would be better
     "scientificName",
     "genus",
     "family",
@@ -54,12 +55,19 @@ public class DownloadController {
     "nameType"
   };
 
+  public DownloadController(SpeciesListMongoRepository speciesListMongoRepository, SpeciesListItemMongoRepository speciesListItemMongoRepository, AuthUtils authUtils) {
+    this.speciesListMongoRepository = speciesListMongoRepository;
+    this.speciesListItemMongoRepository = speciesListItemMongoRepository;
+    this.authUtils = authUtils;
+  }
+
   @SecurityRequirement(name = "JWT")
   @Operation(summary = "Download a species list", tags = "REST")
   @GetMapping("/download/{speciesListID}")
   public ResponseEntity<Object> download(
       @PathVariable("speciesListID") String speciesListID,
       @AuthenticationPrincipal Principal principal,
+      @RequestParam(value = "zip", defaultValue = "false") Boolean zipped,
       HttpServletResponse response) {
     try {
       logger.info("Downloading species list " + speciesListID);
@@ -83,48 +91,22 @@ public class DownloadController {
       csvHeaders.addAll(speciesList.getFieldList());
       csvHeaders.addAll(Arrays.asList(CLASSIFICATION_HEADER_NAMES));
 
-      setupResponseHeaders(response, speciesListID);
+      setupResponseHeaders(response, speciesListID, zipped);
 
-      try (ZipOutputStream zipOutputStream = new ZipOutputStream(response.getOutputStream())) {
-
-        ZipEntry zipEntry = new ZipEntry("taxa.csv");
-        zipOutputStream.putNextEntry(zipEntry);
-
-        try (CSVWriter csvWriter =
-            new CSVWriter(new OutputStreamWriter(zipOutputStream, StandardCharsets.UTF_8))) {
-          writeCsvHeaders(csvWriter, csvHeaders);
-
-          int startIndex = 0;
-          int pageSize = 1000;
-          Pageable pageable = PageRequest.of(startIndex, pageSize);
-
-          boolean finished = false;
-          while (!finished) {
-            Page<SpeciesListItem> page =
-                speciesListItemMongoRepository.findBySpeciesListID(speciesListID, pageable);
-            if (page.isEmpty()) {
-              finished = true;
-            } else {
-              logger.info(
-                  "Writing CSV data for species list "
-                      + speciesListID
-                      + " page "
-                      + startIndex
-                      + " page size "
-                      + page.stream().count());
-              writeCsvData(csvWriter, speciesList.getFieldList(), page);
-              csvWriter.flush();
-              startIndex += 1;
-              pageable = PageRequest.of(startIndex, pageSize);
-            }
-          }
-          logger.info("Finished writing CSV data for species list " + speciesListID);
-        } catch (Exception e) {
-          logger.error(e.getMessage(), e);
+      if (zipped) {
+        try (ZipOutputStream zipOutputStream = new ZipOutputStream(response.getOutputStream())) {
+          ZipEntry zipEntry = new ZipEntry("taxa.csv");
+          zipOutputStream.putNextEntry(zipEntry);
+          writeCSV(speciesListID, zipOutputStream, csvHeaders, speciesList);
+        } catch (Exception ex) {
+          logger.error(ex.getMessage(), ex);
+          return ResponseEntity.badRequest()
+                  .body("Error while attempting to download dataset: " + ex.getMessage());
         }
-      } catch (Exception ex) {
-        logger.error(ex.getMessage(), ex);
+      } else {
+        writeCSV(speciesListID, response.getOutputStream(), csvHeaders, speciesList);
       }
+
       logger.info("Finished writing zip download data for species list " + speciesListID);
       return new ResponseEntity<>(HttpStatus.OK);
     } catch (Exception e) {
@@ -133,10 +115,45 @@ public class DownloadController {
     }
   }
 
-  private void setupResponseHeaders(HttpServletResponse response, String speciesListID) {
+  private void writeCSV(String speciesListID, OutputStream outputStream, List<String> csvHeaders, SpeciesList speciesList) {
+    try (CSVWriter csvWriter =
+                 new CSVWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8))) {
+      writeCsvHeaders(csvWriter, csvHeaders);
+
+      int startIndex = 0;
+      int pageSize = 1000;
+      Pageable pageable = PageRequest.of(startIndex, pageSize);
+
+      boolean finished = false;
+      while (!finished) {
+        Page<SpeciesListItem> page =
+                speciesListItemMongoRepository.findBySpeciesListID(speciesListID, pageable);
+        if (page.isEmpty()) {
+          finished = true;
+        } else {
+          logger.info(
+                  "Writing CSV data for species list "
+                          + speciesListID
+                          + " page "
+                          + startIndex
+                          + " page size "
+                          + page.stream().count());
+          writeCsvData(csvWriter, speciesList.getFieldList(), page);
+          csvWriter.flush();
+          startIndex += 1;
+          pageable = PageRequest.of(startIndex, pageSize);
+        }
+      }
+      logger.info("Finished writing CSV data for species list " + speciesListID);
+    } catch (Exception e) {
+      logger.error(e.getMessage(), e);
+    }
+  }
+
+  private void setupResponseHeaders(HttpServletResponse response, String speciesListID, Boolean isZipped) {
     response.setHeader("Content-Type", "application/octet-stream");
     response.setHeader(
-        "Content-Disposition", "attachment; filename=species-list-" + speciesListID + ".zip");
+        "Content-Disposition", "attachment; filename=species-list-" + speciesListID + (isZipped ? ".zip" : ".csv"));
   }
 
   private void writeCsvHeaders(CSVWriter csvWriter, List<String> csvHeaders) {
@@ -152,14 +169,11 @@ public class DownloadController {
           csvRow.add(speciesListItem.getScientificName());
 
           fieldList.forEach(
-              field -> {
-                speciesListItem.getProperties().stream()
+              field -> speciesListItem.getProperties().stream()
                     .filter(keyValue -> keyValue.getKey().equals(field))
                     .findFirst()
-                    .ifPresent(keyValue -> csvRow.add(keyValue.getValue()));
-              });
+                    .ifPresent(keyValue -> csvRow.add(keyValue.getValue())));
 
-          //
           csvRow.add(speciesListItem.getClassification().getTaxonConceptID());
           csvRow.add(speciesListItem.getClassification().getScientificName());
           csvRow.add(speciesListItem.getClassification().getGenus());

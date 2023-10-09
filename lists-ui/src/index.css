@@ -111,3 +111,20 @@ dd {
 .mantine-Notification-icon {
   background-color: dimgray;
 }
+
+ul.classificationInline {
+  list-style: 'none';
+  top: 0;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+ul.classificationInline li {
+  display: inline;
+  margin-right: 10px;
+}
+
+ul.classificationInline li:not(:last-child)::after {
+  content: "\2022";
+  margin-left: 10px;
+}

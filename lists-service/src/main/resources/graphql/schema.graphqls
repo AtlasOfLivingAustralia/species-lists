@@ -10,6 +10,7 @@ type Query {
   facetSpeciesList(speciesListID: String, searchQuery:String, filters:[Filter], facetFields:[String], page:Int = 0, size: Int = 10): [Facet]
   facetSpeciesLists(searchQuery:String, filters:[Filter], facetFields:[String], page:Int = 0, size: Int = 10, userId:String, isPrivate: Boolean = false): [Facet]
   getTaxonImage(taxonID:String): Image
+  getTaxonImages(taxonID:String,  page:Int = 0, size: Int = 10): [Image]
 }
 
 type Mutation {

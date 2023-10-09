@@ -106,7 +106,9 @@ function SpeciesLists({isPrivate}: {isPrivate: boolean})  {
                         <Space h="md" />
                     </>
                 )}
-                <>{facets && facets.map((facet) => <FacetList facet={facet} addToQuery={addToQuery} hideCount={true} />)}</>
+                <>
+                    {facets && facets.map((facet) => <FacetList facet={facet} addToQuery={addToQuery} hideCount={true} />)}
+                </>
             </Drawer>
             <Grid mb="md">
                 <Grid.Col xs={1} sm={2}>

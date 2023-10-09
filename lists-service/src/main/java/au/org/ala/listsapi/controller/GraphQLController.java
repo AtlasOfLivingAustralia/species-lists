@@ -23,12 +23,13 @@ import co.elastic.clients.elasticsearch._types.aggregations.LongTermsBucket;
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URL;
 import java.security.Principal;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -73,6 +74,9 @@ public class GraphQLController {
 
   @Value("${bie.url}")
   private String bieTemplateUrl;
+
+  @Value("${bie.images.url}")
+  private String bieImagesTemplateUrl;
 
   public static final List<String> CORE_FIELDS =
       List.of(
@@ -844,22 +848,21 @@ public class GraphQLController {
         builder.withAggregation(
             facetField,
             Aggregation.of(
-                a -> a.terms(ta -> ta.field(getPropertiesFacetField(facetField)).size(10))));
+                a -> a.terms(ta -> ta.field(getPropertiesFacetField(facetField)).size(30))));
       }
     }
 
     List<String> classificationFields = new ArrayList<>();
-    classificationFields.add("classification.genus");
     classificationFields.add("classification.family");
-    classificationFields.add("classification.order");
-    classificationFields.add("classification.class");
-    classificationFields.add("classification.phylum");
+//    classificationFields.add("classification.order");
+//    classificationFields.add("classification.class");
+//    classificationFields.add("classification.phylum");
     classificationFields.add("classification.kingdom");
 
     for (String classificationField : classificationFields) {
       builder.withAggregation(
           classificationField,
-          Aggregation.of(a -> a.terms(ta -> ta.field(classificationField + ".keyword").size(10))));
+          Aggregation.of(a -> a.terms(ta -> ta.field(classificationField + ".keyword").size(500))));
     }
 
     Query aggQuery = builder.build();
@@ -902,6 +905,8 @@ public class GraphQLController {
   public Image getTaxonImage(@Argument String taxonID) throws Exception {
     // get taxon image from BIE
     // https://bie.ala.org.au/ws/taxon/https://id.biodiversity.org.au/node/apni/2910201
+//    https://bie.ala.org.au/ws/imageSearch/https%3A//id.biodiversity.org.au/taxon/apni/51288314?rows=5&start=0
+
     Map<String, Object> bieJson = loadJson(String.format(bieTemplateUrl, taxonID));
     if (bieJson != null) {
       String imageID = (String) bieJson.getOrDefault("imageIdentifier", null);
@@ -910,6 +915,22 @@ public class GraphQLController {
       }
     }
     return null;
+  }
+
+  @QueryMapping
+  public List<Image> getTaxonImages(@Argument String taxonID, @Argument Integer page, @Argument Integer size) throws Exception {
+    // get taxon image from BIE
+    ObjectMapper objectMapper = new ObjectMapper();
+    String url = String.format(bieImagesTemplateUrl, taxonID, size, page * size);
+    JsonNode jsonNode =  objectMapper.readTree(new URL(url));
+    JsonNode results  = jsonNode.at("/searchResults/results");
+    List<Image> images = new ArrayList<>();
+    Iterator<JsonNode> iter = results.elements();
+    while(iter.hasNext()){
+      JsonNode node = iter.next();
+      images.add(new Image( node.get("largeImageUrl").asText()));
+    }
+    return images;
   }
 
   public Map<String, Object> loadJson(String url) throws Exception {
