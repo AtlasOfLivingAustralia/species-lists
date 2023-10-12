@@ -858,6 +858,7 @@ public class GraphQLController {
 //    classificationFields.add("classification.class");
 //    classificationFields.add("classification.phylum");
     classificationFields.add("classification.kingdom");
+    classificationFields.add("classification.speciesSubgroup");
 
     for (String classificationField : classificationFields) {
       builder.withAggregation(

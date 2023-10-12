@@ -16,6 +16,7 @@
   "classification.genus" : "Genus (matched)",
   "classification.scientificName" : "Scientific name (matched)",
   "classification.vernacularName" : "Vernacular name (matched)",
+  "classification.speciesSubgroup": "Species groups (matched)",
 
   "isAuthoritative": "Authoritative list",
   "listType": "List type",

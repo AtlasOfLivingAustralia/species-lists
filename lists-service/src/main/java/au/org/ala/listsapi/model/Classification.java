@@ -48,6 +48,7 @@ public class Classification {
   String speciesID;
   String vernacularName;
   List<String> speciesGroup;
+  List<String> speciesSubgroup;
   List<String> issues;
   Integer lft;
   Integer rgt;
