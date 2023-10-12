@@ -34,4 +34,4 @@ COPY --from=builder /app/lists-service-*-SNAPSHOT.jar /data/app.jar
 
 EXPOSE 8080
 
-CMD ["java", "-jar", "/data/lists-service.jar", "--spring.config.location=classpath:file:///data/lists-service/config/lists-service-config.properties"]
+CMD ["java", "-jar", "/data/app.jar", "--spring.config.location=classpath:file:///data/lists-service/config/lists-service-config.properties"]
