@@ -13,15 +13,15 @@ RUN mvn clean package -DskipTests
 
 FROM ubuntu:focal
 
-ARG ENV
-
 ARG DEBIAN_FRONTEND=noninteractive
+ENV SERVER_PORT="8080"
 
 # Install initial dependencies
 RUN apt-get -y update && \
         apt-get install -y -q add-apt-key software-properties-common
 
 ARG APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=DontWarn
+ARG USER=lists-service
 
 # Add the apt.gbif.es repo and gpg key
 RUN echo "deb [arch=amd64] https://apt.gbif.es/ bionic main" > /etc/apt/sources.list.d/ala.list && \
@@ -30,8 +30,9 @@ RUN echo "deb [arch=amd64] https://apt.gbif.es/ bionic main" > /etc/apt/sources.
 # Install main dependencies
 RUN apt-get install -y -q openjdk-17-jdk openjdk-17-jre
 
-COPY --from=builder /app/lists-service-*-SNAPSHOT.jar /data/app.jar
+COPY --from=builder /app/target/lists-service-*-SNAPSHOT.jar /data/app.jar
 
-EXPOSE 8080
+USER $USER
+EXPOSE $SERVER_PORT
 
 CMD ["java", "-jar", "/data/app.jar", "--spring.config.location=classpath:file:///data/lists-service/config/lists-service-config.properties"]
