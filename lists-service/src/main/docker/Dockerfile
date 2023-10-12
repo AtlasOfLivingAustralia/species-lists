@@ -1,3 +1,16 @@
+# Use an official Maven runtime as a parent image
+FROM maven:3.8.3-openjdk-17 AS builder
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the project files into the container
+COPY pom.xml .
+COPY src ./src
+
+# Build the Maven project and create a WAR file
+RUN mvn clean package -DskipTests
+
 FROM ubuntu:focal
 
 ARG ENV
@@ -17,7 +30,7 @@ RUN echo "deb [arch=amd64] https://apt.gbif.es/ bionic main" > /etc/apt/sources.
 # Install main dependencies
 RUN apt-get install -y -q openjdk-17-jdk openjdk-17-jre
 
-ADD ../../../target/lists-service-0.0.1-SNAPSHOT.jar /data/lists-service.jar
+COPY --from=builder /app/lists-service-*-SNAPSHOT.jar /data/app.jar
 
 EXPOSE 8080
 
