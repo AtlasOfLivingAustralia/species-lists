@@ -45,7 +45,7 @@ public class RESTController {
     return speciesList.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
   }
 
-  @Operation(tags = "REST", summary = "Get species lists matching the query")
+  @Operation(tags = "REST", summary = "Get a list of species lists matching the query")
   @GetMapping("/speciesList/")
   public ResponseEntity<Object> speciesLists(
       RESTSpeciesListQuery speciesList,

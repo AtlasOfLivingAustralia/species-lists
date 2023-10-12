@@ -60,7 +60,7 @@ public class IngressController {
   private String tempDir;
 
   @SecurityRequirement(name = "JWT")
-  @Operation(tags = "Ingress", summary = "Release a list")
+  @Operation(tags = "Ingress", summary = "Release a version of a species list")
   @GetMapping("/release/{speciesListID}")
   public ResponseEntity<Object> release(
       @PathVariable("speciesListID") String speciesListID,
@@ -76,7 +76,7 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(tags = "Ingress", summary = "Delete a list")
+  @Operation(tags = "Ingress", summary = "Delete a species list")
   @DeleteMapping("/delete/{speciesListID}")
   public ResponseEntity<Object> delete(
       @PathVariable("speciesListID") String speciesListID,
@@ -95,7 +95,7 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(tags = "Ingress", summary = "Rematch the taxonomy for a list")
+  @Operation(tags = "Ingress", summary = "Rematch the taxonomy for a species list")
   @GetMapping("/rematch/{speciesListID}")
   public ResponseEntity<Object> rematch(
       @PathVariable("speciesListID") String speciesListID,
@@ -115,7 +115,7 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(tags = "Ingress", summary = "Rematch the taxonomy for all lists")
+  @Operation(tags = "Ingress", summary = "Rematch the taxonomy for all species lists")
   @GetMapping("/rematch")
   public ResponseEntity<Object> rematch(@AuthenticationPrincipal Principal principal) {
     try {
@@ -214,7 +214,7 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Upload a species list", tags = "Ingress")
+  @Operation(summary = "Ingest a species list that has been uploaded before", tags = "Ingress")
   @PostMapping("/ingest/{speciesListID}")
   public ResponseEntity<Object> ingest(
       @RequestParam("file") String fileName,
