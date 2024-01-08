@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.1.3</version>
+    <version>3.1.6</version>
     <relativePath/>
   </parent>
   <groupId>au.org.ala</groupId>
@@ -20,7 +20,6 @@
   </properties>
 
   <repositories>
-
     <repository>
       <id>gbif-all</id>
       <url>https://repository.gbif.org/content/groups/gbif</url>
@@ -124,7 +123,7 @@
     <dependency>
       <groupId>com.opencsv</groupId>
       <artifactId>opencsv</artifactId>
-      <version>5.7.1</version>
+      <version>5.9</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>

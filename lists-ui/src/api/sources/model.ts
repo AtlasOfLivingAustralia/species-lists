@@ -30,6 +30,7 @@ interface SpeciesList {
     lastUpdatedBy: string;
     owner: string;
     wkt: string;
+    tags: string[];
 }
 
 type Release = {
@@ -92,7 +93,6 @@ interface InputSpeciesList {
 interface InputKeyValue {
     key: string;
     value: string;
-    // __typename: string;
 }
 
 interface KV {
@@ -133,4 +133,5 @@ interface FilteredSpeciesList {
     totalElements: number;
 }
 
-export type {Breadcrumb,  InputSpeciesList, SpeciesList, SpeciesListPage,  Facet, FacetCount, FilteredSpeciesList, SpeciesListItem, Release, ReleasesData, ListsUser, Classification, KV}
+export type {Breadcrumb, InputSpeciesList, SpeciesList, SpeciesListPage, Facet, FacetCount, FilteredSpeciesList,
+    SpeciesListItem, Release, ReleasesData, ListsUser, Classification, KV}

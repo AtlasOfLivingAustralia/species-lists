@@ -50,10 +50,8 @@ public class IngressController {
   @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
   @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
   @Autowired protected TaxonService taxonService;
-
   @Autowired protected ReleaseService releaseService;
   @Autowired protected UploadService uploadService;
-
   @Autowired protected AuthUtils authUtils;
 
   @Value("${temp.dir:/tmp}")

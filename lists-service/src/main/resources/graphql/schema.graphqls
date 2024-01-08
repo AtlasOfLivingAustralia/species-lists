@@ -17,7 +17,7 @@ type Mutation {
   updateMetadata(id: String!, title: String!, description: String,
     licence: String!, listType: String!, authority:String, region:String,
     isAuthoritative:Boolean, isPrivate: Boolean, isInvasive: Boolean, isThreatened: Boolean,
-    isBIE: Boolean, isSDS: Boolean, doi:String, wkt:String): SpeciesList
+    isBIE: Boolean, isSDS: Boolean, doi:String, wkt:String, tags:[String]): SpeciesList
 
   addField(id: String!, fieldName:String!, fieldValue:String): SpeciesList
 
@@ -70,6 +70,7 @@ type SpeciesList {
   lastUpdatedBy: String
   owner: String
   editors: [String]
+  tags:[String]
 }
 
 type SpeciesListPage {

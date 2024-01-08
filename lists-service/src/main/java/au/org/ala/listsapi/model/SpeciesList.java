@@ -49,6 +49,7 @@ public class SpeciesList {
   private String lastUpdatedBy;
   private List<String> editors; // who can edit the list
   private List<String> approvedViewers; // who can view the list (when list is private)
+  private List<String> tags; // list of tags
 
   private Classification classification; // who created the list
 

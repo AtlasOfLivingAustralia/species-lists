@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@apollo/client";
 import {FormattedMessage, useIntl} from "react-intl";
 import {
-    Affix,
+    Affix, Badge,
     Button, Checkbox,
     Grid,
     Group, HoverCard, Loader, Modal,
@@ -42,7 +42,6 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
     const [lng ] = useState(133);
     const [lat ] = useState(-24.5);
     const [zoom] = useState(3);
-
 
     const intl = useIntl();
 
@@ -214,11 +213,19 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                         </dd>
 
                         <Space h="md"/>
-                        <dt>Authority</dt>
+                        <dt><FormattedMessage id="Authority"/></dt>
                         <dd><Skeleton height={25} width={600} /></dd>
 
                         <Space h="md"/>
-                        <dt>Region</dt>
+                        <dt><FormattedMessage id="Region"/></dt>
+                        <dd><Skeleton height={25} width={500} /></dd>
+
+                        <Space h="md"/>
+                        <dt><FormattedMessage id="wkt"/></dt>
+                        <dd><Skeleton height={25} width={500} /></dd>
+
+                        <Space h="md"/>
+                        <dt>Tags</dt>
                         <dd><Skeleton height={25} width={500} /></dd>
 
                         <Space h="md"/>
@@ -290,7 +297,7 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                                                   disabled={true}
                                         />
                                         <Checkbox size="md"
-                                                  label="Use in Sensitive data service"
+                                                  label="Used in Sensitive data service"
                                                   checked={speciesList.isSDS}
                                                   disabled={true}
                                         />
@@ -304,7 +311,7 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                             </>}
 
                             <Space h="md"/>
-                            <dt>Authority</dt>
+                            <dt><FormattedMessage id="Authority"/></dt>
                             <dd>{speciesList?.authority ? speciesList?.authority : 'Not specified'}</dd>
 
                             <Space h="md"/>
@@ -323,6 +330,14 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                                         onClick={() => clipboard.copy(speciesList?.wkt)}>
                                         {clipboard.copied ? 'Copied to clipboard'  : 'Copy to clipboard'}
                                     </Button>
+                                }
+                            </dd>
+
+                            <Space h="md"/>
+                            <dt>Tags</dt>
+                            <dd>
+                                {speciesList?.tags?.length > 0 &&
+                                    speciesList?.tags.map( tag => {return <Badge>{tag}</Badge>})
                                 }
                             </dd>
 

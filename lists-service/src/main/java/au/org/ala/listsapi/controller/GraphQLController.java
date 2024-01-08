@@ -611,6 +611,7 @@ public class GraphQLController {
       @Argument Boolean isAuthoritative,
       @Argument Boolean isSDS,
       @Argument Boolean isBIE,
+      @Argument List<String> tags,
       @AuthenticationPrincipal Principal principal) {
     Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(id);
     if (speciesList.isEmpty()) {
@@ -647,6 +648,7 @@ public class GraphQLController {
       toUpdate.setIsSDS(isSDS);
       toUpdate.setWkt(wkt);
       toUpdate.setLastUpdatedBy(principal.getName());
+      toUpdate.setTags(tags);
 
       // If the visibility has changed, update the visibility of the list items
       // in elasticsearch and mongo

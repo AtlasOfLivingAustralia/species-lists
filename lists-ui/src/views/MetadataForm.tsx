@@ -1,7 +1,6 @@
-import {Alert, Button, Checkbox, Group, Select, Space, Textarea, TextInput} from "@mantine/core";
+import {Alert, Button, Checkbox, Group, MultiSelect, Select, Space, Textarea, TextInput} from "@mantine/core";
 import { useForm } from "@mantine/form";
 import {FormattedMessage, useIntl} from "react-intl";
-
 import {MetadataFormProps} from "../api/sources/props.ts";
 import {useContext, useState} from "react";
 import {ListsUser, SpeciesList} from "../api/sources/model.ts";
@@ -38,7 +37,8 @@ export function MetadataForm({ speciesList,
             isThreatened: speciesList?.isThreatened,
             isSDS: speciesList?.isSDS,
             isBIE: speciesList?.isBIE,
-            wkt: speciesList?.wkt
+            wkt: speciesList?.wkt,
+            tags: speciesList?.tags
         },
         validate: {
             title: (value) => (!value ? "Please supply a title" : null),
@@ -50,6 +50,13 @@ export function MetadataForm({ speciesList,
     });
 
     const listTypeValidation:string| null = validateListType(form.values.listType, suppliedFields);
+
+    const tags = [
+        { value: 'biocollect', label: 'biocollect' },
+        { value: 'spatial-portal', label: 'spatial-portal' },
+        { value: 'galah', label: 'galah' },
+        { value: 'profiles', label: 'profiles' }
+    ];
 
     return (
         <>
@@ -128,7 +135,7 @@ export function MetadataForm({ speciesList,
                                   {...form.getInputProps('isAuthoritative', { type: 'checkbox' })}
                         />
                         <Checkbox size="md"
-                                  label="Use in Sensitive data service"
+                                  label="Used in Sensitive data service"
                                   checked={isSDS}
                                   {...form.getInputProps('isSDS', { type: 'checkbox' })}
                         />
@@ -170,8 +177,16 @@ export function MetadataForm({ speciesList,
                     ]}
                     {...form.getInputProps("region")}
                 />
-                <Space h="md" />
 
+                <MultiSelect
+                    mt="md"
+                    data={tags}
+                    label="Tags"
+                    placeholder="Select tags"
+                    {...form.getInputProps("tags")}
+                />
+
+                <Space h="md" />
                 <Textarea h={100} label={<FormattedMessage id='wkt'/>} disabled={!edit} placeholder="" {...form.getInputProps("wkt")} />
 
                 { listTypeValidation &&

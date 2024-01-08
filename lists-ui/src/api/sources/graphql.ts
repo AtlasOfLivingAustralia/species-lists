@@ -225,6 +225,7 @@ export const GET_LIST_METADATA = gql`
             owner
             editors
             wkt
+            tags
         }
     }
 `;
@@ -243,6 +244,7 @@ export const UPDATE_LIST = gql`
         $isSDS: Boolean
         $isBIE: Boolean
         $wkt: String
+        $tags: [String]
     ) {
         updateMetadata(
             id: $id
@@ -257,6 +259,7 @@ export const UPDATE_LIST = gql`
             isSDS: $isSDS
             isBIE: $isBIE
             wkt: $wkt
+            tags: $tags
         ) {
             id
             title
@@ -280,6 +283,7 @@ export const UPDATE_LIST = gql`
             owner
             editors
             wkt
+            tags
         }
     }
 `;

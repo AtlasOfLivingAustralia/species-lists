@@ -128,3 +128,13 @@ ul.classificationInline li:not(:last-child)::after {
   content: "\2022";
   margin-left: 10px;
 }
+
+.mantine-Badge-root {
+  background-color: #c44d34;
+  color: #FFFFFF;
+}
+
+.mantine-Badge-inner {
+  background-color: #c44d34;
+  color: #FFFFFF;
+}
