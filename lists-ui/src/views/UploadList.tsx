@@ -52,7 +52,7 @@ function UploadList() {
             formData.append("description", values.description);
             formData.append("listType", values.listType);
             formData.append("region", values.region);
-            formData.append("authority", values.authority);
+            formData.append("authority", values.authority?.toString() ?? "");
             formData.append("licence", values.licence);
             formData.append("isPrivate", values.isPrivate?.toString());
             formData.append("isAuthoritative", values.isAuthoritative?.toString());
@@ -60,6 +60,7 @@ function UploadList() {
             formData.append("isThreatened", values.isThreatened?.toString());
             formData.append("isInvasive", values.isInvasive?.toString());
             formData.append("isSDS", values.isSDS?.toString());
+            formData.append("tags", values.tags?.toString());
             formData.append("file", uploaded.localFile);
 
             fetch(import.meta.env.VITE_INGEST_URL, {

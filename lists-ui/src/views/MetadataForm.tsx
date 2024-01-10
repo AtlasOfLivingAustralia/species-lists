@@ -1,12 +1,16 @@
 import {Alert, Button, Checkbox, Group, MultiSelect, Select, Space, Textarea, TextInput} from "@mantine/core";
 import { useForm } from "@mantine/form";
-import {FormattedMessage, useIntl} from "react-intl";
+import {FormattedMessage} from "react-intl";
 import {MetadataFormProps} from "../api/sources/props.ts";
 import {useContext, useState} from "react";
 import {ListsUser, SpeciesList} from "../api/sources/model.ts";
 import UserContext from "../helpers/UserContext.ts";
 import {IconInfoCircle} from "@tabler/icons-react";
 import {validateListType} from "../helpers/validation.tsx";
+import tags from '../tags.json';
+import licences from '../licences.json';
+import regions from '../regions.json';
+import listTypes from '../listTypes.json';
 
 export function MetadataForm({ speciesList,
                                submitFormFcn,
@@ -51,13 +55,6 @@ export function MetadataForm({ speciesList,
 
     const listTypeValidation:string| null = validateListType(form.values.listType, suppliedFields);
 
-    const tags = [
-        { value: 'biocollect', label: 'biocollect' },
-        { value: 'spatial-portal', label: 'spatial-portal' },
-        { value: 'galah', label: 'galah' },
-        { value: 'profiles', label: 'profiles' }
-    ];
-
     return (
         <>
             <form onSubmit={form.onSubmit((values) => submitFormFcn(values as SpeciesList) )}>
@@ -85,14 +82,7 @@ export function MetadataForm({ speciesList,
                     label="List type"
                     placeholder="Pick one"
                     disabled={!edit}
-                    data={[
-                        { value: "CONSERVATION_LIST", label: useIntl().formatMessage({ id: "CONSERVATION_LIST" }) },
-                        { value: "SENSITIVE_LIST", label: useIntl().formatMessage({ id: "SENSITIVE_LIST" }) },
-                        { value: "INVASIVE", label: useIntl().formatMessage({ id: "INVASIVE" }) },
-                        { value: "COMMON_TRAIT", label: useIntl().formatMessage({ id: "COMMON_TRAIT" }) },
-                        { value: "LOCAL_LIST", label: useIntl().formatMessage({ id: "LOCAL_LIST" }) },
-                        { value: "SPECIES_CHARACTERS", label: useIntl().formatMessage({ id: "SPECIES_CHARACTERS" }) },
-                    ]}
+                    data={listTypes}
                     {...form.getInputProps("listType")}
                 />
 
@@ -114,11 +104,7 @@ export function MetadataForm({ speciesList,
                     label="Licence"
                     placeholder="Pick one"
                     disabled={!edit}
-                    data={[
-                        { value: "CC0", label: "Creative Commons Zero" },
-                        { value: "CC-BY", label: "Creative Commons By Attribution" },
-                        { value: "CC-BY-NC", label: "Creative Commons Attribution-Noncommercial" },
-                    ]}
+                    data={licences}
                     {...form.getInputProps("licence")}
                 />
                 <Space h="lg" />
@@ -148,33 +134,18 @@ export function MetadataForm({ speciesList,
 
                 </Group>
                 <Space h="md" />
-                <TextInput mt="md" label="Authority" disabled={!edit} placeholder="" {...form.getInputProps("authority")} />
+                <TextInput mt="md" label="Authority"
+                           disabled={!edit}
+                           placeholder=""
+                           {...form.getInputProps("authority")}
+                />
 
                 <Space h="md" />
                 <Select
                     label="Region"
                     placeholder="Pick one"
                     disabled={!edit}
-                    data={[
-                        { value : "AUS", label: "Australia"},
-                        { value : "NZ",  label: "New Zealand"},
-                        { value : "NOTAUS", label: "Outside Australia"},
-                        { value : "ACT", label: "Australian Capital Territory"},
-                        { value : "NSW", label: "New South Wales"},
-                        { value : "NT",  label: "Northern Territory"},
-                        { value : "QLD", label: "Queensland"},
-                        { value : "SA",  label: "South Australia"},
-                        { value : "TAS", label: "Tasmania"},
-                        { value : "VIC", label: "Victoria"},
-                        { value : "WA",  label: "Western Australia"},
-                        { value : "CC",  label: "Cocos (Keeling) Islands"},
-                        { value : "CX",  label: "Christmas Island"},
-                        { value : "AC",  label: "Ashmore and Cartier Islands"},
-                        { value : "CS",  label: "Coral Sea Islands"},
-                        { value : "NF",  label: "Norfolk Island"},
-                        { value : "HM",  label: "Heard and McDonald Islands"},
-                        { value : "AQ",  label: "Australian Antarctic Territory"}
-                    ]}
+                    data={regions}
                     {...form.getInputProps("region")}
                 />
 

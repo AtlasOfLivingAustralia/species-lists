@@ -104,6 +104,7 @@ public class UploadService {
     speciesList.setListType(speciesListMetadata.getListType());
     speciesList.setRegion(speciesListMetadata.getRegion());
     speciesList.setTitle(speciesListMetadata.getTitle());
+    speciesList.setTags(speciesListMetadata.getTags());
   }
 
   public File getFileTemp(MultipartFile file) {

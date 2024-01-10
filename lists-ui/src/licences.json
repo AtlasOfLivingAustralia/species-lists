@@ -1,0 +1,5 @@
+[
+  { "value": "CC0", "label": "Creative Commons Zero" },
+  { "value": "CC-BY", "label": "Creative Commons By Attribution" },
+  { "value": "CC-BY-NC", "label": "Creative Commons Attribution-Noncommercial" }
+]

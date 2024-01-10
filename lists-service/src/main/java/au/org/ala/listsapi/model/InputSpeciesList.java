@@ -33,6 +33,7 @@ public class InputSpeciesList {
   private String category;
   private String region;
   private String wkt;
+  private List<String> tags;
 
   String isAuthoritative;
   String isPrivate;
