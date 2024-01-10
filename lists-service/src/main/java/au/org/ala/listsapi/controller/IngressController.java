@@ -95,7 +95,9 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(tags = "Ingress", summary = "Rematch the taxonomy for a species list")
+  @Operation(tags = "Ingress",
+          description = "Rematch the taxonomy for a species list. This is a long running process.",
+          summary = "Rematch the taxonomy for a species list")
   @GetMapping("/rematch/{speciesListID}")
   public ResponseEntity<Object> rematch(
       @PathVariable("speciesListID") String speciesListID,
@@ -115,7 +117,10 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(tags = "Ingress", summary = "Rematch the taxonomy for all species lists")
+  @Operation(tags = "Ingress",
+          description = "Rematch the taxonomy for all species lists. This is a long running process.",
+          summary = "Rematch the taxonomy for all species lists"
+  )
   @GetMapping("/rematch")
   public ResponseEntity<Object> rematch(@AuthenticationPrincipal Principal principal) {
     try {
@@ -131,7 +136,9 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Reindex a species lists", tags = "Ingress")
+  @Operation(summary = "Reindex a species list",
+          description = "Reindex a species list into the ElasticSearch index",
+          tags = "Ingress")
   @GetMapping("/reindex/{speciesListID}")
   public ResponseEntity<Object> reindex(
       @PathVariable("speciesListID") String speciesListID,
@@ -150,7 +157,9 @@ public class IngressController {
 
   @SecurityRequirement(name = "JWT")
   @Tag(name = "Ingress", description = "Services for ingesting species lists")
-  @Operation(summary = "Reindex all species lists", tags = "Ingress")
+  @Operation(summary = "Reindex all species lists",
+          description = "Reindex all species lists into the ElasticSearch index.",
+          tags = "Ingress")
   @GetMapping("/reindex")
   public ResponseEntity<Object> reindex(@AuthenticationPrincipal Principal principal) {
     try {
@@ -166,7 +175,10 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Upload a CSV species list", tags = "Ingress")
+  @Operation(summary = "Upload a CSV species list", tags = "Ingress",
+          description = "Upload a CSV species list. This is step 1 of a 2 step process. "
+                  + "The file is uploaded to a temporary area and then ingested. "
+                  + "The second step is to ingest the species list.")
   @PostMapping(path = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Object> handleFileUpload(@RequestPart("file") MultipartFile file) {
 
@@ -183,7 +195,10 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Ingest a species list", tags = "Ingress")
+  @Operation(summary = "Ingest a species list", tags = "Ingress",
+          description = "Ingest a species list. This is step 2 of a 2 step process. "
+                  + "The file is uploaded to a temporary area and then ingested. "
+                  + "The first step is to upload the species list.")
   @PostMapping("/ingest")
   public ResponseEntity<Object> ingest(
       @RequestParam("file") String fileName,
@@ -214,7 +229,11 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Ingest a species list that has been uploaded before", tags = "Ingress")
+  @Operation(summary = "Ingest a species list that has been uploaded before",
+          description = "Ingest a species list. This is step 2 of a 2 step process. "
+                  + "The file is uploaded to a temporary area and then ingested. "
+                  + "The first step is to upload the species list.",
+          tags = "Ingress")
   @PostMapping("/ingest/{speciesListID}")
   public ResponseEntity<Object> ingest(
       @RequestParam("file") String fileName,
