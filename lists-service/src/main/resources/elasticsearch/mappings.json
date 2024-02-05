@@ -400,6 +400,18 @@
           "ignore_above": 256
         }
       }
+    },
+    "tags": {
+      "type": "keyword",
+      "copy_to": [
+        "all"
+      ],
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
     }
   }
 }

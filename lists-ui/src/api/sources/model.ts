@@ -86,7 +86,6 @@ interface InputSpeciesList {
     order: string;
     family: string;
     genus: string;
-    // __typename: string;
     properties: InputKeyValue[];
 }
 

@@ -42,4 +42,5 @@ public class SpeciesListIndex {
   private boolean hasRegion;
   private String owner;
   private List<String> editors;
+  private List<String> tags;
 }

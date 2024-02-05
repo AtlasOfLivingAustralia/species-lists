@@ -2001,14 +2001,6 @@ object-assign@^4.1.1:
   resolved "https://registry.npmjs.org/object-assign/-/object-assign-4.1.1.tgz"
   integrity sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==
 
-oidc-client-ts@2.2.4:
-  version "2.2.4"
-  resolved "https://registry.yarnpkg.com/oidc-client-ts/-/oidc-client-ts-2.2.4.tgz#7d86b5efe2248f3637a6f3a0ee1af86764aea125"
-  integrity sha512-nOZwIomju+AmXObl5Oq5PjrES/qTt8bLsENJCIydVgi9TEWk7SCkOU6X3RNkY7yfySRM1OJJvDKdREZdmnDT2g==
-  dependencies:
-    crypto-js "^4.1.1"
-    jwt-decode "^3.1.2"
-
 oidc-client-ts@^2.2.5:
   version "2.2.5"
   resolved "https://registry.yarnpkg.com/oidc-client-ts/-/oidc-client-ts-2.2.5.tgz#ca0a9f791d8d9d00a1720226d3e96b50065ce015"
@@ -2016,13 +2008,6 @@ oidc-client-ts@^2.2.5:
   dependencies:
     crypto-js "^4.1.1"
     jwt-decode "^3.1.2"
-
-oidc-react@^3.2.2:
-  version "3.2.2"
-  resolved "https://registry.yarnpkg.com/oidc-react/-/oidc-react-3.2.2.tgz#ea8593d294e454f06e9eea327b5eb92d03413aa4"
-  integrity sha512-xt5DtgiI6yxS+7ff2nBUZR49YfovfAApgpYhmsMoAutlqb41uZUcmquiIWRtbEXLe7UF5Zs8i1eQ1jFpr/+4JQ==
-  dependencies:
-    oidc-client-ts "2.2.4"
 
 once@^1.3.0:
   version "1.4.0"

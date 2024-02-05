@@ -1,7 +1,8 @@
 import {
     Table,
     Grid,
-    Text, Button,
+    Text,
+    Button,
 } from "@mantine/core";
 import {SpeciesListsSideBar} from "./SpeciesListsSideBar.tsx";
 import UserContext from "../helpers/UserContext.ts";
@@ -31,12 +32,21 @@ function Admin() {
                     })
 
                 } else {
-                    notifications.show({
-                        icon: <IconX />,
-                        className: 'fail-notification',
-                        title: 'Reindexing was not started due to an error',
-                        message: 'Unable to start reindexing. Please try again later'
-                    })
+                    if (response.status == 409){
+                        notifications.show({
+                            icon: <IconX />,
+                            className: 'success-notification',
+                            title: 'Reindexing already running!',
+                            message: 'Reindexing already running.'
+                        });
+                    } else {
+                        notifications.show({
+                            icon: <IconX/>,
+                            className: 'fail-notification',
+                            title: 'Reindexing was not started due to an error',
+                            message: 'Unable to start reindexing. Please try again later'
+                        })
+                    }
                 }
             });
         }
@@ -58,12 +68,21 @@ function Admin() {
                         message: 'This will  take a while to finish.'
                     })
                 } else {
-                    notifications.show({
-                        icon: <IconX />,
-                        className: 'fail-notification',
-                        title: 'Rematching failed to start',
-                        message: 'Unable to start rematching. Please try again later'
-                    })
+                    if (response.status == 409){
+                        notifications.show({
+                            icon: <IconX />,
+                            className: 'success-notification',
+                            title: 'Rematching already running!',
+                            message: 'Rematching already running.'
+                        });
+                    } else {
+                        notifications.show({
+                            icon: <IconX/>,
+                            className: 'fail-notification',
+                            title: 'Rematching failed to start',
+                            message: 'Unable to start rematching. Please try again later'
+                        })
+                    }
                 }
             });
         }
@@ -79,18 +98,27 @@ function Admin() {
             }).then(response => {
                 if (response.ok) {
                     notifications.show({
-                        icon: <IconCheck />,
+                        icon: <IconCheck/>,
                         className: 'success-notification',
                         title: 'Migration started',
                         message: 'This will will take a while to finish.'
                     })
                 } else {
-                    notifications.show({
-                        icon: <IconX />,
-                        className: 'fail-notification',
-                        title: 'Migration failed!',
-                        message: 'Migration failed to start. Please try again later'
-                    })
+                    if (response.status == 409){
+                        notifications.show({
+                            icon: <IconX />,
+                            className: 'success-notification',
+                            title: 'Migration already running!',
+                            message: 'Migration already running.'
+                        });
+                    } else {
+                        notifications.show({
+                            icon: <IconX />,
+                            className: 'fail-notification',
+                            title: 'Migration failed!',
+                            message: 'Migration failed to start. Please try again later'
+                        });
+                    }
                 }
             });
         }

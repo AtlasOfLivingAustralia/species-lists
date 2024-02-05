@@ -1,12 +1,8 @@
 package au.org.ala.listsapi.controller;
 
-import au.org.ala.listsapi.model.IngestJob;
-import au.org.ala.listsapi.model.InputSpeciesList;
-import au.org.ala.listsapi.model.Release;
-import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
-import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
+import au.org.ala.listsapi.model.*;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import au.org.ala.listsapi.service.MigrateService;
 import au.org.ala.listsapi.service.ReleaseService;
 import au.org.ala.listsapi.service.TaxonService;
 import au.org.ala.listsapi.service.UploadService;
@@ -19,6 +15,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.File;
 import java.security.Principal;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,16 +47,21 @@ import org.springframework.web.multipart.MultipartFile;
 public class IngressController {
 
   private static final Logger logger = LoggerFactory.getLogger(IngressController.class);
-  @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
+
   @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
-  @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
+
   @Autowired protected TaxonService taxonService;
   @Autowired protected ReleaseService releaseService;
   @Autowired protected UploadService uploadService;
+  @Autowired protected MigrateService migrateService;
+
   @Autowired protected AuthUtils authUtils;
 
   @Value("${temp.dir:/tmp}")
   private String tempDir;
+
+  private CompletableFuture<Void> asyncTask;
+  private String taskName;
 
   @SecurityRequirement(name = "JWT")
   @Operation(tags = "Ingress", summary = "Release a version of a species list")
@@ -126,8 +130,7 @@ public class IngressController {
     try {
       ResponseEntity<Object> errorResponse = checkAuthorized(principal);
       if (errorResponse != null) return errorResponse;
-      taxonService.taxonMatchDatasets();
-      return new ResponseEntity<>(HttpStatus.OK);
+      return startAsyncTaskIfNotBusy("REMATCH", () -> taxonService.taxonMatchDatasets());
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
       return ResponseEntity.badRequest()
@@ -165,8 +168,9 @@ public class IngressController {
     try {
       ResponseEntity<Object> errorResponse = checkAuthorized(principal);
       if (errorResponse != null) return errorResponse;
-      taxonService.reindex();
-      return new ResponseEntity<>(HttpStatus.OK);
+      // start async task
+      return startAsyncTaskIfNotBusy("REINDEX", () -> taxonService.reindex());
+
     } catch (Exception e) {
       logger.error("Error while reindexing all datasets: " + e.getMessage(), e);
       return ResponseEntity.badRequest()
@@ -296,5 +300,61 @@ public class IngressController {
       return ResponseEntity.badRequest().body("User not authorized");
     }
     return null;
+  }
+
+  @SecurityRequirement(name = "JWT")
+  @Operation(summary = "Migration status", tags = "Migrate")
+  @GetMapping("/migrate/status")
+  public ResponseEntity<Object> migrateStatus() {
+    if (asyncTask != null && !asyncTask.isDone()) {
+      return new ResponseEntity<>(new AsyncTaskStatus(taskName, true), HttpStatus.OK);
+    } else {
+      return new ResponseEntity<>(new AsyncTaskStatus(taskName, false), HttpStatus.OK);
+    }
+  }
+
+  @SecurityRequirement(name = "JWT")
+  @Operation(summary = "Migrate data", tags = "Migrate")
+  @GetMapping("/migrate")
+  public ResponseEntity<Object> migrate(
+          @AuthenticationPrincipal Principal principal) {
+
+    ResponseEntity<Object> errorResponse = checkAuthorized(principal);
+    if (errorResponse != null) return errorResponse;
+
+    return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrate());
+  }
+
+  @NotNull
+  private ResponseEntity<Object> startAsyncTaskIfNotBusy(String name, Runnable runnable) {
+    if (asyncTask == null || asyncTask.isDone()) {
+      asyncTask = CompletableFuture.runAsync(runnable);
+      taskName = name;
+      return new ResponseEntity<>(HttpStatus.OK);
+    } else {
+      logger.warn("Already running...");
+      return new ResponseEntity<>(HttpStatus.CONFLICT);
+    }
+  }
+
+  @SecurityRequirement(name = "JWT")
+  @Operation(summary = "Migrate data from local storage", tags = "Migrate")
+  @GetMapping("/migrate-local")
+  public ResponseEntity<Object> migrateLocal(
+          @AuthenticationPrincipal Principal principal) {
+
+    ResponseEntity<Object> errorResponse = checkAuthorized(principal);
+    if (errorResponse != null) return errorResponse;
+
+    if (asyncTask == null || asyncTask.isDone()) {
+      asyncTask = CompletableFuture.runAsync(() -> {
+        migrateService.migrateLocal();
+      });
+      taskName = "MIGRATION";
+      return new ResponseEntity<>(HttpStatus.OK);
+    } else {
+      logger.warn("Already running...");
+      return new ResponseEntity<>(HttpStatus.CONFLICT);
+    }
   }
 }

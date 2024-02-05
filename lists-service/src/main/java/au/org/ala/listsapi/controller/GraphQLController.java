@@ -94,7 +94,8 @@ public class GraphQLController {
           "listType",
           "isAuthoritative",
           "hasRegion",
-          "isSDS");
+          "isSDS",
+          "tags");
 
   public static final List<String> CORE_BOOL_FIELDS =
       List.of("isBIE", "isAuthoritative", "hasRegion", "isSDS");
@@ -540,7 +541,9 @@ public class GraphQLController {
             speciesList.getIsSDS() != null ? speciesList.getIsSDS() : false,
             speciesList.getRegion() != null || speciesList.getWkt() != null,
             speciesList.getOwner(),
-            speciesList.getEditors());
+            speciesList.getEditors(),
+            speciesList.getTags()
+      );
 
     speciesListIndexElasticRepository.save(speciesListIndex);
   }
@@ -629,8 +632,9 @@ public class GraphQLController {
           || isBIE != null && !isBIE.equals(toUpdate.getIsBIE())
           || isSDS != null && !isSDS.equals(toUpdate.getIsSDS())
           || wkt != null && !wkt.equals(toUpdate.getWkt())
-          || region != null && !region.equals(toUpdate.getRegion())) {
-
+          || region != null && !region.equals(toUpdate.getRegion())
+          || tags != null && !tags.equals(toUpdate.getTags())
+      ) {
         reindexRequired = true;
       }
 
@@ -752,6 +756,7 @@ public class GraphQLController {
     facetFields.add("isBIE");
     facetFields.add("isSDS");
     facetFields.add("hasRegion");
+    facetFields.add("tags");
 
     for (String facetField : facetFields) {
       builder.withAggregation(

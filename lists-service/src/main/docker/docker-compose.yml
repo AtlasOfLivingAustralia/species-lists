@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.3
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.3-arm64
     container_name: species-lists-elastic
     environment:
       - node.name=elasticsearch
@@ -17,7 +17,7 @@ services:
     cap_add:
       - IPC_LOCK
     volumes:
-      - /data/elastic:/usr/share/elasticsearch/data
+      - /Users/djtfmartin/dev/species-lists/elastic:/usr/share/elasticsearch/data
     restart: on-failure
     ports:
       - "9200:9200"
@@ -34,7 +34,7 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - /data/db:/data/db
+      - /Users/djtfmartin/dev/species-lists/mongo/db:/data/db
   namematching:
     image: atlasoflivingaustralia/ala-namematching-service:v20210811-3
     container_name: species-lists-namematching

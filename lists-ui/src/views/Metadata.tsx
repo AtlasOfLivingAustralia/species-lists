@@ -336,6 +336,9 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                             <Space h="md"/>
                             <dt>Tags</dt>
                             <dd>
+                                {(!speciesList?.tags || speciesList?.tags?.length == 0) &&
+                                    <span>No tags specified</span>
+                                }
                                 {speciesList?.tags?.length > 0 &&
                                     speciesList?.tags.map( tag => {return <Badge>{tag}</Badge>})
                                 }

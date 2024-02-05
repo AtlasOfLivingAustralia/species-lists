@@ -149,7 +149,9 @@ public class TaxonService {
                         speciesList.getIsSDS() != null ? speciesList.getIsSDS() : false,
                         speciesList.getRegion() != null || speciesList.getWkt() != null,
                         speciesList.getOwner(),
-                        speciesList.getEditors());
+                        speciesList.getEditors(),
+                        speciesList.getTags() != null ? speciesList.getTags() : new ArrayList<>()
+                );
 
                 IndexQuery indexQuery =
                     new IndexQueryBuilder()

@@ -252,7 +252,7 @@ export function ExistingField({speciesListID, originalName}: {speciesListID: str
                 icon: <IconCheck />,
                 title: 'The field removed from list',
                 className: 'success-notification',
-                message: 'The field '+ fieldName.trim + ' has been removed from the list'
+                message: 'The field '+ fieldName.trim() + ' has been removed from the list'
             })
         }).catch((err) => {
             console.log(err);
