@@ -9,6 +9,10 @@ import au.org.ala.listsapi.service.UploadService;
 import au.org.ala.ws.security.profile.AlaUserProfile;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -73,7 +77,7 @@ public class IngressController {
       ResponseEntity<Object> errorResponse = checkAuthorized(speciesListID, principal);
       if (errorResponse != null) return errorResponse;
       Release release = releaseService.release(speciesListID);
-      return new ResponseEntity<>(release, HttpStatus.OK);
+      return ResponseEntity.ok(release);
     } catch (Exception e) {
       return ResponseEntity.badRequest().body("Error while releasing the file: " + e.getMessage());
     }
@@ -184,6 +188,14 @@ public class IngressController {
                   + "The file is uploaded to a temporary area and then ingested. "
                   + "The second step is to ingest the species list.")
   @PostMapping(path = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @ApiResponses(value = {
+          @ApiResponse(responseCode = "200", description = "Successfully uploaded",
+                  content = { @Content(mediaType = "application/json",
+                          schema = @Schema(implementation = IngestJob.class))
+                  }),
+          @ApiResponse(responseCode = "400", description = "Bad Request",
+                  content = { @Content(mediaType = "text/plain") })
+  })
   public ResponseEntity<Object> handleFileUpload(@RequestPart("file") MultipartFile file) {
 
     try {
@@ -191,7 +203,7 @@ public class IngressController {
       File tempFile = uploadService.getFileTemp(file);
       file.transferTo(tempFile);
       IngestJob ingestJob = uploadService.ingest(tempFile, true, true);
-      return new ResponseEntity<>(ingestJob, HttpStatus.OK);
+      return ResponseEntity.ok(ingestJob);
     } catch (Exception e) {
       logger.error("Error while uploading the file: " + e.getMessage(), e);
       return ResponseEntity.badRequest().body("Error while uploading the file: " + e.getMessage());
@@ -204,6 +216,14 @@ public class IngressController {
                   + "The file is uploaded to a temporary area and then ingested. "
                   + "The first step is to upload the species list.")
   @PostMapping("/ingest")
+  @ApiResponses(value = {
+          @ApiResponse(responseCode = "200", description = "Successfully ingested",
+                  content = { @Content(mediaType = "application/json",
+                          schema = @Schema(implementation = SpeciesList.class))
+                  }),
+          @ApiResponse(responseCode = "400", description = "Bad Request",
+                  content = { @Content(mediaType = "text/plain") })
+  })
   public ResponseEntity<Object> ingest(
       @RequestParam("file") String fileName,
       InputSpeciesList speciesList,
@@ -225,7 +245,7 @@ public class IngressController {
       SpeciesList updatedSpeciesList =
           uploadService.ingest(alaUserProfile.getUserId(), speciesList, tempFile, false);
       logger.info("Ingestion complete..." + updatedSpeciesList.toString());
-      return new ResponseEntity<>(updatedSpeciesList, HttpStatus.OK);
+      return ResponseEntity.ok(updatedSpeciesList);
     } catch (Exception e) {
       logger.error("Error while ingesting the file: " + e.getMessage(), e);
       return ResponseEntity.badRequest().body("Error while uploading the file: " + e.getMessage());
@@ -239,6 +259,14 @@ public class IngressController {
                   + "The first step is to upload the species list.",
           tags = "Ingress")
   @PostMapping("/ingest/{speciesListID}")
+  @ApiResponses(value = {
+          @ApiResponse(responseCode = "200", description = "Successfully ingested",
+                  content = { @Content(mediaType = "application/json",
+                          schema = @Schema(implementation = SpeciesList.class))
+                  }),
+          @ApiResponse(responseCode = "400", description = "Bad Request",
+                  content = { @Content(mediaType = "text/plain") })
+  })
   public ResponseEntity<Object> ingest(
       @RequestParam("file") String fileName,
       @PathVariable("speciesListID") String speciesListID,
