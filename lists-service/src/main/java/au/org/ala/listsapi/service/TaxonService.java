@@ -150,8 +150,7 @@ public class TaxonService {
                         speciesList.getRegion() != null || speciesList.getWkt() != null,
                         speciesList.getOwner(),
                         speciesList.getEditors(),
-                        speciesList.getTags() != null ? speciesList.getTags() : new ArrayList<>()
-                );
+                        speciesList.getTags() != null ? speciesList.getTags() : new ArrayList<>());
 
                 IndexQuery indexQuery =
                     new IndexQueryBuilder()

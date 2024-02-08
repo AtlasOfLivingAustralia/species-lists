@@ -20,7 +20,6 @@ import java.io.File;
 import java.security.Principal;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -103,9 +102,10 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(tags = "Ingress",
-          description = "Rematch the taxonomy for a species list. This is a long running process.",
-          summary = "Rematch the taxonomy for a species list")
+  @Operation(
+      tags = "Ingress",
+      description = "Rematch the taxonomy for a species list. This is a long running process.",
+      summary = "Rematch the taxonomy for a species list")
   @GetMapping("/rematch/{speciesListID}")
   public ResponseEntity<Object> rematch(
       @PathVariable("speciesListID") String speciesListID,
@@ -125,10 +125,10 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(tags = "Ingress",
-          description = "Rematch the taxonomy for all species lists. This is a long running process.",
-          summary = "Rematch the taxonomy for all species lists"
-  )
+  @Operation(
+      tags = "Ingress",
+      description = "Rematch the taxonomy for all species lists. This is a long running process.",
+      summary = "Rematch the taxonomy for all species lists")
   @GetMapping("/rematch")
   public ResponseEntity<Object> rematch(@AuthenticationPrincipal Principal principal) {
     try {
@@ -143,9 +143,10 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Reindex a species list",
-          description = "Reindex a species list into the ElasticSearch index",
-          tags = "Ingress")
+  @Operation(
+      summary = "Reindex a species list",
+      description = "Reindex a species list into the ElasticSearch index",
+      tags = "Ingress")
   @GetMapping("/reindex/{speciesListID}")
   public ResponseEntity<Object> reindex(
       @PathVariable("speciesListID") String speciesListID,
@@ -164,9 +165,10 @@ public class IngressController {
 
   @SecurityRequirement(name = "JWT")
   @Tag(name = "Ingress", description = "Services for ingesting species lists")
-  @Operation(summary = "Reindex all species lists",
-          description = "Reindex all species lists into the ElasticSearch index.",
-          tags = "Ingress")
+  @Operation(
+      summary = "Reindex all species lists",
+      description = "Reindex all species lists into the ElasticSearch index.",
+      tags = "Ingress")
   @GetMapping("/reindex")
   public ResponseEntity<Object> reindex(@AuthenticationPrincipal Principal principal) {
     try {
@@ -183,19 +185,29 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Upload a CSV species list", tags = "Ingress",
-          description = "Upload a CSV species list. This is step 1 of a 2 step process. "
-                  + "The file is uploaded to a temporary area and then ingested. "
-                  + "The second step is to ingest the species list.")
+  @Operation(
+      summary = "Upload a CSV species list",
+      tags = "Ingress",
+      description =
+          "Upload a CSV species list. This is step 1 of a 2 step process. "
+              + "The file is uploaded to a temporary area and then ingested. "
+              + "The second step is to ingest the species list.")
   @PostMapping(path = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  @ApiResponses(value = {
-          @ApiResponse(responseCode = "200", description = "Successfully uploaded",
-                  content = { @Content(mediaType = "application/json",
-                          schema = @Schema(implementation = IngestJob.class))
-                  }),
-          @ApiResponse(responseCode = "400", description = "Bad Request",
-                  content = { @Content(mediaType = "text/plain") })
-  })
+  @ApiResponses(
+      value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Successfully uploaded",
+            content = {
+              @Content(
+                  mediaType = "application/json",
+                  schema = @Schema(implementation = IngestJob.class))
+            }),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad Request",
+            content = {@Content(mediaType = "text/plain")})
+      })
   public ResponseEntity<Object> handleFileUpload(@RequestPart("file") MultipartFile file) {
 
     try {
@@ -211,19 +223,29 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Ingest a species list", tags = "Ingress",
-          description = "Ingest a species list. This is step 2 of a 2 step process. "
-                  + "The file is uploaded to a temporary area and then ingested. "
-                  + "The first step is to upload the species list.")
+  @Operation(
+      summary = "Ingest a species list",
+      tags = "Ingress",
+      description =
+          "Ingest a species list. This is step 2 of a 2 step process. "
+              + "The file is uploaded to a temporary area and then ingested. "
+              + "The first step is to upload the species list.")
   @PostMapping("/ingest")
-  @ApiResponses(value = {
-          @ApiResponse(responseCode = "200", description = "Successfully ingested",
-                  content = { @Content(mediaType = "application/json",
-                          schema = @Schema(implementation = SpeciesList.class))
-                  }),
-          @ApiResponse(responseCode = "400", description = "Bad Request",
-                  content = { @Content(mediaType = "text/plain") })
-  })
+  @ApiResponses(
+      value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Successfully ingested",
+            content = {
+              @Content(
+                  mediaType = "application/json",
+                  schema = @Schema(implementation = SpeciesList.class))
+            }),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad Request",
+            content = {@Content(mediaType = "text/plain")})
+      })
   public ResponseEntity<Object> ingest(
       @RequestParam("file") String fileName,
       InputSpeciesList speciesList,
@@ -253,20 +275,29 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Ingest a species list that has been uploaded before",
-          description = "Ingest a species list. This is step 2 of a 2 step process. "
-                  + "The file is uploaded to a temporary area and then ingested. "
-                  + "The first step is to upload the species list.",
-          tags = "Ingress")
+  @Operation(
+      summary = "Ingest a species list that has been uploaded before",
+      description =
+          "Ingest a species list. This is step 2 of a 2 step process. "
+              + "The file is uploaded to a temporary area and then ingested. "
+              + "The first step is to upload the species list.",
+      tags = "Ingress")
   @PostMapping("/ingest/{speciesListID}")
-  @ApiResponses(value = {
-          @ApiResponse(responseCode = "200", description = "Successfully ingested",
-                  content = { @Content(mediaType = "application/json",
-                          schema = @Schema(implementation = SpeciesList.class))
-                  }),
-          @ApiResponse(responseCode = "400", description = "Bad Request",
-                  content = { @Content(mediaType = "text/plain") })
-  })
+  @ApiResponses(
+      value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Successfully ingested",
+            content = {
+              @Content(
+                  mediaType = "application/json",
+                  schema = @Schema(implementation = SpeciesList.class))
+            }),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad Request",
+            content = {@Content(mediaType = "text/plain")})
+      })
   public ResponseEntity<Object> ingest(
       @RequestParam("file") String fileName,
       @PathVariable("speciesListID") String speciesListID,
@@ -344,8 +375,7 @@ public class IngressController {
   @SecurityRequirement(name = "JWT")
   @Operation(summary = "Migrate data", tags = "Migrate")
   @GetMapping("/migrate")
-  public ResponseEntity<Object> migrate(
-          @AuthenticationPrincipal Principal principal) {
+  public ResponseEntity<Object> migrate(@AuthenticationPrincipal Principal principal) {
 
     ResponseEntity<Object> errorResponse = checkAuthorized(principal);
     if (errorResponse != null) return errorResponse;
@@ -368,16 +398,17 @@ public class IngressController {
   @SecurityRequirement(name = "JWT")
   @Operation(summary = "Migrate data from local storage", tags = "Migrate")
   @GetMapping("/migrate-local")
-  public ResponseEntity<Object> migrateLocal(
-          @AuthenticationPrincipal Principal principal) {
+  public ResponseEntity<Object> migrateLocal(@AuthenticationPrincipal Principal principal) {
 
     ResponseEntity<Object> errorResponse = checkAuthorized(principal);
     if (errorResponse != null) return errorResponse;
 
     if (asyncTask == null || asyncTask.isDone()) {
-      asyncTask = CompletableFuture.runAsync(() -> {
-        migrateService.migrateLocal();
-      });
+      asyncTask =
+          CompletableFuture.runAsync(
+              () -> {
+                migrateService.migrateLocal();
+              });
       taskName = "MIGRATION";
       return new ResponseEntity<>(HttpStatus.OK);
     } else {

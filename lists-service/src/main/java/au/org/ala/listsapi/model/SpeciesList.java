@@ -53,7 +53,8 @@ public class SpeciesList {
 
   private Classification classification; // who created the list
 
-  @CreatedDate public Date dateCreated;
   public Date lastUploaded;
+
+  @CreatedDate public Date dateCreated;
   @LastModifiedDate public Date lastUpdated;
 }

@@ -28,11 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URL;
 import java.security.Principal;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -271,7 +267,8 @@ public class GraphQLController {
   }
 
   @QueryMapping
-  public SpeciesList getSpeciesListMetadata(@Argument String speciesListID, @AuthenticationPrincipal Principal principal) {
+  public SpeciesList getSpeciesListMetadata(
+      @Argument String speciesListID, @AuthenticationPrincipal Principal principal) {
     Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findById(speciesListID);
     if (optionalSpeciesList.isPresent()) {
       Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListID);
@@ -280,7 +277,8 @@ public class GraphQLController {
       }
 
       // private list, check user is authorized
-      if (speciesList.get().getIsPrivate() && !authUtils.isAuthorized(speciesList.get(), principal)) {
+      if (speciesList.get().getIsPrivate()
+          && !authUtils.isAuthorized(speciesList.get(), principal)) {
         logger.info("User not authorized to private access list: " + speciesListID);
         throw new AccessDeniedException("You dont have access to this list");
       }
@@ -292,8 +290,12 @@ public class GraphQLController {
 
   @QueryMapping
   public Page<SpeciesListItem> getSpeciesList(
-      @Argument String speciesListID, @Argument Integer page, @Argument Integer size, @AuthenticationPrincipal Principal principal) {
-    return filterSpeciesList(speciesListID, null, new ArrayList<>(), page, size, null, null, principal);
+      @Argument String speciesListID,
+      @Argument Integer page,
+      @Argument Integer size,
+      @AuthenticationPrincipal Principal principal) {
+    return filterSpeciesList(
+        speciesListID, null, new ArrayList<>(), page, size, null, null, principal);
   }
 
   @SchemaMapping(typeName = "Mutation", field = "addField")
@@ -473,13 +475,17 @@ public class GraphQLController {
     }
 
     if (!authUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
-      logger.info("User not authorized to modify access list: " + optionalSpeciesList.get().getId());
+      logger.info(
+          "User not authorized to modify access list: " + optionalSpeciesList.get().getId());
       throw new AccessDeniedException("You dont have access to this list");
     }
 
     SpeciesList speciesList = optionalSpeciesList.get();
     SpeciesListItem speciesListItem = optionalSpeciesListItem.get();
     updateItem(inputSpeciesListItem, speciesListItem);
+
+    // update last updated
+    updateLastUpdated(speciesListItem);
 
     // rematch taxonomy
     try {
@@ -511,6 +517,7 @@ public class GraphQLController {
         inputSpeciesListItem.getProperties().stream()
             .map(kv -> new KeyValue(kv.getKey(), kv.getValue()))
             .collect(Collectors.toList()));
+    speciesListItem.setLastUpdated(new Date());
     return speciesListItemMongoRepository.save(speciesListItem);
   }
 
@@ -542,8 +549,7 @@ public class GraphQLController {
             speciesList.getRegion() != null || speciesList.getWkt() != null,
             speciesList.getOwner(),
             speciesList.getEditors(),
-            speciesList.getTags()
-      );
+            speciesList.getTags());
 
     speciesListIndexElasticRepository.save(speciesListIndex);
   }
@@ -567,9 +573,21 @@ public class GraphQLController {
     SpeciesListItem speciesListItem = new SpeciesListItem();
     speciesListItem = updateItem(inputSpeciesListItem, speciesListItem);
 
+    // update last updated
+    updateLastUpdated(speciesListItem);
+
     // index
     reindex(speciesListItem, optionalSpeciesList.get());
     return speciesListItem;
+  }
+
+  private void updateLastUpdated(SpeciesListItem speciesListItem) {
+    Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListItem.getSpeciesListID());
+    if (speciesList.isPresent()) {
+      SpeciesList sl = speciesList.get();
+      sl.setLastUpdated(new Date());
+      speciesListMongoRepository.save(sl);
+    }
   }
 
   @SchemaMapping(typeName = "Mutation", field = "removeSpeciesListItem")
@@ -633,8 +651,7 @@ public class GraphQLController {
           || isSDS != null && !isSDS.equals(toUpdate.getIsSDS())
           || wkt != null && !wkt.equals(toUpdate.getWkt())
           || region != null && !region.equals(toUpdate.getRegion())
-          || tags != null && !tags.equals(toUpdate.getTags())
-      ) {
+          || tags != null && !tags.equals(toUpdate.getTags())) {
         reindexRequired = true;
       }
 
@@ -676,16 +693,16 @@ public class GraphQLController {
       @Argument Integer size,
       @Argument String sort,
       @Argument String direction,
-      @AuthenticationPrincipal Principal principal
-      ) {
+      @AuthenticationPrincipal Principal principal) {
 
-    if (speciesListID != null){
+    if (speciesListID != null) {
 
-      Optional<SpeciesList> speciesListOptional = speciesListMongoRepository.findById(speciesListID);
+      Optional<SpeciesList> speciesListOptional =
+          speciesListMongoRepository.findById(speciesListID);
       if (speciesListOptional.isEmpty()) {
         return null;
       }
-      if (speciesListOptional.get().getIsPrivate()){
+      if (speciesListOptional.get().getIsPrivate()) {
         // private list, check user is authorized
         if (!authUtils.isAuthorized(speciesListOptional.get(), principal)) {
           logger.info("User not authorized to private access list: " + speciesListID);
@@ -861,9 +878,9 @@ public class GraphQLController {
 
     List<String> classificationFields = new ArrayList<>();
     classificationFields.add("classification.family");
-//    classificationFields.add("classification.order");
-//    classificationFields.add("classification.class");
-//    classificationFields.add("classification.phylum");
+    //    classificationFields.add("classification.order");
+    //    classificationFields.add("classification.class");
+    //    classificationFields.add("classification.phylum");
     classificationFields.add("classification.kingdom");
     classificationFields.add("classification.speciesSubgroup");
 
@@ -913,7 +930,8 @@ public class GraphQLController {
   public Image getTaxonImage(@Argument String taxonID) throws Exception {
     // get taxon image from BIE
     // https://bie.ala.org.au/ws/taxon/https://id.biodiversity.org.au/node/apni/2910201
-//    https://bie.ala.org.au/ws/imageSearch/https%3A//id.biodiversity.org.au/taxon/apni/51288314?rows=5&start=0
+    //
+    // https://bie.ala.org.au/ws/imageSearch/https%3A//id.biodiversity.org.au/taxon/apni/51288314?rows=5&start=0
 
     Map<String, Object> bieJson = loadJson(String.format(bieTemplateUrl, taxonID));
     if (bieJson != null) {
@@ -926,17 +944,18 @@ public class GraphQLController {
   }
 
   @QueryMapping
-  public List<Image> getTaxonImages(@Argument String taxonID, @Argument Integer page, @Argument Integer size) throws Exception {
+  public List<Image> getTaxonImages(
+      @Argument String taxonID, @Argument Integer page, @Argument Integer size) throws Exception {
     // get taxon image from BIE
     ObjectMapper objectMapper = new ObjectMapper();
     String url = String.format(bieImagesTemplateUrl, taxonID, size, page * size);
-    JsonNode jsonNode =  objectMapper.readTree(new URL(url));
-    JsonNode results  = jsonNode.at("/searchResults/results");
+    JsonNode jsonNode = objectMapper.readTree(new URL(url));
+    JsonNode results = jsonNode.at("/searchResults/results");
     List<Image> images = new ArrayList<>();
     Iterator<JsonNode> iter = results.elements();
-    while(iter.hasNext()){
+    while (iter.hasNext()) {
       JsonNode node = iter.next();
-      images.add(new Image( node.get("largeImageUrl").asText()));
+      images.add(new Image(node.get("largeImageUrl").asText()));
     }
     return images;
   }

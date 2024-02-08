@@ -10,7 +10,7 @@ interface SelectedFacetProps {
 
 export function SelectedFacet({ facet, idx, removeFacet }: SelectedFacetProps) {
     return (
-        <Button variant={"outline"} onClick={() => removeFacet(idx)}>
+        <Button variant={"outline"} onClick={() => removeFacet(idx)} style={{ marginBottom: '5px'}}>
             <IconSquareRoundedXFilled />
             <FormattedMessage id={facet.key} /> : <FormattedMessage id={facet.value || 'not.supplied'} defaultMessage={facet.value || 'Not supplied'} />
         </Button>

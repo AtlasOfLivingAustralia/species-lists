@@ -73,7 +73,7 @@ public class RESTController {
     }
   }
 
-  public Map<String, Object> getLegacyFormat(Page<SpeciesList> results){
+  public Map<String, Object> getLegacyFormat(Page<SpeciesList> results) {
     Map<String, Object> legacyFormat = new HashMap<>();
     legacyFormat.put("listCount", results.getTotalElements());
     legacyFormat.put("offset", results.getPageable().getPageNumber());

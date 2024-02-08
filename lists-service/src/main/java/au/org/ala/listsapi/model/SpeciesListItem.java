@@ -1,5 +1,6 @@
 package au.org.ala.listsapi.model;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -7,7 +8,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
 
 @org.springframework.data.mongodb.core.mapping.Document(collection = "listItems")
 @NoArgsConstructor
@@ -28,6 +31,8 @@ public class SpeciesListItem {
   private String genus;
   private List<KeyValue> properties;
   private Classification classification;
+  @CreatedDate public Date dateCreated;
+  @LastModifiedDate public Date lastUpdated;
 
   public Map<String, String> toTaxonMap() {
     Map<String, String> taxon = new HashMap<>();

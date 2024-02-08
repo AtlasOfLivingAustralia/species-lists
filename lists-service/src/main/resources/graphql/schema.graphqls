@@ -94,6 +94,8 @@ type SpeciesListItem {
   genus: String
   properties: [KeyValue]
   classification: Classification
+  dateCreated: String
+  lastUpdated: String
 }
 
 input InputSpeciesListItem {

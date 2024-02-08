@@ -224,14 +224,8 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                             <IconArrowRightSquare/>
                         </Button>
                     </Group>
-                    {/*<Box sx={() => ({*/}
-                    {/*    '@media (min-width: 800px)': {*/}
-                    {/*        display: 'none'*/}
-                    {/*    },*/}
-                    {/*})}>*/}
-                       <Space h="xl" />
-                    {/*</Box>*/}
-                    <SpeciesListItemView selectedItem={selectedItem} customFields={customFields} loading={loading} />
+                   <Space h="xl" />
+                   <SpeciesListItemView selectedItem={selectedItem} customFields={customFields} loading={loading} />
                 </>}
 
                 { selectedItem && isEditing &&
@@ -272,7 +266,7 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
                                     ]}
                                 />
                                 <TextInput
-                                    sx={{ flexBasis: '60%' }}
+                                    sx={{ flexBasis: '45%' }}
                                     placeholder="Search within list..."
                                     icon={<IconSearch size={16} />}
                                     value={searchQuery ? searchQuery : ''}

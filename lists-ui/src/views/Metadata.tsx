@@ -321,9 +321,7 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                             <Space h="md"/>
                             <dt><FormattedMessage id="wkt"/></dt>
                             <dd>
-                                { !speciesList.wkt &&
-                                    <>Not specified</>
-                                }
+                                { !speciesList.wkt &&  <>Not specified</> }
                                 {speciesList?.wkt &&
                                     <Button
                                         variant="outline"
@@ -337,7 +335,7 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                             <dt>Tags</dt>
                             <dd>
                                 {(!speciesList?.tags || speciesList?.tags?.length == 0) &&
-                                    <span>No tags specified</span>
+                                    <>No tags specified</>
                                 }
                                 {speciesList?.tags?.length > 0 &&
                                     speciesList?.tags.map( tag => {return <Badge>{tag}</Badge>})
@@ -356,8 +354,7 @@ export function Metadata({ setSpeciesList }: MetadataProps): JSX.Element {
                                 <Space h="md"/>
                                 <dt>Last modified by</dt>
                                 <dd>{speciesList?.lastUpdatedBy}</dd>
-                                </>
-                            }
+                            </>}
                         </dl>
                         </>
                     )}

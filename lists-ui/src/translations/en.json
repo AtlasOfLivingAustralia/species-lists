@@ -22,6 +22,7 @@
   "listType": "List type",
   "isBIE": "Visible on species pages",
   "isSDS": "Used by sensitive data service",
+  "tags": "Tags",
   "hasRegion": "Region specified",
   "true": "yes",
   "false": "no",

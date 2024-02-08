@@ -18,14 +18,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.apache.commons.lang3.StringUtils;
@@ -320,7 +313,10 @@ public class UploadService {
                 family,
                 genus,
                 keyValues,
-                null);
+                null, //classification
+                new Date(), // dateCreated
+                new Date() // lastUpdated
+            );
 
         batch.add(speciesListItem);
 
