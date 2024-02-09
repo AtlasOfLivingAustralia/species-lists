@@ -10,4 +10,4 @@ This consists of two components:
 
 ## Architecture
 
-![Untitled-2023-12-16-1730](https://github.com/AtlasOfLivingAustralia/species-lists/assets/444897/7d9f5a2b-39ca-493f-aca3-7bc698aae0d8)
+<img src="https://github.com/AtlasOfLivingAustralia/species-lists/assets/444897/7d9f5a2b-39ca-493f-aca3-7bc698aae0d8" width="450">
