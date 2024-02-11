@@ -81,10 +81,18 @@ public class MigrateService {
       speciesList.setListType((String) list.get("listType"));
       speciesList.setAuthority((String) list.get("authority"));
       speciesList.setRegion((String) list.get("region"));
-
       speciesList.setLastUpdatedBy((String) list.get("username"));
-      speciesList.setLastUpdated((String) list.get("lastUpdated"));
-      speciesList.setDateCreated((String) list.get("dateCreated"));
+
+      if (list.get("lastUpdated") != null) {
+        String lastUpdatedString = (String) list.get("lastUpdated");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        speciesList.setLastUpdated(sdf.parse(lastUpdatedString));
+      }
+      if (list.get("dateCreated") != null) {
+        String dateCreatedString = (String) list.get("dateCreated");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        speciesList.setDateCreated(sdf.parse(dateCreatedString));
+      }
 
       speciesList.setIsAuthoritative(
           list.get("isAuthoritative") instanceof Boolean && (Boolean) list.get("isAuthoritative"));
