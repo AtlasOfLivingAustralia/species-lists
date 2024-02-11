@@ -412,6 +412,33 @@
           "ignore_above": 256
         }
       }
+    },
+    "dateCreated": {
+      "type": "keyword",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "lastUpdated": {
+      "type": "keyword",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "lastUpdatedBy": {
+      "type": "keyword",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
     }
   }
 }

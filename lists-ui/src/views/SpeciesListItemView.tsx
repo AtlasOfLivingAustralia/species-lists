@@ -173,6 +173,23 @@ export function SpeciesListItemView({ selectedItem, customFields }: SpeciesListI
                 <div style={{ height: '300px' }}></div>
                 <Space h="md" />
             </>}
+
+            <>
+                <dl>
+                    <dt>Created</dt>
+                    <dd>{selectedItem?.dateCreated}</dd>
+
+                    <Space h="md"/>
+                    <dt>Last modified</dt>
+                    <dd>{selectedItem?.lastUpdated}</dd>
+
+                    {selectedItem?.lastUpdatedBy && <>
+                        <Space h="md"/>
+                        <dt>Last modified by</dt>
+                        <dd>{selectedItem?.lastUpdatedBy}</dd>
+                    </>}
+                </dl>
+            </>
         </>
     );
 }

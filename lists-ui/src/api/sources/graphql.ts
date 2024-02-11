@@ -43,6 +43,9 @@ export const GET_LIST = gql`
                     familyID
                     genusID
                 }
+                dateCreated
+                lastUpdated
+                lastUpdatedBy
             }
             totalPages
             totalElements
@@ -138,6 +141,9 @@ export const UPDATE_SPECIES_LIST_ITEM = gql`
                 genus
                 taxonConceptID
             }
+            dateCreated
+            lastUpdated
+            lastUpdatedBy            
         }
     }
 `;
@@ -287,8 +293,6 @@ export const UPDATE_LIST = gql`
         }
     }
 `;
-
-
 
 export const REMOVE_FIELD = gql`
     mutation removeField(

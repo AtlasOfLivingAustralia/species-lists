@@ -1,12 +1,15 @@
 package au.org.ala.listsapi.model;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Mapping;
 import org.springframework.data.elasticsearch.annotations.Setting;
@@ -43,4 +46,7 @@ public class SpeciesListIndex {
   private String owner;
   private List<String> editors;
   private List<String> tags;
+  public String dateCreated;
+  public String lastUpdated;
+  private String lastUpdatedBy;
 }

@@ -335,7 +335,7 @@ public class IngressController {
 
     // check it exists
     Optional<SpeciesList> speciesListOptional = speciesListMongoRepository.findById(speciesListID);
-    if (!speciesListOptional.isPresent()) {
+    if (speciesListOptional.isEmpty()) {
       return ResponseEntity.badRequest().body("Species list not found");
     }
 
@@ -355,7 +355,7 @@ public class IngressController {
     }
 
     // check authorised
-    if (!authUtils.isAuthorized(principal)) {
+    if (authUtils.isNotAuthorized(principal)) {
       return ResponseEntity.badRequest().body("User not authorized");
     }
     return null;

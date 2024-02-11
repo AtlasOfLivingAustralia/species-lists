@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URL;
 import java.security.Principal;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -125,8 +126,21 @@ public class GraphQLController {
         .forEach(e -> keyValues.add(new KeyValue(e.getKey(), e.getValue())));
     speciesListItem.setProperties(keyValues);
     speciesListItem.setClassification(index.getClassification());
+    speciesListItem.setDateCreated(parsedDate(index.getDateCreated()));
+    speciesListItem.setLastUpdated(parsedDate(index.getLastUpdated()));
+    speciesListItem.setLastUpdatedBy(index.getLastUpdatedBy());
+
     return speciesListItem;
   }
+
+  static Date parsedDate(String date) {
+    try {
+      return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").parse(date);
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
 
   public static List<SpeciesListItem> convertList(List<SpeciesListIndex> list) {
     return list.stream().map(index -> convert(index)).collect(Collectors.toList());
@@ -153,7 +167,7 @@ public class GraphQLController {
       @AuthenticationPrincipal Principal principal) {
 
     // if searching private lists, check user is authorized
-    if (isPrivate && !authUtils.isAuthorized(principal)) {
+    if (isPrivate && authUtils.isNotAuthorized(principal)) {
       logger.info("User not authorized to private access lists");
       throw new AccessDeniedException("You dont have access to this list");
     }
@@ -482,10 +496,10 @@ public class GraphQLController {
 
     SpeciesList speciesList = optionalSpeciesList.get();
     SpeciesListItem speciesListItem = optionalSpeciesListItem.get();
-    updateItem(inputSpeciesListItem, speciesListItem);
+    updateItem(inputSpeciesListItem, speciesListItem, principal);
 
     // update last updated
-    updateLastUpdated(speciesListItem);
+    updateLastUpdated(speciesListItem, principal);
 
     // rematch taxonomy
     try {
@@ -503,7 +517,7 @@ public class GraphQLController {
   }
 
   private SpeciesListItem updateItem(
-      InputSpeciesListItem inputSpeciesListItem, SpeciesListItem speciesListItem) {
+      InputSpeciesListItem inputSpeciesListItem, SpeciesListItem speciesListItem, Principal principal) {
     speciesListItem.setScientificName(inputSpeciesListItem.getScientificName());
     speciesListItem.setTaxonID(inputSpeciesListItem.getTaxonID());
     speciesListItem.setGenus(inputSpeciesListItem.getGenus());
@@ -518,6 +532,7 @@ public class GraphQLController {
             .map(kv -> new KeyValue(kv.getKey(), kv.getValue()))
             .collect(Collectors.toList()));
     speciesListItem.setLastUpdated(new Date());
+    speciesListItem.setLastUpdatedBy(principal.getName());
     return speciesListItemMongoRepository.save(speciesListItem);
   }
 
@@ -549,7 +564,11 @@ public class GraphQLController {
             speciesList.getRegion() != null || speciesList.getWkt() != null,
             speciesList.getOwner(),
             speciesList.getEditors(),
-            speciesList.getTags());
+            speciesList.getTags(),
+            speciesList.getDateCreated() != null ? speciesList.getDateCreated().toString(): null,
+            speciesList.getLastUpdated() != null ? speciesList.getLastUpdated().toString(): null,
+            speciesList.getLastUpdatedBy()
+        );
 
     speciesListIndexElasticRepository.save(speciesListIndex);
   }
@@ -571,21 +590,22 @@ public class GraphQLController {
 
     // add the new entry
     SpeciesListItem speciesListItem = new SpeciesListItem();
-    speciesListItem = updateItem(inputSpeciesListItem, speciesListItem);
+    speciesListItem = updateItem(inputSpeciesListItem, speciesListItem, principal);
 
     // update last updated
-    updateLastUpdated(speciesListItem);
+    updateLastUpdated(speciesListItem, principal);
 
     // index
     reindex(speciesListItem, optionalSpeciesList.get());
     return speciesListItem;
   }
 
-  private void updateLastUpdated(SpeciesListItem speciesListItem) {
+  private void updateLastUpdated(SpeciesListItem speciesListItem, Principal principal) {
     Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListItem.getSpeciesListID());
     if (speciesList.isPresent()) {
       SpeciesList sl = speciesList.get();
       sl.setLastUpdated(new Date());
+      sl.setLastUpdatedBy(principal.getName());
       speciesListMongoRepository.save(sl);
     }
   }

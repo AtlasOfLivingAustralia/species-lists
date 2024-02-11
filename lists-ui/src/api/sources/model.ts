@@ -74,6 +74,9 @@ interface SpeciesListItem {
     genus: string;
     properties: KV[];
     classification: Classification;
+    lastUpdated: string;
+    lastUpdatedBy: string;
+    dateCreated: string;
 }
 
 interface InputSpeciesList {

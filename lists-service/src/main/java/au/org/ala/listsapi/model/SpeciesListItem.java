@@ -11,6 +11,7 @@ import lombok.experimental.SuperBuilder;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.annotation.Version;
 
 @org.springframework.data.mongodb.core.mapping.Document(collection = "listItems")
 @NoArgsConstructor
@@ -19,6 +20,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 @AllArgsConstructor
 public class SpeciesListItem {
   @Id private String id;
+  @Version private Integer version;
   private String speciesListID;
   private String taxonID;
   private String scientificName;
@@ -33,6 +35,7 @@ public class SpeciesListItem {
   private Classification classification;
   @CreatedDate public Date dateCreated;
   @LastModifiedDate public Date lastUpdated;
+  private String lastUpdatedBy;
 
   public Map<String, String> toTaxonMap() {
     Map<String, String> taxon = new HashMap<>();

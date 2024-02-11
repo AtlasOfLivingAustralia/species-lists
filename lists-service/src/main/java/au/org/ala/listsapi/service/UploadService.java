@@ -46,6 +46,19 @@ public class UploadService {
   @Value("${temp.dir:/tmp}")
   private String tempDir;
 
+  private static final Set<String> NULL_VALUES = new HashSet<>();
+
+  static {
+    NULL_VALUES.add("null");
+    NULL_VALUES.add("undefined");
+    NULL_VALUES.add("na");
+    NULL_VALUES.add("n/a");
+    NULL_VALUES.add("none");
+    NULL_VALUES.add("unknown");
+    NULL_VALUES.add("unspecified");
+    NULL_VALUES.add("not specified");
+  }
+
   public boolean deleteList(String speciesListID, AlaUserProfile userProfile) {
 
     Optional<SpeciesList> list = speciesListMongoRepository.findById(speciesListID);
@@ -106,7 +119,7 @@ public class UploadService {
             + "/upload-"
             + System.currentTimeMillis()
             + "-"
-            + file.getOriginalFilename().replaceAll("[^a-zA-Z0-9._-]", "_"));
+            + Objects.requireNonNull(file.getOriginalFilename()).replaceAll("[^a-zA-Z0-9._-]", "_"));
   }
 
   public SpeciesList reload(String speciesListID, File fileToLoad, boolean dryRun)
@@ -185,9 +198,7 @@ public class UploadService {
     while (entries.hasMoreElements()) {
       ZipEntry entry = entries.nextElement();
       if (!entry.isDirectory() && entry.getName().endsWith(".csv")) {
-        IngestJob ingestJob =
-            loadCSV(speciesListID, zipFile.getInputStream(entry), dryRun, skipIndexing, false);
-        return ingestJob;
+          return loadCSV(speciesListID, zipFile.getInputStream(entry), dryRun, skipIndexing, false);
       }
     }
     return null;
@@ -302,20 +313,22 @@ public class UploadService {
         SpeciesListItem speciesListItem =
             new SpeciesListItem(
                 null,
+                null,
                 speciesListID,
-                taxonID,
-                scientificName,
-                vernacularName,
-                kingdom,
-                phylum,
-                classs,
-                order,
-                family,
-                genus,
+                cleanField(taxonID),
+                cleanField(scientificName),
+                cleanField(vernacularName),
+                cleanField(kingdom),
+                cleanField(phylum),
+                cleanField(classs),
+                cleanField(order),
+                cleanField(family),
+                cleanField(genus),
                 keyValues,
                 null, //classification
                 new Date(), // dateCreated
-                new Date() // lastUpdated
+                new Date(), // lastUpdated,
+                null
             );
 
         batch.add(speciesListItem);
@@ -336,8 +349,7 @@ public class UploadService {
 
     IngestJob ingestJob = new IngestJob();
     logger.info("Field names = " + StringUtils.join(fieldNames, ", "));
-    List<String> facetNames = new ArrayList<>();
-    facetNames.addAll(fieldNames);
+    List<String> facetNames = new ArrayList<>(fieldNames);
     facetNames.removeAll(notFacetable);
 
     logger.info("Facet-able names = " + StringUtils.join(facetNames, ", "));
@@ -362,6 +374,13 @@ public class UploadService {
     }
 
     return ingestJob;
+  }
+
+  public static String cleanField(String value) {
+    if (value == null || NULL_VALUES.contains(value.trim().toLowerCase())) {
+      return null;
+    }
+    return value.trim();
   }
 
   public static String cleanKey(String keyName) {

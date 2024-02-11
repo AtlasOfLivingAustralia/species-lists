@@ -14,7 +14,7 @@ public class AuthUtils {
   @Value("#{'${security.admin.role}'.split(',')}")
   private List<String> adminRoles;
 
-  public boolean isAuthorized(Principal principal) {
+  public boolean isNotAuthorized(Principal principal) {
     // Principal needs to on of the following:
     //  1) ROLE_ADMIN
     //  2) ROLE_USER and is the owner of the list
@@ -27,11 +27,11 @@ public class AuthUtils {
     } else if (principal instanceof AlaUserProfile) {
       alaUserProfile = (AlaUserProfile) principal;
     } else {
-      return false;
+      return true;
     }
 
-    if (alaUserProfile == null) return false;
-    return (alaUserProfile.getRoles() != null && hasAdminRole(alaUserProfile));
+    if (alaUserProfile == null) return true;
+    return (alaUserProfile.getRoles() == null || !hasAdminRole(alaUserProfile));
   }
 
   public boolean isAuthorized(SpeciesList list, Principal principal) {

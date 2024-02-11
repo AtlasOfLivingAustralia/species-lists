@@ -3,11 +3,11 @@ type Query {
   lists(searchQuery:String, filters:[Filter], page:Int = 0, size: Int = 10, userId:String, isPrivate: Boolean = false): SpeciesListPage
   listsFacets(searchQuery:String): [Facet]
   listReleases(speciesListID: String, page:Int = 0, size: Int = 10): [Release]
-  getSpeciesListMetadata(speciesListID: String): SpeciesList
+  getSpeciesListMetadata(speciesListID: String!): SpeciesList
   getSpeciesList(speciesListID: String, page:Int = 0, size: Int = 10): SpeciesListItemPage
-  filterSpeciesList(speciesListID: String, searchQuery: String, filters:[Filter],
+  filterSpeciesList(speciesListID: String!, searchQuery: String, filters:[Filter],
     page:Int = 0, size: Int = 10, sort: String = "scientificName", dir: String = "asc"): SpeciesListItemPage
-  facetSpeciesList(speciesListID: String, searchQuery:String, filters:[Filter], facetFields:[String], page:Int = 0, size: Int = 10): [Facet]
+  facetSpeciesList(speciesListID: String!, searchQuery:String, filters:[Filter], facetFields:[String], page:Int = 0, size: Int = 10): [Facet]
   facetSpeciesLists(searchQuery:String, filters:[Filter], facetFields:[String], page:Int = 0, size: Int = 10, userId:String, isPrivate: Boolean = false): [Facet]
   getTaxonImage(taxonID:String): Image
   getTaxonImages(taxonID:String,  page:Int = 0, size: Int = 10): [Image]
@@ -47,6 +47,7 @@ type Release {
 
 type SpeciesList {
   id: ID
+  version: Int
   title: String
   description: String
   rowCount: Int
@@ -82,6 +83,7 @@ type SpeciesListPage {
 
 type SpeciesListItem {
   id: ID
+  version: Int
   speciesListID: String
   scientificName: String
   taxonID: String
@@ -96,6 +98,7 @@ type SpeciesListItem {
   classification: Classification
   dateCreated: String
   lastUpdated: String
+  lastUpdatedBy: String
 }
 
 input InputSpeciesListItem {

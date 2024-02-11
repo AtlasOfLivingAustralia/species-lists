@@ -82,6 +82,10 @@ public class MigrateService {
       speciesList.setAuthority((String) list.get("authority"));
       speciesList.setRegion((String) list.get("region"));
 
+      speciesList.setLastUpdatedBy((String) list.get("username"));
+      speciesList.setLastUpdated((String) list.get("lastUpdated"));
+      speciesList.setDateCreated((String) list.get("dateCreated"));
+
       speciesList.setIsAuthoritative(
           list.get("isAuthoritative") instanceof Boolean && (Boolean) list.get("isAuthoritative"));
       speciesList.setIsPrivate(
