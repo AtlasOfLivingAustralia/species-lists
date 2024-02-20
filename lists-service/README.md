@@ -5,16 +5,19 @@ It is a Spring Boot application that provides REST and GraphQL web services for 
 
 ## Getting started
 
-```bash
-./gradlew bootRun
-```
+### Elasticsearch and MongoDB
 
-## Elasticsearch and MongoDB
-
-To run the elasticsearch and mongodb containers, use the following command:
+To run the elasticsearch and mongodb containers needed for the list-service
+to run, use the following command:
 
 ```bash
 docker-compose -f src/main/docker/docker-compose.yml up
+```
+
+### Running the application locally
+
+```bash
+./gradlew bootRun
 ```
 
 ## GraphQL
@@ -25,13 +28,12 @@ The GraphQL test interface is available at `http://localhost:8080/graphiql`.
 
 The Swagger UI for REST services are available at `http://localhost:8080`.
 
-
-# Docker hub
+## Docker hub
 
 The docker images for list-service are available on [docker hub](https://hub.docker.com/r/atlasoflivingaustralia/lists-service). 
 Commits to this `develop` branch will result in a new image being built and pushed to the `latest` tag on docker hub.
 
-# Helm Charts
+## Helm charts
 
 The helm charts for list-service are available in the 
 [helm-charts](https://github.com/AtlasOfLivingAustralia/helm-charts) repository.
