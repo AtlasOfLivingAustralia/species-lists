@@ -31,3 +31,7 @@ The Swagger UI for REST services are available at `http://localhost:8080`.
 The docker images for list-service are available on [docker hub](https://hub.docker.com/r/atlasoflivingaustralia/lists-service). 
 Commits to this `develop` branch will result in a new image being built and pushed to the `latest` tag on docker hub.
 
+# Helm Charts
+
+The helm charts for list-service are available in the 
+[helm-charts](https://github.com/AtlasOfLivingAustralia/helm-charts) repository.
