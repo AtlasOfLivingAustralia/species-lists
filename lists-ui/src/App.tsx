@@ -68,12 +68,12 @@ export default function App() {
     if (auth.isAuthenticated && auth.user && !currentUser) {
         // set the current user
         const user = auth.user;
-        const roles = (user?.profile?.role || user?.profile["cognito:groups"] || []) as string[];
-        const userId = (user?.profile?.userid || user?.profile["cognito:username"]) as string || '';
+        const roles = (user?.profile[import.meta.env.VITE_PROFILE_ROLES] || []) as string[];
+        const userId = (user?.profile[import.meta.env.VITE_PROFILE_USERID]) as string || '';
         setCurrentUser({
             user: auth.user,
             userId: userId,
-            isAdmin: roles.includes('ROLE_ADMIN') || roles.includes('admin'),
+            isAdmin: roles.includes(import.meta.env.VITE_ADMIN_ROLE),
             roles: roles
         });
     }
