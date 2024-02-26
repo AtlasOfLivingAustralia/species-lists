@@ -68,12 +68,12 @@ export default function App() {
     if (auth.isAuthenticated && auth.user && !currentUser) {
         // set the current user
         const user = auth.user;
-        const roles = (user?.profile?.role || []) as string[];
-        const userId = user?.profile?.userid as string || '';
+        const roles = (user?.profile[import.meta.env.VITE_PROFILE_ROLES] || []) as string[];
+        const userId = (user?.profile[import.meta.env.VITE_PROFILE_USERID]) as string || '';
         setCurrentUser({
             user: auth.user,
             userId: userId,
-            isAdmin: roles.includes('ROLE_ADMIN'),
+            isAdmin: roles.includes(import.meta.env.VITE_ADMIN_ROLE),
             roles: roles
         });
     }
@@ -147,7 +147,7 @@ export default function App() {
                                                         },
                                                     })}>
                                                         <Text>
-                                                            Profile - {currentUser?.user?.profile?.name} {currentUser?.isAdmin ? '(ADMIN)' : ''}
+                                                            Profile - {currentUser?.user?.profile?.name || (currentUser?.user?.profile?.given_name + ' ' + currentUser?.user?.profile?.family_name)} {currentUser?.isAdmin ? '(ADMIN)' : ''}
                                                         </Text>
                                                     </Button>
                                                     <Button radius="xs" onClick={logout} variant="outline" size="md" compact sx={() => ({

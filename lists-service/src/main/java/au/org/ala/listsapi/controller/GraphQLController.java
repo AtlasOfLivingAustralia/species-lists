@@ -533,6 +533,9 @@ public class GraphQLController {
             .collect(Collectors.toList()));
     speciesListItem.setLastUpdated(new Date());
     speciesListItem.setLastUpdatedBy(principal.getName());
+    if (speciesListItem.getSpeciesListID() == null) {
+      speciesListItem.setSpeciesListID(inputSpeciesListItem.getSpeciesListID());
+    }
     return speciesListItemMongoRepository.save(speciesListItem);
   }
 

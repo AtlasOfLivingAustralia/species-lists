@@ -102,6 +102,10 @@ public class MigrateService {
           list.get("isThreatened") instanceof Boolean && (Boolean) list.get("isThreatened"));
       speciesList.setIsInvasive(
           list.get("isInvasive") instanceof Boolean && (Boolean) list.get("isInvasive"));
+      speciesList.setIsBIE(
+          list.get("isBIE") instanceof Boolean && (Boolean) list.get("isBIE"));
+      speciesList.setIsSDS(
+          list.get("isSDS") instanceof Boolean && (Boolean) list.get("isSDS"));
       speciesList.setWkt((String) list.get("wkt"));
 
       SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");

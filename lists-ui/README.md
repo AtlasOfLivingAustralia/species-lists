@@ -40,4 +40,13 @@ VITE_OIDC_SCOPE=TO_BE_ADDED
 VITE_ROLE_ADMIN=ROLE_ADMIN
 VITE_APP_MAPBOX_TOKEN=TO_BE_ADDED
 VITE_APP_BIE_URL=https://bie.ala.org.au
+
+# User roles are found in property 'role' (OIDC) or 'cognito:groups' (Cognito)
+VITE_PROFILE_ROLES=cognito:groups
+
+# User id is found in profile property 'userid' (OIDC) or 'cognito:username' (Cognito)
+VITE_PROFILE_USERID=cognito:username
+
+# Admin role is 'ROLE_ADMIN' (OIDC) or 'admin' (Cognito)
+VITE_ADMIN_ROLE=admin
 ```

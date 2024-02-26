@@ -27,6 +27,8 @@ public class RESTSpeciesListQuery {
   String isPrivate;
   String isInvasive;
   String isThreatened;
+  String isBIE;
+  String isSDS;
 
   public boolean isEmpty() {
     if ((id != null && !id.isEmpty())
@@ -42,7 +44,8 @@ public class RESTSpeciesListQuery {
         || (isAuthoritative != null && !isAuthoritative.isEmpty())
         || (isPrivate != null && !isPrivate.isEmpty())
         || (isInvasive != null && !isInvasive.isEmpty())
-        || (isThreatened != null && !isThreatened.isEmpty())) {
+        || (isThreatened != null && !isThreatened.isEmpty())
+        || (isBIE != null && !isBIE.isEmpty())) {
       return false;
     }
     return true;
@@ -54,6 +57,7 @@ public class RESTSpeciesListQuery {
     s.setIsAuthoritative(parseBoolean(removeQueryExpr(this.isAuthoritative)));
     s.setIsInvasive(parseBoolean(removeQueryExpr(this.isInvasive)));
     s.setIsThreatened(parseBoolean(removeQueryExpr(this.isThreatened)));
+    s.setIsBIE(parseBoolean(removeQueryExpr(this.isBIE)));
     s.setCategory(this.category);
     s.setRegion(this.region);
     s.setLicence(this.licence);
