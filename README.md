@@ -4,8 +4,8 @@ System for managing species lists in the ALA.
 
 This consists of two components:
 
-* lists-ui - Web application for managing species lists
-* lists-service - Spring boot REST and GraphQL web services for accessing, modifying species lists
+* [lists-ui](lists-ui) - Web application for browsing and managing species lists
+* [lists-service](lists-service) - Spring boot REST and GraphQL web services for accessing, modifying species lists
 
 
 ## Architecture
