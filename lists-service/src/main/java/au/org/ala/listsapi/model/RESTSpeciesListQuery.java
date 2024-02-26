@@ -28,6 +28,7 @@ public class RESTSpeciesListQuery {
   String isInvasive;
   String isThreatened;
   String isBIE;
+  String isSDS;
 
   public boolean isEmpty() {
     if ((id != null && !id.isEmpty())
