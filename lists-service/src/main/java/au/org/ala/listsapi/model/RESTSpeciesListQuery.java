@@ -45,7 +45,8 @@ public class RESTSpeciesListQuery {
         || (isPrivate != null && !isPrivate.isEmpty())
         || (isInvasive != null && !isInvasive.isEmpty())
         || (isThreatened != null && !isThreatened.isEmpty())
-        || (isBIE != null && !isBIE.isEmpty())) {
+        || (isBIE != null && !isBIE.isEmpty())
+        || (isSDS != null && !isSDS.isEmpty())) {
       return false;
     }
     return true;
@@ -58,6 +59,7 @@ public class RESTSpeciesListQuery {
     s.setIsInvasive(parseBoolean(removeQueryExpr(this.isInvasive)));
     s.setIsThreatened(parseBoolean(removeQueryExpr(this.isThreatened)));
     s.setIsBIE(parseBoolean(removeQueryExpr(this.isBIE)));
+    s.setIsSDS(parseBoolean(removeQueryExpr(this.isSDS)));
     s.setCategory(this.category);
     s.setRegion(this.region);
     s.setLicence(this.licence);
