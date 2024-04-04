@@ -1,7 +1,7 @@
 # List UI front end
 
 This is the front end for the species-lists project.
-It is a React app written in Typescript that uses the Mantine UI framework.
+It is a React app written in TypeScript that uses the [Mantine](https://mantine.dev/) UI framework.
 
 ## Getting started
 
@@ -37,7 +37,6 @@ VITE_SIGNUP_URL=https://auth-test.ala.org.au/userdetails/registration/createAcco
 VITE_OIDC_CLIENT_ID=TO_BE_ADDED
 VITE_OIDC_REDIRECT_URL=http://localhost:5173
 VITE_OIDC_SCOPE=TO_BE_ADDED
-VITE_ROLE_ADMIN=ROLE_ADMIN
 VITE_APP_MAPBOX_TOKEN=TO_BE_ADDED
 VITE_APP_BIE_URL=https://bie.ala.org.au
 

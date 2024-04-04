@@ -196,5 +196,6 @@ yarn-error.log*
 /lists-ui-vite.iml
 /schema.graphql
 /.env.production
+/.env.local
 /dist/*
 /dist
