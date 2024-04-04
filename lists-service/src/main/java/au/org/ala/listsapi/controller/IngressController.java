@@ -355,7 +355,7 @@ public class IngressController {
     }
 
     // check authorised
-    if (authUtils.isNotAuthorized(principal)) {
+    if (!authUtils.isAuthorized(principal)) {
       return ResponseEntity.badRequest().body("User not authorized");
     }
     return null;

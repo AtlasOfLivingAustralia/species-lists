@@ -167,7 +167,7 @@ public class GraphQLController {
       @AuthenticationPrincipal Principal principal) {
 
     // if searching private lists, check user is authorized
-    if (isPrivate && authUtils.isNotAuthorized(principal)) {
+    if (isPrivate && !authUtils.isAuthorized(principal)) {
       logger.info("User not authorized to private access lists");
       throw new AccessDeniedException("You dont have access to this list");
     }
