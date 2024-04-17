@@ -103,7 +103,7 @@ function SpeciesListSideBar({ selectedView,
                         </Accordion.Control>
                     </Link>
                 </Accordion.Item>
-                <Accordion.Item value="releases">
+                {/* <Accordion.Item value="releases">
                     <Link to={`/releases/${speciesListID}`}>
                         <Accordion.Control>
                             <Group>
@@ -112,7 +112,7 @@ function SpeciesListSideBar({ selectedView,
                             </Group>
                         </Accordion.Control>
                     </Link>
-                </Accordion.Item>
+                </Accordion.Item> */}
 
                 {currentUser && speciesList && (currentUser.isAdmin || currentUser.userId == speciesList?.owner) &&
                     <Accordion.Item value="reload">
