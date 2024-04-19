@@ -1,19 +1,19 @@
 package au.org.ala.listsapi.service;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import au.org.ala.listsapi.model.ConstraintListItem;
 import au.org.ala.listsapi.model.ConstraintType;
 import au.org.ala.listsapi.model.InputSpeciesList;
-import au.org.ala.listsapi.model.SpeciesList;
-import com.google.common.reflect.TypeToken;
-import com.google.gson.Gson;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +21,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -52,12 +51,12 @@ public class ConstraintService {
   }
 
   @PostConstruct
-  private void init() {
-    Gson gson = new Gson();
+  private void init() throws JsonProcessingException {
+    ObjectMapper objectMapper = new ObjectMapper();
     String json = getJson();
 
-    Type constraintType = new TypeToken<Map<String, List<ConstraintListItem>>>(){}.getType();
-    constraints = gson.fromJson(json, constraintType);
+    TypeReference<HashMap<String,List<ConstraintListItem>>> typeRef = new TypeReference<>() {};
+    constraints = objectMapper.readValue(json, typeRef);
   }
 
   // This function returns the constraint list as a map of List<ConstraintListItem> to correctly output JSON
