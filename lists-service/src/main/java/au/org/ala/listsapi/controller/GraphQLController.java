@@ -1,20 +1,11 @@
 package au.org.ala.listsapi.controller;
 
-import au.org.ala.listsapi.model.Classification;
-import au.org.ala.listsapi.model.Facet;
-import au.org.ala.listsapi.model.FacetCount;
-import au.org.ala.listsapi.model.Filter;
-import au.org.ala.listsapi.model.Image;
-import au.org.ala.listsapi.model.InputSpeciesListItem;
-import au.org.ala.listsapi.model.KeyValue;
-import au.org.ala.listsapi.model.Release;
-import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.model.SpeciesListIndex;
-import au.org.ala.listsapi.model.SpeciesListItem;
+import au.org.ala.listsapi.model.*;
 import au.org.ala.listsapi.repo.ReleaseMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import au.org.ala.listsapi.service.ConstraintService;
 import au.org.ala.listsapi.service.TaxonService;
 import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.SortOrder;
@@ -105,6 +96,7 @@ public class GraphQLController {
   @Autowired private SpeciesListItemMongoRepository speciesListItemMongoRepository;
 
   @Autowired protected TaxonService taxonService;
+  @Autowired protected ConstraintService constraintService;
   @Autowired protected AuthUtils authUtils;
 
   public static SpeciesListItem convert(SpeciesListIndex index) {
@@ -656,7 +648,7 @@ public class GraphQLController {
       @Argument Boolean isSDS,
       @Argument Boolean isBIE,
       @Argument List<String> tags,
-      @AuthenticationPrincipal Principal principal) {
+      @AuthenticationPrincipal Principal principal) throws Exception {
     Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(id);
     if (speciesList.isEmpty()) {
       return null;
@@ -676,6 +668,11 @@ public class GraphQLController {
           || region != null && !region.equals(toUpdate.getRegion())
           || tags != null && !tags.equals(toUpdate.getTags())) {
         reindexRequired = true;
+      }
+
+      // check that the supplied list type, region and license is valid
+      if (!constraintService.validateList(toUpdate)) {
+        throw new Exception("Updated list contains invalid properties for a controlled value (list type, license, region)");
       }
 
       toUpdate.setTitle(title);

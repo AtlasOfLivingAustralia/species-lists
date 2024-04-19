@@ -11,6 +11,7 @@ import java.util.Map;
 import au.org.ala.listsapi.model.ConstraintListItem;
 import au.org.ala.listsapi.model.ConstraintType;
 import au.org.ala.listsapi.model.InputSpeciesList;
+import au.org.ala.listsapi.model.SpeciesList;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -78,6 +79,15 @@ public class ConstraintService {
             validateValue(ConstraintType.lists, speciesList.getListType()) &&
             validateValue(ConstraintType.regions, speciesList.getRegion()) &&
             validateValue(ConstraintType.licenses, speciesList.getLicence())
+    );
+  }
+
+  public boolean validateList(SpeciesList speciesList) {
+    // check that the supplied list type, region and license is valid
+    return !(
+            validateValue(ConstraintType.lists, speciesList.getListType()) &&
+                    validateValue(ConstraintType.regions, speciesList.getRegion()) &&
+                    validateValue(ConstraintType.licenses, speciesList.getLicence())
     );
   }
 
