@@ -41,3 +41,5 @@ build/
 /src/main/resources/graphql/schema.graphql
 /src/main/resources/graphql/.graphqlconfig
 /src/main/resources/graphql/graphql.config.yml
+
+.DS_STORE
