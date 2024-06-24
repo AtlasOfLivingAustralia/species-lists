@@ -54,7 +54,7 @@ public class IngressController {
   @Autowired protected ReleaseService releaseService;
   @Autowired protected UploadService uploadService;
   @Autowired protected MigrateService migrateService;
-  @Autowired protected ConstraintService constraintService;
+  @Autowired protected ValidationService validationService;
 
   @Autowired protected AuthUtils authUtils;
 
@@ -257,7 +257,7 @@ public class IngressController {
       }
 
       // check that the supplied list type, region and license is valid
-      if (!constraintService.validateList(speciesList)) {
+      if (!validationService.validateList(speciesList)) {
         return ResponseEntity.badRequest().body("The supplied list is not valid");
       }
 

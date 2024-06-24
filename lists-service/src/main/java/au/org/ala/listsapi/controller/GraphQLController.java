@@ -5,7 +5,7 @@ import au.org.ala.listsapi.repo.ReleaseMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
-import au.org.ala.listsapi.service.ConstraintService;
+import au.org.ala.listsapi.service.ValidationService;
 import au.org.ala.listsapi.service.TaxonService;
 import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.SortOrder;
@@ -96,7 +96,7 @@ public class GraphQLController {
   @Autowired private SpeciesListItemMongoRepository speciesListItemMongoRepository;
 
   @Autowired protected TaxonService taxonService;
-  @Autowired protected ConstraintService constraintService;
+  @Autowired protected ValidationService validationService;
   @Autowired protected AuthUtils authUtils;
 
   public static SpeciesListItem convert(SpeciesListIndex index) {
@@ -671,7 +671,7 @@ public class GraphQLController {
       }
 
       // check that the supplied list type, region and license is valid
-      if (!constraintService.validateList(toUpdate)) {
+      if (!validationService.validateList(toUpdate)) {
         throw new Exception("Updated list contains invalid properties for a controlled value (list type, license, region)");
       }
 
