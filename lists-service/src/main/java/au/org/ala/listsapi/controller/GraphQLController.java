@@ -675,7 +675,11 @@ public class GraphQLController {
       SpeciesList toUpdate = speciesList.get();
 
       // check that the supplied list type, region and license is valid
-      if (!validationService.validateList(toUpdate)) {
+      if (
+              !validationService.isValueValid(ConstraintType.lists, listType) ||
+              !validationService.isValueValid(ConstraintType.licenses, licence) ||
+              !validationService.isValueValid(ConstraintType.countries, region)
+      ) {
         throw new Exception("Updated list contains invalid properties for a controlled value (list type, license, region)");
       }
 

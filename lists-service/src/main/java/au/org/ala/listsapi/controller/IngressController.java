@@ -257,8 +257,8 @@ public class IngressController {
       }
 
       // check that the supplied list type, region and license is valid
-      if (!validationService.validateList(speciesList)) {
-        return ResponseEntity.badRequest().body("The supplied list is not valid");
+      if (!validationService.isListValid(speciesList)) {
+        return ResponseEntity.badRequest().body("Supplied list contains invalid properties for a controlled value (list type, license, region)");
       }
 
       logger.info("Ingestion started...");

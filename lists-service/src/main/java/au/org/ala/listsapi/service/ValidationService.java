@@ -78,7 +78,7 @@ public class ValidationService {
     return constraints;
   }
 
-  public boolean validateValue(ConstraintType constraintType, String value) {
+  public boolean isValueValid(ConstraintType constraintType, String value) {
     List<ConstraintListItem> list = constraints.get(constraintType.name());
 
     return list.stream()
@@ -86,19 +86,12 @@ public class ValidationService {
             .findAny().orElse(null) != null;
   }
 
-  public boolean validateList(InputSpeciesList speciesList) {
+  public boolean isListValid(InputSpeciesList speciesList) {
     // check that the supplied list type, region and license is valid
-    return !(
-            validateValue(ConstraintType.lists, speciesList.getListType()) &&
-            validateValue(ConstraintType.licenses, speciesList.getLicence())
-    );
-  }
-
-  public boolean validateList(SpeciesList speciesList) {
-    // check that the supplied list type, region and license is valid
-    return !(
-            validateValue(ConstraintType.lists, speciesList.getListType()) &&
-            validateValue(ConstraintType.licenses, speciesList.getLicence())
+    return (
+            isValueValid(ConstraintType.lists, speciesList.getListType()) &&
+            isValueValid(ConstraintType.licenses, speciesList.getLicence()) &&
+            isValueValid(ConstraintType.countries, speciesList.getRegion())
     );
   }
 
