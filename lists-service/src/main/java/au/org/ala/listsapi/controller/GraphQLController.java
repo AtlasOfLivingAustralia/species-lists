@@ -658,6 +658,12 @@ public class GraphQLController {
       boolean reindexRequired = false;
 
       SpeciesList toUpdate = speciesList.get();
+
+      // check that the supplied list type, region and license is valid
+      if (!validationService.validateList(toUpdate)) {
+        throw new Exception("Updated list contains invalid properties for a controlled value (list type, license, region)");
+      }
+
       if (title != null && !title.equalsIgnoreCase(toUpdate.getTitle())
           || listType != null && !listType.equalsIgnoreCase(toUpdate.getListType())
           || isPrivate != null && !isPrivate.equals(toUpdate.getIsPrivate())
@@ -668,11 +674,6 @@ public class GraphQLController {
           || region != null && !region.equals(toUpdate.getRegion())
           || tags != null && !tags.equals(toUpdate.getTags())) {
         reindexRequired = true;
-      }
-
-      // check that the supplied list type, region and license is valid
-      if (!validationService.validateList(toUpdate)) {
-        throw new Exception("Updated list contains invalid properties for a controlled value (list type, license, region)");
       }
 
       toUpdate.setTitle(title);
