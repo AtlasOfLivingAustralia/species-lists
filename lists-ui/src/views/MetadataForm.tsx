@@ -7,8 +7,18 @@ import {ListsUser, SpeciesList} from "../api/sources/model.ts";
 import UserContext from "../helpers/UserContext.ts";
 import {IconInfoCircle} from "@tabler/icons-react";
 import {validateListType} from "../helpers/validation.tsx";
-import valueConstraintsJSON from '../constraints.json';
 import tags from '../tags.json';
+
+interface Constraint {
+    value: string;
+    label: string;
+}
+
+interface ConstraintsResponse {
+    lists: Constraint[];
+    countries: Constraint[];
+    licenses: Constraint[];
+}
 
 export function MetadataForm({ speciesList,
                                submitFormFcn,
@@ -22,7 +32,7 @@ export function MetadataForm({ speciesList,
     const [isAuthoritative] = useState(speciesList?.isAuthoritative);
     const [isSDS] = useState(speciesList?.isSDS);
     const [isBIE] = useState(speciesList?.isBIE);
-    const [valueConstraints, setValueConstraints] = useState<typeof valueConstraintsJSON| null>(null);
+    const [valueConstraints, setValueConstraints] = useState<ConstraintsResponse | null>(null);
     const currentUser = useContext(UserContext) as ListsUser;
 
     const form = useForm({
@@ -95,7 +105,7 @@ export function MetadataForm({ speciesList,
                     label="List type"
                     placeholder="Pick one"
                     disabled={!edit}
-                    data={valueConstraints?.lists || valueConstraintsJSON.lists}
+                    data={valueConstraints?.lists || []}
                     {...form.getInputProps("listType")}
                 />
 
@@ -117,7 +127,7 @@ export function MetadataForm({ speciesList,
                     label="Licence"
                     placeholder="Pick one"
                     disabled={!edit}
-                    data={valueConstraints?.licenses || valueConstraintsJSON.licenses}
+                    data={valueConstraints?.licenses || []}
                     {...form.getInputProps("licence")}
                 />
                 <Space h="lg" />
@@ -158,7 +168,7 @@ export function MetadataForm({ speciesList,
                     label="Region"
                     placeholder="Pick one"
                     disabled={!edit}
-                    data={valueConstraints?.regions || valueConstraintsJSON.regions}
+                    data={valueConstraints?.countries || []}
                     {...form.getInputProps("region")}
                 />
 
