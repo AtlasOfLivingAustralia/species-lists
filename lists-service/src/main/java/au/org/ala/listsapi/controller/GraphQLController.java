@@ -16,6 +16,8 @@ import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import graphql.*;
+import graphql.schema.DataFetchingEnvironment;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URL;
 import java.security.Principal;
@@ -42,8 +44,10 @@ import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.graphql.data.method.annotation.Argument;
+import org.springframework.graphql.data.method.annotation.GraphQlExceptionHandler;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
+import org.springframework.lang.NonNull;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -263,6 +267,17 @@ public class GraphQLController {
     } else {
       bq.filter(f -> f.term(t -> t.field(filter.getKey()).value(filter.getValue())));
     }
+  }
+
+  @GraphQlExceptionHandler
+  public GraphQLError handle(@NonNull Throwable ex, @NonNull DataFetchingEnvironment environment){
+    return GraphQLError
+            .newError()
+            .errorType(ErrorType.ValidationError)
+            .message(ex.getMessage())
+            .path(environment.getExecutionStepInfo().getPath())
+            .location(environment.getField().getSourceLocation())
+            .build();
   }
 
   @QueryMapping
