@@ -598,6 +598,14 @@ public class GraphQLController {
     // update last updated
     updateLastUpdated(speciesListItem, principal);
 
+    // rematch taxonomy
+    try {
+      Classification classification = taxonService.lookupTaxon(speciesListItem);
+      speciesListItem.setClassification(classification);
+    } catch (Exception e) {
+      logger.error(e.getMessage(), e);
+    }
+
     // index
     reindex(speciesListItem, optionalSpeciesList.get());
     return speciesListItem;
