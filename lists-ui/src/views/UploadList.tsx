@@ -200,14 +200,15 @@ function UploadList() {
                                 },
                                 function (error) {
                                     console.log(error);
+                                    setRejectedMessage(error.toString());
                                     setUploading(false);
                                 }
                             );
                             return respJson;
                         })
                         .catch((err) => {
-                            // setUploading(false);
-                            console.log("File upload error", err);
+                            setUploading(false);
+                            setRejectedMessage(err.toString());
                         });
                 }}
                 onReject={(files) => {
@@ -237,7 +238,7 @@ function UploadList() {
                         <Text size="sm" color="dimmed" inline mt={7}>
                             Files should not exceed 5mb
                         </Text>
-                        <Text h="md" weight="bold">
+                        <Text h="md" weight="bold" mt="md">
                             {rejectedMessage}
                         </Text>
                     </div>
