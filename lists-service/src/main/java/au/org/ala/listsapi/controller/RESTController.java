@@ -7,6 +7,8 @@ import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
+import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -20,6 +22,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,6 +36,8 @@ public class RESTController {
 
   private static final Logger logger = LoggerFactory.getLogger(RESTController.class);
 
+  @Autowired protected AuthUtils authUtils;
+
   @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
 
   @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
@@ -40,8 +46,17 @@ public class RESTController {
   @Tag(name = "REST", description = "REST Services for species lists lookups")
   @GetMapping("/speciesList/{speciesListID}")
   public ResponseEntity<SpeciesList> speciesList(
-      @PathVariable("speciesListID") String speciesListID) {
+      @PathVariable("speciesListID") String speciesListID, @AuthenticationPrincipal Principal principal) {
     Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListID);
+
+    if (speciesList.isPresent()) {
+      SpeciesList list = speciesList.get();
+
+      if (list.getIsPrivate() && !authUtils.isAuthorized(list, principal)) {
+        throw new AccessDeniedException("You don't have access to this list");
+      }
+    }
+
     return speciesList.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
   }
 
@@ -63,6 +78,7 @@ public class RESTController {
               .withIgnoreCase()
               .withIgnoreNullValues()
               .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
+
       // Create an Example from the exampleProduct with the matcher
       Example<SpeciesList> example = Example.of(speciesList.convertTo(), matcher);
       Page<SpeciesList> results = speciesListMongoRepository.findAll(example, paging);
@@ -87,12 +103,25 @@ public class RESTController {
   public ResponseEntity<Object> speciesList(
       @PathVariable("speciesListID") String speciesListID,
       @RequestParam(name = "page", defaultValue = "1") int page,
-      @RequestParam(name = "pageSize", defaultValue = "10") int pageSize) {
+      @RequestParam(name = "pageSize", defaultValue = "10") int pageSize,
+      @AuthenticationPrincipal Principal principal) {
     try {
-      Pageable paging = PageRequest.of(page - 1, pageSize);
-      Page<SpeciesListItem> speciesListItems =
-          speciesListItemMongoRepository.findBySpeciesListID(speciesListID, paging);
-      return new ResponseEntity<>(speciesListItems.getContent(), HttpStatus.OK);
+      Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListID);
+
+      if (speciesList.isPresent()) {
+        SpeciesList list = speciesList.get();
+
+        if (list.getIsPrivate() && !authUtils.isAuthorized(list, principal)) {
+          return ResponseEntity.status(400).body("You don't have access to this list");
+        }
+
+        Pageable paging = PageRequest.of(page - 1, pageSize);
+        Page<SpeciesListItem> speciesListItems =
+                speciesListItemMongoRepository.findBySpeciesListID(speciesListID, paging);
+        return new ResponseEntity<>(speciesListItems.getContent(), HttpStatus.OK);
+      }
+
+      return ResponseEntity.status(404).body("Species list not found");
     } catch (Exception e) {
       return ResponseEntity.badRequest().body(e.getMessage());
     }

@@ -56,6 +56,9 @@ public class AuthUtils {
     // 3) ROLE_USER and an editor of the list
     AlaUserProfile profile = getUserProfile(principal);
 
+    if (profile == null)
+      return false;
+
     return (list.getOwner() != null && list.getOwner().equals(profile.getUserId()))
         || (list.getEditors() != null && list.getEditors().contains(profile.getUserId()))
         || isAuthorized(principal);

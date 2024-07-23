@@ -169,7 +169,7 @@ public class GraphQLController {
     // if searching private lists, check user is authorized
     if (isPrivate && !authUtils.isAuthorized(principal)) {
       logger.info("User not authorized to private access lists");
-      throw new AccessDeniedException("You dont have access to this list");
+      throw new AccessDeniedException("You don't have access to this list");
     }
 
     NativeQueryBuilder builder = NativeQuery.builder().withPageable(PageRequest.of(1, 1));
@@ -294,7 +294,7 @@ public class GraphQLController {
       if (speciesList.get().getIsPrivate()
           && !authUtils.isAuthorized(speciesList.get(), principal)) {
         logger.info("User not authorized to private access list: " + speciesListID);
-        throw new AccessDeniedException("You dont have access to this list");
+        throw new AccessDeniedException("You don't have access to this list");
       }
 
       return optionalSpeciesList.get();
@@ -326,7 +326,7 @@ public class GraphQLController {
 
     if (!authUtils.isAuthorized(speciesList.get(), principal)) {
       logger.info("User not authorized to modify access list: " + id);
-      throw new AccessDeniedException("You dont have authorisation to modify this list");
+      throw new AccessDeniedException("You don't have authorisation to modify this list");
     }
 
     SpeciesList toUpdate = speciesList.get();
@@ -377,7 +377,7 @@ public class GraphQLController {
 
     if (!authUtils.isAuthorized(speciesList.get(), principal)) {
       logger.info("User not authorized to modify access list: " + id);
-      throw new AccessDeniedException("You dont have access to this list");
+      throw new AccessDeniedException("You don't have access to this list");
     }
 
     // remove from species list metadata
@@ -431,7 +431,7 @@ public class GraphQLController {
 
     if (!authUtils.isAuthorized(speciesList.get(), principal)) {
       logger.info("User not authorized to modify access list: " + id);
-      throw new AccessDeniedException("You dont have access to this list");
+      throw new AccessDeniedException("You don't have access to this list");
     }
 
     SpeciesList toUpdate = speciesList.get();
@@ -491,7 +491,7 @@ public class GraphQLController {
     if (!authUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
       logger.info(
           "User not authorized to modify access list: " + optionalSpeciesList.get().getId());
-      throw new AccessDeniedException("You dont have access to this list");
+      throw new AccessDeniedException("You don't have access to this list");
     }
 
     SpeciesList speciesList = optionalSpeciesList.get();
@@ -588,7 +588,7 @@ public class GraphQLController {
     }
 
     if (!authUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
-      throw new AccessDeniedException("You dont have access to this list");
+      throw new AccessDeniedException("You don't have access to this list");
     }
 
     // add the new entry
@@ -629,7 +629,7 @@ public class GraphQLController {
     }
 
     if (!authUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
-      throw new AccessDeniedException("You dont have access to this list");
+      throw new AccessDeniedException("You don't have access to this list");
     }
 
     // delete the list item
@@ -703,7 +703,7 @@ public class GraphQLController {
 
       return updatedList;
     } else {
-      throw new AccessDeniedException("You dont have access to this list");
+      throw new AccessDeniedException("You don't have access to this list");
     }
   }
 
@@ -729,7 +729,7 @@ public class GraphQLController {
         // private list, check user is authorized
         if (!authUtils.isAuthorized(speciesListOptional.get(), principal)) {
           logger.info("User not authorized to private access list: " + speciesListID);
-          throw new AccessDeniedException("You dont have access to this list");
+          throw new AccessDeniedException("You don't have access to this list");
         }
       }
     }
@@ -869,7 +869,7 @@ public class GraphQLController {
     if (speciesList.get().getIsPrivate()) {
       if (!authUtils.isAuthorized(speciesList.get(), principal)) {
         logger.info("User not authorized to private access list: " + speciesListID);
-        throw new AccessDeniedException("You dont have access to this list");
+        throw new AccessDeniedException("You don't have access to this list");
       }
     }
 
