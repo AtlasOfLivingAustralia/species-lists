@@ -99,8 +99,7 @@ public class ValidationService {
     // check that the supplied list type, region and license is valid
     return (
             isValueValid(ConstraintType.lists, speciesList.getListType()) &&
-            isValueValid(ConstraintType.licenses, speciesList.getLicence()) &&
-            isValueValid(ConstraintType.countries, speciesList.getRegion())
+            isValueValid(ConstraintType.licenses, speciesList.getLicence())
     );
   }
 
