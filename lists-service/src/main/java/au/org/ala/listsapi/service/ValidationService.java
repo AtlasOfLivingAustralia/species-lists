@@ -33,6 +33,14 @@ public class ValidationService {
 
   private Map<String, List<ConstraintListItem>> constraints = null;
 
+  private List<ConstraintListItem> getConstraintsByKey(ConstraintType constraintType) {
+    return constraints.get(constraintType.name());
+  }
+
+  private void setConstraintsByKey(ConstraintType constraintType, List<ConstraintListItem> items) {
+    constraints.put(constraintType.name(), items);
+  }
+
   @PostConstruct
   private void init() throws IOException {
     ObjectMapper objectMapper = new ObjectMapper();
@@ -41,18 +49,19 @@ public class ValidationService {
     constraints = objectMapper.readValue(json, new TypeReference<HashMap<String, List<ConstraintListItem>>>() {});
 
     try {
-      List<Location> countries = fetchJson(userDetailsUrl + "/ws/registration/countries.json", new TypeReference<>() {});
+      List<Location> userdetailsCountries = fetchJson(userDetailsUrl + "/ws/registration/countries.json", new TypeReference<>() {});
+      List<ConstraintListItem> countries = getConstraintsByKey(ConstraintType.countries);
 
       // Map the countries list into UI constraints
-      List<ConstraintListItem> countryConstraints = countries.stream().map(e -> {
+      userdetailsCountries.forEach(e -> {
         var constraint = new ConstraintListItem();
         constraint.setLabel(e.getName());
         constraint.setValue(e.getIsoCode());
 
-        return constraint;
-      }).toList();
+        countries.add(constraint);
+      });
 
-      constraints.put("countries", countryConstraints);
+      setConstraintsByKey(ConstraintType.countries, countries);
     } catch (Exception ex) {
       log.error("Error loading country constraints from userdetails", ex);
     }
@@ -79,7 +88,7 @@ public class ValidationService {
   }
 
   public boolean isValueValid(ConstraintType constraintType, String value) {
-    List<ConstraintListItem> list = constraints.get(constraintType.name());
+    List<ConstraintListItem> list = getConstraintsByKey(constraintType);
 
     return list.stream()
             .filter(elm -> elm.getValue().equals(value))
@@ -96,42 +105,12 @@ public class ValidationService {
   }
 
   public List<ConstraintListItem> getConstraintList(ConstraintType constraintType) throws Exception {
-    List<ConstraintListItem> list = constraints.get(constraintType.name());
+    List<ConstraintListItem> list = getConstraintsByKey(constraintType);
 
     if (list == null) {
       throw new Exception("Could not find corresponding constraint list for '" + constraintType + "' type!");
     }
 
     return list;
-  }
-
-  public List<ConstraintListItem> getConstraintRegions(String country) throws Exception {
-    String constraintKey = "regions_" + country;
-    List<ConstraintListItem> list = constraints.get(constraintKey);
-
-    if (list != null) {
-      return list;
-    }
-
-    try {
-      List<Location> regions = fetchJson(userDetailsUrl + "/ws/registration/states.json?country=" + country, new TypeReference<>() {});
-
-      // Map the countries list into UI constraints
-      List<ConstraintListItem> regionConstraints = regions.stream().map(e -> {
-        var constraint = new ConstraintListItem();
-        constraint.setLabel(e.getName());
-        constraint.setValue(e.getIsoCode());
-
-        return constraint;
-      }).toList();
-
-      constraints.put(constraintKey, regionConstraints);
-
-      return regionConstraints;
-    } catch (Exception ex) {
-      log.error("Error fetching regions for country '" + country + "'", ex);
-    }
-
-    return null;
   }
 }

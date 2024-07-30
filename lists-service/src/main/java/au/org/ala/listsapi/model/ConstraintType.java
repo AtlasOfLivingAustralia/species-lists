@@ -4,5 +4,4 @@ public enum ConstraintType {
   lists,
   licenses,
   countries,
-  regions
 }

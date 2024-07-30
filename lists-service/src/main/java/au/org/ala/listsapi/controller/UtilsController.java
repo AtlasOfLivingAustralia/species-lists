@@ -41,18 +41,4 @@ public class UtilsController {
       return ResponseEntity.badRequest().body(e.getMessage());
     }
   }
-
-  @Operation(tags = "REST", summary = "Get constraint regions for a particular country")
-  @GetMapping("/constraints/regions/{country}")
-  public ResponseEntity<Object> constraintsForType(
-          @PathVariable("country") String country) {
-    try {
-      return new ResponseEntity<>(
-              validationService.getConstraintRegions(country),
-              HttpStatus.OK
-      );
-    } catch (Exception e) {
-      return ResponseEntity.badRequest().body(e.getMessage());
-    }
-  }
 }
