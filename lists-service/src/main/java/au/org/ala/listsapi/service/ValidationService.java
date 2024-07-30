@@ -41,7 +41,7 @@ public class ValidationService {
     constraints = objectMapper.readValue(json, new TypeReference<HashMap<String, List<ConstraintListItem>>>() {});
 
     try {
-      List<Location> countries = fetchJson(userDetailsUrl + "ws/registration/countries.json", new TypeReference<>() {});
+      List<Location> countries = fetchJson(userDetailsUrl + "/ws/registration/countries.json", new TypeReference<>() {});
 
       // Map the countries list into UI constraints
       List<ConstraintListItem> countryConstraints = countries.stream().map(e -> {
@@ -114,7 +114,7 @@ public class ValidationService {
     }
 
     try {
-      List<Location> regions = fetchJson(userDetailsUrl + "ws/registration/states.json?country=" + country, new TypeReference<>() {});
+      List<Location> regions = fetchJson(userDetailsUrl + "/ws/registration/states.json?country=" + country, new TypeReference<>() {});
 
       // Map the countries list into UI constraints
       List<ConstraintListItem> regionConstraints = regions.stream().map(e -> {
