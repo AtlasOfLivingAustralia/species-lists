@@ -15,7 +15,7 @@ export function SpeciesListsSideBar( {resetSpeciesList, selectedView} : SpeciesL
 
     const currentUser = useContext(UserContext) as ListsUser;
     return (
-        <Accordion className={`speciesListsSideBar`} defaultValue={selectedView} >
+        <Accordion className={`speciesListsSideBar`} value={selectedView} >
             <AllLists resetSpeciesList={resetSpeciesList} />
             <UploadListOption resetSpeciesList={resetSpeciesList} />
             {currentUser &&

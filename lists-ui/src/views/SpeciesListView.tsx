@@ -173,7 +173,10 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
             </Drawer>
             <Drawer
                 opened={speciesSelected}
-                onClose={speciesHandlers.close}
+                onClose={() => {
+                    setisEditing(false);
+                    speciesHandlers.close();
+                }}
                 position="right"
                 title={
                     <>

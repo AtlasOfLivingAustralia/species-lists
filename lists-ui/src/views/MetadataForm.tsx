@@ -91,6 +91,7 @@ export function MetadataForm({ speciesList,
                     label="Species list name"
                     placeholder="My species list"
                     disabled={!edit}
+                    required
                     {...form.getInputProps("title")}
                 />
                 <Space h="md" />
@@ -98,6 +99,7 @@ export function MetadataForm({ speciesList,
                     label="Description"
                     placeholder="Description"
                     disabled={!edit}
+                    required
                     {...form.getInputProps("description")}
                 />
                 <Space h="md" />
@@ -105,7 +107,8 @@ export function MetadataForm({ speciesList,
                     label="List type"
                     placeholder="Pick one"
                     disabled={!edit}
-                    data={valueConstraints?.lists || []}
+                    data={listTypes}
+                    required
                     {...form.getInputProps("listType")}
                 />
 
@@ -127,7 +130,8 @@ export function MetadataForm({ speciesList,
                     label="Licence"
                     placeholder="Pick one"
                     disabled={!edit}
-                    data={valueConstraints?.licenses || []}
+                    data={licences}
+                    required
                     {...form.getInputProps("licence")}
                 />
                 <Space h="lg" />

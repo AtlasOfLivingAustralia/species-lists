@@ -60,9 +60,12 @@ export default function App() {
     };
 
     const logout = () => {
-        auth.removeUser();
-        setCurrentUser(null);
-        window.location.href = import.meta.env.VITE_OIDC_REDIRECT_URL
+        auth.signoutRedirect({
+            extraQueryParams: {
+                client_id: auth.settings.client_id,
+                logout_uri: import.meta.env.VITE_OIDC_REDIRECT_URL
+            }
+        });
     };
 
     if (auth.isAuthenticated && auth.user && !currentUser) {

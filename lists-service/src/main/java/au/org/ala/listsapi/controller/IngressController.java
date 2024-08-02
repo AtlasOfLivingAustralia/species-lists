@@ -153,7 +153,7 @@ public class IngressController {
       ResponseEntity<Object> errorResponse = checkAuthorized(speciesListID, principal);
       if (errorResponse != null) return errorResponse;
 
-      taxonService.taxonMatchDataset(speciesListID);
+      taxonService.reindex(speciesListID);
       return new ResponseEntity<>(HttpStatus.OK);
     } catch (Exception e) {
       logger.error("Error while reindexing dataset " + e.getMessage(), e);
