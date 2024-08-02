@@ -1,8 +1,0 @@
-[
-  { "value": "CONSERVATION_LIST", "label": "Conservation species list" },
-  { "value": "SENSITIVE_LIST", "label": "Sensitive list" },
-  { "value": "INVASIVE",  "label": "Invasive species list" },
-  { "value": "COMMON_TRAIT",  "label": "Traits" },
-  { "value": "LOCAL_LIST",  "label": "Local checklist" },
-  { "value": "SPECIES_CHARACTERS",  "label": "Species characters"  }
-]

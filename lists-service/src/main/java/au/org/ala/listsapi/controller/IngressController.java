@@ -2,10 +2,7 @@ package au.org.ala.listsapi.controller;
 
 import au.org.ala.listsapi.model.*;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
-import au.org.ala.listsapi.service.MigrateService;
-import au.org.ala.listsapi.service.ReleaseService;
-import au.org.ala.listsapi.service.TaxonService;
-import au.org.ala.listsapi.service.UploadService;
+import au.org.ala.listsapi.service.*;
 import au.org.ala.ws.security.profile.AlaUserProfile;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -57,6 +54,7 @@ public class IngressController {
   @Autowired protected ReleaseService releaseService;
   @Autowired protected UploadService uploadService;
   @Autowired protected MigrateService migrateService;
+  @Autowired protected ValidationService validationService;
 
   @Autowired protected AuthUtils authUtils;
 
@@ -256,6 +254,11 @@ public class IngressController {
       AlaUserProfile alaUserProfile = (AlaUserProfile) principal;
       if (alaUserProfile == null) {
         return ResponseEntity.badRequest().body("User not found");
+      }
+
+      // check that the supplied list type, region and license is valid
+      if (!validationService.isListValid(speciesList)) {
+        return ResponseEntity.badRequest().body("Supplied list contains invalid properties for a controlled value (list type, license, region)");
       }
 
       logger.info("Ingestion started...");

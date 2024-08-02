@@ -2,15 +2,23 @@ import {Alert, Button, Checkbox, Group, MultiSelect, Select, Space, Textarea, Te
 import { useForm } from "@mantine/form";
 import {FormattedMessage} from "react-intl";
 import {MetadataFormProps} from "../api/sources/props.ts";
-import {useContext, useState} from "react";
+import {useContext, useEffect, useState} from "react";
 import {ListsUser, SpeciesList} from "../api/sources/model.ts";
 import UserContext from "../helpers/UserContext.ts";
 import {IconInfoCircle} from "@tabler/icons-react";
 import {validateListType} from "../helpers/validation.tsx";
 import tags from '../tags.json';
-import licences from '../licences.json';
-import regions from '../regions.json';
-import listTypes from '../listTypes.json';
+
+interface Constraint {
+    value: string;
+    label: string;
+}
+
+interface ConstraintsResponse {
+    lists: Constraint[];
+    countries: Constraint[];
+    licenses: Constraint[];
+}
 
 export function MetadataForm({ speciesList,
                                submitFormFcn,
@@ -24,6 +32,7 @@ export function MetadataForm({ speciesList,
     const [isAuthoritative] = useState(speciesList?.isAuthoritative);
     const [isSDS] = useState(speciesList?.isSDS);
     const [isBIE] = useState(speciesList?.isBIE);
+    const [valueConstraints, setValueConstraints] = useState<ConstraintsResponse | null>(null);
     const currentUser = useContext(UserContext) as ListsUser;
 
     const form = useForm({
@@ -54,6 +63,20 @@ export function MetadataForm({ speciesList,
     });
 
     const listTypeValidation:string| null = validateListType(form.values.listType, suppliedFields);
+
+    // useEffect hook to fetch list type constraints
+    useEffect(() => {
+        async function getListTypeConstraints() {
+            try {
+                const resp = await fetch(`${import.meta.env.VITE_API_URL}/constraints`);
+                setValueConstraints(await resp.json());
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        getListTypeConstraints();
+    }, []);
 
     return (
         <>
@@ -149,7 +172,7 @@ export function MetadataForm({ speciesList,
                     label="Region"
                     placeholder="Pick one"
                     disabled={!edit}
-                    data={regions}
+                    data={valueConstraints?.countries || []}
                     {...form.getInputProps("region")}
                 />
 

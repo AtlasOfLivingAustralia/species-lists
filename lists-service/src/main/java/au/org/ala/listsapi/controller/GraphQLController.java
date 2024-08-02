@@ -1,20 +1,11 @@
 package au.org.ala.listsapi.controller;
 
-import au.org.ala.listsapi.model.Classification;
-import au.org.ala.listsapi.model.Facet;
-import au.org.ala.listsapi.model.FacetCount;
-import au.org.ala.listsapi.model.Filter;
-import au.org.ala.listsapi.model.Image;
-import au.org.ala.listsapi.model.InputSpeciesListItem;
-import au.org.ala.listsapi.model.KeyValue;
-import au.org.ala.listsapi.model.Release;
-import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.model.SpeciesListIndex;
-import au.org.ala.listsapi.model.SpeciesListItem;
+import au.org.ala.listsapi.model.*;
 import au.org.ala.listsapi.repo.ReleaseMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import au.org.ala.listsapi.service.ValidationService;
 import au.org.ala.listsapi.service.TaxonService;
 import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.SortOrder;
@@ -25,6 +16,8 @@ import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import graphql.*;
+import graphql.schema.DataFetchingEnvironment;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URL;
 import java.security.Principal;
@@ -51,8 +44,10 @@ import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.graphql.data.method.annotation.Argument;
+import org.springframework.graphql.data.method.annotation.GraphQlExceptionHandler;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
+import org.springframework.lang.NonNull;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -105,6 +100,7 @@ public class GraphQLController {
   @Autowired private SpeciesListItemMongoRepository speciesListItemMongoRepository;
 
   @Autowired protected TaxonService taxonService;
+  @Autowired protected ValidationService validationService;
   @Autowired protected AuthUtils authUtils;
 
   public static SpeciesListItem convert(SpeciesListIndex index) {
@@ -271,6 +267,17 @@ public class GraphQLController {
     } else {
       bq.filter(f -> f.term(t -> t.field(filter.getKey()).value(filter.getValue())));
     }
+  }
+
+  @GraphQlExceptionHandler
+  public GraphQLError handle(@NonNull Throwable ex, @NonNull DataFetchingEnvironment environment){
+    return GraphQLError
+            .newError()
+            .errorType(ErrorType.ValidationError)
+            .message(ex.getMessage())
+            .path(environment.getExecutionStepInfo().getPath())
+            .location(environment.getField().getSourceLocation())
+            .build();
   }
 
   @QueryMapping
@@ -664,7 +671,7 @@ public class GraphQLController {
       @Argument Boolean isSDS,
       @Argument Boolean isBIE,
       @Argument List<String> tags,
-      @AuthenticationPrincipal Principal principal) {
+      @AuthenticationPrincipal Principal principal) throws Exception {
     Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(id);
     if (speciesList.isEmpty()) {
       return null;
@@ -674,6 +681,15 @@ public class GraphQLController {
       boolean reindexRequired = false;
 
       SpeciesList toUpdate = speciesList.get();
+
+      // check that the supplied list type, region and license is valid
+      if (
+              !validationService.isValueValid(ConstraintType.lists, listType) ||
+              !validationService.isValueValid(ConstraintType.licenses, licence)
+      ) {
+        throw new Exception("Updated list contains invalid properties for a controlled value (list type, license)");
+      }
+
       if (title != null && !title.equalsIgnoreCase(toUpdate.getTitle())
           || listType != null && !listType.equalsIgnoreCase(toUpdate.getListType())
           || isPrivate != null && !isPrivate.equals(toUpdate.getIsPrivate())
