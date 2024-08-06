@@ -68,7 +68,7 @@ export function MetadataForm({ speciesList,
     useEffect(() => {
         async function getListTypeConstraints() {
             try {
-                const resp = await fetch(`${import.meta.env.VITE_API_URL}/constraints`);
+                const resp = await fetch(import.meta.env.VITE_CONSTRAINTS_URL);
                 setValueConstraints(await resp.json());
             } catch (error) {
                 console.error(error);
@@ -107,7 +107,7 @@ export function MetadataForm({ speciesList,
                     label="List type"
                     placeholder="Pick one"
                     disabled={!edit}
-                    data={listTypes}
+                    data={valueConstraints?.lists || []}
                     required
                     {...form.getInputProps("listType")}
                 />
@@ -130,7 +130,7 @@ export function MetadataForm({ speciesList,
                     label="Licence"
                     placeholder="Pick one"
                     disabled={!edit}
-                    data={licences}
+                    data={valueConstraints?.licenses || []}
                     required
                     {...form.getInputProps("licence")}
                 />
