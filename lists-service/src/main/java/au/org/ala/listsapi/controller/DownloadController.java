@@ -204,9 +204,8 @@ public class DownloadController {
       SpeciesList speciesList, Principal principal) {
 
     // check user logged in
-    AlaUserProfile alaUserProfile = (AlaUserProfile) principal;
-    if (alaUserProfile == null) {
-      return ResponseEntity.badRequest().body("User not found");
+    if (authUtils.getUserProfile(principal) == null) {
+      return ResponseEntity.badRequest().body("User not logged in");
     }
 
     // check authorised

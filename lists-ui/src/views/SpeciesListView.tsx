@@ -100,7 +100,10 @@ function SpeciesListView({ setSpeciesList, resetSpeciesList }: SpeciesListProps)
     function download() {
         fetch(import.meta.env.VITE_DOWNLOAD_URL + "/" + speciesListID, {
             method: 'GET',
-            headers: { 'Content-Type': 'application/zip'}
+            headers: {
+                'Content-Type': 'application/zip',
+                'Authorization': 'Bearer ' + currentUser?.user.access_token
+            }
         })
         .then( res => res.blob() )
         .then( blob => {
