@@ -358,13 +358,21 @@ public class UploadService {
     ingestJob.setRowCount(rowCount);
     ingestJob.setOriginalFieldNames(originalFieldNames);
 
+    List<String> validationError = new ArrayList<>();
+
+    if (rowCount == 0) {
+      validationError.add("NO_RECORDS_IN_CSV");
+    }
+
     if (recordsWithoutScientificName > 0) {
-      List<String> validationError = new ArrayList<>();
       if (recordsWithoutScientificName == rowCount) {
         validationError.add("ALL_RECORDS_WITHOUT_SCIENTIFIC_NAME");
       } else {
         validationError.add("SOME_RECORDS_WITHOUT_SCIENTIFIC_NAME");
       }
+    }
+
+    if (!validationError.isEmpty()) {
       ingestJob.setValidationErrors(validationError);
     }
 
