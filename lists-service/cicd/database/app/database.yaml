@@ -1,0 +1,129 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: 'A DocumentDB Cluster with AutoScaling'
+
+Parameters:
+  pAdminUser:
+    Description: The username for the DocumentDB admin user
+    Type: String
+    Default: admin
+  pInstanceClass:
+    Description: The DocumentDB instance class
+    Type: String
+    Default: db.t4g.medium
+  pInstanceCount:
+    Description: The number of instances in the DocumentDB cluster
+    Type: Number
+    Default: 1
+  pVpcStackName:
+    Description: The name of the Bedrock VPC stack
+    Type: String
+  pBuild:
+    Description: The CodeBuild build number
+    Type: Number
+  pCleanBranch:
+    Description: The clean branch
+    Type: String
+  pProductName:
+    Description: The product name
+    Type: String
+  pEnvironment:
+    Description: Environment for this DocumentDB instance
+    AllowedValues:
+      - development
+      - develop
+      - staging
+      - production
+    Type: String
+
+Conditions:
+  IsDev: !Equals
+    - !Ref pEnvironment
+    - development
+  IsProd: !Equals
+    - !Ref pEnvironment
+    - production
+
+Resources:
+
+  DocDbSubnetGrp:
+    Type: AWS::DocDB::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: DocumentDB subnet group
+      SubnetIds: !Split
+        - ','
+        - Fn::ImportValue:
+            Fn::Sub: ${pVpcStackName}-PriSubnets
+      Tags:
+        - Key: Name
+          Value: Lists DocumentDB SubnetGroup
+
+  DocDbSecurityGrp:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow access from the VPC
+      VpcId:
+        Fn::ImportValue:
+          Fn::Sub: ${pVpcStackName}-Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 27017
+          ToPort: 27017
+          CidrIp:
+            Fn::ImportValue:
+              Fn::Sub: ${pVpcStackName}-VpcCidr
+      Tags:
+        - Key: Name
+          Value: Lists DocumentDB SG
+
+  DocDbClusterParameterGroup:
+    Type: AWS::DocDB::DBClusterParameterGroup
+    Properties:
+      Description: DocumentDB cluster parameter group
+      Family: docdb4.0
+      Parameters:
+        tls: enabled
+        audit_logs: enabled
+        ttl_monitor: enabled
+
+  DocDbCluster:
+    Type: AWS::DocDB::DBCluster
+    Properties:
+      DBClusterIdentifier: !Sub ${pEnvironment}-docdb-cluster
+      MasterUsername: !Ref pAdminUser
+      MasterUserPassword: !Sub
+        - '{{resolve:secretsmanager:lists-${ResourceName}:SecretString:db-password}}'
+        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      DBSubnetGroupName: !Ref DocDbSubnetGrp
+      VpcSecurityGroupIds:
+        - !Ref DocDbSecurityGrp
+      EngineVersion: 4.0.0
+      BackupRetentionPeriod: 7
+      PreferredBackupWindow: 16:00-17:00
+      PreferredMaintenanceWindow: tue:17:00-tue:19:00
+      DBClusterParameterGroupName: !Ref DocDbClusterParameterGroup
+      Tags:
+        - Key: Name
+          Value: DocumentDB Cluster
+
+  DocDbInstance:
+    Type: AWS::DocDB::DBInstance
+    Properties:
+      DBClusterIdentifier: !Ref DocDbCluster
+      DBInstanceClass: !Ref pInstanceClass
+      AutoMinorVersionUpgrade: true
+      Tags:
+        - Key: Name
+          Value: Lists DocumentDB Instance
+
+Outputs:
+  DocDbClusterEndpoint:
+    Description: The endpoint of the DocumentDB cluster
+    Value: !GetAtt DocDbCluster.Endpoint
+    Export:
+      Name: !Sub ${AWS::StackName}-DocDbClusterEndpoint
+  DocDbClusterReaderEndpoint:
+    Description: The reader endpoint of the DocumentDB cluster
+    Value: !GetAtt DocDbCluster.ReadEndpoint
+    Export:
+      Name: !Sub ${AWS::StackName}-DocDbClusterReaderEndpoint

@@ -13,7 +13,6 @@ import {
     IconReload,
     IconTable,
     IconUpload,
-    IconVersions,
 } from '@tabler/icons-react';
 import {ListsUser, SpeciesList} from "../api/sources/model";
 import {SpeciesListSideBarProps} from "../api/sources/props.ts";

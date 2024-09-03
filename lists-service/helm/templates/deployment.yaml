@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ala-species-lists.fullname" . }}
+  labels:
+    {{- include "ala-species-lists.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "ala-species-lists.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ala-species-lists.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          args:
+            - "-Djavax.net.ssl.trustStore=/data/lists-service/config/global-bundle.pem"
+            - "-Djavax.net.ssl.trustStorePassword=changeit"
+          volumeMounts:
+            - name: config-volume
+              mountPath: /data/lists-service/config/lists-service-config.properties
+              subPath: lists-service-config.properties
+            - name: docdb-ca-cert
+              mountPath: /data/lists-service/config/global-bundle.pem
+              subPath: global-bundle.pem
+      volumes:
+        - name: config-volume
+          secret:
+            secretName: lists-service-config-secret
+        - name: docdb-ca-cert
+          secret:
+            secretName: docdb-ca-cert

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-{{ include "ala-species-lists.fullname" . }}
+  labels:
+    {{- include "ala-species-lists.labels" . | nindent 4 }}
+spec:
+  type: LoadBalancer
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort}}
+      protocol: TCP
+  selector:
+    {{- include "ala-species-lists.selectorLabels" . | nindent 4 }}

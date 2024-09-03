@@ -1,0 +1,30 @@
+{
+  "Parameters" : {
+    "pAdminUser"           : "{{ admin_user }}",
+    "pInstanceClass"       : "{{ instance_class }}",
+    "pInstanceCount"       : "{{ instance_count }}",
+    "pVpcStackName"        : "{{ vpc_stack_name }}",
+    "pBuild"               : "{{ codebuild_build_number }}",
+    "pCleanBranch"         : "{{ clean_branch }}",
+    "pProductName"         : "{{ product_name }}",
+    "pEnvironment"         : "{{ environment }}"
+  },
+  "Tags" : {
+    "product"     : "{{ product_name }}",
+    "component"   : "{{ product_component }}",
+    "environment" : "{{ environment }}",
+    "branch"      : "{{ src_branch }}",
+    "version"     : "{{ commit_id }}",
+    "build"       : "{{ codebuild_build_number }}"
+  },
+  "StackPolicy" : {
+    "Statement" : [
+      {
+        "Effect" : "Allow",
+        "Action" : "Update:*",
+        "Principal": "*",
+        "Resource" : "*"
+      }
+    ]
+  }
+}
