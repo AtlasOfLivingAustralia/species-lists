@@ -181,6 +181,7 @@ export function ThEditable({
         onChange={(event) => setUpdatedField(event.currentTarget.value)}
         disabled={!editing || updating || deleting}
         classNames={updating || deleting ? undefined : inputClasses}
+        miw={CSS.supports('field-sizing', 'content') ? undefined : 100}
         styles={{
           input: {
             fieldSizing: 'content',
