@@ -267,8 +267,10 @@ public class IngressController {
         return ResponseEntity.badRequest().body("File not uploaded yet");
       }
 
+
+
       SpeciesList updatedSpeciesList =
-          uploadService.ingest(alaUserProfile.getUserId(), speciesList, tempFile, false);
+          uploadService.ingest(alaUserProfile.getGivenName() + " " + alaUserProfile.getFamilyName(), speciesList, tempFile, false);
       logger.info("Ingestion complete..." + updatedSpeciesList.toString());
       return ResponseEntity.ok(updatedSpeciesList);
     } catch (Exception e) {

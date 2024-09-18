@@ -75,12 +75,12 @@ public class UploadService {
   }
 
   public SpeciesList ingest(
-      String userId, InputSpeciesList speciesListMetadata, File fileToLoad, boolean dryRun)
+      String name, InputSpeciesList speciesListMetadata, File fileToLoad, boolean dryRun)
       throws Exception {
 
     // create the species list in mongo
     SpeciesList speciesList = new SpeciesList();
-    speciesList.setOwner(userId);
+    speciesList.setOwner(name);
     extractUpdates(speciesListMetadata, speciesList);
     speciesList = speciesListMongoRepository.save(speciesList);
 
@@ -93,7 +93,7 @@ public class UploadService {
 
     speciesList = speciesListMongoRepository.save(speciesList);
 
-    releaseService.asyncRelease(speciesList.getId());
+    releaseService.release(speciesList.getId());
     return speciesList;
   }
 
