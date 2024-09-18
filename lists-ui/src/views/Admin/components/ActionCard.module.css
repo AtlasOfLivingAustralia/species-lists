@@ -1,0 +1,13 @@
+.card {
+  transition: all 200ms ease;
+
+  &:hover {
+    transform: scale(1.04);
+    opacity: 0.4;
+  }
+
+  &:active {
+    transform: scale(1.02);
+    opacity: 0.6;
+  }
+}
