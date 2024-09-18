@@ -25,16 +25,7 @@ import { FormattedMessage, FormattedNumber } from 'react-intl';
 import { FixedSizeList as List } from 'react-window';
 
 import classes from './FiltersDrawer.module.css';
-
-interface KV {
-  key: string;
-  value: string;
-}
-
-interface Facet {
-  key: string;
-  counts: { value: string; count: number }[];
-}
+import { Facet, KV } from '#/api';
 
 interface FiltersDrawerProps {
   facets: Facet[];
