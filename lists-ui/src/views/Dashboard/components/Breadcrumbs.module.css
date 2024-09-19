@@ -1,0 +1,19 @@
+.link {
+  @mixin light {
+    color: black;
+  }
+
+  @mixin dark {
+    color: white;
+  }
+
+  &:hover {
+    @mixin light {
+      color: var(--mantine-color-rust-6);
+    }
+
+    @mixin dark {
+      color: var(--mantine-color-flamingo-4);
+    }
+  }
+}

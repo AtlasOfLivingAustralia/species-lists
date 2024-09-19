@@ -1,0 +1,16 @@
+.table {
+  table-layout: auto;
+}
+
+.tbody .tr {
+  cursor: pointer;
+
+  &:hover {
+    @mixin light {
+      background-color: var(--mantine-color-light-grey-2);
+    }
+    @mixin dark {
+      background-color: var(--mantine-color-dark-4);
+    }
+  }
+}

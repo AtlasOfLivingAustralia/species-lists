@@ -1,0 +1,17 @@
+.imageBackground {
+  @mixin light {
+    background-color: var(--mantine-color-concrete-0);
+  }
+  @mixin dark {
+    background-color: var(--mantine-color-dark-grey-three-9);
+  }
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  bottom: 0;
+  transition: all ease 200ms;
+  overflow: hidden;
+}

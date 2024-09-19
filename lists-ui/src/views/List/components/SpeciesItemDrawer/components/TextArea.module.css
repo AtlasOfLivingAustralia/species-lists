@@ -1,0 +1,9 @@
+.input {
+  &[data-disabled='true'] {
+    cursor: default;
+    border-color: transparent;
+    background-color: transparent;
+    color: var(--mantine-color-text);
+    opacity: 1;
+  }
+}
