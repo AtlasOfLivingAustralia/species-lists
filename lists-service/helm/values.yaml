@@ -68,3 +68,15 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+mongodb:
+  username: ""
+  password: ""
+  host: ""
+  port: 27017
+  database: "species-lists"
+
+oidc:
+  enabled: true
+  clientId: ""
+  discoveryUri: ""

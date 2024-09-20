@@ -24,13 +24,15 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           command: [ "java" ]
           args:
-            - "-Djavax.net.ssl.trustStore=/data/lists-service/config/rds-truststore.jks"
+            - "-Djavax.net.ssl.trustStore=/data/lists-service/config/lists-service-truststore.jks"
             - "-Djavax.net.ssl.trustStorePassword=changeme"
             - "-Djavax.net.ssl.trustStoreType=jks"
-            - "-Djavax.net.debug=SSL"
             - "-jar"
             - "app.jar"
             - "--spring.config.location=file:/data/lists-service/config/lists-service-config.properties"
+          envFrom:
+            - secretRef:
+                name: {{ include "ala-species-lists.fullname" . }}
           volumeMounts:
             - name: config-volume
               mountPath: /data/lists-service/config/lists-service-config.properties
@@ -38,13 +40,10 @@ spec:
             - name: config-volume
               mountPath: /data/lists-service/config/constraints.json
               subPath: constraints.json
-            - name: docdb-ca-cert
-              mountPath: /data/lists-service/config/rds-truststore.jks
-              subPath: rds-truststore.jks
+            - name: config-volume
+              mountPath: /data/lists-service/config/lists-service-truststore.jks
+              subPath: lists-service-truststore.jks
       volumes:
         - name: config-volume
-          secret:
-            secretName: lists-service-config
-        - name: docdb-ca-cert
-          secret:
-            secretName: docdb-ca-cert
+          configMap:
+            name: {{ include "ala-species-lists.fullname" . }}
