@@ -68,7 +68,10 @@ Resources:
             Fn::Sub: ${pVpcStackName}-PriSubnets
       Tags:
         - Key: Name
-          Value: Lists DocumentDB SubnetGroup
+          Value: !Sub
+            - ${pProductName}-${ResourceName}
+            - !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+            - -subnet-group
 
   DocDbSecurityGrp:
     Type: AWS::EC2::SecurityGroup
@@ -86,7 +89,10 @@ Resources:
               Fn::Sub: ${pVpcStackName}-VpcCidr
       Tags:
         - Key: Name
-          Value: Lists DocumentDB SG
+          Value: !Sub
+            - ${pProductName}-${ResourceName}
+            - !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+            - -security-group
 
   DocDbClusterParameterGroup:
     Type: AWS::DocDB::DBClusterParameterGroup
@@ -98,6 +104,12 @@ Resources:
         tls: enabled
         audit_logs: enabled
         ttl_monitor: enabled
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - ${pProductName}-${ResourceName}
+            - !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+            - -cluster-pg
 
   DocDbCluster:
     Type: AWS::DocDB::DBCluster
@@ -118,7 +130,10 @@ Resources:
       StorageEncrypted: true
       Tags:
         - Key: Name
-          Value: DocumentDB Cluster
+          Value: !Sub
+            - ${pProductName}-${ResourceName}
+            - !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+            - -cluster
       VpcSecurityGroupIds:
         - !Ref DocDbSecurityGrp
 
@@ -130,7 +145,10 @@ Resources:
       AutoMinorVersionUpgrade: true
       Tags:
         - Key: Name
-          Value: Lists DocumentDB Instance
+          Value: !Sub
+            - ${pProductName}-${ResourceName}
+            - !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+            - -instance
 
 Outputs:
   DocDbClusterEndpoint:
