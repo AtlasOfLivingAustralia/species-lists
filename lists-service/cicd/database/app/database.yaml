@@ -11,6 +11,18 @@ Parameters:
     Description: The DocumentDB instance class
     Type: String
     Default: db.t4g.medium
+  pBackupRetentionPeriod:
+    Description: The number of days to retain backups for
+    Type: Number
+    Default: 7
+  pDbEngineVersion:
+    Description: The DocumentDB engine version
+    Type: String
+    Default: 4.0.0
+  pDbParameterGroupFamily:
+    Description: The DocumentDB parameter group family
+    Type: String
+    Default: docdb4.0
   pInstanceCount:
     Description: The number of instances in the DocumentDB cluster
     Type: Number
@@ -79,8 +91,9 @@ Resources:
   DocDbClusterParameterGroup:
     Type: AWS::DocDB::DBClusterParameterGroup
     Properties:
+      Name: !Sub ${pEnvironment}-docdb-cluster-pg
       Description: DocumentDB cluster parameter group
-      Family: docdb4.0
+      Family: !Ref pDbParameterGroupFamily
       Parameters:
         tls: enabled
         audit_logs: enabled
@@ -89,22 +102,25 @@ Resources:
   DocDbCluster:
     Type: AWS::DocDB::DBCluster
     Properties:
+      CopyTagsToSnapshot: true
+      BackupRetentionPeriod: !Ref pBackupRetentionPeriod
       DBClusterIdentifier: !Sub ${pEnvironment}-docdb-cluster
+      DBClusterParameterGroupName: !Ref DocDbClusterParameterGroup
+      DBSubnetGroupName: !Ref DocDbSubnetGrp
+      DeletionProtection: !If [ IsProd, true, false ]
+      EngineVersion: !Ref pDbEngineVersion
       MasterUsername: !Ref pAdminUser
       MasterUserPassword: !Sub
         - '{{resolve:secretsmanager:lists-${ResourceName}:SecretString:db-password}}'
         - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
-      DBSubnetGroupName: !Ref DocDbSubnetGrp
-      VpcSecurityGroupIds:
-        - !Ref DocDbSecurityGrp
-      EngineVersion: 4.0.0
-      BackupRetentionPeriod: 7
       PreferredBackupWindow: 16:00-17:00
       PreferredMaintenanceWindow: tue:17:00-tue:19:00
-      DBClusterParameterGroupName: !Ref DocDbClusterParameterGroup
+      StorageEncrypted: true
       Tags:
         - Key: Name
           Value: DocumentDB Cluster
+      VpcSecurityGroupIds:
+        - !Ref DocDbSecurityGrp
 
   DocDbInstance:
     Type: AWS::DocDB::DBInstance

@@ -1,13 +1,16 @@
 {
   "Parameters" : {
-    "pAdminUser"           : "{{ admin_user }}",
-    "pInstanceClass"       : "{{ instance_class }}",
-    "pInstanceCount"       : "{{ instance_count }}",
-    "pVpcStackName"        : "{{ vpc_stack_name }}",
-    "pBuild"               : "{{ codebuild_build_number }}",
-    "pCleanBranch"         : "{{ clean_branch }}",
-    "pProductName"         : "{{ product_name }}",
-    "pEnvironment"         : "{{ environment }}"
+    "pAdminUser"                : "{{ admin_user }}",
+    "pBackupRetentionPeriod"    : "{{ backup_retention_period }}",
+    "pDbEngineVersion"          : "{{ db_engine_version }}",
+    "pDbParameterGroupFamily"   : "{{ db_parameter_group_family }}",
+    "pInstanceClass"            : "{{ instance_class }}",
+    "pInstanceCount"            : "{{ instance_count }}",
+    "pVpcStackName"             : "{{ vpc_stack_name }}",
+    "pBuild"                    : "{{ codebuild_build_number }}",
+    "pCleanBranch"              : "{{ clean_branch }}",
+    "pProductName"              : "{{ product_name }}",
+    "pEnvironment"              : "{{ environment }}"
   },
   "Tags" : {
     "product"     : "{{ product_name }}",
