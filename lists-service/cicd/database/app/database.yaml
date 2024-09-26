@@ -69,9 +69,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - ${pProductName}-${ResourceName}
-            - !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
-            - -subnet-group
+            - ${pProductName}-${ResourceName}-subnet-group
+            - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
 
   DocDbSecurityGrp:
     Type: AWS::EC2::SecurityGroup
@@ -90,9 +89,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - ${pProductName}-${ResourceName}
-            - !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
-            - -security-group
+            - ${pProductName}-${ResourceName}-security-group
+            - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
 
   DocDbClusterParameterGroup:
     Type: AWS::DocDB::DBClusterParameterGroup
@@ -107,9 +105,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - ${pProductName}-${ResourceName}
-            - !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
-            - -cluster-pg
+            - ${pProductName}-${ResourceName}-cluster-pg
+            - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
 
   DocDbCluster:
     Type: AWS::DocDB::DBCluster
@@ -131,9 +128,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - ${pProductName}-${ResourceName}
-            - !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
-            - -cluster
+            - ${pProductName}-${ResourceName}-cluster
+            - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
       VpcSecurityGroupIds:
         - !Ref DocDbSecurityGrp
 
@@ -146,9 +142,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - ${pProductName}-${ResourceName}
-            - !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
-            - -instance
+            - ${pProductName}-${ResourceName}-instance
+            - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
 
 Outputs:
   DocDbClusterEndpoint:
