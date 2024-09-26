@@ -24,14 +24,6 @@ phases:
         && curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
         && chmod 700 get_helm.sh
         && ./get_helm.sh
-        && curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-        && chmod +x kubectl
-        && mv kubectl /usr/local/bin/
-        && ARCH=amd64
-        && PLATFORM=$(uname -s)_$ARCH
-        && curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$PLATFORM.tar.gz"
-        && tar -xzf eksctl_$PLATFORM.tar.gz -C /tmp && rm eksctl_$PLATFORM.tar.gz
-        && mv /tmp/eksctl /usr/local/bin
 
   build:
     commands:
@@ -42,8 +34,19 @@ phases:
       - printf "$(kubectl config current-context)\n"
       - cd lists-service/helm
       - export CERTIFICATE_ARN=$(aws acm list-certificates --region ap-southeast-2 --query "CertificateSummaryList[?DomainName=='*.test.ala.org.au' && Status=='ISSUED'].CertificateArn" --output text)
-      - helm upgrade --install ala-species-lists . -n lists --set image.repository=$REPO --set image.tag=$IMAGE_TAG --set ingress.hostname=lists-ws.test.ala.org.au --set ingress.certificateArn=$CERTIFICATE_ARN
-
+      - helm upgrade --install ala-species-lists . 
+                      -n lists 
+                      --set image.repository=$REPO 
+                      --set image.tag=$IMAGE_TAG 
+                      --set ingress.hostname=$SUB_DOMAIN.$HOSTED_ZONE
+                      --set ingress.certificateArn=$CERTIFICATE_ARN
+                      --set mongodb.host=$MONGODB_HOST
+                      --set mongodb.username=$MONGODB_USERNAME
+                      --set oidc.discoveryUri=$OIDC_DISCOVERY_URI
+                      --set oidc.clientId=$OIDC_CLIENT_ID
+                      --set bie.baseUrl=$BIE_BASE_URL
+                      --set images.baseUrl=$IMAGES_BASE_URL
+                      --set userdetails.baseUrl=$USERDETAILS_BASE_URL
   post_build:
     commands:
       - echo Post-build phase...

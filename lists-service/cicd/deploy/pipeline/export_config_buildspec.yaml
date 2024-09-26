@@ -68,6 +68,12 @@ phases:
       - echo LISTS_ECR_REPOSITORY_NAME=$LISTS_ECR_REPOSITORY_NAME
       - echo DB_READ_ENDPOINT=$DB_READ_ENDPOINT
       - echo DB_WRITE_ENDPOINT=$DB_WRITE_ENDPOINT
+      - echo creating the app environment for the lists deployment...
+      - |
+         source cicd/unset_codebuild_env_vars.sh
+         for var in $(printenv | awk -F= '{print $1}'); do
+           echo "$var=\"$(printenv $var)\"" >> app.env
+         done
     finally:
       - #echo This always runs
 
@@ -81,3 +87,9 @@ phases:
   post_build:
     commands:
       - #echo Entered the post_build phase...
+
+artifacts:
+  files:
+    - app.env
+  name: DeployConfigArtifact
+  discard-paths: no

@@ -80,3 +80,12 @@ oidc:
   enabled: true
   clientId: ""
   discoveryUri: ""
+
+bie:
+  baseUrl: ""
+
+images:
+  baseUrl: ""
+
+userdetails:
+  baseUrl: ""
