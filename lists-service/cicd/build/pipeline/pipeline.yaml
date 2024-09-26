@@ -95,6 +95,9 @@ Resources:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/standard:7.0
+        EnvironmentVariables:
+          - Name: ENVIRONMENT
+            Value: !Ref pEnvironment
       Source:
         Type: CODEPIPELINE
         BuildSpec: !Sub lists-service/cicd/${pProductComponent}/pipeline/build_lists_buildspec.yaml
