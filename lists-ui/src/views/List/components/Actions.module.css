@@ -1,0 +1,13 @@
+.mobile {
+  /* Desktop Sizes */
+  @media (min-width: 48em) {
+    display: none !important;
+  }
+}
+
+.desktop {
+  /* Mobile Sizes */
+  @media (max-width: 48em) {
+    display: none !important;
+  }
+}
