@@ -1,4 +1,7 @@
 version: 0.2
+###
+# This build project builds the lists service and pushes the Docker image 
+# to Amazon ECR
 
 env:
   shell: bash
