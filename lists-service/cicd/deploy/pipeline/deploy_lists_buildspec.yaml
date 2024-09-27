@@ -1,4 +1,7 @@
 version: 0.2
+###
+# This build project sets up the eks context and deploys the lists service
+# using Helm
 
 env:
   shell: bash
