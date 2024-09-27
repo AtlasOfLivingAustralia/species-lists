@@ -61,7 +61,10 @@ Resources:
               - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
       Description: !Sub Lists app ${pEnvironment} secrets
       GenerateSecretString: 
-        GenerateStringKey: db-password
+        GenerateStringKey: !If
+              - IsFirstBuild
+              - db-password
+              - !Ref "AWS::NoValue"
         PasswordLength: 12
         ExcludeCharacters: "/@\" "
         SecretStringTemplate: !If
