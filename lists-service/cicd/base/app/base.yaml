@@ -71,7 +71,7 @@ Resources:
               - IsFirstBuild
               - |
                 {
-                   "db-password" : "",
+                   "db-password" : ""
                 }
               - !Ref "AWS::NoValue"
 
