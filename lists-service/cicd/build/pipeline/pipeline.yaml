@@ -95,9 +95,6 @@ Resources:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/standard:7.0
-        EnvironmentVariables:
-          - Name: ENVIRONMENT
-            Value: !Ref pEnvironment
       Source:
         Type: CODEPIPELINE
         BuildSpec: !Sub lists-service/cicd/${pProductComponent}/pipeline/build_lists_buildspec.yaml
@@ -238,11 +235,12 @@ Resources:
               ProjectName: !Ref BuildLists
               EnvironmentVariables: !Sub |
                 [
-                  { "name":"ECR_REPO", "value":"#{ExportConfigNS.ECR_REPO}" },
-                  { "name":"IMAGE_NAME", "value":"#{ExportConfigNS.IMAGE_NAME}" },
-                  { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
                   { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
-                  { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" }
+                  { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
+                  { "name":"ECR_REPO", "value":"#{ExportConfigNS.ECR_REPO}" },
+                  { "name":"ENVIRONMENT", "value":"${pEnvironment}" },
+                  { "name":"IMAGE_NAME", "value":"#{ExportConfigNS.IMAGE_NAME}" },
+                  { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" }
                 ]
             InputArtifacts:
               - Name: 'SourceArtifact'
