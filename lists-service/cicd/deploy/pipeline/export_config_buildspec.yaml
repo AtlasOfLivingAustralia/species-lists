@@ -76,7 +76,7 @@ phases:
       - echo EKS_CLUSTER_NAME=$EKS_CLUSTER_NAME
       - echo creating the app environment for the lists deployment...
       - |
-         source cicd/unset_codebuild_env_vars.sh
+         source lists-service/cicd/unset_codebuild_env_vars.sh
          for var in $(printenv | awk -F= '{print $1}'); do
            echo "$var=\"$(printenv $var)\"" >> app.env
          done
