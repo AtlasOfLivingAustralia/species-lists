@@ -11,19 +11,9 @@ phases:
   install:
     commands:
       - echo Installing dependencies...
-      - apt update -y
-        && cat /etc/lsb-release
-        && apt-get -q -y install openjdk-11-jdk
-        && apt-get -q -y install unzip
-        && apt-get -q -y install zip
-        && apt-get -q -y install curl
-        && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-        && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-        && apt-get update
-        && apt-get install -y docker-ce
-        && curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-        && chmod 700 get_helm.sh
-        && ./get_helm.sh
+      - curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+      - chmod 700 get_helm.sh
+      - ./get_helm.sh
 
   build:
     commands:
