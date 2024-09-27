@@ -22,6 +22,7 @@ Conditions:
     - !Equals
       - !Ref pEnvironment
       - production
+  IsFirstBuild: !Equals [!Ref pBuild, "1"]
 
 Resources:
 
@@ -63,10 +64,13 @@ Resources:
         GenerateStringKey: db-password
         PasswordLength: 12
         ExcludeCharacters: "/@\" "
-        SecretStringTemplate: |
-          {
-            "db-password": ""
-          }
+        SecretStringTemplate: !If
+              - IsFirstBuild
+              - |
+                {
+                   "db-password" : "",
+                }
+              - !Ref "AWS::NoValue"
 
 
 
