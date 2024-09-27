@@ -10,11 +10,13 @@ env:
     DEBIAN_FRONTEND: "noninteractive"
   exported-variables:
     - CODEBUILD_BUILD_NUMBER
-    - PRODUCT_NAME
+    - ECR_REPO
+    - IMAGE_NAME
+    - IMAGE_TAG
     - PRODUCT_COMPONENT
-    - SLACK_DEPLOY_NOTIFICATION
+    - PRODUCT_NAME
     - SLACK_ALERT_CHANNEL
-    - LISTS_ECR_REPOSITORY_NAME
+    - SLACK_DEPLOY_NOTIFICATION
 
 phases:
 
@@ -57,9 +59,9 @@ phases:
       - set -a ; source env.txt ; set +a
       # import stack export from the base cloudformation stack
       - echo importing stack output...
-      - LISTS_ECR_REPOSITORY_NAME=$(aws cloudformation describe-stacks --stack-name $BASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='ListsRepositoryName'].OutputValue" --output text)
+      - export ECR_REPO=$(aws cloudformation list-exports --query "Exports[?Name=='$BASE_STACK_NAME-ListsRepositoryUri'].Value" --output text)
+      - echo ECR_REPO=$ECR_REPO
       - LISTS_SECRETS=$(aws cloudformation describe-stacks --stack-name $BASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='ListsSecrets'].OutputValue" --output text)
-      - echo LISTS_ECR_REPOSITORY_NAME=$LISTS_ECR_REPOSITORY_NAME
       - echo LISTS_SECRETS=$LISTS_SECRETS
     finally:
       - #echo This always runs

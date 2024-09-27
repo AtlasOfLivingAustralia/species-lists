@@ -95,9 +95,6 @@ Resources:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/standard:7.0
-        EnvironmentVariables:
-          - Name: IMAGE_TAG
-            Value: 'latest'
       Source:
         Type: CODEPIPELINE
         BuildSpec: !Sub lists-service/cicd/${pProductComponent}/pipeline/deploy_lists_buildspec.yaml
@@ -224,6 +221,8 @@ Resources:
                   { "name":"DB_WRITE_ENDPOINT", "value":"#{ExportConfigNS.DB_WRITE_ENDPOINT}" },
                   { "name":"ECR_REPO", "value":"#{ExportConfigNS.ECR_REPO}" },
                   { "name":"EKS_CLUSTER_NAME", "value":"#{ExportConfigNS.EKS_CLUSTER_NAME}" },
+                  { "name":"IMAGE_NAME", "value":"#{ExportConfigNS.IMAGE_NAME}" },
+                  { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
                   { "name":"LISTS_SECRET_NAME", "value":"#{ExportConfigNS.LISTS_SECRET_NAME}" }
                 ]
             InputArtifacts:

@@ -19,10 +19,11 @@ phases:
     commands:
       - echo Build started on $(date)
       - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME
-      - kubectl config set-context --current --namespace=lists
+      - kubectl config set-context --current --namespace=$PRODUCT_NAME
       - printf "$(kubectl config current-context)\n"
+      # do we need to create the service account here?
       - cd lists-service/helm
-      - helm upgrade --install ala-species-lists . 
+      - helm upgrade --install $IMAGE_NAME . 
                       -n lists 
                       --set image.repository=$ECR_REPO 
                       --set image.tag=$IMAGE_TAG 

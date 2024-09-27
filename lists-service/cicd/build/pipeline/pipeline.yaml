@@ -238,7 +238,9 @@ Resources:
               ProjectName: !Ref BuildLists
               EnvironmentVariables: !Sub |
                 [
-                  { "name":"LISTS_ECR_REPOSITORY_NAME", "value":"#{ExportConfigNS.LISTS_ECR_REPOSITORY_NAME}" },
+                  { "name":"ECR_REPO", "value":"#{ExportConfigNS.ECR_REPO}" },
+                  { "name":"IMAGE_NAME", "value":"#{ExportConfigNS.IMAGE_NAME}" },
+                  { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
                   { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
                   { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" }
                 ]
