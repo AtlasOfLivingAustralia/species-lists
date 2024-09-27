@@ -27,6 +27,19 @@ phases:
       - printf "$(kubectl config current-context)\n"
       # do we need to create the service account here?
       - cd lists-service/helm
+      - echo helm upgrade --install $IMAGE_NAME . 
+                      -n lists 
+                      --set image.repository=$ECR_REPO 
+                      --set image.tag=$IMAGE_TAG 
+                      --set ingress.hostname=$SUB_DOMAIN.$HOSTED_ZONE
+                      --set ingress.certificateArn=$CERTIFICATE_ARN
+                      --set mongodb.host=$MONGODB_HOST
+                      --set mongodb.username=$MONGODB_USERNAME
+                      --set oidc.discoveryUri=$OIDC_DISCOVERY_URI
+                      --set oidc.clientId=$OIDC_CLIENT_ID
+                      --set bie.baseUrl=$BIE_BASE_URL
+                      --set images.baseUrl=$IMAGES_BASE_URL
+                      --set userdetails.baseUrl=$USERDETAILS_BASE_URL
       - helm upgrade --install $IMAGE_NAME . 
                       -n lists 
                       --set image.repository=$ECR_REPO 
