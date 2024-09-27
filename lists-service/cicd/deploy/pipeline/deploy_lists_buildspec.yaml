@@ -19,14 +19,13 @@ phases:
     commands:
       - echo Build started on $(date)
       - aws eks --region ap-southeast-2 update-kubeconfig --name $EKS_CLUSTER_NAME
-      - export REPO=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$LISTS_ECR_REPOSITORY_NAME
       - kubectl config set-context --current --namespace=lists
       - printf "$(kubectl config current-context)\n"
       - cd lists-service/helm
       - export CERTIFICATE_ARN=$(aws acm list-certificates --region ap-southeast-2 --query "CertificateSummaryList[?DomainName=='*.test.ala.org.au' && Status=='ISSUED'].CertificateArn" --output text)
       - helm upgrade --install ala-species-lists . 
                       -n lists 
-                      --set image.repository=$REPO 
+                      --set image.repository=$ECR_REPO 
                       --set image.tag=$IMAGE_TAG 
                       --set ingress.hostname=$SUB_DOMAIN.$HOSTED_ZONE
                       --set ingress.certificateArn=$CERTIFICATE_ARN

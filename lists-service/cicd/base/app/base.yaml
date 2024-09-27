@@ -76,6 +76,12 @@ Outputs:
     Description: The ECR repository ARN for the Lists service
     Value: !GetAtt ListsRepository.Arn
 
+  ListsRepositoryUri:
+    Description: The ECR repository URI for the lists service
+    Value: !GetAtt ListsRepository.RepositoryUri
+    Export:
+      Name: !Sub ${AWS::StackName}-ListsRepositoryUri
+
   ListsRepositoryName:
     Description: The ECR repository ARN for the Lists service
     Value: !Ref ListsRepository

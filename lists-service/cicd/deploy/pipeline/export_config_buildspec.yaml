@@ -16,7 +16,7 @@ env:
     - SLACK_DEPLOY_NOTIFICATION
     - SLACK_ALERT_CHANNEL
     - LISTS_SECRET_NAME
-    - LISTS_ECR_REPOSITORY_NAME
+    - ECR_REPO
     - DB_READ_ENDPOINT
     - DB_WRITE_ENDPOINT
 
@@ -61,11 +61,11 @@ phases:
       - set -a ; source env.txt ; set +a
       - LISTS_SECRET_NAME_ARN=$(aws cloudformation describe-stacks --stack-name $BASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='ListsSecret'].OutputValue" --output text)
       - LISTS_SECRET_NAME=$(echo $LISTS_SECRET_NAME_ARN | cut -d':' -f7 | rev | cut -d'-' -f2- | rev)
-      - LISTS_ECR_REPOSITORY_NAME=$(aws cloudformation describe-stacks --stack-name $BASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='ListsRepositoryName'].OutputValue" --output text)
+      - export ECR_REPO=$(aws cloudformation list-exports --query "Exports[?Name=='$BASE_STACK_NAME-ListsRepositoryUri'].Value" --output text)
+      - echo ECR_REPO=$ECR_REPO
       - DB_READ_ENDPOINT=$(aws cloudformation describe-stacks --stack-name $DATABASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='ReadEndpoint'].OutputValue" --output text)
       - DB_WRITE_ENDPOINT=$(aws cloudformation describe-stacks --stack-name $DATABASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='WriteEndpoint'].OutputValue" --output text)
       - echo LISTS_SECRET_NAME=$LISTS_SECRET_NAME
-      - echo LISTS_ECR_REPOSITORY_NAME=$LISTS_ECR_REPOSITORY_NAME
       - echo DB_READ_ENDPOINT=$DB_READ_ENDPOINT
       - echo DB_WRITE_ENDPOINT=$DB_WRITE_ENDPOINT
       - echo creating the app environment for the lists deployment...

@@ -222,7 +222,7 @@ Resources:
                 [
                   { "name":"LISTS_SECRET_NAME", "value":"#{ExportConfigNS.LISTS_SECRET_NAME}" },
                   { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
-                  { "name":"LISTS_ECR_REPOSITORY_NAME", "value":"#{ExportConfigNS.LISTS_ECR_REPOSITORY_NAME}" },
+                  { "name":"ECR_REPO", "value":"#{ExportConfigNS.ECR_REPO}" },
                   { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
                   { "name":"DB_READ_ENDPOINT", "value":"#{ExportConfigNS.DB_READ_ENDPOINT}" },
                   { "name":"DB_WRITE_ENDPOINT", "value":"#{ExportConfigNS.DB_WRITE_ENDPOINT}" },
