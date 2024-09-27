@@ -7,18 +7,19 @@ env:
   shell: bash
   git-credential-helper: yes
   variables:
-    DEBIAN_FRONTEND: "noninteractive"
+    DEBIAN_FRONTEND: noninteractive
   exported-variables:
-    - CODEBUILD_BUILD_NUMBER
     - BASE_STACK_FILE_PFIX
-    - PRODUCT_NAME
-    - PRODUCT_COMPONENT
-    - SLACK_DEPLOY_NOTIFICATION
-    - SLACK_ALERT_CHANNEL
-    - LISTS_SECRET_NAME
-    - ECR_REPO
+    - CODEBUILD_BUILD_NUMBER
     - DB_READ_ENDPOINT
     - DB_WRITE_ENDPOINT
+    - ECR_REPO
+    - EKS_CLUSTER_NAME
+    - LISTS_SECRET_NAME
+    - PRODUCT_COMPONENT
+    - PRODUCT_NAME
+    - SLACK_ALERT_CHANNEL
+    - SLACK_DEPLOY_NOTIFICATION
 
 phases:
 
@@ -68,6 +69,8 @@ phases:
       - echo LISTS_SECRET_NAME=$LISTS_SECRET_NAME
       - echo DB_READ_ENDPOINT=$DB_READ_ENDPOINT
       - echo DB_WRITE_ENDPOINT=$DB_WRITE_ENDPOINT
+      - export EKS_CLUSTER_NAME=$(aws cloudformation list-exports --query "Exports[?Name=='$REGOLITH_STACK_NAME-ClusterName'].Value" --output text)
+      - echo EKS_CLUSTER_NAME=$EKS_CLUSTER_NAME
       - echo creating the app environment for the lists deployment...
       - |
          source cicd/unset_codebuild_env_vars.sh

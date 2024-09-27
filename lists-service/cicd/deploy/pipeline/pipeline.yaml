@@ -14,9 +14,6 @@ Parameters:
   pCleanBranch:
     Type: String
     Description: The clean branch, can be used in resource names
-  pEksClusterName:
-    Type: String
-    Description: The name of the EKS cluster
   pEnvironment:
     Type: String
     Description: The AWS environment this belongs to
@@ -226,7 +223,7 @@ Resources:
                   { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
                   { "name":"DB_READ_ENDPOINT", "value":"#{ExportConfigNS.DB_READ_ENDPOINT}" },
                   { "name":"DB_WRITE_ENDPOINT", "value":"#{ExportConfigNS.DB_WRITE_ENDPOINT}" },
-                  { "name":"EKS_CLUSTER_NAME", "value":"${pEksClusterName}" }
+                  { "name":"EKS_CLUSTER_NAME", "value":"#{ExportConfigNS.EKS_CLUSTER_NAME}" }
                 ]
             InputArtifacts:
               - Name: 'SourceArtifact'
