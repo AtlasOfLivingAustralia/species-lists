@@ -22,7 +22,7 @@ Conditions:
     - !Equals
       - !Ref pEnvironment
       - production
-  IsFirstBuild: !Equals ["1", "1"]
+  IsFirstBuild: !Equals [!Ref pBuild, "1"]
 
 Resources:
 
