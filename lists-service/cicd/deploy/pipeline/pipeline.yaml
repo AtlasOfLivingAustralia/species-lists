@@ -202,7 +202,7 @@ Resources:
                  ]
             Namespace: ExportConfigNS
             InputArtifacts:
-              - Name: 'SourceArtifact'
+              - Name: SourceArtifact
             OutputArtifacts:
               - Name: ExportConfigArtifact
             RunOrder: 1
@@ -217,16 +217,17 @@ Resources:
               ProjectName: !Ref DeployLists
               EnvironmentVariables: !Sub |
                 [
-                  { "name":"LISTS_SECRET_NAME", "value":"#{ExportConfigNS.LISTS_SECRET_NAME}" },
                   { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
-                  { "name":"ECR_REPO", "value":"#{ExportConfigNS.ECR_REPO}" },
+                  { "name":"CERTIFICATE_ARN", "value":"#{ExportConfigNS.CERTIFICATE_ARN}" },
                   { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
                   { "name":"DB_READ_ENDPOINT", "value":"#{ExportConfigNS.DB_READ_ENDPOINT}" },
                   { "name":"DB_WRITE_ENDPOINT", "value":"#{ExportConfigNS.DB_WRITE_ENDPOINT}" },
-                  { "name":"EKS_CLUSTER_NAME", "value":"#{ExportConfigNS.EKS_CLUSTER_NAME}" }
+                  { "name":"ECR_REPO", "value":"#{ExportConfigNS.ECR_REPO}" },
+                  { "name":"EKS_CLUSTER_NAME", "value":"#{ExportConfigNS.EKS_CLUSTER_NAME}" },
+                  { "name":"LISTS_SECRET_NAME", "value":"#{ExportConfigNS.LISTS_SECRET_NAME}" }
                 ]
             InputArtifacts:
-              - Name: 'SourceArtifact'
+              - Name: SourceArtifact
             RunOrder: 2
 
           - Name: DeployNotification

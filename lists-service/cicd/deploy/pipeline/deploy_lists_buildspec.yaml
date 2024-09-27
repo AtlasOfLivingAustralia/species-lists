@@ -22,7 +22,6 @@ phases:
       - kubectl config set-context --current --namespace=lists
       - printf "$(kubectl config current-context)\n"
       - cd lists-service/helm
-      - export CERTIFICATE_ARN=$(aws acm list-certificates --region ap-southeast-2 --query "CertificateSummaryList[?DomainName=='*.test.ala.org.au' && Status=='ISSUED'].CertificateArn" --output text)
       - helm upgrade --install ala-species-lists . 
                       -n lists 
                       --set image.repository=$ECR_REPO 
