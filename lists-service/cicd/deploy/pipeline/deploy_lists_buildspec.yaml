@@ -11,6 +11,7 @@ env:
     DB_PASSWORD: $LISTS_SECRET_NAME:db-password
 
 phases:
+
   install:
     commands:
       - echo Installing dependencies...
