@@ -19,6 +19,8 @@ env:
     - IMAGE_NAME
     - IMAGE_TAG
     - LISTS_SECRET_NAME
+    - OIDC_CLIENT_ID
+    - OIDC_DISCOVERY_URI
     - PRODUCT_COMPONENT
     - PRODUCT_NAME
     - SLACK_ALERT_CHANNEL
@@ -74,6 +76,10 @@ phases:
       - echo DB_WRITE_ENDPOINT=$DB_WRITE_ENDPOINT
       - export EKS_CLUSTER_NAME=$(aws cloudformation list-exports --query "Exports[?Name=='$REGOLITH_STACK_NAME-ClusterName'].Value" --output text)
       - echo EKS_CLUSTER_NAME=$EKS_CLUSTER_NAME
+      - export $OIDC_DISCOVERY_URI=https://cognito-idp.ap-southeast-2.amazonaws.com/$COGNITO_POOL_ID/.well-known/openid-configuration
+      - echo OIDC_DISCOVERY_URI=$OIDC_DISCOVERY_URI
+      - export $OIDC_CLIENT_ID=$(aws cognito-idp list-user-pool-clients --user-pool-id $COGNITO_POOL_ID --query "UserPoolClients[?ClientName=='species-lists-ui-test'].ClientId" --output text)
+      - echo $OIDC_CLIENT_ID=$OIDC_CLIENT_ID
       - echo creating the app environment for the lists deployment...
       - |
          source lists-service/cicd/unset_codebuild_env_vars.sh

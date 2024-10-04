@@ -8,7 +8,7 @@ env:
   variables:
     JAVA_TOOL_OPTIONS: -Dhttps.protocols=TLSv1.2
   secrets-manager:
-    DB_PASSWORD: $LISTS_SECRET_NAME:db-password
+    $MONGODB_PASSWORD: $LISTS_SECRET_NAME:db-password
 
 phases:
 
@@ -18,6 +18,10 @@ phases:
       - curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
       - chmod 700 get_helm.sh
       - ./get_helm.sh
+
+  pre_build:
+    commands:
+      - source $CODEBUILD_SRC_DIR_ExportConfigArtifact/app.env
 
   build:
     commands:
@@ -35,11 +39,14 @@ phases:
                       --set ingress.certificateArn=$CERTIFICATE_ARN
                       --set mongodb.host=$MONGODB_HOST
                       --set mongodb.username=$MONGODB_USERNAME
+                      --set-literal mongodb.password=<mongodb password>
                       --set oidc.discoveryUri=$OIDC_DISCOVERY_URI
                       --set oidc.clientId=$OIDC_CLIENT_ID
                       --set bie.baseUrl=$BIE_BASE_URL
                       --set images.baseUrl=$IMAGES_BASE_URL
+                      --set namematching.baseUrl=$NAMEMATCHING_BASE_URL
                       --set userdetails.baseUrl=$USERDETAILS_BASE_URL
+                      --set deploymentAnnotations.checksum/configs="$(md5sum app.env | awk '{print $1}')
       - helm upgrade --install $IMAGE_NAME . 
                       -n lists 
                       --set image.repository=$ECR_REPO 
@@ -48,11 +55,14 @@ phases:
                       --set ingress.certificateArn=$CERTIFICATE_ARN
                       --set mongodb.host=$MONGODB_HOST
                       --set mongodb.username=$MONGODB_USERNAME
+                      --set-literal mongodb.password=$MONGODB_PASSWORD
                       --set oidc.discoveryUri=$OIDC_DISCOVERY_URI
                       --set oidc.clientId=$OIDC_CLIENT_ID
                       --set bie.baseUrl=$BIE_BASE_URL
                       --set images.baseUrl=$IMAGES_BASE_URL
+                      --set namematching.baseUrl=$NAMEMATCHING_BASE_URL
                       --set userdetails.baseUrl=$USERDETAILS_BASE_URL
+                      --set deploymentAnnotations.checksum/configs="$(md5sum app.env | awk '{print $1}')"
   post_build:
     commands:
       - echo Post-build phase...

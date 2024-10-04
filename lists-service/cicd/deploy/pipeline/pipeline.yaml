@@ -223,6 +223,8 @@ Resources:
                   { "name":"EKS_CLUSTER_NAME", "value":"#{ExportConfigNS.EKS_CLUSTER_NAME}" },
                   { "name":"IMAGE_NAME", "value":"#{ExportConfigNS.IMAGE_NAME}" },
                   { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
+                  { "name":"OIDC_CLIENT_ID", value": "#{ExportConfigNS.OIDC_CLIENT_ID}" },
+                  { "name":"OIDC_DISCOVERY_URI", "value":"#{ExportConfigNS.OIDC_DISCOVERY_URI}" },
                   { "name":"LISTS_SECRET_NAME", "value":"#{ExportConfigNS.LISTS_SECRET_NAME}" }
                 ]
             InputArtifacts:
