@@ -28,7 +28,7 @@ phases:
       # do we need to create the service account here?
       - cd lists-service/helm
       - | 
-        echo mongodb:
+        echo "mongodb:
             host: $MONGODB_HOST
             password: \"$MONGODB_PASSWORD\"
             username: $MONGODB_USERNAME
@@ -42,7 +42,7 @@ phases:
           namematching:
             baseUrl: $NAMEMATCHING_BASE_URL
           userdetails:
-            baseUrl: $USERDETAILS_BASE_URL > helm_values.yaml
+            baseUrl: $USERDETAILS_BASE_URL" > helm_values.yaml
       - echo helm values
       - cat helm_values.yaml
       - echo helm upgrade --install $IMAGE_NAME . 
