@@ -215,17 +215,24 @@ Resources:
               EnvironmentVariables: !Sub |
                 [
                   { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
+                  { "name":"BIE_BASE_URL", "value":"#{ExportConfigNS.BIE_BASE_URL}" },
                   { "name":"CERTIFICATE_ARN", "value":"#{ExportConfigNS.CERTIFICATE_ARN}" },
                   { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
                   { "name":"DB_READ_ENDPOINT", "value":"#{ExportConfigNS.DB_READ_ENDPOINT}" },
                   { "name":"DB_WRITE_ENDPOINT", "value":"#{ExportConfigNS.DB_WRITE_ENDPOINT}" },
                   { "name":"ECR_REPO", "value":"#{ExportConfigNS.ECR_REPO}" },
                   { "name":"EKS_CLUSTER_NAME", "value":"#{ExportConfigNS.EKS_CLUSTER_NAME}" },
+                  { "name":"HOSTED_ZONE", "value":"#{ExportConfigNS.HOSTED_ZONE}" },
                   { "name":"IMAGE_NAME", "value":"#{ExportConfigNS.IMAGE_NAME}" },
                   { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
-                  { "name":"OIDC_CLIENT_ID", value": "#{ExportConfigNS.OIDC_CLIENT_ID}" },
+                  { "name":"IMAGES_BASE_URL", "value":"#{ExportConfigNS.IMAGES_BASE_URL}" },
+                  { "name":"LISTS_SECRET_NAME", "value":"#{ExportConfigNS.LISTS_SECRET_NAME}" },
+                  { "name":"MONGODB_HOST", "value":"#{ExportConfigNS.MONGODB_HOST}" },
+                  { "name":"MONGODB_USERNAME", "value":"#{ExportConfigNS.MONGODB_USERNAME}" },
+                  { "name":"OIDC_CLIENT_ID", "value":"#{ExportConfigNS.OIDC_CLIENT_ID}" },
                   { "name":"OIDC_DISCOVERY_URI", "value":"#{ExportConfigNS.OIDC_DISCOVERY_URI}" },
-                  { "name":"LISTS_SECRET_NAME", "value":"#{ExportConfigNS.LISTS_SECRET_NAME}" }
+                  { "name":"SUB_DOMAIN", "value":"#{ExportConfigNS.SUB_DOMAIN}" },
+                  { "name":"USERDETAILS_BASE_URL", "value":"#{ExportConfigNS.USERDETAILS_BASE_URL}" }
                 ]
             InputArtifacts:
               - Name: SourceArtifact
