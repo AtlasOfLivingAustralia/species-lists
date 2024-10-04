@@ -87,5 +87,8 @@ bie:
 images:
   baseUrl: ""
 
+namematching:
+  baseUrl: ""
+
 userdetails:
   baseUrl: ""
