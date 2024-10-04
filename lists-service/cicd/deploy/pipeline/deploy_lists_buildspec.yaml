@@ -27,38 +27,39 @@ phases:
       - printf "$(kubectl config current-context)\n"
       # do we need to create the service account here?
       - cd lists-service/helm
+      - echo "mongodb:
+            host: $MONGODB_HOST
+            password: \"$MONGODB_PASSWORD\"
+            username: $MONGODB_USERNAME
+          oidc:
+            discoveryUri: $OIDC_DISCOVERY_URI
+            clientId: $OIDC_CLIENT_ID
+          bie:
+            baseUrl: $BIE_BASE_URL
+          images:
+            baseUrl: $IMAGES_BASE_URL
+          namematching:
+            baseUrl: $NAMEMATCHING_BASE_URL
+          userdetails:
+            baseUrl: $USERDETAILS_BASE_URL" > helm_values.yaml
+      - echo helm values
+      - cat helm_values.yaml
       - echo helm upgrade --install $IMAGE_NAME . 
                       -n lists 
                       --set image.repository=$ECR_REPO 
                       --set image.tag=$IMAGE_TAG 
                       --set ingress.hostname=$SUB_DOMAIN.$HOSTED_ZONE
                       --set ingress.certificateArn=$CERTIFICATE_ARN
-                      --set mongodb.host=$MONGODB_HOST
-                      --set mongodb.username=$MONGODB_USERNAME
-                      --set-literal mongodb.password=<mongodb password>
-                      --set oidc.discoveryUri=$OIDC_DISCOVERY_URI
-                      --set oidc.clientId=$OIDC_CLIENT_ID
-                      --set bie.baseUrl=$BIE_BASE_URL
-                      --set images.baseUrl=$IMAGES_BASE_URL
-                      --set namematching.baseUrl=$NAMEMATCHING_BASE_URL
-                      --set userdetails.baseUrl=$USERDETAILS_BASE_URL
-                      --set deploymentAnnotations.checksum/configs="$(md5sum app.env | awk '{print $1}')
+                      -f helm_values.txt
+                      --set deploymentAnnotations.checksum/configs="$(md5sum helm_values.yaml | awk '{print $1}')"
       - helm upgrade --install $IMAGE_NAME . 
                       -n lists 
                       --set image.repository=$ECR_REPO 
                       --set image.tag=$IMAGE_TAG 
                       --set ingress.hostname=$SUB_DOMAIN.$HOSTED_ZONE
                       --set ingress.certificateArn=$CERTIFICATE_ARN
-                      --set mongodb.host=$MONGODB_HOST
-                      --set mongodb.username=$MONGODB_USERNAME
-                      --set-literal mongodb.password=$MONGODB_PASSWORD
-                      --set oidc.discoveryUri=$OIDC_DISCOVERY_URI
-                      --set oidc.clientId=$OIDC_CLIENT_ID
-                      --set bie.baseUrl=$BIE_BASE_URL
-                      --set images.baseUrl=$IMAGES_BASE_URL
-                      --set namematching.baseUrl=$NAMEMATCHING_BASE_URL
-                      --set userdetails.baseUrl=$USERDETAILS_BASE_URL
-                      --set deploymentAnnotations.checksum/configs="$(md5sum app.env | awk '{print $1}')"
+                      -f helm_values.txt
+                      --set deploymentAnnotations.checksum/configs="$(md5sum helm_values.yaml | awk '{print $1}')"
   post_build:
     commands:
       - echo Post-build phase...
