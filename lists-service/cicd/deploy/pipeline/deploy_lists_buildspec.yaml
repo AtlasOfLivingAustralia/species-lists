@@ -27,7 +27,7 @@ phases:
       - printf "$(kubectl config current-context)\n"
       # do we need to create the service account here?
       - cd lists-service/helm
-      - > 
+      - | 
         echo mongodb:
             host: $MONGODB_HOST
             password: \"$MONGODB_PASSWORD\"
