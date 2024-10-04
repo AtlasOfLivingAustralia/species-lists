@@ -13,6 +13,8 @@ spec:
     metadata:
       labels:
         {{- include "ala-species-lists.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{- include "ala-species-lists.deploymentAnnotations" . | nindent 8 }}
     spec:
       containers:
         - name: {{ .Chart.Name }}

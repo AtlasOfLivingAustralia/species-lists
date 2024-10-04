@@ -43,6 +43,16 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
+deployment annotations
+checksum of the config
+*/}}
+{{- define "ala-species-lists.deploymentAnnotations" -}}
+{{- $configChecksun := ( dict "checksum/lists-service-config.properties" ( .Files.Get "config/lists-service-config.properties" | sha256sum ) ) -}}
+{{- $annotations := merge .Values.deploymentAnnotations $configChecksun -}}
+{{ toYaml $annotations }}
+{{- end }}
+
+{{/*
 Selector labels
 */}}
 {{- define "ala-species-lists.selectorLabels" -}}

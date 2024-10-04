@@ -19,6 +19,8 @@ serviceAccount:
   annotations: {}
   name: ""
 
+deploymentAnnotations: {}
+
 podAnnotations: {}
 podLabels: {}
 
