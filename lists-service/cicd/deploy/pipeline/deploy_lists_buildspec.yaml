@@ -29,20 +29,20 @@ phases:
       - cd lists-service/helm
       - | 
         echo "mongodb:
-            host: $MONGODB_HOST
-            password: \"$MONGODB_PASSWORD\"
-            username: $MONGODB_USERNAME
-          oidc:
-            discoveryUri: $OIDC_DISCOVERY_URI
-            clientId: $OIDC_CLIENT_ID
-          bie:
-            baseUrl: $BIE_BASE_URL
-          images:
-            baseUrl: $IMAGES_BASE_URL
-          namematching:
-            baseUrl: $NAMEMATCHING_BASE_URL
-          userdetails:
-            baseUrl: $USERDETAILS_BASE_URL" > helm_values.yaml
+          host: $MONGODB_HOST
+          password: \"$MONGODB_PASSWORD\"
+          username: $MONGODB_USERNAME
+        oidc:
+          discoveryUri: $OIDC_DISCOVERY_URI
+          clientId: $OIDC_CLIENT_ID
+        bie:
+          baseUrl: $BIE_BASE_URL
+        images:
+          baseUrl: $IMAGES_BASE_URL
+        namematching:
+          baseUrl: $NAMEMATCHING_BASE_URL
+        userdetails:
+          baseUrl: $USERDETAILS_BASE_URL" > helm_values.yaml
       - echo helm values
       - cat helm_values.yaml
       - echo helm upgrade --install $IMAGE_NAME . 
