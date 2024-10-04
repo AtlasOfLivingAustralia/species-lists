@@ -9,6 +9,7 @@ env:
   variables:
     DEBIAN_FRONTEND: noninteractive
   exported-variables:
+    - ADMIN_USER
     - BASE_STACK_FILE_PFIX
     - BIE_BASE_URL
     - CERTIFICATE_ARN
