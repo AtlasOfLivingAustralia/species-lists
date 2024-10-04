@@ -95,7 +95,9 @@ Resources:
   DocDbClusterParameterGroup:
     Type: AWS::DocDB::DBClusterParameterGroup
     Properties:
-      Name: !Sub ${pEnvironment}-docdb-cluster-pg
+      Name: !Sub
+        - ${pProductName}-${ResourceName}-cluster-pg
+        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
       Description: DocumentDB cluster parameter group
       Family: !Ref pDbParameterGroupFamily
       Parameters:
@@ -113,7 +115,9 @@ Resources:
     Properties:
       CopyTagsToSnapshot: true
       BackupRetentionPeriod: !Ref pBackupRetentionPeriod
-      DBClusterIdentifier: !Sub ${pEnvironment}-docdb-cluster
+      DBClusterIdentifier: !Sub
+        - ${pProductName}-${ResourceName}-cluster
+        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
       DBClusterParameterGroupName: !Ref DocDbClusterParameterGroup
       DBSubnetGroupName: !Ref DocDbSubnetGrp
       DeletionProtection: !If [ IsProd, true, false ]
