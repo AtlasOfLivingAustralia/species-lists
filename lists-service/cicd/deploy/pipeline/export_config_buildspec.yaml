@@ -86,7 +86,7 @@ phases:
       - echo EKS_CLUSTER_NAME=$EKS_CLUSTER_NAME
       - export OIDC_DISCOVERY_URI=https://cognito-idp.ap-southeast-2.amazonaws.com/$COGNITO_POOL_ID/.well-known/openid-configuration
       - echo OIDC_DISCOVERY_URI=$OIDC_DISCOVERY_URI
-      - export $OIDC_CLIENT_ID=$(aws cognito-idp list-user-pool-clients --user-pool-id $COGNITO_POOL_ID --query "UserPoolClients[?ClientName=='species-lists-ui-test'].ClientId" --output text)
+      - export OIDC_CLIENT_ID=$(aws cognito-idp list-user-pool-clients --user-pool-id $COGNITO_POOL_ID --query "UserPoolClients[?ClientName=='species-lists-ui-test'].ClientId" --output text)
       - echo $OIDC_CLIENT_ID=$OIDC_CLIENT_ID
       - echo creating the app environment for the lists deployment...
       - |
