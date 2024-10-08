@@ -255,6 +255,7 @@ Resources:
                 ]
             InputArtifacts:
               - Name: SourceArtifact
+              - Name: ExportConfigArtifact
             RunOrder: 2
 
           - Name: DeployNotification
