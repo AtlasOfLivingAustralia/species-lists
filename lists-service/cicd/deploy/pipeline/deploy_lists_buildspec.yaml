@@ -47,6 +47,7 @@ phases:
       - cat helm_values.yaml
       - echo helm upgrade --install $IMAGE_NAME . 
                       -n lists 
+                      --set releaseOverride=$HELM_RELEASE_NAME
                       --set image.repository=$ECR_REPO 
                       --set image.tag=$IMAGE_TAG 
                       --set ingress.hostname=$SUB_DOMAIN.$HOSTED_ZONE
@@ -54,7 +55,8 @@ phases:
                       -f helm_values.yaml
                       --set deploymentAnnotations.checksum/configs="$(md5sum helm_values.yaml | awk '{print $1}')"
       - helm upgrade --install $IMAGE_NAME . 
-                      -n lists 
+                      -n lists
+                      --set releaseOverride=
                       --set image.repository=$ECR_REPO 
                       --set image.tag=$IMAGE_TAG 
                       --set ingress.hostname=$SUB_DOMAIN.$HOSTED_ZONE
