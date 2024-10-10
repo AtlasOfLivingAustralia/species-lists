@@ -304,6 +304,7 @@ Resources:
               ProjectName: !Ref UninstallLists
               EnvironmentVariables: !Sub |
                 [
+                  { "name":"EKS_CLUSTER_NAME", "value":"#{ExportConfigNS.EKS_CLUSTER_NAME}" },
                   { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" }
                 ]
             InputArtifacts:
