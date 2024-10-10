@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ala-species-lists.fullname" . }}
+  labels:
+    {{- include "ala-species-lists.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "ala-species-lists.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ala-species-lists.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{- include "ala-species-lists.deploymentAnnotations" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          command: [ "java" ]
+          args:
+            - "-Djavax.net.ssl.trustStore=/data/lists-service/config/lists-service-truststore.jks"
+            - "-Djavax.net.ssl.trustStorePassword=changeme"
+            - "-Djavax.net.ssl.trustStoreType=jks"
+            - "-jar"
+            - "app.jar"
+            - "--spring.config.location=file:/data/lists-service/config/lists-service-config.properties"
+          envFrom:
+            - secretRef:
+                name: {{ include "ala-species-lists.fullname" . }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /data/lists-service/config/lists-service-config.properties
+              subPath: lists-service-config.properties
+            - name: config-volume
+              mountPath: /data/lists-service/config/constraints.json
+              subPath: constraints.json
+            - name: config-volume
+              mountPath: /data/lists-service/config/lists-service-truststore.jks
+              subPath: lists-service-truststore.jks
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ include "ala-species-lists.fullname" . }}

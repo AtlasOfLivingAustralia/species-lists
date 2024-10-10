@@ -1,0 +1,28 @@
+version: 0.2
+###
+# This build project builds the LISTS site files ready for upload to s3
+
+env:
+  shell: bash
+
+phases:
+  install:
+    on-failure: ABORT
+    runtime-versions:
+      nodejs: $NODE_VERSION
+    commands:
+      - cp lists-ui/vite.properties lists-ui/.env
+      - cd lists-ui
+  pre_build:
+    commands:
+      - echo running npm install...
+      - npm i
+  build:
+    commands:
+      - echo building...
+      - npm run build:$ENVIRONMENT
+
+artifacts:
+  base-directory: lists-ui/dist
+  files:
+    - '**/*'
