@@ -100,6 +100,27 @@ Resources:
         BuildSpec: !Sub lists-service/cicd/${pProductComponent}/pipeline/deploy_lists_buildspec.yaml
       TimeoutInMinutes: 20
 
+  UninstallLists:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub
+        - ${pProductName}-${pProductComponent}-uninstall-lists-${ResourceName}
+        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      Description: Uninstall lists
+      ServiceRole:
+        Fn::ImportValue:
+          Fn::Sub: ${pBootstrapStackName}-CodeBuildServiceRoleArn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !Sub lists-service/cicd/${pProductComponent}/pipeline/uninstall_lists_buildspec.yaml
+      TimeoutInMinutes: 20
+
   DeployNotification:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -277,6 +298,22 @@ Resources:
             Configuration:
               CustomData: Approval required to tear down this stack
             RunOrder: 1
+          - Name: UninstallLists
+            ActionTypeId:
+              Owner: AWS
+              Category: Build
+              Version: 1
+              Provider: CodeBuild
+            Configuration:
+              ProjectName: !Ref UninstallLists
+              EnvironmentVariables: !Sub |
+                [
+                  { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
+                  { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" },
+                ]
+            InputArtifacts:
+              - Name: SourceArtifact
+            RunOrder: 2
           - Name: TeardownCodePipeline
             ActionTypeId:
               Owner: AWS
@@ -289,7 +326,7 @@ Resources:
               RoleArn:
                    Fn::ImportValue:
                      Fn::Sub: '${pBootstrapStackName}-CloudFormationServiceRoleArn'
-            RunOrder: 2
+            RunOrder: 3
 
   DeployListsCodeBuildLogGroup:
     Type: AWS::Logs::LogGroup
