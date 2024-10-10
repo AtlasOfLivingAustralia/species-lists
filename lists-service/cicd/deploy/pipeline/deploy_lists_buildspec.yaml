@@ -23,8 +23,8 @@ phases:
     commands:
       - echo Build started on $(date)
       - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME
-      - kubectl config set-context --current --namespace=$PRODUCT_NAME
-      - printf "$(kubectl config current-context)\n"
+#      - kubectl config set-context --current --namespace=$PRODUCT_NAME
+#      - printf "$(kubectl config current-context)\n"
       # do we need to create the service account here?
       - cd lists-service/helm
       - | 
