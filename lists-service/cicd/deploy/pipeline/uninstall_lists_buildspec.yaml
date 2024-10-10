@@ -7,8 +7,6 @@ env:
   shell: bash
   variables:
     JAVA_TOOL_OPTIONS: -Dhttps.protocols=TLSv1.2
-  secrets-manager:
-    MONGODB_PASSWORD: $LISTS_SECRET_NAME:db-password
 
 phases:
 
