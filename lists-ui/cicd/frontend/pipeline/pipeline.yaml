@@ -302,7 +302,7 @@ Resources:
                     { "name":"SRC_BRANCH", "value":"#{CheckoutSrcNS.BranchName}" },
                     { "name":"VITE_API_BASEURL", "value":"#{ExportConfigNS.VITE_API_BASEURL}" },
                     { "name":"VITE_AUTH_AUTHORITY", "value":"#{ExportConfigNS.VITE_AUTH_AUTHORITY}" },
-                    { "name":"VITE_AUTH_CLIENT_ID", "value":"#{ExportConfigNS.OIDC_CLIENT_ID}" },
+                    { "name":"VITE_AUTH_CLIENT_ID", "value":"#{ExportConfigNS.VITE_AUTH_CLIENT_ID}" },
                     { "name":"VITE_AUTH_END_SESSION_URI", "value":"#{ExportConfigNS.VITE_AUTH_END_SESSION_URI}"},
                     { "name":"VITE_AUTH_REDIRECT_URI", "value":"#{ExportConfigNS.VITE_AUTH_REDIRECT_URI}"}
                   ]
