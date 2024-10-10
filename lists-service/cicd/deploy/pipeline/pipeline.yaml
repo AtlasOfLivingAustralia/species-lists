@@ -304,8 +304,7 @@ Resources:
               ProjectName: !Ref UninstallLists
               EnvironmentVariables: !Sub |
                 [
-                  { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
-                  { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" },
+                  { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" }
                 ]
             InputArtifacts:
               - Name: SourceArtifact
