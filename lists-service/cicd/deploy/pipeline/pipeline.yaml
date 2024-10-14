@@ -335,6 +335,16 @@ Resources:
         - Key: Name
           Value: !Ref AWS::StackName
 
+  UninstallListsCodeBuildLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/codebuild/${UninstallLists}
+      RetentionInDays: 30
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+
   ExportConfigCodeBuildLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Delete
