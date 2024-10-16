@@ -10,7 +10,7 @@ import { Link, useLocation, useRouteLoaderData } from 'react-router-dom';
 
 import classes from './Breadcrumbs.module.css';
 import { ChevronRightIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { UploadButton } from '#/components/UploadButton';
+import { ActionButtons } from '#/components/ActionButtons';
 
 interface ListLoaderData {
   meta: SpeciesList;
@@ -50,7 +50,7 @@ export function Breadcrumbs() {
             </Text>
           )}
         </Base>
-        <UploadButton />
+        <ActionButtons />
       </Group>
     </Container>
   );
