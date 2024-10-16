@@ -16,6 +16,31 @@ export default (token: string) => ({
       null,
       token
     ),
+  download: async (id: string): Promise<void> => {
+    const response = await fetch(
+      `${import.meta.env.VITE_API_BASEURL}${
+        import.meta.env.VITE_API_LIST_DOWNLOAD
+      }/${id}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    // Create the anchor element containing the list data
+    const data = await response.blob();
+    const url = window.URL.createObjectURL(data);
+    const a = document.createElement('a');
+
+    // Trigger the download
+    a.href = url;
+    a.download = `species-list-${id}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  },
   rematch: async (id: string): Promise<void> =>
     request(
       `${import.meta.env.VITE_API_LIST_REMATCH}/${id}`,
