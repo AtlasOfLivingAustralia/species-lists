@@ -57,6 +57,7 @@ import { Flags } from './components/Flags';
 import { Actions } from './components/Actions';
 import { Summary } from './components/Summary';
 import { FiltersDrawer } from '#/components/FiltersDrawer';
+import { ThSortable } from './components/Table/ThSortable';
 
 interface ListLoaderData {
   meta: SpeciesList;
@@ -89,6 +90,10 @@ export function Component() {
   const [refresh, setRefresh] = useState<boolean>(false);
   const [editing, setEditing] = useState<boolean>(false);
 
+  // Sorting state
+  const [sort, setSort] = useState<string>('scientificName');
+  const [dir, setDir] = useState<'asc' | 'desc'>('asc');
+
   const mounted = useMounted();
   const params = useParams();
   const ala = useALA();
@@ -114,6 +119,8 @@ export function Component() {
             size,
             filters: toKV(filters),
             isPrivate: false,
+            sort,
+            dir,
           },
           ala.token
         );
@@ -127,12 +134,24 @@ export function Component() {
 
     if (mounted) runQuery();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, size, filters, searchQuery, refresh]);
+  }, [page, size, filters, searchQuery, refresh, sort, dir]);
 
   // Keep the current page in check
   useEffect(() => {
     if (totalPages && page >= totalPages) setPage(totalPages - 1);
   }, [page, totalPages]);
+
+  const handleSortClick = useCallback(
+    (newSort: string) => {
+      if (sort === newSort) {
+        setDir(dir === 'asc' ? 'desc' : 'asc');
+      } else {
+        setSort(newSort);
+        setDir('desc');
+      }
+    },
+    [sort, dir]
+  );
 
   const handleSizeChange = (newSize: string | null) => {
     const newSizeInt = parseInt(newSize || '10', 10);
@@ -276,6 +295,7 @@ export function Component() {
   );
 
   const hasError = Boolean(error);
+  console.log(sort, dir);
 
   return (
     <>
@@ -379,18 +399,28 @@ export function Component() {
                 >
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th>
+                      <ThSortable
+                        active={sort === 'scientificName'}
+                        dir={dir}
+                        onSort={() => handleSortClick('scientificName')}
+                      >
                         <FormattedMessage
                           id='suppliedName'
                           defaultMessage='Supplied name'
                         />
-                      </Table.Th>
-                      <ThMatch>
+                      </ThSortable>
+                      <ThSortable
+                        active={sort === 'classification.scientificName'}
+                        dir={dir}
+                        onSort={() =>
+                          handleSortClick('classification.scientificName')
+                        }
+                      >
                         <FormattedMessage
                           id='scientificName'
                           defaultMessage='Scientific name'
                         />
-                      </ThMatch>
+                      </ThSortable>
                       {meta.fieldList.map((field) => (
                         <ThEditable
                           key={field}
@@ -412,9 +442,16 @@ export function Component() {
                         />
                       )}
                       {classificationFields.map((field) => (
-                        <ThMatch key={field}>
+                        <ThSortable
+                          key={field}
+                          active={sort === `classification.${field}`}
+                          dir={dir}
+                          onSort={() =>
+                            handleSortClick(`classification.${field}`)
+                          }
+                        >
                           <FormattedMessage id={`classification.${field}`} />
-                        </ThMatch>
+                        </ThSortable>
                       ))}
                     </Table.Tr>
                   </Table.Thead>

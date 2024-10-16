@@ -35,6 +35,7 @@ export function TrItem({
       <Table.Td width='auto'>
         {row.classification?.scientificName ? (
           <Anchor
+            fs='italic'
             href={`${import.meta.env.VITE_ALA_BIE_SPECIES}/${
               row.classification?.taxonConceptID
             }`}

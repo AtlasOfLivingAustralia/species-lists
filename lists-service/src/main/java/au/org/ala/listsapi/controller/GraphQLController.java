@@ -739,7 +739,7 @@ public class GraphQLController {
       @Argument Integer page,
       @Argument Integer size,
       @Argument String sort,
-      @Argument String direction,
+      @Argument String dir,
       @AuthenticationPrincipal Principal principal) {
 
     if (speciesListID != null) {
@@ -773,7 +773,7 @@ public class GraphQLController {
             s.field(
                 new FieldSort.Builder()
                     .field(sort)
-                    .order(SortOrder.valueOf(direction != null ? direction : "Asc"))
+                    .order(dir.equals("asc") ? SortOrder.Asc : SortOrder.Desc)
                     .build()));
 
     Query query = builder.build();
