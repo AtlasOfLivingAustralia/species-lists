@@ -78,6 +78,13 @@ public class UploadService {
       String name, InputSpeciesList speciesListMetadata, File fileToLoad, boolean dryRun)
       throws Exception {
 
+    // If the species list is public, or authoritative, create a collectory link
+    boolean isAuthoritative = Boolean.parseBoolean(speciesListMetadata.getIsAuthoritative());
+    boolean isPrivate = Boolean.parseBoolean(speciesListMetadata.getIsPrivate());
+    if (!isPrivate || isAuthoritative) {
+
+    }
+
     // create the species list in mongo
     SpeciesList speciesList = new SpeciesList();
     speciesList.setOwner(name);
