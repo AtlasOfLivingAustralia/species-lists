@@ -128,7 +128,9 @@ Outputs:
 
   ListsSecret:
     Description: The Secrets name for lists 
-    Value: !Ref ListsSecret.Name
+    Value: !Sub
+      - lists-${ResourceName}
+      - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
     Export:
       Name: !Sub ${AWS::StackName}-ListsSecret
 
