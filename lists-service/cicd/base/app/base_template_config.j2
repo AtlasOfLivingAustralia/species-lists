@@ -2,7 +2,9 @@
   "Parameters" : {
     "pBuild"                : "{{ codebuild_build_number }}",
     "pCleanBranch"          : "{{ clean_branch }}",
-    "pEnvironment"          : "{{ environment }}"
+    "pEnvironment"          : "{{ environment }}",
+    "pCognitoStackName"     : "{{ cognito_stack_name }}",
+    "pAppClientDomain"      : "{{ app_client_domain }}"
   },
   "Tags" : {
     "product"     : "{{ product_name }}",

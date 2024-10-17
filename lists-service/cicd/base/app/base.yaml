@@ -12,6 +12,12 @@ Parameters:
   pEnvironment:
     Type: String
     Description: The AWS environment this belongs to
+  pCognitoStackName:
+    Type: String
+    Description: The name of the Cognito stack
+  pAppClientDomain:
+    Type: String
+    Description: The domain for the app client
 
 Conditions:
 
@@ -69,7 +75,40 @@ Resources:
                    "db-password" : ""
                 }
 
-
+  AppClient:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        pName: !Sub
+          - ${pProductName}-${ResourceName}-species-lists
+          - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+        pCallbackUrls: !Join
+          - ','
+          - - !Sub https://${pAppClientDomain}
+        pDefaultUrl: !Sub https://${pAppClientDomain}
+        pLogoutUrls: !Join
+          - ','
+          - - !Sub https://${pAppClientDomain}
+        pScopes: !Join
+          - ','
+          - - email
+            - openid
+            - profile
+            - ala/roles
+            - ala/attrs
+        pGenerateSecret: false
+        pAllowedOAuthFlows: !Join
+          - ','
+          - - code
+        pUserPoolId:
+          Fn::ImportValue:
+            Fn::Sub: ${pCognitoStackName}-UserPoolId
+      TemplateURL: !Sub
+        - https://${AppClientBucket}.s3.${AWS::Region}.amazonaws.com/cicd/cognito/app/app_client.yaml
+        - AppClientBucket:
+            Fn::ImportValue:
+                      Fn::Sub: ${pCognitoStackName}-AppClientBucket
+      TimeoutInMinutes: 5
 
 Outputs:
 
@@ -90,3 +129,7 @@ Outputs:
   ListsSecret:
     Description: The Secrets name for lists 
     Value: !Ref ListsSecret
+
+  ListsAppClient:
+    Description: The app client for the lists service
+    Value: !GetAtt AppClient.Outputs.AppClientId
