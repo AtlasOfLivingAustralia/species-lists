@@ -80,7 +80,7 @@ Resources:
     Properties:
       Parameters:
         pName: !Sub
-          - ${pProductName}-${ResourceName}-species-lists
+          - species-lists-${ResourceName}
           - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
         pCallbackUrls: !Join
           - ','
