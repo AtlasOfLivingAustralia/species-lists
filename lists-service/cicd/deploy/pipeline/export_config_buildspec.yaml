@@ -10,25 +10,15 @@ env:
     DEBIAN_FRONTEND: noninteractive
   exported-variables:
     - ADMIN_USER
-#    - BASE_STACK_FILE_PFIX
     - BIE_BASE_URL
     - CERTIFICATE_ARN
     - CODEBUILD_BUILD_NUMBER
-#    - DB_READ_ENDPOINT
-#    - DB_WRITE_ENDPOINT
-#    - ECR_REPO
-#    - EKS_CLUSTER_NAME
     - HELM_RELEASE_NAME
     - HOSTED_ZONE
-#    - IMAGE_NAME
     - IMAGE_TAG
     - IMAGES_BASE_URL
-#    - LISTS_SECRET_NAME
-#    - MONGODB_HOST
     - MONGODB_USERNAME
     - NAMEMATCHING_BASE_URL
-#    - OIDC_CLIENT_ID
-#    - OIDC_DISCOVERY_URI
     - PRODUCT_COMPONENT
     - PRODUCT_NAME
     - SLACK_ALERT_CHANNEL
@@ -75,21 +65,7 @@ phases:
       - lists-service/cicd/gen_env_vars.py --env $ENVIRONMENT --clean-branch $CLEAN_BRANCH --conf lists-service/cicd/$PRODUCT_COMPONENT/config.ini > env.txt
       - echo loading config..
       - set -a ; source env.txt ; set +a
-#      - LISTS_SECRET_NAME_ARN=$(aws cloudformation describe-stacks --stack-name $BASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='ListsSecret'].OutputValue" --output text)
-#      - LISTS_SECRET_NAME=$(echo $LISTS_SECRET_NAME_ARN | cut -d':' -f7 | rev | cut -d'-' -f2- | rev)
-#      - echo LISTS_SECRET_NAME=$LISTS_SECRET_NAME
-#      - export ECR_REPO=$(aws cloudformation list-exports --query "Exports[?Name=='$BASE_STACK_NAME-ListsRepositoryUri'].Value" --output text)
-#      - echo ECR_REPO=$ECR_REPO
-#      - DB_READ_ENDPOINT=$(aws cloudformation describe-stacks --stack-name $DATABASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='DocDbClusterReaderEndpoint'].OutputValue" --output text)
-#      - DB_WRITE_ENDPOINT=$(aws cloudformation describe-stacks --stack-name $DATABASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='DocDbClusterEndpoint'].OutputValue" --output text)
-#      - echo DB_READ_ENDPOINT=$DB_READ_ENDPOINT
-#      - echo DB_WRITE_ENDPOINT=$DB_WRITE_ENDPOINT
-#      - export EKS_CLUSTER_NAME=$(aws cloudformation list-exports --query "Exports[?Name=='$REGOLITH_STACK_NAME-ClusterName'].Value" --output text)
-#      - echo EKS_CLUSTER_NAME=$EKS_CLUSTER_NAME
-#      - export OIDC_DISCOVERY_URI=https://cognito-idp.ap-southeast-2.amazonaws.com/$COGNITO_POOL_ID/.well-known/openid-configuration
-#      - echo OIDC_DISCOVERY_URI=$OIDC_DISCOVERY_URI
-#      - export OIDC_CLIENT_ID=$(aws cognito-idp list-user-pool-clients --user-pool-id $COGNITO_POOL_ID --query "UserPoolClients[?ClientName=='${COGNITO_APP_NAME}'].ClientId" --output text)
-#      - echo OIDC_CLIENT_ID=$OIDC_CLIENT_ID
+      # this is not being used in the deploy build spec. The environment vars are exported into the pipeline namespace.
       - echo creating the app environment for the lists deployment...
       - |
          source lists-service/cicd/unset_codebuild_env_vars.sh
