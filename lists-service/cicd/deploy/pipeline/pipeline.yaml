@@ -256,19 +256,19 @@ Resources:
                   ]
                 - AppClientId:
                     Fn::ImportValue:
-                        Fn::Sub: "#{ExportConfigNS.BASE_STACK_NAME}-AppClientId"
-                - EksRepo:
+                      Fn::Sub: "#{ExportConfigNS.BASE_STACK_NAME}-AppClientId"
+                  EksRepo:
                     Fn::ImportValue:
-                      Fn::Sub: "${ExportConfigNS.BASE_STACK_NAME}-ListsRepositoryUri"
-                - MongoDbHost:
+                      Fn::Sub: "#{ExportConfigNS.BASE_STACK_NAME}-ListsRepositoryUri"
+                  MongoDbHost:
                     Fn::ImportValue:
                       Fn::Sub: "#{ExportConfigNS.DATABASE_STACK_NAME}-DocDbClusterEndpoint"
-                - OidcDiscoveryUrl:
-                      Fn:Sub:
+                  OidcDiscoveryUrl:
+                      Fn::Sub:
                         - "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}/.well-known/openid-configuration"
                         - UserPoolId:
                             Fn::ImportValue:
-                              Fn::Sub: "${ExportConfigNS.BASE_STACK_NAME}-UserPoolId"
+                              Fn::Sub: "#{ExportConfigNS.BASE_STACK_NAME}-UserPoolId"
 
             InputArtifacts:
               - Name: SourceArtifact
