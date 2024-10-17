@@ -107,7 +107,7 @@ Resources:
         - https://${AppClientBucket}.s3.${AWS::Region}.amazonaws.com/cicd/cognito/app/app_client.yaml
         - AppClientBucket:
             Fn::ImportValue:
-                      Fn::Sub: ${pCognitoStackName}-AppClientBucket
+              Fn::Sub: ${pCognitoStackName}-AppClientBucket
       TimeoutInMinutes: 5
 
 Outputs:
@@ -130,6 +130,15 @@ Outputs:
     Description: The Secrets name for lists 
     Value: !Ref ListsSecret
 
+  UserPoolId:
+    Description: The user pool id for the lists service
+    Value:
+      Fn::ImportValue: !Sub ${pCognitoStackName}-UserPoolId
+    Export:
+      Name: !Sub ${AWS::StackName}-UserPoolId
+
   ListsAppClient:
     Description: The app client for the lists service
     Value: !GetAtt AppClient.Outputs.AppClientId
+    Export:
+      Name: !Sub ${AWS::StackName}-AppClientId
