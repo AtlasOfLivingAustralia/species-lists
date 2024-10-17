@@ -5,6 +5,9 @@ Parameters:
   pAutoDeploy:
     Type: String
     Description: Sets the pipeline to auto deploy on repo changes
+  pBaseStackName:
+    Type: String
+    Description: The name of the base stack
   pBootstrapStackName:
     Type: String
     Description: the name of the bootstrap stack
@@ -256,19 +259,19 @@ Resources:
                   ]
                 - AppClientId:
                     Fn::ImportValue:
-                      Fn::Sub: "#{ExportConfigNS.BASE_STACK_NAME}-AppClientId"
+                      Fn::Sub: "${pBaseStackName}-AppClientId"
                   EksRepo:
                     Fn::ImportValue:
-                      Fn::Sub: "#{ExportConfigNS.BASE_STACK_NAME}-ListsRepositoryUri"
+                      Fn::Sub: "${pBaseStackName}-ListsRepositoryUri"
                   MongoDbHost:
                     Fn::ImportValue:
-                      Fn::Sub: "#{ExportConfigNS.DATABASE_STACK_NAME}-DocDbClusterEndpoint"
+                      Fn::Sub: "${pBaseStackName}-DocDbClusterEndpoint"
                   OidcDiscoveryUrl:
                       Fn::Sub:
                         - "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}/.well-known/openid-configuration"
                         - UserPoolId:
                             Fn::ImportValue:
-                              Fn::Sub: "#{ExportConfigNS.BASE_STACK_NAME}-UserPoolId"
+                              Fn::Sub: "${pBaseStackName}-UserPoolId"
 
             InputArtifacts:
               - Name: SourceArtifact
