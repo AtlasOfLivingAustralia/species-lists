@@ -128,7 +128,9 @@ Outputs:
 
   ListsSecret:
     Description: The Secrets name for lists 
-    Value: !Ref ListsSecret
+    Value: !Ref ListsSecret.Name
+    Export:
+      Name: !Sub ${AWS::StackName}-ListsSecret
 
   UserPoolId:
     Description: The user pool id for the lists service
