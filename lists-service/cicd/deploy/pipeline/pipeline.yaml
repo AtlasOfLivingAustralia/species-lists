@@ -17,6 +17,9 @@ Parameters:
   pCleanBranch:
     Type: String
     Description: The clean branch, can be used in resource names
+  pDatabaseStackName:
+    Type: String
+    Description: The name of the database stack
   pEnvironment:
     Type: String
     Description: The AWS environment this belongs to
@@ -38,6 +41,9 @@ Parameters:
   pProductName:
     Type: String
     Description: The name of the product
+  pRegolithStackName:
+    Type: String
+    Description: The name of the regolith stack
   pRestartExecutionOnUpdate:
     Type: String
     Description: Restart that pipeline if it's been updated
@@ -243,7 +249,7 @@ Resources:
                     { "name":"BIE_BASE_URL", "value":"#{ExportConfigNS.BIE_BASE_URL}" },
                     { "name":"CERTIFICATE_ARN", "value":"#{ExportConfigNS.CERTIFICATE_ARN}" },
                     { "name":"ECR_REPO", "value":"${EksRepo}" },
-                    { "name":"EKS_CLUSTER_NAME", "value":"#{ExportConfigNS.EKS_CLUSTER_NAME}" },
+                    { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
                     { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" },
                     { "name":"HOSTED_ZONE", "value":"#{ExportConfigNS.HOSTED_ZONE}" },
                     { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
@@ -260,12 +266,15 @@ Resources:
                 - AppClientId:
                     Fn::ImportValue:
                       Fn::Sub: "${pBaseStackName}-AppClientId"
+                  EksClusterName:
+                    Fn::ImportValue:
+                      Fn::Sub: "${pRegolithStackName}-ClusterName"
                   EksRepo:
                     Fn::ImportValue:
                       Fn::Sub: "${pBaseStackName}-ListsRepositoryUri"
                   MongoDbHost:
                     Fn::ImportValue:
-                      Fn::Sub: "${pBaseStackName}-DocDbClusterEndpoint"
+                      Fn::Sub: "${pDatabaseStackName}-DocDbClusterEndpoint"
                   OidcDiscoveryUrl:
                       Fn::Sub:
                         - "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}/.well-known/openid-configuration"

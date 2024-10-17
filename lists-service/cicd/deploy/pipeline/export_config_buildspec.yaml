@@ -10,17 +10,17 @@ env:
     DEBIAN_FRONTEND: noninteractive
   exported-variables:
     - ADMIN_USER
-    - BASE_STACK_FILE_PFIX
+#    - BASE_STACK_FILE_PFIX
     - BIE_BASE_URL
     - CERTIFICATE_ARN
     - CODEBUILD_BUILD_NUMBER
-    - DB_READ_ENDPOINT
-    - DB_WRITE_ENDPOINT
+#    - DB_READ_ENDPOINT
+#    - DB_WRITE_ENDPOINT
 #    - ECR_REPO
-    - EKS_CLUSTER_NAME
+#    - EKS_CLUSTER_NAME
     - HELM_RELEASE_NAME
     - HOSTED_ZONE
-    - IMAGE_NAME
+#    - IMAGE_NAME
     - IMAGE_TAG
     - IMAGES_BASE_URL
 #    - LISTS_SECRET_NAME
@@ -80,12 +80,12 @@ phases:
 #      - echo LISTS_SECRET_NAME=$LISTS_SECRET_NAME
 #      - export ECR_REPO=$(aws cloudformation list-exports --query "Exports[?Name=='$BASE_STACK_NAME-ListsRepositoryUri'].Value" --output text)
 #      - echo ECR_REPO=$ECR_REPO
-      - DB_READ_ENDPOINT=$(aws cloudformation describe-stacks --stack-name $DATABASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='DocDbClusterReaderEndpoint'].OutputValue" --output text)
-      - DB_WRITE_ENDPOINT=$(aws cloudformation describe-stacks --stack-name $DATABASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='DocDbClusterEndpoint'].OutputValue" --output text)
-      - echo DB_READ_ENDPOINT=$DB_READ_ENDPOINT
-      - echo DB_WRITE_ENDPOINT=$DB_WRITE_ENDPOINT
-      - export EKS_CLUSTER_NAME=$(aws cloudformation list-exports --query "Exports[?Name=='$REGOLITH_STACK_NAME-ClusterName'].Value" --output text)
-      - echo EKS_CLUSTER_NAME=$EKS_CLUSTER_NAME
+#      - DB_READ_ENDPOINT=$(aws cloudformation describe-stacks --stack-name $DATABASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='DocDbClusterReaderEndpoint'].OutputValue" --output text)
+#      - DB_WRITE_ENDPOINT=$(aws cloudformation describe-stacks --stack-name $DATABASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='DocDbClusterEndpoint'].OutputValue" --output text)
+#      - echo DB_READ_ENDPOINT=$DB_READ_ENDPOINT
+#      - echo DB_WRITE_ENDPOINT=$DB_WRITE_ENDPOINT
+#      - export EKS_CLUSTER_NAME=$(aws cloudformation list-exports --query "Exports[?Name=='$REGOLITH_STACK_NAME-ClusterName'].Value" --output text)
+#      - echo EKS_CLUSTER_NAME=$EKS_CLUSTER_NAME
 #      - export OIDC_DISCOVERY_URI=https://cognito-idp.ap-southeast-2.amazonaws.com/$COGNITO_POOL_ID/.well-known/openid-configuration
 #      - echo OIDC_DISCOVERY_URI=$OIDC_DISCOVERY_URI
 #      - export OIDC_CLIENT_ID=$(aws cognito-idp list-user-pool-clients --user-pool-id $COGNITO_POOL_ID --query "UserPoolClients[?ClientName=='${COGNITO_APP_NAME}'].ClientId" --output text)
