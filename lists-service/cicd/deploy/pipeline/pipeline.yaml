@@ -298,19 +298,24 @@ Resources:
               Provider: CodeBuild
             Configuration:
               ProjectName: !Ref DeployNotification
-              EnvironmentVariables: !Sub |
-                [
-                  { "name":"AUTHOR", "value":"#{CheckoutSrcNS.AuthorDisplayName}" },
-                  { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
-                  { "name":"COMMIT_ID", "value":"#{CheckoutSrcNS.CommitId}" },
-                  { "name":"ENVIRONMENT", "value":"${pEnvironment}" },
-                  { "name":"PRODUCT_COMPONENT", "value":"#{ExportConfigNS.PRODUCT_COMPONENT}" },
-                  { "name":"PRODUCT_NAME", "value":"#{ExportConfigNS.PRODUCT_NAME}" },
-                  { "name":"REPO", "value":"#{CheckoutSrcNS.FullRepositoryName}" },
-                  { "name":"SLACK_ALERT_CHANNEL", "value":"#{ExportConfigNS.SLACK_ALERT_CHANNEL}" },
-                  { "name":"SLACK_DEPLOY_NOTIFICATION", "value":"#{ExportConfigNS.SLACK_DEPLOY_NOTIFICATION}" },
-                  { "name":"SRC_BRANCH", "value":"${pGitHubBranch}" }
-                ]
+              EnvironmentVariables:
+                Fn::Sub:
+                  - |
+                    [
+                      { "name":"AUTHOR", "value":"#{CheckoutSrcNS.AuthorDisplayName}" },
+                      { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
+                      { "name":"COMMIT_ID", "value":"#{CheckoutSrcNS.CommitId}" },
+                      { "name":"ENVIRONMENT", "value":"${pEnvironment}" },
+                      { "name":"PRODUCT_COMPONENT", "value":"#{ExportConfigNS.PRODUCT_COMPONENT}" },
+                      { "name":"PRODUCT_NAME", "value":"#{ExportConfigNS.PRODUCT_NAME}" },
+                      { "name":"REPO", "value":"#{CheckoutSrcNS.FullRepositoryName}" },
+                      { "name":"SLACK_ALERT_CHANNEL", "value":"#{ExportConfigNS.SLACK_ALERT_CHANNEL}" },
+                      { "name":"SLACK_DEPLOY_NOTIFICATION", "value":"#{ExportConfigNS.SLACK_DEPLOY_NOTIFICATION}" },
+                      { "name":"SRC_BRANCH", "value":"${pGitHubBranch}" }
+                    ]
+                  - EksClusterName:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pRegolithStackName}-ClusterName"
             Namespace: DeployNotificationNS
             InputArtifacts:
               - Name: 'SourceArtifact'
@@ -337,7 +342,7 @@ Resources:
               ProjectName: !Ref UninstallLists
               EnvironmentVariables: !Sub |
                 [
-                  { "name":"EKS_CLUSTER_NAME", "value":"#{ExportConfigNS.EKS_CLUSTER_NAME}" },
+                  { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
                   { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" }
                 ]
             InputArtifacts:
