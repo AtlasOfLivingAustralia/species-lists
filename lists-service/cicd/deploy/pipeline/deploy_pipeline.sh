@@ -138,9 +138,11 @@ aws cloudformation deploy \
     --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
     --parameter-overrides \
         pAutoDeploy=$AUTO_DEPLOY \
+        pBaseStackName=$BASE_STACK_NAME \
         pBootstrapStackName=$BOOTSTRAP_STACK_NAME \
         pBucketsStackName=$BUCKETS_STACK_NAME \
         pCleanBranch=$clean_branch \
+        pDatabaseStackName=$DATABASE_STACK_NAME \
         pEnvironment=$environment \
         pGitHubBranch=$branch \
         pGitHubOwner=$GITHUB_OWNER \
@@ -148,5 +150,6 @@ aws cloudformation deploy \
         pPipelineFingerprint=$PIPELINE_MD5 \
         pProductComponent=$PRODUCT_COMPONENT \
         pProductName=$PRODUCT_NAME \
+        pRegolithStackName=$REGOLITH_STACK_NAME \
         pRestartExecutionOnUpdate=$RESTART_PIPELINE_ON_UPDATE \
 

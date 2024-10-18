@@ -5,6 +5,9 @@ Parameters:
   pAutoDeploy:
     Type: String
     Description: Sets the pipeline to auto deploy on repo changes
+  pBaseStackName:
+    Type: String
+    Description: The name of the base stack
   pBootstrapStackName:
     Type: String
     Description: the name of the bootstrap stack
@@ -14,6 +17,9 @@ Parameters:
   pCleanBranch:
     Type: String
     Description: The clean branch, can be used in resource names
+  pDatabaseStackName:
+    Type: String
+    Description: The name of the database stack
   pEnvironment:
     Type: String
     Description: The AWS environment this belongs to
@@ -35,6 +41,9 @@ Parameters:
   pProductName:
     Type: String
     Description: The name of the product
+  pRegolithStackName:
+    Type: String
+    Description: The name of the regolith stack
   pRestartExecutionOnUpdate:
     Type: String
     Description: Restart that pipeline if it's been updated
@@ -233,26 +242,50 @@ Resources:
               Provider: CodeBuild
             Configuration:
               ProjectName: !Ref DeployLists
-              EnvironmentVariables: !Sub |
-                [
-                  { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
-                  { "name":"BIE_BASE_URL", "value":"#{ExportConfigNS.BIE_BASE_URL}" },
-                  { "name":"CERTIFICATE_ARN", "value":"#{ExportConfigNS.CERTIFICATE_ARN}" },
-                  { "name":"ECR_REPO", "value":"#{ExportConfigNS.ECR_REPO}" },
-                  { "name":"EKS_CLUSTER_NAME", "value":"#{ExportConfigNS.EKS_CLUSTER_NAME}" },
-                  { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" },
-                  { "name":"HOSTED_ZONE", "value":"#{ExportConfigNS.HOSTED_ZONE}" },
-                  { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
-                  { "name":"IMAGES_BASE_URL", "value":"#{ExportConfigNS.IMAGES_BASE_URL}" },
-                  { "name":"LISTS_SECRET_NAME", "value":"#{ExportConfigNS.LISTS_SECRET_NAME}" },
-                  { "name":"MONGODB_HOST", "value":"#{ExportConfigNS.DB_WRITE_ENDPOINT}" },
-                  { "name":"MONGODB_USERNAME", "value":"#{ExportConfigNS.ADMIN_USER}" },
-                  { "name":"NAMEMATCHING_BASE_URL", "value":"#{ExportConfigNS.NAMEMATCHING_BASE_URL}" },
-                  { "name":"OIDC_CLIENT_ID", "value":"#{ExportConfigNS.OIDC_CLIENT_ID}" },
-                  { "name":"OIDC_DISCOVERY_URI", "value":"#{ExportConfigNS.OIDC_DISCOVERY_URI}" },
-                  { "name":"SUB_DOMAIN", "value":"#{ExportConfigNS.SUB_DOMAIN}" },
-                  { "name":"USERDETAILS_BASE_URL", "value":"#{ExportConfigNS.USERDETAILS_BASE_URL}" }
-                ]
+              EnvironmentVariables:
+                Fn::Sub:
+                  - |
+                    [
+                      { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
+                      { "name":"BIE_BASE_URL", "value":"#{ExportConfigNS.BIE_BASE_URL}" },
+                      { "name":"CERTIFICATE_ARN", "value":"#{ExportConfigNS.CERTIFICATE_ARN}" },
+                      { "name":"ECR_REPO", "value":"${EksRepo}" },
+                      { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
+                      { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" },
+                      { "name":"HOSTED_ZONE", "value":"#{ExportConfigNS.HOSTED_ZONE}" },
+                      { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
+                      { "name":"IMAGES_BASE_URL", "value":"#{ExportConfigNS.IMAGES_BASE_URL}" },
+                      { "name":"LISTS_SECRET_NAME", "value":"${ListSecretName}" },
+                      { "name":"MONGODB_HOST", "value":"${MongoDbHost}" },
+                      { "name":"MONGODB_USERNAME", "value":"#{ExportConfigNS.ADMIN_USER}" },
+                      { "name":"NAMEMATCHING_BASE_URL", "value":"#{ExportConfigNS.NAMEMATCHING_BASE_URL}" },
+                      { "name":"OIDC_CLIENT_ID", "value":"${AppClientId}" },
+                      { "name":"OIDC_DISCOVERY_URI", "value":"${OidcDiscoveryUrl}" },
+                      { "name":"SUB_DOMAIN", "value":"#{ExportConfigNS.SUB_DOMAIN}" },
+                      { "name":"USERDETAILS_BASE_URL", "value":"#{ExportConfigNS.USERDETAILS_BASE_URL}" }
+                    ]
+                  - AppClientId:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pBaseStackName}-AppClientId"
+                    EksClusterName:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pRegolithStackName}-ClusterName"
+                    EksRepo:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pBaseStackName}-ListsRepositoryUri"
+                    ListSecretName:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pBaseStackName}-ListsSecret"
+                    MongoDbHost:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pDatabaseStackName}-DocDbClusterEndpoint"
+                    OidcDiscoveryUrl:
+                        Fn::Sub:
+                          - "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}/.well-known/openid-configuration"
+                          - UserPoolId:
+                              Fn::ImportValue:
+                                Fn::Sub: "${pBaseStackName}-UserPoolId"
+
             InputArtifacts:
               - Name: SourceArtifact
             RunOrder: 2
@@ -302,11 +335,15 @@ Resources:
               Provider: CodeBuild
             Configuration:
               ProjectName: !Ref UninstallLists
-              EnvironmentVariables: !Sub |
-                [
-                  { "name":"EKS_CLUSTER_NAME", "value":"#{ExportConfigNS.EKS_CLUSTER_NAME}" },
-                  { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" }
-                ]
+              EnvironmentVariables: !Sub
+                - |
+                  [
+                    { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
+                    { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" }
+                  ]
+                - EksClusterName:
+                    Fn::ImportValue:
+                      Fn::Sub: "${pRegolithStackName}-ClusterName"
             InputArtifacts:
               - Name: SourceArtifact
             RunOrder: 2
