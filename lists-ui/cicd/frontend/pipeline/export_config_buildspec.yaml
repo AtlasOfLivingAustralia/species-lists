@@ -28,7 +28,6 @@ env:
     - WAF_STACK_NAME
     - VITE_API_BASEURL
     - VITE_AUTH_AUTHORITY
-    - VITE_AUTH_CLIENT_ID
     - VITE_AUTH_END_SESSION_URI
     - VITE_AUTH_REDIRECT_URI
 
@@ -70,8 +69,6 @@ phases:
       - lists-ui/cicd/gen_env_vars.py --env $ENVIRONMENT --clean-branch $CLEAN_BRANCH --conf lists-ui/cicd/$PRODUCT_COMPONENT/config.ini > env.txt
       - echo loading config..
       - set -a ; source env.txt ; set +a
-      - export VITE_AUTH_CLIENT_ID=$(aws cognito-idp list-user-pool-clients --user-pool-id $COGNITO_POOL_ID --query "UserPoolClients[?ClientName=='${COGNITO_APP_NAME}'].ClientId" --output text)
-      - echo VITE_AUTH_CLIENT_ID=$VITE_AUTH_CLIENT_ID
     finally:
       -  #echo This always runs
 
