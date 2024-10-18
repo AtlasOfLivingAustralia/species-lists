@@ -5,6 +5,9 @@ Parameters:
   pAutoDeploy:
     Type: String
     Description: Sets the pipeline to autodeploy on repo changes
+  pBaseStackName:
+    Type: String
+    Description: The name of the base stack
   pBootstrapStackName:
     Type: String
     Description: The name of the bootstrap stack
@@ -294,18 +297,30 @@ Resources:
                 Provider: CodeBuild
               Configuration:
                 ProjectName: !Ref BuildCode
-                EnvironmentVariables: |
-                  [
-                    { "name":"COMMIT_ID", "value":"#{CheckoutSrcNS.CommitId}" },
-                    { "name":"ENVIRONMENT", "value":"#{ExportConfigNS.ENVIRONMENT}" },
-                    { "name":"NODE_VERSION", "value":"#{ExportConfigNS.NODE_VERSION}" },
-                    { "name":"SRC_BRANCH", "value":"#{CheckoutSrcNS.BranchName}" },
-                    { "name":"VITE_API_BASEURL", "value":"#{ExportConfigNS.VITE_API_BASEURL}" },
-                    { "name":"VITE_AUTH_AUTHORITY", "value":"#{ExportConfigNS.VITE_AUTH_AUTHORITY}" },
-                    { "name":"VITE_AUTH_CLIENT_ID", "value":"#{ExportConfigNS.VITE_AUTH_CLIENT_ID}" },
-                    { "name":"VITE_AUTH_END_SESSION_URI", "value":"#{ExportConfigNS.VITE_AUTH_END_SESSION_URI}"},
-                    { "name":"VITE_AUTH_REDIRECT_URI", "value":"#{ExportConfigNS.VITE_AUTH_REDIRECT_URI}"}
-                  ]
+                EnvironmentVariables: 
+                  Fn::Sub:
+                    - | 
+                      [
+                        { "name":"COMMIT_ID", "value":"#{CheckoutSrcNS.CommitId}" },
+                        { "name":"ENVIRONMENT", "value":"#{ExportConfigNS.ENVIRONMENT}" },
+                        { "name":"NODE_VERSION", "value":"#{ExportConfigNS.NODE_VERSION}" },
+                        { "name":"SRC_BRANCH", "value":"#{CheckoutSrcNS.BranchName}" },
+                        { "name":"VITE_API_BASEURL", "value":"#{ExportConfigNS.VITE_API_BASEURL}" },
+                        { "name":"VITE_AUTH_AUTHORITY", "value":"${OidcDiscoveryUrl}" },
+                        { "name":"VITE_AUTH_CLIENT_ID", "value":"${OidcClientId}" },
+                        { "name":"VITE_AUTH_END_SESSION_URI", "value":"#{ExportConfigNS.VITE_AUTH_END_SESSION_URI}"},
+                        { "name":"VITE_AUTH_REDIRECT_URI", "value":"#{ExportConfigNS.VITE_AUTH_REDIRECT_URI}"}
+                      ]
+                    - OidcClientId:
+                        Fn::ImportValue:
+                          Fn::Sub: "${pBaseStackName}-AppClientId"
+                      OidcDiscoveryUrl:
+                        Fn::Sub:
+                          - "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}"
+                          - UserPoolId:
+                              Fn::ImportValue:
+                                Fn::Sub: "${pBaseStackName}-UserPoolId"
+
               Namespace: BuildListsNS
               InputArtifacts:
                 - Name: ListsSourceArtifact
