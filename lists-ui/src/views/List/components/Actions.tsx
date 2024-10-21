@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActionIcon,
   Box,
@@ -10,13 +10,18 @@ import {
   Switch,
   Tooltip,
   Text,
+  Stack,
+  Button,
+  Divider,
 } from '@mantine/core';
 import { DotsThreeIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrashAlt } from '@fortawesome/free-regular-svg-icons';
 import {
   faDownload,
+  faGlobe,
   faRefresh,
+  faSearch,
   faTableColumns,
 } from '@fortawesome/free-solid-svg-icons';
 
@@ -51,10 +56,32 @@ export function Actions({
   const [updating, setUpdating] = useState<boolean>(false);
   const [rematching, setRematching] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
+  const listQid = useRef<string | null>(null);
   const navigate = useNavigate();
 
   const ala = useALA();
   const authorisedForList = ala.isAuthorisedForList(meta);
+
+  // Download callback handler
+  const handleQidRedirect = useCallback(async (url: string) => {
+    console.log(url, listQid.current);
+    if (!listQid.current) {
+      try {
+        listQid.current = await ala.rest.lists.qid(meta.id);
+      } catch (error) {
+        notifications.show({
+          message: getErrorMessage(error),
+          position: 'bottom-left',
+          radius: 'md',
+        });
+
+        return;
+      }
+    }
+
+    if (listQid.current)
+      window.open(`${url}?q=qid:${listQid.current}`, '_blank');
+  }, []);
 
   // Download callback handler
   const handleDownload = useCallback(async () => {
@@ -286,39 +313,37 @@ export function Actions({
         </Menu.Dropdown>
       </Menu>
       <Box className={classes.desktop}>
-        <Paper
-          miw={authorisedForList ? 285 : undefined}
-          py={8}
-          px='sm'
-          shadow='sm'
-          radius='lg'
-          withBorder
-        >
-          <Group className={classes.desktop} gap='xs'>
-            {authorisedForList && (
-              <Switch
-                disabled={updating || rematching || deleting}
-                mr='xs'
-                size='xs'
-                label='Edit fields'
-                checked={editing}
-                onChange={(ev) => onEditingChange(ev.currentTarget.checked)}
-              />
-            )}
-            <Tooltip label='Download list' position='left'>
-              <ActionIcon
-                onClick={handleDownload}
-                variant='light'
-                size='md'
-                radius='lg'
-                aria-label='Download list'
-              >
-                <FontAwesomeIcon size='sm' icon={faDownload} />
-              </ActionIcon>
-            </Tooltip>
-            {!authorisedForList && <Text size='xs'>Download list</Text>}
-            {authorisedForList && (
-              <>
+        <Stack>
+          {authorisedForList && (
+            <Paper
+              miw={authorisedForList ? 285 : undefined}
+              py={8}
+              px='sm'
+              shadow='sm'
+              radius='lg'
+              withBorder
+            >
+              <Group gap='xs'>
+                <Switch
+                  disabled={updating || rematching || deleting}
+                  mr='xs'
+                  size='xs'
+                  label='Edit fields'
+                  checked={editing}
+                  onChange={(ev) => onEditingChange(ev.currentTarget.checked)}
+                />
+
+                <Tooltip label='Download list' position='left'>
+                  <ActionIcon
+                    onClick={handleDownload}
+                    variant='light'
+                    size='md'
+                    radius='lg'
+                    aria-label='Download list'
+                  >
+                    <FontAwesomeIcon size='sm' icon={faDownload} />
+                  </ActionIcon>
+                </Tooltip>
                 <Tooltip label='Edit metadata' position='left'>
                   <ActionIcon
                     onClick={handleMetaEdit}
@@ -358,10 +383,66 @@ export function Actions({
                     <FontAwesomeIcon size='sm' icon={faTrashAlt} />
                   </ActionIcon>
                 </Tooltip>
+              </Group>
+            </Paper>
+          )}
+          <Paper withBorder radius='lg'>
+            {!authorisedForList && (
+              <>
+                <Button
+                  onClick={handleDownload}
+                  fullWidth
+                  size='sm'
+                  variant='subtle'
+                  leftSection={<FontAwesomeIcon icon={faDownload} />}
+                  style={{
+                    fontSize: '0.8rem',
+                    borderRadius: 0,
+                    borderTopLeftRadius: 14,
+                    borderTopRightRadius: 14,
+                  }}
+                >
+                  Download list
+                </Button>
+                <Divider />
               </>
             )}
-          </Group>
-        </Paper>
+            <Button
+              onClick={() =>
+                handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH)
+              }
+              fullWidth
+              size='sm'
+              variant='subtle'
+              leftSection={<FontAwesomeIcon icon={faSearch} />}
+              style={{
+                fontSize: '0.8rem',
+                borderRadius: 0,
+                borderTopLeftRadius: authorisedForList ? 14 : 0,
+                borderTopRightRadius: authorisedForList ? 14 : 0,
+              }}
+            >
+              View occurrence records
+            </Button>
+            <Divider />
+            <Button
+              onClick={() =>
+                handleQidRedirect(import.meta.env.VITE_ALA_SPATIAL)
+              }
+              fullWidth
+              variant='subtle'
+              leftSection={<FontAwesomeIcon icon={faGlobe} />}
+              style={{
+                fontSize: '0.8rem',
+                borderRadius: 0,
+                borderBottomLeftRadius: 14,
+                borderBottomRightRadius: 14,
+              }}
+            >
+              View in spatial portal
+            </Button>
+          </Paper>
+        </Stack>
       </Box>
     </>
   );

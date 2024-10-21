@@ -5,8 +5,11 @@ import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import au.org.ala.listsapi.service.BiocacheService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -35,6 +38,8 @@ public class RESTController {
   @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
 
   @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
+
+  @Autowired protected BiocacheService biocacheService;
 
   @Operation(tags = "REST", summary = "Get species list metadata")
   @Tag(name = "REST", description = "REST Services for species lists lookups")
@@ -93,6 +98,18 @@ public class RESTController {
       Page<SpeciesListItem> speciesListItems =
           speciesListItemMongoRepository.findBySpeciesListID(speciesListID, paging);
       return new ResponseEntity<>(speciesListItems.getContent(), HttpStatus.OK);
+    } catch (Exception e) {
+      return ResponseEntity.badRequest().body(e.getMessage());
+    }
+  }
+
+  @Operation(tags = "REST", summary = "Get a SOLR query PID for a list")
+  @GetMapping("/speciesListQid/{speciesListID}")
+  public ResponseEntity<Object> speciesListPid(
+          @PathVariable("speciesListID") String speciesListID) {
+    try {
+      String qid = biocacheService.getQidForSpeciesList(speciesListID);
+      return new ResponseEntity<>(Collections.singletonMap("qid", qid), HttpStatus.OK);
     } catch (Exception e) {
       return ResponseEntity.badRequest().body(e.getMessage());
     }

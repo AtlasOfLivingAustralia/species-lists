@@ -102,4 +102,11 @@ export default (token: string) => ({
       'GET',
       null
     ),
+  qid: async (id: string): Promise<string> => {
+    const { qid } = await request<{ qid: string }>(
+      `${import.meta.env.VITE_API_LIST_QID}/${id}`,
+      'GET'
+    );
+    return qid;
+  },
 });
