@@ -25,6 +25,7 @@ phases:
     commands:
       - echo Build started on $(date)
       - APP_CLIENT_NAME=$(if [ "$ENVIRONMENT" == "development" ]; then echo $PRODUCT_NAME-$CLEAN_BRANCH; else echo $PRODUCT_NAME-$ENVIRONMENT; fi)
+      - echo App client name. $APP_CLIENT_NAME
       - aws cognito-idp create-user-pool-client
             --access-token-validity 60
             --allowed-o-auth-flows code
