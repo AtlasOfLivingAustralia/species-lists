@@ -34,8 +34,8 @@ phases:
             --callback-urls https://$SUB_DOMAIN.$HOSTED_ZONE
             --client-name $APP_CLIENT_NAME
             --default-redirect-uri https://$SUB_DOMAIN.$HOSTED_ZONE
-            --enable-propagate-additional-user-context-data False
-            --enable-token-revocation True
+            --no-enable-propagate-additional-user-context-data
+            --enable-token-revocation
             --explicit-auth-flows ALLOW_ADMIN_USER_PASSWORD_AUTH ALLOW_CUSTOM_AUTH ALLOW_REFRESH_TOKEN_AUTH ALLOW_USER_SRP_AUTH
             --id-token-validity 30
             --logout-urls https://$SUB_DOMAIN.$HOSTED_ZONE
