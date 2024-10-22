@@ -249,6 +249,7 @@ Resources:
                       { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
                       { "name":"BIE_BASE_URL", "value":"#{ExportConfigNS.BIE_BASE_URL}" },
                       { "name":"CERTIFICATE_ARN", "value":"#{ExportConfigNS.CERTIFICATE_ARN}" },
+                      { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
                       { "name":"COGNITO_POOL_ID", "value":"#{ExportConfigNS.COGNITO_POOL_ID}" },
                       { "name":"ECR_REPO", "value":"${EksRepo}" },
                       { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
@@ -261,8 +262,8 @@ Resources:
                       { "name":"MONGODB_HOST", "value":"${MongoDbHost}" },
                       { "name":"MONGODB_USERNAME", "value":"#{ExportConfigNS.ADMIN_USER}" },
                       { "name":"NAMEMATCHING_BASE_URL", "value":"#{ExportConfigNS.NAMEMATCHING_BASE_URL}" },
-                      { "name":"OIDC_CLIENT_ID", "value":"${AppClientId}" },
                       { "name":"OIDC_DISCOVERY_URI", "value":"${OidcDiscoveryUrl}" },
+                      { "name":"PRODUCT_NAME", "value":"#{ExportConfigNS.PRODUCT_NAME}" },
                       { "name":"SUB_DOMAIN", "value":"#{ExportConfigNS.SUB_DOMAIN}" },
                       { "name":"USERDETAILS_BASE_URL", "value":"#{ExportConfigNS.USERDETAILS_BASE_URL}" }
                     ]
