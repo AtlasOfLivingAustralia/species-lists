@@ -19,7 +19,10 @@ phases:
 
   build:
     commands:
-      - echo Build started on $(date)
+      - echo Uninstall started on $(date)
+      - delete-user-pool-client
+          --user-pool-id $COGNITO_POOL_ID
+          --client-id $APP_CLIENT_NAME
       - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME
 #      - kubectl config set-context --current --namespace=$PRODUCT_NAME
 #      - printf "$(kubectl config current-context)\n"

@@ -9,6 +9,8 @@ env:
     JAVA_TOOL_OPTIONS: -Dhttps.protocols=TLSv1.2
   secrets-manager:
     MONGODB_PASSWORD: $LISTS_SECRET_NAME:db-password
+  exported-variables:
+    - APP_CLIENT_NAME
 
 phases:
 
@@ -22,7 +24,32 @@ phases:
   build:
     commands:
       - echo Build started on $(date)
+      - APP_CLIENT_NAME=$(if [ $ENVIRONMENT == "development" ]; then echo $PRODUCT_NAME-$CLEAN_BRANCH; else echo $PRODUCT_NAME-$ENVIRONMENT; fi)
+      - create-user-pool-client
+            --access-token-validity 60
+            --allowed-o-auth-flows code
+            --allowed-o-auth-flows-user-pool-client
+            --allowed-o-auth-scopes email openid profile ala/roles ala/attrs
+            --auth-session-validity 3
+            --callback-urls https://$SUB_DOMAIN.$HOSTED_ZONE
+            --client-name $APP_CLIENT_NAME
+            --default-redirect-uri https://$SUB_DOMAIN.$HOSTED_ZONE
+            --enable-propagate-additional-user-context-data False
+            --enable-token-revocation True
+            --explicit-auth-flows ALLOW_ADMIN_USER_PASSWORD_AUTH ALLOW_CUSTOM_AUTH ALLOW_REFRESH_TOKEN_AUTH ALLOW_USER_SRP_AUTH
+            --id-token-validity 30
+            --logout-urls https://$SUB_DOMAIN.$HOSTED_ZONE
+            --no-generate-secret
+            --prevent-user-existence-errors ENABLED
+            --refresh-token-validity 30
+            --supported-identity-providers COGNITO Facebook Google AAF SignInWithApple
+            --token-validity-units AccessToken=minutes,IdToken=minutes,RefreshToken=days
+            --user-pool-id $COGNITO_POOL_ID > new_app_client.json
+
+
+      - OIDC_CLIENT_ID=$(jq -r '.UserPoolClient.ClientId' new_app_client.json)
       - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME
+
 #      - kubectl config set-context --current --namespace=$PRODUCT_NAME
 #      - printf "$(kubectl config current-context)\n"
       # do we need to create the service account here?
