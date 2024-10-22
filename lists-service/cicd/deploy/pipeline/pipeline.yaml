@@ -252,6 +252,7 @@ Resources:
                       { "name":"COGNITO_POOL_ID", "value":"#{ExportConfigNS.COGNITO_POOL_ID}" },
                       { "name":"ECR_REPO", "value":"${EksRepo}" },
                       { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
+                      { "name":"ENVIRONMENT", "value":"${pEnvironment}" },
                       { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" },
                       { "name":"HOSTED_ZONE", "value":"#{ExportConfigNS.HOSTED_ZONE}" },
                       { "name":"IMAGES_BASE_URL", "value":"#{ExportConfigNS.IMAGES_BASE_URL}" },
