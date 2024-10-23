@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Base resources for the Lists service
+
+Parameters:
+  pBuild:
+    Type: String
+    Description: The build number
+  pCleanBranch:
+    Type: String
+    Description: The clean branch, can be used in resource names
+  pEnvironment:
+    Type: String
+    Description: The AWS environment this belongs to
+
+Conditions:
+
+  IsDev: !Equals
+    - !Ref pEnvironment
+    - development
+  NotProd: !Not
+    - !Equals
+      - !Ref pEnvironment
+      - production
+  IsFirstBuild: !Equals [!Ref pBuild, "1"]
+
+Resources:
+
+  ListsRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      EmptyOnDelete: !If [ NotProd, true, false ]
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      RepositoryName: !Sub
+                         - lists-${ResourceName}
+                         - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      RepositoryPolicyText:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowPublicPull
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - 'ecr:GetDownloadUrlForLayer'
+              - 'ecr:BatchGetImage'
+              - 'ecr:BatchCheckLayerAvailability'
+      Tags:
+        - Key: Environment
+          Value: !Ref pEnvironment
+        - Key: Branch
+          Value: !Ref pCleanBranch
+
+Outputs:
+
+  ListsRepositoryArn:
+    Description: The ECR repository ARN for the Lists service
+    Value: !GetAtt ListsRepository.Arn
+
+  ListsRepositoryUri:
+    Description: The ECR repository URI for the lists service
+    Value: !GetAtt ListsRepository.RepositoryUri
+    Export:
+      Name: !Sub ${AWS::StackName}-ListsRepositoryUri
+
+  ListsRepositoryName:
+    Description: The ECR repository ARN for the Lists service
+    Value: !Ref ListsRepository

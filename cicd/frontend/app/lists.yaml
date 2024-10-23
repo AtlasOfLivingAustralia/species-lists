@@ -1,0 +1,186 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: LISTS Infrastructure
+
+Parameters:
+  pListsWafWebAclArn:
+    Type: String
+    Description: The WAF Web ACL to attach the CloudFront distribution to
+  pSourceBucket:
+    Type: String
+    Description: The bucket name for the site
+  pBucketPath:
+    Type: String
+    Description: Optional path that the files are stored under
+  pCleanBranch:
+    Type: String
+    Description: A cleaned version of the code branch name
+    Default: development
+  pEnvironment:
+    Type: String
+    Description: The AWS environment this belongs to
+  pHostedZone:
+    Type: String
+    Description: The hosted zone the site are accessed under
+  pSubDomain:
+    Type: String
+    Description: The subdomain the site are accessed on
+  pSslCertificate:
+    Type: String
+    Description: The arn of the SSL certificate to be used
+
+Conditions:
+  IsDev: !Equals
+    - !Ref pEnvironment
+    - development
+  NotDev: !Not [ Condition: IsDev ]
+
+Resources:
+  ListsBucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub ${pSourceBucket}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: TRUE
+        BlockPublicPolicy: TRUE
+        RestrictPublicBuckets: TRUE
+      Tags:
+        - Key: component
+          Value: website
+        - Key: Name
+          Value: !Sub ${pSourceBucket}
+
+  ListsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ListsBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - 's3:GetObject'
+            Effect: Allow
+            Resource: !Sub 'arn:aws:s3:::${ListsBucket}/*'
+            Principal:
+              AWS: !Sub 'arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${ListsCloudFrontOai}'
+
+  ListsDnsRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Name: !Sub '${pSubDomain}.${pHostedZone}'
+      Comment: !Sub LISTS domain for the ${pEnvironment} environment
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ListsCloudFrontDistro.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2
+      HostedZoneName: !Sub '${pHostedZone}.'
+
+  ListsCloudFrontDistro:
+    Type: AWS::CloudFront::Distribution
+    DependsOn: ListsBucket
+    Properties:
+      DistributionConfig:
+        Aliases:
+          - !Sub '${pSubDomain}.${pHostedZone}'
+        Comment: !Sub CF Distribution for the LISTS site ${pEnvironment}
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ErrorCachingMinTTL: 300
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+          CachedMethods:
+            - GET
+            - HEAD
+          CachePolicyId: !Ref ListsCachePolicy
+          Compress: true
+          TargetOriginId: lists-s3
+          ViewerProtocolPolicy: redirect-to-https
+        DefaultRootObject: index.html
+        Enabled: true
+        HttpVersion: http2
+        IPV6Enabled: false
+        Origins:
+          - DomainName: !Sub '${pSourceBucket}.s3.${AWS::Region}.amazonaws.com'
+            Id: lists-s3
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${ListsCloudFrontOai}'
+            OriginPath: !Sub '/${pBucketPath}'
+        ViewerCertificate:
+          AcmCertificateArn: !Ref pSslCertificate
+          MinimumProtocolVersion: TLSv1.2_2021
+          SslSupportMethod: sni-only
+        WebACLId: !Ref pListsWafWebAclArn
+      Tags:
+        - Key: component
+          Value: cdn
+
+  ListsCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Comment: !Sub CF Cache Policy for the LISTS site ${pEnvironment}
+        DefaultTTL: 300
+        MaxTTL: 86400
+        MinTTL: 1
+        Name: !Sub
+          - "Lists-cache-Policy-${ResourceName}"
+          - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: none
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
+          HeadersConfig:
+            HeaderBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: whitelist
+            QueryStrings:
+              - cb
+
+  ListsCloudFrontOai:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub CF Origin Access Identity for the LISTS ${pEnvironment}
+
+  CognitoAppClient:
+     Type:  
+     DependsOn:
+      - AlaResourceServer
+     Properties:
+       Parameters:
+         pName : lists-dev
+         pCallbackUrls : !Join
+                 - ','
+                 - - !Sub '${pSubDomain}.${pHostedZone}'
+         pDefaultUrl : !Sub '${pSubDomain}.${pHostedZone}'
+         pLogoutUrls : !Join
+                 - ','
+                 - - !Sub '${pSubDomain}.${pHostedZone}'
+         pScopes : !Join
+                 - ','
+                 - - email
+                   - openid
+                   - profile
+                   - ala/roles
+                   - ala/attrs
+         pAllowedOAuthFlows: !Join
+                 - ','
+                 - - code
+         pUserPoolId : !Ref pUserPoolId
+       TemplateURL: app_client.yaml
+       TimeoutInMinutes: 5
+
+Outputs:
+  ListsBucketName:
+    Value: !Ref ListsBucket
+  ListsBucketArn:
+    Value: !GetAtt ListsBucket.Arn
+  ListsCloudFrontDistributionArn:
+    Value: !Sub
+      - "arn:aws:cloudfront::${AWS::AccountId}:distribution/${DistributionId}"
+      - DistributionId: !GetAtt ListsCloudFrontDistro.Id
