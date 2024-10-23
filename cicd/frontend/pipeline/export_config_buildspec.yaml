@@ -38,7 +38,7 @@ phases:
       - echo Running on $(lsb_release -d | cut -f2)
       - echo aws-cli version $(aws --version)
       - pip install --upgrade jinja2
-      - export CUR_PIPELINE_FINGERPRINT=$(md5sum lists-ui/cicd/$PRODUCT_COMPONENT/pipeline/pipeline.yaml | awk '{print $1}')
+      - export CUR_PIPELINE_FINGERPRINT=$(md5sum cicd/$PRODUCT_COMPONENT/pipeline/pipeline.yaml | awk '{print $1}')
       - # This next bit checks if the running pipeline is out of sync with the pipeline in the
       - # current code revision. If it is it re-launches itself! For a normal branch commit the
       - # pipeline is set to autorun on update so it will restart automatically and launch the
@@ -49,7 +49,7 @@ phases:
       - | 
           if [[ $PIPELINE_FINGERPRINT != $CUR_PIPELINE_FINGERPRINT ]]; then
             echo existing pipeline is out of sync with current code revision, relaunching!
-            cd lists-ui/cicd/$PRODUCT_COMPONENT/pipeline/
+            cd cicd/$PRODUCT_COMPONENT/pipeline/
             ./deploy_pipeline.sh -e ${ENVIRONMENT:0:4} -b $SRC_BRANCH
             # pipeline execution should now stop if this is a rollback, 
             # or restart automatically if this a normal branch deploy
@@ -66,7 +66,7 @@ phases:
       - echo source branch is $SRC_BRANCH
       - echo clean branch is $CLEAN_BRANCH
       - echo Environment is $ENVIRONMENT
-      - lists-ui/cicd/gen_env_vars.py --env $ENVIRONMENT --clean-branch $CLEAN_BRANCH --conf lists-ui/cicd/$PRODUCT_COMPONENT/config.ini > env.txt
+      - cicd/gen_env_vars.py --env $ENVIRONMENT --clean-branch $CLEAN_BRANCH --conf cicd/$PRODUCT_COMPONENT/config.ini > env.txt
       - echo loading config..
       - set -a ; source env.txt ; set +a
     finally:
@@ -76,7 +76,7 @@ phases:
     commands:
       - echo Entered the build phase...
       - |
-          for i in lists-ui/cicd/$PRODUCT_COMPONENT/app/*.yaml; do
+          for i in cicd/$PRODUCT_COMPONENT/app/*.yaml; do
             stack=$(echo $i | sed 's/.yaml$//')
             aws cloudformation package --template-file $stack.yaml \
                                        --s3-bucket $ARTIFACTS_BUCKET \
@@ -85,7 +85,7 @@ phases:
                                        --region $REGION
 
             echo Generating the template config for $stack
-            lists-ui/cicd/gen_template_config.py  --template ${stack}_template_config.j2 > ${stack}_template_config.json
+            cicd/gen_template_config.py  --template ${stack}_template_config.j2 > ${stack}_template_config.json
           done
     finally:
       -  #echo This always runs
@@ -96,6 +96,6 @@ phases:
 
 artifacts:
   files:
-    - lists-ui/cicd/$PRODUCT_COMPONENT/app/*
+    - cicd/$PRODUCT_COMPONENT/app/*
   name: BuildTemplateConfigArtifact
   discard-paths: no

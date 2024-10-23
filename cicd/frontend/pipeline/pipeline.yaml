@@ -88,7 +88,7 @@ Resources:
                 Fn::Sub: ${pBucketsStackName}-${AWS::Region}-CodePipelineArtifactBucketName
       Source:
         Type: CODEPIPELINE
-        BuildSpec: !Sub lists-ui/cicd/${pProductComponent}/pipeline/export_config_buildspec.yaml
+        BuildSpec: !Sub cicd/${pProductComponent}/pipeline/export_config_buildspec.yaml
       TimeoutInMinutes: 5
 
   BuildCode:
@@ -109,7 +109,7 @@ Resources:
         Image: aws/codebuild/standard:7.0
       Source:
         Type: CODEPIPELINE
-        BuildSpec: !Sub lists-ui/cicd/${pProductComponent}/pipeline/npm_build_buildspec.yaml
+        BuildSpec: !Sub cicd/${pProductComponent}/pipeline/npm_build_buildspec.yaml
       TimeoutInMinutes: 10
 
   EmptyBucket:
@@ -130,7 +130,7 @@ Resources:
         Image: aws/codebuild/standard:7.0
       Source:
         Type: CODEPIPELINE
-        BuildSpec: !Sub lists-ui/cicd/${pProductComponent}/pipeline/empty_bucket_buildspec.yaml
+        BuildSpec: !Sub cicd/${pProductComponent}/pipeline/empty_bucket_buildspec.yaml
       TimeoutInMinutes: 5
 
   DeployNotification:
@@ -154,7 +154,7 @@ Resources:
             Value: !Ref pCleanBranch       
       Source:                             
         Type: CODEPIPELINE
-        BuildSpec: !Sub lists-ui/cicd/${pProductComponent}/pipeline/deploy_notification_buildspec.yaml
+        BuildSpec: !Sub cicd/${pProductComponent}/pipeline/deploy_notification_buildspec.yaml
       TimeoutInMinutes: 5
 
   Pipeline:
@@ -253,8 +253,8 @@ Resources:
                 Version: 1
                 Provider: CloudFormation
               Configuration:
-                TemplatePath: !Sub 'ExportConfigArtifact::lists-ui/cicd/${pProductComponent}/app/#{ExportConfigNS.WAF_STACK_FILE_PFIX}.yaml'
-                TemplateConfiguration: !Sub 'ExportConfigArtifact::lists-ui/cicd/${pProductComponent}/app/#{ExportConfigNS.WAF_STACK_FILE_PFIX}_template_config.json'
+                TemplatePath: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/#{ExportConfigNS.WAF_STACK_FILE_PFIX}.yaml'
+                TemplateConfiguration: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/#{ExportConfigNS.WAF_STACK_FILE_PFIX}_template_config.json'
                 ActionMode: !If [ IsDev, REPLACE_ON_FAILURE, CREATE_UPDATE]
                 Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND
                 RoleArn:
@@ -274,8 +274,8 @@ Resources:
                 Version: 1
                 Provider: CloudFormation
               Configuration:
-                TemplatePath: !Sub 'ExportConfigArtifact::lists-ui/cicd/${pProductComponent}/app/#{ExportConfigNS.APP_STACK_FILE_PFIX}.yaml'
-                TemplateConfiguration: !Sub 'ExportConfigArtifact::lists-ui/cicd/${pProductComponent}/app/#{ExportConfigNS.APP_STACK_FILE_PFIX}_template_config.json'
+                TemplatePath: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/#{ExportConfigNS.APP_STACK_FILE_PFIX}.yaml'
+                TemplateConfiguration: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/#{ExportConfigNS.APP_STACK_FILE_PFIX}_template_config.json'
                 ActionMode: !If [ IsDev, REPLACE_ON_FAILURE, CREATE_UPDATE]
                 Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND
                 ParameterOverrides: |
