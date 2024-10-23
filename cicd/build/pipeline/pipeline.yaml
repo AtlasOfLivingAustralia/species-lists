@@ -225,21 +225,21 @@ Resources:
               - Name: ExportConfigArtifact
             RunOrder: 1
 
-          - Name: DeployEKR-CFStack
+          - Name: DeployECR-CFStack
             ActionTypeId:
               Owner: AWS
               Category: Deploy
               Version: 1
               Provider: CloudFormation
             Configuration:
-              TemplatePath: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/ekr.yaml'
+              TemplatePath: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/ecr.yaml'
               ActionMode: !If [ IsDev, REPLACE_ON_FAILURE, CREATE_UPDATE ]
-              TemplateConfiguration: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/ekr_template_config.json'
+              TemplateConfiguration: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/ecr_template_config.json'
               Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
               RoleArn:
                    Fn::ImportValue:
                      Fn::Sub: '${pBootstrapStackName}-CloudFormationServiceRoleArn'
-              StackName: '#{ExportConfigNS.BUILD_STACK_NAME}'
+              StackName: '#{ExportConfigNS.ECR_STACK_NAME}'
             InputArtifacts:
               - Name: 'ExportConfigArtifact'
             Namespace: BuildCloudFormationOutNS

@@ -32,7 +32,7 @@ Conditions:
 
 Resources:
 
- ListsAppClient:
+  ListsAppClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       AccessTokenValidity: 60
@@ -77,6 +77,6 @@ Outputs:
 
   AppClientId:
     Description: The app client for the lists service
-    Value: !Ref AppClientId
+    Value: !Ref ListsAppClient
     Export:
       Name: !Sub ${AWS::StackName}-AppClientId
