@@ -38,7 +38,12 @@ Resources:
       AccessTokenValidity: 60
       AllowedOAuthFlows: code
       AllowedOAuthFlowsUserPoolClient: True
-      AllowedOAuthScopes: openid,profile,email,ala/roles,ala/attrs
+      AllowedOAuthScopes: 
+        - openid
+        - profile
+        - email
+        - ala/roles
+        - ala/attrs
       AuthSessionValidity: 3
       CallbackURLs: !Sub ${pAppClientHost}
       ClientName: !Sub
