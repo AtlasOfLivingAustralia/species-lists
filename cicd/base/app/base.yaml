@@ -36,7 +36,8 @@ Resources:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       AccessTokenValidity: 60
-      AllowedOAuthFlows: code
+      AllowedOAuthFlows: 
+        - code
       AllowedOAuthFlowsUserPoolClient: True
       AllowedOAuthScopes: 
         - openid
@@ -63,7 +64,6 @@ Resources:
       LogoutURLs: 
         - !Sub ${pAppClientHost}
       PreventUserExistenceErrors: ENABLED
-      ReadAttributes: !Ref AWS::NoValue
       RefreshTokenValidity: 30
       SupportedIdentityProviders:
         - COGNITO
@@ -78,7 +78,6 @@ Resources:
       UserPoolId: 
         Fn::ImportValue:
             !Sub ${pCognitoStackName}-UserPoolId
-      WriteAttributes: !Ref AWS::NoValue
 
 Outputs:
 
