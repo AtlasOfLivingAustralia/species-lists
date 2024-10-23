@@ -143,7 +143,7 @@ aws cloudformation deploy \
         pBucketsStackName=$BUCKETS_STACK_NAME \
         pCleanBranch=$clean_branch \
         pCognitoStackName=$COGNITO_STACK_NAME \
-        pEksStackName=$EKS_STACK_NAME \
+        pEcrStackName=$ECR_STACK_NAME \
         pEnvironment=$environment \
         pGitHubBranch=$branch \
         pGitHubOwner=$GITHUB_OWNER \
