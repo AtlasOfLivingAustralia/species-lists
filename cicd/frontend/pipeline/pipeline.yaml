@@ -191,6 +191,7 @@ Resources:
                     - !If [ AutoDeploy, !Ref pGitHubBranch, bogo-branch ]
                 FilePaths:
                   Includes:
+                    - !Sub cicd/${pProductComponent}/**
                     - !Sub lists-ui/**
             SourceActionName: CheckoutSrc
       Variables:
