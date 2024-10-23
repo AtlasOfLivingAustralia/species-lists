@@ -17,7 +17,7 @@ Parameters:
     Description: The name of the Cognito stack
   pAppClientHost:
     Type: String
-    Description The host for the app client
+    Description: The host for the app client
 
 Conditions:
 
