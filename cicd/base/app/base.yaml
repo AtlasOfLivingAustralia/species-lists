@@ -45,7 +45,8 @@ Resources:
         - ala/roles
         - ala/attrs
       AuthSessionValidity: 3
-      CallbackURLs: !Sub ${pAppClientHost}
+      CallbackURLs: 
+        - !Sub ${pAppClientHost}
       ClientName: !Sub
           - species-lists-${ResourceName}
           - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
@@ -59,7 +60,8 @@ Resources:
         - ALLOW_USER_SRP_AUTH
       GenerateSecret: False
       IdTokenValidity: 60
-      LogoutURLs: !Sub ${pAppClientHost}
+      LogoutURLs: 
+        - !Sub ${pAppClientHost}
       PreventUserExistenceErrors: ENABLED
       ReadAttributes: !Ref AWS::NoValue
       RefreshTokenValidity: 30
