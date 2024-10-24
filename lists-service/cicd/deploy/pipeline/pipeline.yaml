@@ -249,25 +249,25 @@ Resources:
                       { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
                       { "name":"BIE_BASE_URL", "value":"#{ExportConfigNS.BIE_BASE_URL}" },
                       { "name":"CERTIFICATE_ARN", "value":"#{ExportConfigNS.CERTIFICATE_ARN}" },
+                      { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
+                      { "name":"COGNITO_POOL_ID", "value":"#{ExportConfigNS.COGNITO_POOL_ID}" },
                       { "name":"ECR_REPO", "value":"${EksRepo}" },
                       { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
+                      { "name":"ENVIRONMENT", "value":"${pEnvironment}" },
                       { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" },
                       { "name":"HOSTED_ZONE", "value":"#{ExportConfigNS.HOSTED_ZONE}" },
-                      { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
                       { "name":"IMAGES_BASE_URL", "value":"#{ExportConfigNS.IMAGES_BASE_URL}" },
+                      { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
                       { "name":"LISTS_SECRET_NAME", "value":"${ListSecretName}" },
                       { "name":"MONGODB_HOST", "value":"${MongoDbHost}" },
                       { "name":"MONGODB_USERNAME", "value":"#{ExportConfigNS.ADMIN_USER}" },
                       { "name":"NAMEMATCHING_BASE_URL", "value":"#{ExportConfigNS.NAMEMATCHING_BASE_URL}" },
-                      { "name":"OIDC_CLIENT_ID", "value":"${AppClientId}" },
                       { "name":"OIDC_DISCOVERY_URI", "value":"${OidcDiscoveryUrl}" },
+                      { "name":"PRODUCT_NAME", "value":"#{ExportConfigNS.PRODUCT_NAME}" },
                       { "name":"SUB_DOMAIN", "value":"#{ExportConfigNS.SUB_DOMAIN}" },
                       { "name":"USERDETAILS_BASE_URL", "value":"#{ExportConfigNS.USERDETAILS_BASE_URL}" }
                     ]
-                  - AppClientId:
-                      Fn::ImportValue:
-                        Fn::Sub: "${pBaseStackName}-AppClientId"
-                    EksClusterName:
+                  - EksClusterName:
                       Fn::ImportValue:
                         Fn::Sub: "${pRegolithStackName}-ClusterName"
                     EksRepo:
@@ -285,7 +285,7 @@ Resources:
                           - UserPoolId:
                               Fn::ImportValue:
                                 Fn::Sub: "${pBaseStackName}-UserPoolId"
-
+            Namespace: DeployListsNS
             InputArtifacts:
               - Name: SourceArtifact
             RunOrder: 2
@@ -338,6 +338,8 @@ Resources:
               EnvironmentVariables: !Sub
                 - |
                   [
+                    { "name":"APP_CLIENT_NAME", "value":"#{DeployListsNS.APP_CLIENT_NAME}" },
+                    { "name":"COGNITO_POOL_ID", "value":"#{ExportConfigNS.COGNITO_POOL_ID}" },
                     { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
                     { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" }
                   ]
