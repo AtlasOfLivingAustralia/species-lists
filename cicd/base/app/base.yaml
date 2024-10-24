@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Base resources for the Lists service
+
+Parameters:
+  pBuild:
+    Type: String
+    Description: The build number
+  pCleanBranch:
+    Type: String
+    Description: The clean branch, can be used in resource names
+  pEnvironment:
+    Type: String
+    Description: The AWS environment this belongs to
+  pCognitoStackName:
+    Type: String
+    Description: The name of the Cognito stack
+  pAppClientHost:
+    Type: String
+    Description: The host for the app client
+
+Conditions:
+
+  IsDev: !Equals
+    - !Ref pEnvironment
+    - development
+  NotProd: !Not
+    - !Equals
+      - !Ref pEnvironment
+      - production
+  IsFirstBuild: !Equals [!Ref pBuild, "1"]
+
+Resources:
+
+  ListsAppClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      AccessTokenValidity: 60
+      AllowedOAuthFlows: 
+        - code
+      AllowedOAuthFlowsUserPoolClient: True
+      AllowedOAuthScopes: 
+        - openid
+        - profile
+        - email
+        - ala/roles
+        - ala/attrs
+      AuthSessionValidity: 3
+      CallbackURLs: 
+        - !Sub ${pAppClientHost}
+      ClientName: !Sub
+          - species-lists-${ResourceName}
+          - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      DefaultRedirectURI: !Sub ${pAppClientHost}
+      EnablePropagateAdditionalUserContextData: False
+      EnableTokenRevocation: True
+      ExplicitAuthFlows:
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+        - ALLOW_CUSTOM_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+      GenerateSecret: False
+      IdTokenValidity: 60
+      LogoutURLs: 
+        - !Sub ${pAppClientHost}
+      PreventUserExistenceErrors: ENABLED
+      RefreshTokenValidity: 30
+      SupportedIdentityProviders:
+        - COGNITO
+        - Facebook
+        - Google
+        - AAF
+        - SignInWithApple
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: days
+      UserPoolId: 
+        Fn::ImportValue:
+            !Sub ${pCognitoStackName}-UserPoolId
+
+Outputs:
+
+  AppClientId:
+    Description: The app client for the lists service
+    Value: !Ref ListsAppClient
+    Export:
+      Name: !Sub ${AWS::StackName}-AppClientId
