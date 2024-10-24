@@ -147,34 +147,6 @@ Resources:
       CloudFrontOriginAccessIdentityConfig:
         Comment: !Sub CF Origin Access Identity for the LISTS ${pEnvironment}
 
-  CognitoAppClient:
-     Type:  
-     DependsOn:
-      - AlaResourceServer
-     Properties:
-       Parameters:
-         pName : lists-dev
-         pCallbackUrls : !Join
-                 - ','
-                 - - !Sub '${pSubDomain}.${pHostedZone}'
-         pDefaultUrl : !Sub '${pSubDomain}.${pHostedZone}'
-         pLogoutUrls : !Join
-                 - ','
-                 - - !Sub '${pSubDomain}.${pHostedZone}'
-         pScopes : !Join
-                 - ','
-                 - - email
-                   - openid
-                   - profile
-                   - ala/roles
-                   - ala/attrs
-         pAllowedOAuthFlows: !Join
-                 - ','
-                 - - code
-         pUserPoolId : !Ref pUserPoolId
-       TemplateURL: app_client.yaml
-       TimeoutInMinutes: 5
-
 Outputs:
   ListsBucketName:
     Value: !Ref ListsBucket
