@@ -367,6 +367,19 @@ Resources:
             InputArtifacts:
               - Name: SourceArtifact
             RunOrder: 2
+          - Name: TeardownDatabaseStack
+            ActionTypeId:
+              Owner: AWS
+              Category: Deploy
+              Version: 1
+              Provider: CloudFormation
+            Configuration:
+              ActionMode: DELETE_ONLY
+              StackName: '#{ExportConfigNS.DATABASE_STACK_NAME}'
+              RoleArn:
+                Fn::ImportValue:
+                  Fn::Sub: '${pBootstrapStackName}-CloudFormationServiceRoleArn'
+            RunOrder: 3
           - Name: TeardownCodePipeline
             ActionTypeId:
               Owner: AWS
