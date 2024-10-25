@@ -174,7 +174,8 @@ Resources:
                 FilePaths:
                   Includes:
                     - !Sub cicd/${pProductComponent}/**
-                    - lists-service/**
+                    - lists-service/pom.xml
+                    - lists-service/src/**
             SourceActionName: CheckoutSrc
       Variables:
         - Name: SRC_BRANCH
