@@ -403,7 +403,8 @@ Resources:
 Outputs:
   PipelineName:
     Value: !Ref Pipeline
-    Export:  Name: !Sub ${AWS::StackName}-PipelineName
+    Export:
+      Name: !Sub ${AWS::StackName}-PipelineName
 
   PipelineUrl:
     Value: !Sub https://console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${Pipeline}
