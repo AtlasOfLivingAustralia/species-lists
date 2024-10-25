@@ -284,7 +284,8 @@ Resources:
                 - !Sub 
                   - aws codepipeline start-pipeline-execution --name ${DeployPipeline}
                   - DeployPipeline:
-                    Fn:Sub: ${pDeployPipelineStack}-PipelineName
+                      Fn::ImportValue:
+                        Fn::Sub: ${pDeployPipelineStack}-PipelineName
 
           - Name: DeployNotification
             ActionTypeId:
