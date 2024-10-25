@@ -20,6 +20,9 @@ Parameters:
   pCognitoStackName:
     Type: String
     Description: The name of the Cognito stack
+  pDatabaseStackName:
+    Type: String
+    Description: The name of the database stack
   pEcrStackName:
     Type: String
     Description: The name of the ECR stack
@@ -237,27 +240,6 @@ Resources:
               - Name: ExportConfigArtifact
             RunOrder: 1
 
-          - Name: DeployDatabaseCFStack
-            ActionTypeId:
-              Owner: AWS
-              Category: Deploy
-              Version: 1
-              Provider: CloudFormation
-            Configuration:
-              TemplatePath: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/database.yaml'
-              ActionMode: !If [ IsDev, REPLACE_ON_FAILURE, CREATE_UPDATE ]
-              TemplateConfiguration: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/database_template_config.json'
-              Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
-              RoleArn:
-                   Fn::ImportValue:
-                     Fn::Sub: '${pBootstrapStackName}-CloudFormationServiceRoleArn'
-              StackName: '#{ExportConfigNS.DATABASE_STACK_NAME}'
-            InputArtifacts:
-              - Name: 'ExportConfigArtifact'
-            Namespace: DatabaseCloudForamtionOutNS
-            OutputArtifacts: [ ]
-            RunOrder: 2
-
       - Name: Deploy_Helm_Chart
         Actions:
           - Name: DeployLists
@@ -281,8 +263,8 @@ Resources:
                       { "name":"HOSTED_ZONE", "value":"#{ExportConfigNS.HOSTED_ZONE}" },
                       { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
                       { "name":"IMAGES_BASE_URL", "value":"#{ExportConfigNS.IMAGES_BASE_URL}" },
-                      { "name":"LISTS_SECRET_NAME", "value":"#{DatabaseCloudForamtionOutNS.DocDbPasswordSecretName}" },
-                      { "name":"MONGODB_HOST", "value":"#{DatabaseCloudForamtionOutNS.DocDbClusterEndpoint}" },
+                      { "name":"LISTS_SECRET_NAME", "value":"${ListSecretName}" },
+                      { "name":"MONGODB_HOST", "value":"${MongoDbHost}" },
                       { "name":"MONGODB_USERNAME", "value":"#{ExportConfigNS.ADMIN_USER}" },
                       { "name":"NAMEMATCHING_BASE_URL", "value":"#{ExportConfigNS.NAMEMATCHING_BASE_URL}" },
                       { "name":"OIDC_CLIENT_ID", "value":"${AppClientId}" },
@@ -299,6 +281,12 @@ Resources:
                     EcrRepo:
                       Fn::ImportValue:
                         Fn::Sub: "${pEcrStackName}-ListsRepositoryUri"
+                    ListSecretName:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pDatabaseStackName}-DocDbPasswordSecretName"
+                    MongoDbHost:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pDatabaseStackName}-DocDbClusterEndpoint"
                     OidcDiscoveryUrl:
                         Fn::Sub:
                           - "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}/.well-known/openid-configuration"
@@ -367,19 +355,6 @@ Resources:
             InputArtifacts:
               - Name: SourceArtifact
             RunOrder: 2
-          - Name: TeardownDatabaseStack
-            ActionTypeId:
-              Owner: AWS
-              Category: Deploy
-              Version: 1
-              Provider: CloudFormation
-            Configuration:
-              ActionMode: DELETE_ONLY
-              StackName: '#{ExportConfigNS.DATABASE_STACK_NAME}'
-              RoleArn:
-                Fn::ImportValue:
-                  Fn::Sub: '${pBootstrapStackName}-CloudFormationServiceRoleArn'
-            RunOrder: 3
           - Name: TeardownCodePipeline
             ActionTypeId:
               Owner: AWS
