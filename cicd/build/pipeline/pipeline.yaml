@@ -14,6 +14,9 @@ Parameters:
   pCleanBranch:
     Type: String
     Description: The clean branch, can be used in resource names
+  pDeployPipelineStack:
+    Type: String
+    Description: The name of the deployment pipeline stack
   pEnvironment:
     Type: String
     Description: The AWS environment this belongs to
@@ -269,6 +272,19 @@ Resources:
             InputArtifacts:
               - Name: 'SourceArtifact'
             RunOrder: 1
+
+          - Name: TriggerDeployment
+            ActionTypeId: 
+              Owner: AWS
+              Category: Compute
+              Version: 1
+              Provider: Commands
+            Configuration:
+              Commands:
+                - !Sub 
+                  - aws codepipeline start-pipeline-execution --name ${DeployPipeline}
+                  - DeployPipeline:
+                    Fn:Sub: ${pDeployPipelineStack}-PipelineName
 
           - Name: DeployNotification
             ActionTypeId:
