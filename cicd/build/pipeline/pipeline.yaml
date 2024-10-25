@@ -279,13 +279,13 @@ Resources:
               Category: Compute
               Version: 1
               Provider: Commands
-            Configuration:
-              Commands:
-                - !Sub 
-                  - aws codepipeline start-pipeline-execution --name ${DeployPipeline}
-                  - DeployPipeline:
-                      Fn::ImportValue:
-                        Fn::Sub: ${pDeployPipelineStack}-PipelineName
+            Commands:
+              - !Sub
+                - aws codepipeline start-pipeline-execution --name ${DeployPipeline}
+                - DeployPipeline:
+                    Fn::ImportValue:
+                      Fn::Sub: ${pDeployPipelineStack}-PipelineName
+            RunOrder: 2
 
           - Name: DeployNotification
             ActionTypeId:
@@ -311,7 +311,7 @@ Resources:
             Namespace: DeployNotificationNS
             InputArtifacts:
               - Name: 'SourceArtifact'
-            RunOrder: 2
+            RunOrder: 3
 
       - Name: Teardown
         Actions:
