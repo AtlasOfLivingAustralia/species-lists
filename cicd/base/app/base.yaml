@@ -49,7 +49,7 @@ Resources:
       CallbackURLs: 
         - !Sub ${pAppClientHost}
       ClientName: !Sub
-          - species-lists-${ResourceName}-changed
+          - species-lists-${ResourceName}
           - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
       DefaultRedirectURI: !Sub ${pAppClientHost}
       EnablePropagateAdditionalUserContextData: False
