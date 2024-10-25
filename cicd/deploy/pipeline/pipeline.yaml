@@ -186,6 +186,7 @@ Resources:
                 FilePaths:
                   Includes:
                     - !Sub cicd/${pProductComponent}/**
+                    - lists-service/helm/**
             SourceActionName: CheckoutSrc
       Variables:
         - Name: SRC_BRANCH
