@@ -727,11 +727,7 @@ public class GraphQLController {
       SpeciesList updatedList = speciesListMongoRepository.save(toUpdate);
       if (reindexRequired) {
         taxonService.reindex(updatedList.getId());
-
-        // If the list has an associate data resource, update the metadata
-        if (updatedList.getDataResourceUid() != null) {
-          metadataService.setMeta(updatedList);
-        }
+        metadataService.setMeta(updatedList);
       }
 
       return updatedList;
