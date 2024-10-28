@@ -374,6 +374,8 @@ public class WebService {
 
             int statusCode = conn.getResponseCode();
             result.put("statusCode", statusCode);
+            result.put("headers", conn.getHeaderFields());
+
             if (statusCode == HttpURLConnection.HTTP_OK || statusCode == HttpURLConnection.HTTP_CREATED) {
                 // TODO: detect non JSON response
                 String text = IOUtils.toString(conn.getInputStream(), StandardCharsets.UTF_8);

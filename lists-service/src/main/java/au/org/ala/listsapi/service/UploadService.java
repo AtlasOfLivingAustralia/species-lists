@@ -41,6 +41,7 @@ public class UploadService {
   @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
   @Autowired protected TaxonService taxonService;
   @Autowired protected ReleaseService releaseService;
+  @Autowired protected MetadataService metadataService;
   @Autowired protected AuthUtils authUtils;
 
   @Value("${temp.dir:/tmp}")
@@ -78,13 +79,6 @@ public class UploadService {
       String name, InputSpeciesList speciesListMetadata, File fileToLoad, boolean dryRun)
       throws Exception {
 
-    // If the species list is public, or authoritative, create a collectory link
-    boolean isAuthoritative = Boolean.parseBoolean(speciesListMetadata.getIsAuthoritative());
-    boolean isPrivate = Boolean.parseBoolean(speciesListMetadata.getIsPrivate());
-    if (!isPrivate || isAuthoritative) {
-
-    }
-
     // create the species list in mongo
     SpeciesList speciesList = new SpeciesList();
     speciesList.setOwner(name);
@@ -97,6 +91,11 @@ public class UploadService {
     speciesList.setFieldList(ingestJob.getFieldList());
     speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
     speciesList.setRowCount(ingestJob.getRowCount());
+
+    // If the species list is public, or authoritative, create a metadata link
+    if (!speciesList.getIsPrivate() || speciesList.getIsAuthoritative()) {
+      metadataService.setMeta(speciesList);
+    }
 
     speciesList = speciesListMongoRepository.save(speciesList);
 
