@@ -13,7 +13,6 @@ import {
   Stack,
   Button,
   Divider,
-  Center,
 } from '@mantine/core';
 import { DotsThreeIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';

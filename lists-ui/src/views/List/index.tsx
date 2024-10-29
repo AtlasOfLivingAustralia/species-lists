@@ -74,7 +74,7 @@ export function Component() {
   const {
     meta: rawMeta,
     list: loaderList,
-    facets,
+    facets: rawFacets,
   } = useLoaderData() as ListLoaderData;
   const [list, setList] = useState<FilteredSpeciesList>(loaderList);
   const [meta, setMeta] = useState<SpeciesList>(rawMeta);
@@ -85,6 +85,7 @@ export function Component() {
   const [size, setSize] = useState<number>(10);
   const [searchQuery, setSearch] = useDebouncedState('', 300);
   const [filters, setFilters] = useState<{ [key: string]: string }>({});
+  const [facets, setFacets] = useState<Facet[]>(rawFacets);
   const [error, setError] = useState<Error | null>(null);
   const [refresh, setRefresh] = useState<boolean>(false);
   const [editing, setEditing] = useState<boolean>(false);
@@ -109,23 +110,25 @@ export function Component() {
   useEffect(() => {
     async function runQuery() {
       try {
-        const { list: updatedList } = await performGQLQuery(
-          queries.QUERY_LISTS_GET,
-          {
-            speciesListID: params.id,
-            searchQuery,
-            page,
-            size,
-            filters: toKV(filters),
-            isPrivate: false,
-            sort,
-            dir,
-          },
-          ala.token
-        );
+        const { list: updatedList, facets: updatedFacets } =
+          await performGQLQuery(
+            queries.QUERY_LISTS_GET,
+            {
+              speciesListID: params.id,
+              searchQuery,
+              page,
+              size,
+              filters: toKV(filters),
+              isPrivate: false,
+              sort,
+              dir,
+            },
+            ala.token
+          );
 
         setError(null);
         setList(updatedList);
+        setFacets(updatedFacets);
       } catch (error) {
         setError(error as Error);
       }
