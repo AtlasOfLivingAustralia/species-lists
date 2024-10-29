@@ -276,9 +276,9 @@ Resources:
                   - AppClientId:
                       Fn::ImportValue:
                         Fn::Sub: "${pBaseStackName}-AppClientId"
-                    EksClusterName:
-                      Fn::ImportValue:
-                        Fn::Sub: "${pRegolithStackName}-ClusterName"
+                    EksClusterName: testing
+                      #Fn::ImportValue:
+                      #  Fn::Sub: "${pRegolithStackName}-ClusterName"
                     EcrRepo:
                       Fn::ImportValue:
                         Fn::Sub: "${pEcrStackName}-ListsRepositoryUri"
@@ -350,9 +350,9 @@ Resources:
                     { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
                     { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" }
                   ]
-                - EksClusterName:
-                    Fn::ImportValue:
-                      Fn::Sub: "${pRegolithStackName}-ClusterName"
+                - EksClusterName: testing
+                    #Fn::ImportValue:
+                    #  Fn::Sub: "${pRegolithStackName}-ClusterName"
             InputArtifacts:
               - Name: SourceArtifact
             RunOrder: 2
