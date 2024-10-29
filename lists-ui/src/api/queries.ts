@@ -44,6 +44,7 @@ export const QUERY_LISTS_GET = `query loadList(
     title
     description
     rowCount
+    distinctMatchCount
     fieldList
     owner
     authority

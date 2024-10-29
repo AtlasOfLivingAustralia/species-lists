@@ -13,12 +13,14 @@ import {
   Stack,
   Button,
   Divider,
+  Center,
 } from '@mantine/core';
 import { DotsThreeIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrashAlt } from '@fortawesome/free-regular-svg-icons';
 import {
   faDownload,
+  faFingerprint,
   faGlobe,
   faRefresh,
   faSearch,
@@ -45,6 +47,7 @@ interface ActionsProps {
   editing: boolean;
   onEditingChange: (editing: boolean) => void;
   onMetaEdited: (meta: SpeciesListSubmit) => void;
+  onRematched: () => void;
 }
 
 export function Actions({
@@ -52,10 +55,12 @@ export function Actions({
   editing,
   onEditingChange,
   onMetaEdited,
+  onRematched,
 }: ActionsProps) {
   const [updating, setUpdating] = useState<boolean>(false);
   const [rematching, setRematching] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
+  const [fetchingQid, setFetchingQid] = useState<string | null>(null);
   const listQid = useRef<string | null>(null);
   const navigate = useNavigate();
 
@@ -64,8 +69,8 @@ export function Actions({
 
   // Download callback handler
   const handleQidRedirect = useCallback(async (url: string) => {
-    console.log(url, listQid.current);
     if (!listQid.current) {
+      setFetchingQid(url);
       try {
         listQid.current = await ala.rest.lists.qid(meta.id);
       } catch (error) {
@@ -77,6 +82,7 @@ export function Actions({
 
         return;
       }
+      setFetchingQid(null);
     }
 
     if (listQid.current)
@@ -158,6 +164,7 @@ export function Actions({
         try {
           // Fire off the delete request
           await ala.rest.lists.rematch(meta.id);
+          onRematched();
           notifications.show({
             message: (
               <>
@@ -257,6 +264,22 @@ export function Actions({
           >
             Download list
           </Menu.Item>
+          <Menu.Item
+            onClick={() =>
+              handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH)
+            }
+            disabled={Boolean(fetchingQid)}
+            leftSection={<FontAwesomeIcon icon={faSearch} />}
+          >
+            Occurrence records
+          </Menu.Item>
+          <Menu.Item
+            onClick={() => handleQidRedirect(import.meta.env.VITE_ALA_SPATIAL)}
+            disabled={Boolean(fetchingQid)}
+            leftSection={<FontAwesomeIcon icon={faGlobe} />}
+          >
+            Spatial portal
+          </Menu.Item>
           {authorisedForList && (
             <>
               <Menu.Label>Administration</Menu.Label>
@@ -313,7 +336,31 @@ export function Actions({
         </Menu.Dropdown>
       </Menu>
       <Box className={classes.desktop}>
-        <Stack>
+        <Stack gap='xs'>
+          {meta.distinctMatchCount && (
+            <Paper
+              miw={authorisedForList ? 285 : undefined}
+              py={8}
+              px='sm'
+              shadow='sm'
+              radius='lg'
+              withBorder
+            >
+              <Text
+                fw='bold'
+                style={{
+                  textAlign: 'center',
+                  fontSize: '0.8rem',
+                }}
+              >
+                <FontAwesomeIcon
+                  icon={faFingerprint}
+                  style={{ marginRight: 12 }}
+                />
+                {meta.distinctMatchCount} distinct taxa
+              </Text>
+            </Paper>
+          )}
           {authorisedForList && (
             <Paper
               miw={authorisedForList ? 285 : undefined}
@@ -411,6 +458,10 @@ export function Actions({
               onClick={() =>
                 handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH)
               }
+              loading={
+                fetchingQid === import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH
+              }
+              disabled={Boolean(fetchingQid)}
               fullWidth
               size='sm'
               variant='subtle'
@@ -429,6 +480,8 @@ export function Actions({
               onClick={() =>
                 handleQidRedirect(import.meta.env.VITE_ALA_SPATIAL)
               }
+              loading={fetchingQid === import.meta.env.VITE_ALA_SPATIAL}
+              disabled={Boolean(fetchingQid)}
               fullWidth
               variant='subtle'
               leftSection={<FontAwesomeIcon icon={faGlobe} />}

@@ -43,7 +43,6 @@ import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
 import tableClasses from './classes/Table.module.css';
 
 // Table components
-import { ThMatch } from './components/Table/ThMatch';
 import { ThEditable } from './components/Table/ThEditable';
 import { TrItem } from './components/Table/TrItem';
 import { ThCreate } from './components/Table/ThCreate';
@@ -295,7 +294,6 @@ export function Component() {
   );
 
   const hasError = Boolean(error);
-  console.log(sort, dir);
 
   return (
     <>
@@ -327,17 +325,18 @@ export function Component() {
                     {meta.description}
                   </Text>
                 )}
+                <Group mt='sm'>
+                  <Flags meta={meta} />
+                </Group>
               </Stack>
               <Actions
                 meta={meta}
                 editing={editing}
                 onEditingChange={setEditing}
                 onMetaEdited={handleListMetaUpdated}
+                onRematched={() => setRefresh(!refresh)}
               />
             </Flex>
-          </Grid.Col>
-          <Grid.Col span={12} pb='sm' pt={0}>
-            <Flags display='inline-flex' meta={meta} />
           </Grid.Col>
           <Grid.Col span={12}>
             <Group justify='space-between'>

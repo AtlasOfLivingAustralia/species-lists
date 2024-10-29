@@ -97,7 +97,7 @@ public class GraphQLController {
   @Autowired protected ReleaseMongoRepository releaseMongoRepository;
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
   @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
-  @Autowired private SpeciesListItemMongoRepository speciesListItemMongoRepository;
+  @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
 
   @Autowired protected TaxonService taxonService;
   @Autowired protected ValidationService validationService;
