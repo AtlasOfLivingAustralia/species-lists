@@ -233,6 +233,7 @@ Resources:
               Provider: CodeBuild
             Configuration:
               ProjectName: !Ref DeployLists
+              PrimarySource: SourceArtifact
               EnvironmentVariables: !Sub |
                 [
                   { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
