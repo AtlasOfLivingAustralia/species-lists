@@ -251,6 +251,7 @@ Resources:
               Provider: CodeBuild
             Configuration:
               ProjectName: !Ref DeployLists
+              PrimarySource: SourceArtifact
               EnvironmentVariables:
                 Fn::Sub:
                   - |
