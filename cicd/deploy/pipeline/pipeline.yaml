@@ -298,6 +298,7 @@ Resources:
 
             InputArtifacts:
               - Name: SourceArtifact
+              - Name: ExportConfigArtifact
             RunOrder: 2
 
           - Name: DeployNotification
@@ -376,6 +377,16 @@ Resources:
     DeletionPolicy: Delete
     Properties:
       LogGroupName: !Sub /aws/codebuild/${DeployLists}
+      RetentionInDays: 30
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+
+  UninstallListsCodeBuildLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/codebuild/${UninstallLists}
       RetentionInDays: 30
       Tags:
         - Key: Name

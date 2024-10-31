@@ -8,8 +8,8 @@
 # Some fun, a different image for each environment
 case $ENVIRONMENT in
   "production")
-    IMAGE_URL=https://inaturalist-open-data.s3.amazonaws.com/photos/321044358/small.png
-    ALT_TEXT="Photo by David Wesolowski. https://www.inaturalist.org/observations/147380645"
+    IMAGE_URL=https://inaturalist-open-data.s3.amazonaws.com/photos/69895591/small.jpg
+    ALT_TEXT="Photo by John D Reynolds. https://www.inaturalist.org/observations/44082017"
     ;;
   "staging")
     IMAGE_URL=https://inaturalist-open-data.s3.amazonaws.com/photos/208429788/small.jpg
