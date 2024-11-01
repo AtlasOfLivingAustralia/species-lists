@@ -144,7 +144,6 @@ aws cloudformation deploy \
         pCleanBranch=$clean_branch \
         pCognitoStackName=$COGNITO_STACK_NAME \
         pDatabaseStackName=$DATABASE_STACK_NAME \
-        pEcrStackName=$ECR_STACK_NAME \
         pEnvironment=$environment \
         pGitHubBranch=$branch \
         pGitHubOwner=$GITHUB_OWNER \

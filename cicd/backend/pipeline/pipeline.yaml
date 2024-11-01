@@ -23,9 +23,6 @@ Parameters:
   pDatabaseStackName:
     Type: String
     Description: The name of the database stack
-  pEcrStackName:
-    Type: String
-    Description: The name of the ECR stack
   pEnvironment:
     Type: String
     Description: The AWS environment this belongs to
@@ -93,6 +90,27 @@ Resources:
         Type: CODEPIPELINE
         BuildSpec: !Sub cicd/${pProductComponent}/pipeline/export_config_buildspec.yaml
       TimeoutInMinutes: 5
+
+  BuildLists:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub
+        - ${pProductName}-${pProductComponent}-build-lists-${ResourceName}
+        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      Description: Build the lists project
+      ServiceRole:
+               Fn::ImportValue:
+                 Fn::Sub: ${pBootstrapStackName}-CodeBuildServiceRoleArn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !Sub cicd/${pProductComponent}/pipeline/build_lists_buildspec.yaml
+      TimeoutInMinutes: 30
 
   DeployLists:
     Type: AWS::CodeBuild::Project
@@ -241,8 +259,50 @@ Resources:
               - Name: ExportConfigArtifact
             RunOrder: 1
 
+          - Name: DeployECR-CFStack
+            ActionTypeId:
+              Owner: AWS
+              Category: Deploy
+              Version: 1
+              Provider: CloudFormation
+            Configuration:
+              TemplatePath: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/ecr.yaml'
+              ActionMode: !If [ IsDev, REPLACE_ON_FAILURE, CREATE_UPDATE ]
+              TemplateConfiguration: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/ecr_template_config.json'
+              Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
+              RoleArn:
+                   Fn::ImportValue:
+                     Fn::Sub: '${pBootstrapStackName}-CloudFormationServiceRoleArn'
+              StackName: '#{ExportConfigNS.ECR_STACK_NAME}'
+            InputArtifacts:
+              - Name: 'ExportConfigArtifact'
+            Namespace: BuildCloudFormationOutNS
+            OutputArtifacts: [ ]
+            RunOrder: 2
+
       - Name: Deploy_Helm_Chart
         Actions:
+          - Name: BuildLists
+            ActionTypeId:
+              Owner: AWS
+              Category: Build
+              Version: 1
+              Provider: CodeBuild
+            Configuration:
+              ProjectName: !Ref BuildLists
+              EnvironmentVariables: !Sub |
+                [
+                  { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
+                  { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
+                  { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
+                  { "name":"ENVIRONMENT", "value":"${pEnvironment}" },
+                  { "name":"IMAGE_NAME", "value":"#{ExportConfigNS.IMAGE_NAME}" },
+                  { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" }
+                ]
+            InputArtifacts:
+              - Name: 'SourceArtifact'
+            RunOrder: 1
+
           - Name: DeployLists
             ActionTypeId:
               Owner: AWS
@@ -259,7 +319,7 @@ Resources:
                       { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
                       { "name":"BIE_BASE_URL", "value":"#{ExportConfigNS.BIE_BASE_URL}" },
                       { "name":"CERTIFICATE_ARN", "value":"#{ExportConfigNS.CERTIFICATE_ARN}" },
-                      { "name":"ECR_REPO", "value":"${EcrRepo}" },
+                      { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
                       { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
                       { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" },
                       { "name":"HOSTED_ZONE", "value":"#{ExportConfigNS.HOSTED_ZONE}" },
@@ -280,9 +340,6 @@ Resources:
                     EksClusterName:
                       Fn::ImportValue:
                         Fn::Sub: "${pRegolithStackName}-ClusterName"
-                    EcrRepo:
-                      Fn::ImportValue:
-                        Fn::Sub: "${pEcrStackName}-ListsRepositoryUri"
                     ListSecretName:
                       Fn::ImportValue:
                         Fn::Sub: "${pDatabaseStackName}-DocDbPasswordSecretName"
