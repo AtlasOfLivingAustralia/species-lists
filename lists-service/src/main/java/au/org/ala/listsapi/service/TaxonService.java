@@ -192,7 +192,9 @@ public class TaxonService {
 
     int size = 100;
     int page = 0;
+    int distinct = 0;
     boolean done = false;
+
     while (!done) {
       Pageable paging = PageRequest.of(page, size);
       Page<SpeciesListItem> speciesListItems =
@@ -202,6 +204,11 @@ public class TaxonService {
         try {
           List<SpeciesListItem> items = speciesListItems.getContent();
           updateClassifications(items);
+
+          distinct += (int) items.stream()
+                  .filter(speciesListItem -> speciesListItem.getClassification().getSuccess())
+                  .map(speciesListItem -> speciesListItem.getClassification().getTaxonConceptID()).distinct().count();
+
           speciesListItemMongoRepository.saveAll(items);
 
         } catch (Exception e) {
@@ -212,6 +219,11 @@ public class TaxonService {
       }
       page++;
     }
+
+    SpeciesList speciesList = optionalSp.get();
+    speciesList.setDistinctMatchCount(distinct);
+    speciesListMongoRepository.save(speciesList);
+
     logger.info("Taxon matching " + speciesListID + " complete.");
   }
 

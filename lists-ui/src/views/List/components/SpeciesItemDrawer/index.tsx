@@ -141,7 +141,7 @@ export function SpeciesItemDrawer({
         <Drawer.Header>
           <Flex justify='space-between' align='center' w='100%'>
             <Title fs='italic' order={4} mr='xs'>
-              {item.scientificName}
+              {item?.scientificName}
             </Title>
             <Flex align='center'>
               <Switch
@@ -166,7 +166,7 @@ export function SpeciesItemDrawer({
           <Box className={classes.imageBackground}>
             <Center>
               <TaxonImage
-                taxonID={item.classification.taxonConceptID}
+                taxonID={item.classification?.taxonConceptID}
                 h={200}
                 w='100%'
               />
@@ -223,7 +223,7 @@ export function SpeciesItemDrawer({
                   children: (
                     <Text>
                       Please confirm that you wish to delete{' '}
-                      <b>{item.scientificName}</b> from this list.
+                      <b>{item?.scientificName}</b> from this list.
                     </Text>
                   ),
                   labels: { confirm: 'Confirm', cancel: 'Cancel' },

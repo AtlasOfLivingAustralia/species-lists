@@ -114,6 +114,7 @@ public class IngressController {
         return errorResponse;
       }
       taxonService.taxonMatchDataset(speciesListID);
+      taxonService.reindex(speciesListID);
       return new ResponseEntity<>(HttpStatus.OK);
     } catch (Exception e) {
       logger.error(e.getMessage(), e);

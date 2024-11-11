@@ -36,12 +36,15 @@ export const QUERY_LISTS_GET = `query loadList(
   $filters: [Filter]
   $page: Int
   $size: Int
+  $sort: String
+  $dir: String
 ) {
   meta: getSpeciesListMetadata(speciesListID: $speciesListID) {
     id
     title
     description
     rowCount
+    distinctMatchCount
     fieldList
     owner
     authority
@@ -63,6 +66,8 @@ export const QUERY_LISTS_GET = `query loadList(
     page: $page
     size: $size
     filters: $filters
+    sort: $sort
+    dir: $dir
   ) {
     content {
       id

@@ -1,4 +1,4 @@
-import { MantineStyleProp, Table, TableTrProps } from '@mantine/core';
+import { Anchor, MantineStyleProp, Table, TableTrProps } from '@mantine/core';
 import { SpeciesListItem } from '#/api';
 import find from 'lodash-es/find';
 
@@ -32,7 +32,21 @@ export function TrItem({
       {...rest}
     >
       <Table.Td width='auto'>{row.scientificName}</Table.Td>
-      <Table.Td width='auto'>{row.classification.scientificName}</Table.Td>
+      <Table.Td width='auto'>
+        {row.classification?.scientificName ? (
+          <Anchor
+            fs='italic'
+            href={`${import.meta.env.VITE_ALA_BIE_SPECIES}/${
+              row.classification?.taxonConceptID
+            }`}
+            target='_blank'
+          >
+            {row.classification?.scientificName}
+          </Anchor>
+        ) : (
+          ''
+        )}
+      </Table.Td>
       {fields.map((key) => (
         <Table.Td key={key} style={tdStyles}>
           {find(row.properties, { key })?.value}
@@ -42,7 +56,7 @@ export function TrItem({
       {classification.map((key) => (
         <Table.Td key={key} style={tdStyles}>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          {(row.classification as any)[key]}
+          {(row.classification as any)?.[key]}
         </Table.Td>
       ))}
     </Table.Tr>

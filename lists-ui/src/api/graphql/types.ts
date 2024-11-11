@@ -26,6 +26,7 @@ interface SpeciesList {
   listType: string;
   region: string;
   rowCount: number;
+  distinctMatchCount: number;
   title: string;
   lastUpdatedBy: string;
   owner: string;

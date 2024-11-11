@@ -98,7 +98,7 @@ public class GraphQLController {
   @Autowired protected ReleaseMongoRepository releaseMongoRepository;
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
   @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
-  @Autowired private SpeciesListItemMongoRepository speciesListItemMongoRepository;
+  @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
 
   @Autowired protected TaxonService taxonService;
   @Autowired protected ValidationService validationService;
@@ -744,7 +744,7 @@ public class GraphQLController {
       @Argument Integer page,
       @Argument Integer size,
       @Argument String sort,
-      @Argument String direction,
+      @Argument String dir,
       @AuthenticationPrincipal Principal principal) {
 
     if (speciesListID != null) {
@@ -778,7 +778,7 @@ public class GraphQLController {
             s.field(
                 new FieldSort.Builder()
                     .field(sort)
-                    .order(SortOrder.valueOf(direction != null ? direction : "Asc"))
+                    .order(dir.equals("asc") ? SortOrder.Asc : SortOrder.Desc)
                     .build()));
 
     Query query = builder.build();
