@@ -30,7 +30,7 @@ phases:
       - | 
         echo "mongodb:
           host: $MONGODB_HOST
-          password: \"$MONGODB_PASSWORD\"
+          password: $MONGODB_PASSWORD
           username: $MONGODB_USERNAME
         oidc:
           discoveryUri: $OIDC_DISCOVERY_URI
