@@ -7,6 +7,8 @@ env:
   shell: bash
   variables:
     JAVA_TOOL_OPTIONS: -Dhttps.protocols=TLSv1.2
+  secrets-manager:
+    DOCKER_PASSWORD: $ALA_SECRETS_NAME:dockerhub-password
 
 phases:
   install:
@@ -17,9 +19,10 @@ phases:
     commands:
       - echo Build started on $(date)
       - echo Logging in to Amazon ECR...
-      - aws ecr get-login-password | docker login -u AWS --password-stdin "https://$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+      - docker login -u $DOCKER_USERNANE -p $DOCKER_PASSWORD
       - echo Building the Docker image...
       - docker build -t $IMAGE_NAME -f lists-service/src/main/docker/Dockerfile lists-service
+      - aws ecr get-login-password | docker login -u AWS --password-stdin "https://$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
       - echo Tagging the Docker image...
       - echo tagging
       - docker tag $IMAGE_NAME:$IMAGE_TAG $ECR_REPO:$CLEAN_BRANCH-$CODEBUILD_BUILD_NUMBER

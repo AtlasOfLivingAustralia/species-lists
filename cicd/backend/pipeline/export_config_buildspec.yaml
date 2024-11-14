@@ -10,6 +10,7 @@ env:
     DEBIAN_FRONTEND: noninteractive
   exported-variables:
     - ADMIN_USER
+    - ALA_SECRETS_NAME
     - BIE_BASE_URL
     - CERTIFICATE_ARN
     - CODEBUILD_BUILD_NUMBER
