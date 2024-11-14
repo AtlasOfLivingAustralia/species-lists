@@ -329,7 +329,7 @@ Resources:
                       { "name":"IMAGES_BASE_URL", "value":"#{ExportConfigNS.IMAGES_BASE_URL}" },
                       { "name":"LISTS_SECRET_NAME", "value":"${ListSecretName}" },
                       { "name":"MONGODB_HOST", "value":"${MongoDbHost}" },
-                      { "name":"MONGODB_USERNAME", "value":"#{ExportConfigNS.ADMIN_USER}" },
+                      { "name":"MONGODB_USERNAME", "value":"${MongoDbUsername}" },
                       { "name":"NAMEMATCHING_BASE_URL", "value":"#{ExportConfigNS.NAMEMATCHING_BASE_URL}" },
                       { "name":"OIDC_CLIENT_ID", "value":"${AppClientId}" },
                       { "name":"OIDC_DISCOVERY_URI", "value":"${OidcDiscoveryUrl}" },
@@ -348,6 +348,9 @@ Resources:
                     MongoDbHost:
                       Fn::ImportValue:
                         Fn::Sub: "${pDatabaseStackName}-DocDbClusterEndpoint"
+                    MongoDbUsername:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pDatabaseStackName}-DocDbUsername"
                     OidcDiscoveryUrl:
                         Fn::Sub:
                           - "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}/.well-known/openid-configuration"
