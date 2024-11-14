@@ -5,6 +5,7 @@ import au.org.ala.listsapi.repo.ReleaseMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import au.org.ala.listsapi.service.MetadataService;
 import au.org.ala.listsapi.service.ValidationService;
 import au.org.ala.listsapi.service.TaxonService;
 import co.elastic.clients.elasticsearch._types.FieldSort;
@@ -97,11 +98,12 @@ public class GraphQLController {
   @Autowired protected ReleaseMongoRepository releaseMongoRepository;
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
   @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
-  @Autowired private SpeciesListItemMongoRepository speciesListItemMongoRepository;
+  @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
 
   @Autowired protected TaxonService taxonService;
   @Autowired protected ValidationService validationService;
   @Autowired protected AuthUtils authUtils;
+  @Autowired protected MetadataService metadataService;
 
   public static SpeciesListItem convert(SpeciesListIndex index) {
 
@@ -691,6 +693,7 @@ public class GraphQLController {
       }
 
       if (title != null && !title.equalsIgnoreCase(toUpdate.getTitle())
+          || description != null && !description.equalsIgnoreCase(toUpdate.getDescription())
           || listType != null && !listType.equalsIgnoreCase(toUpdate.getListType())
           || isPrivate != null && !isPrivate.equals(toUpdate.getIsPrivate())
           || isAuthoritative != null && !isAuthoritative.equals(toUpdate.getIsAuthoritative())
@@ -698,6 +701,7 @@ public class GraphQLController {
           || isSDS != null && !isSDS.equals(toUpdate.getIsSDS())
           || wkt != null && !wkt.equals(toUpdate.getWkt())
           || region != null && !region.equals(toUpdate.getRegion())
+          || licence != null && !licence.equals(toUpdate.getLicence())
           || tags != null && !tags.equals(toUpdate.getTags())) {
         reindexRequired = true;
       }
@@ -723,6 +727,7 @@ public class GraphQLController {
       SpeciesList updatedList = speciesListMongoRepository.save(toUpdate);
       if (reindexRequired) {
         taxonService.reindex(updatedList.getId());
+        metadataService.setMeta(updatedList);
       }
 
       return updatedList;
@@ -739,7 +744,7 @@ public class GraphQLController {
       @Argument Integer page,
       @Argument Integer size,
       @Argument String sort,
-      @Argument String direction,
+      @Argument String dir,
       @AuthenticationPrincipal Principal principal) {
 
     if (speciesListID != null) {
@@ -773,7 +778,7 @@ public class GraphQLController {
             s.field(
                 new FieldSort.Builder()
                     .field(sort)
-                    .order(SortOrder.valueOf(direction != null ? direction : "Asc"))
+                    .order(dir.equals("asc") ? SortOrder.Asc : SortOrder.Desc)
                     .build()));
 
     Query query = builder.build();

@@ -41,6 +41,7 @@ public class UploadService {
   @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
   @Autowired protected TaxonService taxonService;
   @Autowired protected ReleaseService releaseService;
+  @Autowired protected MetadataService metadataService;
   @Autowired protected AuthUtils authUtils;
 
   @Value("${temp.dir:/tmp}")
@@ -90,6 +91,11 @@ public class UploadService {
     speciesList.setFieldList(ingestJob.getFieldList());
     speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
     speciesList.setRowCount(ingestJob.getRowCount());
+
+    // If the species list is public, or authoritative, create a metadata link
+    if (!speciesList.getIsPrivate() || speciesList.getIsAuthoritative()) {
+      metadataService.setMeta(speciesList);
+    }
 
     speciesList = speciesListMongoRepository.save(speciesList);
 

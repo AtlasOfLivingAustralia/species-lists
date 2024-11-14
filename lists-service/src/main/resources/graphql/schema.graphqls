@@ -51,6 +51,7 @@ type SpeciesList {
   title: String
   description: String
   rowCount: Int
+  distinctMatchCount: Int
   fieldList:[String]
   facetList:[String]
   licence: String

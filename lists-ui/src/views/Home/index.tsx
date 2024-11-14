@@ -37,7 +37,7 @@ function Home() {
   const [searchQuery, setSearch] = useDebouncedState('', 300);
   const [filters, setFilters] = useState<KV[]>([]);
   const [refresh, setRefresh] = useState<boolean>(false);
-  const [view, setView] = useState<string>('all');
+  const [view, setView] = useState<string>('public');
 
   const ala = useALA();
   const { data, error, update } = useGQLQuery<HomeQuery>(
@@ -105,11 +105,11 @@ function Home() {
   const labels = useMemo(
     () => [
       {
-        value: 'all',
+        value: 'public',
         label: (
           <Center style={{ gap: 10 }}>
             <FontAwesomeIcon icon={faList} fontSize={14} />
-            <span>All</span>
+            <span>Public</span>
           </Center>
         ),
       },
