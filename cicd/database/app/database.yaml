@@ -43,7 +43,7 @@ Parameters:
     Description: Environment for this DocumentDB instance
     AllowedValues:
       - development
-      - develop
+      - testing
       - staging
       - production
     Type: String

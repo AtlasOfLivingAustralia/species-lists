@@ -2,7 +2,7 @@
 
 ###
 # Generate the environment vars file for the current environment.
-# Usage: gen_env_vars.py --env [development|develop|staging|production] --conf [/path/to/conf.ini]
+# Usage: gen_env_vars.py --env [development|testing|staging|production] --conf [/path/to/conf.ini]
 
 import os
 import argparse
