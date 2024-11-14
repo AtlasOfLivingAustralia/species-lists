@@ -1,0 +1,67 @@
+version: 0.2
+###
+# This build project sets up the eks context and deploys the lists service
+# using Helm
+
+env:
+  shell: bash
+  variables:
+    JAVA_TOOL_OPTIONS: -Dhttps.protocols=TLSv1.2
+  secrets-manager:
+    MONGODB_PASSWORD: $LISTS_SECRET_NAME:db-password
+
+phases:
+
+  install:
+    commands:
+      - echo Installing dependencies...
+      - curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+      - chmod 700 get_helm.sh
+      - ./get_helm.sh
+
+  build:
+    commands:
+      - echo Build started on $(date)
+      - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME
+#      - kubectl config set-context --current --namespace=$PRODUCT_NAME
+#      - printf "$(kubectl config current-context)\n"
+      # do we need to create the service account here?
+      - cd lists-service/helm
+      - | 
+        echo "mongodb:
+          host: $MONGODB_HOST
+          password: \"$MONGODB_PASSWORD\"
+          username: $MONGODB_USERNAME
+        oidc:
+          discoveryUri: $OIDC_DISCOVERY_URI
+          clientId: $OIDC_CLIENT_ID
+        bie:
+          baseUrl: $BIE_BASE_URL
+        images:
+          baseUrl: $IMAGES_BASE_URL
+        namematching:
+          baseUrl: $NAMEMATCHING_BASE_URL
+        userdetails:
+          baseUrl: $USERDETAILS_BASE_URL" > helm_values.yaml
+      - echo helm values
+      - cat helm_values.yaml
+      - echo helm upgrade --install $HELM_RELEASE_NAME  . 
+                      -n lists 
+                      --set image.repository=$ECR_REPO 
+                      --set image.tag=$IMAGE_TAG 
+                      --set ingress.hostname=$SUB_DOMAIN.$HOSTED_ZONE
+                      --set ingress.certificateArn=$CERTIFICATE_ARN
+                      -f helm_values.yaml
+                      --set deploymentAnnotations.checksum/configs="$(md5sum helm_values.yaml | awk '{print $1}')"
+      - helm upgrade --install $HELM_RELEASE_NAME . 
+                      -n lists
+                      --set image.repository=$ECR_REPO 
+                      --set image.tag=$IMAGE_TAG 
+                      --set ingress.hostname=$SUB_DOMAIN.$HOSTED_ZONE
+                      --set ingress.certificateArn=$CERTIFICATE_ARN
+                      -f helm_values.yaml
+                      --set deploymentAnnotations.checksum/configs="$(md5sum helm_values.yaml | awk '{print $1}')"
+  post_build:
+    commands:
+      - echo Post-build phase...
+      - echo Build completed on $(date)

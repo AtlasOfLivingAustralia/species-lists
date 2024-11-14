@@ -1,0 +1,106 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Lists UI WAF - needs to launch in us-east-1
+
+Parameters:
+  pAllowListedIps:
+    Type: CommaDelimitedList
+    Description: List of IPs to allow 
+  pCleanBranch:
+    Type: String
+    Description: A cleaned version of the code branch name
+    Default: development
+  pEnvironment:
+    Type: String
+    Description: The AWS environment this belongs to
+
+Conditions:
+  IsDev: !Equals
+    - !Ref pEnvironment
+    - development
+  NotDev: !Not [ Condition: IsDev ]
+
+Resources:
+
+  AllowlistIpSet:
+    Type: AWS::WAFv2::IPSet
+    Properties:
+      Name: !Sub
+        - "lists-ip-allowlist-${ResourceName}"
+        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      Description: !Sub List of IPs to allow for LISTS ${pEnvironment}
+      Scope: CLOUDFRONT
+      IPAddressVersion: IPV4
+      Addresses: !Ref pAllowListedIps
+
+  ListsWafWebACL:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      Name: !Sub
+        - "lists-${ResourceName}"
+        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      Description: LISTS Web ACL
+      Scope: CLOUDFRONT
+      DefaultAction:
+        Allow: {}
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: !Sub lists-waf-wacl-${pCleanBranch}
+      Rules:
+        - Name: ip-allowlist
+          Action:
+            Block: {}
+          Priority: 0
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub lists-waf-wacl-rule-${pCleanBranch}
+          Statement:
+            NotStatement:
+              Statement:
+                IPSetReferenceStatement:
+                  Arn: !GetAtt AllowlistIpSet.Arn
+        - Name: aws-managed-ip-reputation-rule-set
+          OverrideAction:
+            None: {}
+          Priority: 1
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub lists-waf-wacl-ip-reputation-rule-${pCleanBranch}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesAmazonIpReputationList
+        - Name: aws-managed-common-rule-set
+          OverrideAction:
+            None: {}
+          Priority: 2
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub lists-waf-wacl-common-rule-${pCleanBranch}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesCommonRuleSet
+        - Name: aws-managed-bad-inputs-rule-set
+          OverrideAction:
+            None: {}
+          Priority: 3
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub lists-waf-wacl-bad-inputs-rule-${pCleanBranch}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesKnownBadInputsRuleSet
+      Tags:
+        - Key: Environment
+          Value: !Ref pEnvironment
+
+Outputs:
+ ListsWafWebAclArn:
+   Description: The ARN of the WAF Web ACL
+   Value: !GetAtt ListsWafWebACL.Arn

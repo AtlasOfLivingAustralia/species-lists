@@ -1,0 +1,14 @@
+version: 0.2
+###
+# Deletes all objects from the source bucket, this needs to be done 
+# before publish so that old files are removed and before the teardown action
+# so the bucket can be removed
+
+env:
+  shell: bash
+
+phases:
+  build:
+    commands:
+      - echo source bucket is $SOURCE_BUCKET/$BUCKET_PATH
+      - aws s3 rm s3://$SOURCE_BUCKET --recursive
