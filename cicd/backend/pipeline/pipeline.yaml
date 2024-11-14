@@ -295,6 +295,7 @@ Resources:
                   { "name":"ALA_SECRETS_NAME", "value":"#{ExportConfigNS.ALA_SECRETS_NAME}" },
                   { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
                   { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
+                  { "name":"DOCKER_USERNAME", "value":"#{ExportConfigNS.DOCKER_USERNAME}" },
                   { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
                   { "name":"ENVIRONMENT", "value":"${pEnvironment}" },
                   { "name":"IMAGE_NAME", "value":"#{ExportConfigNS.IMAGE_NAME}" },
