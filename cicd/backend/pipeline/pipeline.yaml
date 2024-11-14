@@ -292,6 +292,7 @@ Resources:
               ProjectName: !Ref BuildLists
               EnvironmentVariables: !Sub |
                 [
+                  { "name":"ALA_SECRETS_NAME", "value":"#{ExportConfigNS.ALA_SECRETS_NAME}" },
                   { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
                   { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
                   { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
@@ -316,7 +317,6 @@ Resources:
                 Fn::Sub:
                   - |
                     [
-                      { "name":"ALA_SECRETS_NAME", "value":"#{ExportConfigNS.ALA_SECRETS_NAME}" },
                       { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
                       { "name":"BIE_BASE_URL", "value":"#{ExportConfigNS.BIE_BASE_URL}" },
                       { "name":"CERTIFICATE_ARN", "value":"#{ExportConfigNS.CERTIFICATE_ARN}" },
