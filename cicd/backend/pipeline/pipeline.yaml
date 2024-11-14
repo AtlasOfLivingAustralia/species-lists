@@ -336,9 +336,9 @@ Resources:
                       { "name":"SUB_DOMAIN", "value":"#{ExportConfigNS.SUB_DOMAIN}" },
                       { "name":"USERDETAILS_BASE_URL", "value":"#{ExportConfigNS.USERDETAILS_BASE_URL}" }
                     ]
-                  - AppClientId:
-                      Fn::ImportValue:
-                        Fn::Sub: "${pBaseStackName}-AppClientId"
+                  - AppClientId: dummy-val
+                      #Fn::ImportValue:
+                      #  Fn::Sub: "${pBaseStackName}-AppClientId"
                     EksClusterName:
                       Fn::ImportValue:
                         Fn::Sub: "${pRegolithStackName}-ClusterName"
