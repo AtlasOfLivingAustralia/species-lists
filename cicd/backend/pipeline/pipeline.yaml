@@ -5,6 +5,9 @@ Parameters:
   pAutoDeploy:
     Type: String
     Description: Sets the pipeline to auto deploy on repo changes
+  pBaseStackName:
+    Type: String
+    Description: The name of the base stack
   pBootstrapStackName:
     Type: String
     Description: the name of the bootstrap stack
@@ -14,9 +17,12 @@ Parameters:
   pCleanBranch:
     Type: String
     Description: The clean branch, can be used in resource names
-  pDeployPipelineStack:
+  pCognitoStackName:
     Type: String
-    Description: The name of the deployment pipeline stack
+    Description: The name of the Cognito stack
+  pDatabaseStackName:
+    Type: String
+    Description: The name of the database stack
   pEnvironment:
     Type: String
     Description: The AWS environment this belongs to
@@ -38,6 +44,9 @@ Parameters:
   pProductName:
     Type: String
     Description: The name of the product
+  pRegolithStackName:
+    Type: String
+    Description: The name of the regolith stack
   pRestartExecutionOnUpdate:
     Type: String
     Description: Restart that pipeline if it's been updated
@@ -103,6 +112,48 @@ Resources:
         BuildSpec: !Sub cicd/${pProductComponent}/pipeline/build_lists_buildspec.yaml
       TimeoutInMinutes: 30
 
+  DeployLists:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub
+              - ${pProductName}-${pProductComponent}-deploy-lists-${ResourceName}
+              - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      Description: Deploy lists
+      ServiceRole:
+               Fn::ImportValue:
+                 Fn::Sub: ${pBootstrapStackName}-CodeBuildServiceRoleArn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !Sub cicd/${pProductComponent}/pipeline/deploy_lists_buildspec.yaml
+      TimeoutInMinutes: 20
+
+  UninstallLists:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub
+        - ${pProductName}-${pProductComponent}-uninstall-lists-${ResourceName}
+        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      Description: Uninstall lists
+      ServiceRole:
+        Fn::ImportValue:
+          Fn::Sub: ${pBootstrapStackName}-CodeBuildServiceRoleArn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !Sub cicd/${pProductComponent}/pipeline/uninstall_lists_buildspec.yaml
+      TimeoutInMinutes: 20
+
   DeployNotification:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -125,7 +176,7 @@ Resources:
       TimeoutInMinutes: 5
 
   Pipeline:
-    Type: AWS::CodePipeline::Pipeline
+    Type: "AWS::CodePipeline::Pipeline"
     Properties:
       Name: !Sub
               - ${pProductName}-${pProductComponent}-${ResourceName}
@@ -153,8 +204,7 @@ Resources:
                 FilePaths:
                   Includes:
                     - !Sub cicd/${pProductComponent}/**
-                    - lists-service/pom.xml
-                    - lists-service/src/**
+                    - lists-service/helm/**
             SourceActionName: CheckoutSrc
       Variables:
         - Name: SRC_BRANCH
@@ -204,7 +254,7 @@ Resources:
                  ]
             Namespace: ExportConfigNS
             InputArtifacts:
-              - Name: 'SourceArtifact'
+              - Name: SourceArtifact
             OutputArtifacts:
               - Name: ExportConfigArtifact
             RunOrder: 1
@@ -230,8 +280,8 @@ Resources:
             OutputArtifacts: [ ]
             RunOrder: 2
 
-      - Name: Build_Docker_Image
-        Actions:  
+      - Name: Deploy_Helm_Chart
+        Actions:
           - Name: BuildLists
             ActionTypeId:
               Owner: AWS
@@ -253,18 +303,59 @@ Resources:
               - Name: 'SourceArtifact'
             RunOrder: 1
 
-          - Name: TriggerDeployment
-            ActionTypeId: 
+          - Name: DeployLists
+            ActionTypeId:
               Owner: AWS
-              Category: Compute
+              Category: Build
               Version: 1
-              Provider: Commands
-            Commands:
-              - !Sub
-                - aws codepipeline start-pipeline-execution --name ${DeployPipeline}
-                - DeployPipeline:
-                    Fn::ImportValue:
-                      Fn::Sub: ${pDeployPipelineStack}-PipelineName
+              Provider: CodeBuild
+            Configuration:
+              ProjectName: !Ref DeployLists
+              PrimarySource: SourceArtifact
+              EnvironmentVariables:
+                Fn::Sub:
+                  - |
+                    [
+                      { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
+                      { "name":"BIE_BASE_URL", "value":"#{ExportConfigNS.BIE_BASE_URL}" },
+                      { "name":"CERTIFICATE_ARN", "value":"#{ExportConfigNS.CERTIFICATE_ARN}" },
+                      { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
+                      { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
+                      { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" },
+                      { "name":"HOSTED_ZONE", "value":"#{ExportConfigNS.HOSTED_ZONE}" },
+                      { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
+                      { "name":"IMAGES_BASE_URL", "value":"#{ExportConfigNS.IMAGES_BASE_URL}" },
+                      { "name":"LISTS_SECRET_NAME", "value":"${ListSecretName}" },
+                      { "name":"MONGODB_HOST", "value":"${MongoDbHost}" },
+                      { "name":"MONGODB_USERNAME", "value":"#{ExportConfigNS.ADMIN_USER}" },
+                      { "name":"NAMEMATCHING_BASE_URL", "value":"#{ExportConfigNS.NAMEMATCHING_BASE_URL}" },
+                      { "name":"OIDC_CLIENT_ID", "value":"${AppClientId}" },
+                      { "name":"OIDC_DISCOVERY_URI", "value":"${OidcDiscoveryUrl}" },
+                      { "name":"SUB_DOMAIN", "value":"#{ExportConfigNS.SUB_DOMAIN}" },
+                      { "name":"USERDETAILS_BASE_URL", "value":"#{ExportConfigNS.USERDETAILS_BASE_URL}" }
+                    ]
+                  - AppClientId:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pBaseStackName}-AppClientId"
+                    EksClusterName:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pRegolithStackName}-ClusterName"
+                    ListSecretName:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pDatabaseStackName}-DocDbPasswordSecretName"
+                    MongoDbHost:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pDatabaseStackName}-DocDbClusterEndpoint"
+                    OidcDiscoveryUrl:
+                        Fn::Sub:
+                          - "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}/.well-known/openid-configuration"
+                          - UserPoolId:
+                              Fn::ImportValue:
+                                Fn::Sub: "${pCognitoStackName}-UserPoolId"
+
+            InputArtifacts:
+              - Name: SourceArtifact
+              - Name: ExportConfigArtifact
             RunOrder: 2
 
           - Name: DeployNotification
@@ -304,6 +395,26 @@ Resources:
             Configuration:
               CustomData: Approval required to tear down this stack
             RunOrder: 1
+          - Name: UninstallLists
+            ActionTypeId:
+              Owner: AWS
+              Category: Build
+              Version: 1
+              Provider: CodeBuild
+            Configuration:
+              ProjectName: !Ref UninstallLists
+              EnvironmentVariables: !Sub
+                - |
+                  [
+                    { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
+                    { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" }
+                  ]
+                - EksClusterName:
+                    Fn::ImportValue:
+                      Fn::Sub: "${pRegolithStackName}-ClusterName"
+            InputArtifacts:
+              - Name: SourceArtifact
+            RunOrder: 2
           - Name: TeardownEcrStack
             ActionTypeId:
               Owner: AWS
@@ -316,7 +427,7 @@ Resources:
               RoleArn:
                 Fn::ImportValue:
                   Fn::Sub: '${pBootstrapStackName}-CloudFormationServiceRoleArn'
-            RunOrder: 2
+            RunOrder: 3
           - Name: TeardownCodePipeline
             ActionTypeId:
               Owner: AWS
@@ -329,13 +440,23 @@ Resources:
               RoleArn:
                    Fn::ImportValue:
                      Fn::Sub: '${pBootstrapStackName}-CloudFormationServiceRoleArn'
-            RunOrder: 2
+            RunOrder: 4
 
-  BuildListsCodeBuildLogGroup:
+  DeployListsCodeBuildLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Delete
     Properties:
-      LogGroupName: !Sub /aws/codebuild/${BuildLists}
+      LogGroupName: !Sub /aws/codebuild/${DeployLists}
+      RetentionInDays: 30
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+
+  UninstallListsCodeBuildLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/codebuild/${UninstallLists}
       RetentionInDays: 30
       Tags:
         - Key: Name
@@ -363,5 +484,10 @@ Resources:
 
 
 Outputs:
+  PipelineName:
+    Value: !Ref Pipeline
+    Export:
+      Name: !Sub ${AWS::StackName}-PipelineName
+
   PipelineUrl:
     Value: !Sub https://console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${Pipeline}
