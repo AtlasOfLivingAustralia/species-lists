@@ -40,11 +40,13 @@ Resources:
         - code
       AllowedOAuthFlowsUserPoolClient: True
       AllowedOAuthScopes: 
+        - ala/attrs
+        - ala/internal
+        - ala/roles
+        - email
         - openid
         - profile
-        - email
-        - ala/roles
-        - ala/attrs
+        - users/read
       AuthSessionValidity: 3
       CallbackURLs: 
         - !Sub ${pAppClientHost}
@@ -59,7 +61,7 @@ Resources:
         - ALLOW_CUSTOM_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
         - ALLOW_USER_SRP_AUTH
-      GenerateSecret: False
+      GenerateSecret: True
       IdTokenValidity: 60
       LogoutURLs: 
         - !Sub ${pAppClientHost}
