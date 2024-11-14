@@ -315,9 +315,9 @@ Resources:
                         { "name":"VITE_AUTH_END_SESSION_URI", "value":"#{ExportConfigNS.VITE_AUTH_END_SESSION_URI}"},
                         { "name":"VITE_AUTH_REDIRECT_URI", "value":"#{ExportConfigNS.VITE_AUTH_REDIRECT_URI}"}
                       ]
-                    - OidcClientId: dummy-val
-                        #Fn::ImportValue:
-                        #  Fn::Sub: "${pBaseStackName}-AppClientId"
+                    - OidcClientId:
+                        Fn::ImportValue:
+                          Fn::Sub: "${pBaseStackName}-AppClientId"
                       OidcDiscoveryUrl:
                         Fn::Sub:
                           - "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}"
