@@ -50,7 +50,7 @@ phases:
                       --set image.repository=$ECR_REPO 
                       --set image.tag=$IMAGE_TAG 
                       --set ingress.hostname=$SUB_DOMAIN.$HOSTED_ZONE
-                      --set ingress.certificateArn=$CERTIFICATE_ARN
+                      --set ingress.certificateArn=$APP_CERTIFICATE
                       -f helm_values.yaml
                       --set deploymentAnnotations.checksum/configs="$(md5sum helm_values.yaml | awk '{print $1}')"
       - helm upgrade --install $HELM_RELEASE_NAME . 
@@ -58,7 +58,7 @@ phases:
                       --set image.repository=$ECR_REPO 
                       --set image.tag=$IMAGE_TAG 
                       --set ingress.hostname=$SUB_DOMAIN.$HOSTED_ZONE
-                      --set ingress.certificateArn=$CERTIFICATE_ARN
+                      --set ingress.certificateArn=$APP_CERTIFICATE
                       -f helm_values.yaml
                       --set deploymentAnnotations.checksum/configs="$(md5sum helm_values.yaml | awk '{print $1}')"
   post_build:

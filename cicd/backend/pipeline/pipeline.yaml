@@ -320,7 +320,7 @@ Resources:
                     [
                       { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
                       { "name":"BIE_BASE_URL", "value":"#{ExportConfigNS.BIE_BASE_URL}" },
-                      { "name":"CERTIFICATE_ARN", "value":"#{ExportConfigNS.CERTIFICATE_ARN}" },
+                      { "name":"APP_CERTIFICATE", "value":"#{ExportConfigNS.APP_CERTIFICATE}" },
                       { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
                       { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
                       { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" },

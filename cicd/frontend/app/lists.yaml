@@ -24,7 +24,7 @@ Parameters:
   pSubDomain:
     Type: String
     Description: The subdomain the site are accessed on
-  pSslCertificate:
+  pCloudfrontCertificate:
     Type: String
     Description: The arn of the SSL certificate to be used
 
@@ -110,7 +110,7 @@ Resources:
               OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${ListsCloudFrontOai}'
             OriginPath: !Sub '/${pBucketPath}'
         ViewerCertificate:
-          AcmCertificateArn: !Ref pSslCertificate
+          AcmCertificateArn: !Ref pCloudfrontCertificate
           MinimumProtocolVersion: TLSv1.2_2021
           SslSupportMethod: sni-only
         WebACLId: !Ref pListsWafWebAclArn
