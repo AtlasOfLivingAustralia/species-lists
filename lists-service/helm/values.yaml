@@ -83,7 +83,17 @@ oidc:
   clientId: ""
   discoveryUri: ""
 
+webservices:
+  clientId: ""
+  clientSecret: ""
+
 bie:
+  baseUrl: ""
+
+biocache:
+  baseUrl: ""
+
+collectory:
   baseUrl: ""
 
 images:
