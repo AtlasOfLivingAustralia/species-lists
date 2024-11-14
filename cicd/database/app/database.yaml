@@ -175,6 +175,12 @@ Resources:
 
 Outputs:
 
+  DocDbUsername:
+    Description: The DocumentDB username
+    Value: !Ref pAdminUser
+    Export: 
+      Name: !Sub ${AWS::StackName}-DocDbUsername
+
   DocDbPasswordSecret:
     Description: The Secrets name for lists 
     Value: !Ref DocDbPasswordSecret

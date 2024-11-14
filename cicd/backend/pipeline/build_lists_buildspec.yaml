@@ -19,7 +19,7 @@ phases:
     commands:
       - echo Build started on $(date)
       - echo Logging in to Amazon ECR...
-      - docker login -u $DOCKER_USERNANE -p $DOCKER_PASSWORD
+      - echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin 
       - echo Building the Docker image...
       - docker build -t $IMAGE_NAME -f lists-service/src/main/docker/Dockerfile lists-service
       - aws ecr get-login-password | docker login -u AWS --password-stdin "https://$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
