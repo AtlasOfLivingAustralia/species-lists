@@ -15,7 +15,7 @@ case $ENVIRONMENT in
     IMAGE_URL=https://inaturalist-open-data.s3.amazonaws.com/photos/208429788/small.jpg
     ALT_TEXT="Photo by Geoff Walker. https://www.inaturalist.org/observations/123058239"
     ;;
-  "develop")
+  "testing")
     IMAGE_URL=https://inaturalist-open-data.s3.amazonaws.com/photos/123146710/small.jpeg
     ALT_TEXT="Photo by Deb. https://www.inaturalist.org/observations/75285642"
     ;;
