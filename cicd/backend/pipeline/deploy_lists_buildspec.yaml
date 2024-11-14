@@ -9,6 +9,8 @@ env:
     JAVA_TOOL_OPTIONS: -Dhttps.protocols=TLSv1.2
   secrets-manager:
     MONGODB_PASSWORD: $LISTS_SECRET_NAME:db-password
+#    WEBSERVICE_CLIENT_ID:
+#    WEBSERVICE_CLIENT_SECRET: 
 
 phases:
 
@@ -35,8 +37,15 @@ phases:
         oidc:
           discoveryUri: $OIDC_DISCOVERY_URI
           clientId: $OIDC_CLIENT_ID
+        webservice:
+          clientId: $WEBSERVICE_CLIENT_ID
+          clientSecret: $WEBSERVICE_CLIENT_SECRET
         bie:
           baseUrl: $BIE_BASE_URL
+        biocache:
+          baseUrl: $BIOCACHE_BASE_URL
+        collectory:
+          baseUrl: $COLLECTORY_BASE_URL
         images:
           baseUrl: $IMAGES_BASE_URL
         namematching:
