@@ -55,7 +55,9 @@ export function Display({ item }: SpeciesItemDisplayProps) {
               <Table.Td>
                 <FormattedMessage id={`classification.${field}`} />
               </Table.Td>
-              <Table.Td pl={23}>{(item.classification as any)[field]}</Table.Td>
+              <Table.Td pl={23}>
+                {(item.classification as any)?.[field]}
+              </Table.Td>
               <Table.Td style={expandedStyle}>
                 <div
                   style={{
@@ -65,7 +67,7 @@ export function Display({ item }: SpeciesItemDisplayProps) {
                     height: 50,
                   }}
                 >
-                  {(item as any)[field]}
+                  {(item as any)?.[field]}
                 </div>
               </Table.Td>
             </Table.Tr>

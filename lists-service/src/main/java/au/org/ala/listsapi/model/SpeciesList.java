@@ -32,6 +32,7 @@ public class SpeciesList {
   private List<String> facetList;
   private String doi;
   private Integer rowCount;
+  private Integer distinctMatchCount;
   private String authority;
   private String category;
   private String region;

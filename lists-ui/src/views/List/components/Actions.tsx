@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActionIcon,
   Box,
@@ -10,11 +10,21 @@ import {
   Switch,
   Tooltip,
   Text,
+  Stack,
+  Button,
+  Divider,
 } from '@mantine/core';
 import { DotsThreeIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrashAlt } from '@fortawesome/free-regular-svg-icons';
-import { faRefresh, faTableColumns } from '@fortawesome/free-solid-svg-icons';
+import {
+  faDownload,
+  faFingerprint,
+  faGlobe,
+  faRefresh,
+  faSearch,
+  faTableColumns,
+} from '@fortawesome/free-solid-svg-icons';
 
 // Mantine Notifications & Modals manager
 import { notifications } from '@mantine/notifications';
@@ -36,6 +46,7 @@ interface ActionsProps {
   editing: boolean;
   onEditingChange: (editing: boolean) => void;
   onMetaEdited: (meta: SpeciesListSubmit) => void;
+  onRematched: () => void;
 }
 
 export function Actions({
@@ -43,14 +54,52 @@ export function Actions({
   editing,
   onEditingChange,
   onMetaEdited,
+  onRematched,
 }: ActionsProps) {
   const [updating, setUpdating] = useState<boolean>(false);
   const [rematching, setRematching] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
+  const [fetchingQid, setFetchingQid] = useState<string | null>(null);
+  const listQid = useRef<string | null>(null);
   const navigate = useNavigate();
 
   const ala = useALA();
   const authorisedForList = ala.isAuthorisedForList(meta);
+
+  // Download callback handler
+  const handleQidRedirect = useCallback(async (url: string) => {
+    if (!listQid.current) {
+      setFetchingQid(url);
+      try {
+        listQid.current = await ala.rest.lists.qid(meta.id);
+      } catch (error) {
+        notifications.show({
+          message: getErrorMessage(error),
+          position: 'bottom-left',
+          radius: 'md',
+        });
+
+        return;
+      }
+      setFetchingQid(null);
+    }
+
+    if (listQid.current)
+      window.open(`${url}?q=qid:${listQid.current}`, '_blank');
+  }, []);
+
+  // Download callback handler
+  const handleDownload = useCallback(async () => {
+    try {
+      await ala.rest.lists.download(meta.id);
+    } catch (error) {
+      notifications.show({
+        message: getErrorMessage(error),
+        position: 'bottom-left',
+        radius: 'md',
+      });
+    }
+  }, []);
 
   // Delete callback handler
   const handleDelete = useCallback(() => {
@@ -114,6 +163,7 @@ export function Actions({
         try {
           // Fire off the delete request
           await ala.rest.lists.rematch(meta.id);
+          onRematched();
           notifications.show({
             message: (
               <>
@@ -153,7 +203,6 @@ export function Actions({
 
             try {
               // Update the list
-              console.log(ala.token);
               await performGQLQuery(
                 MUTATION_LIST_UPDATE,
                 {
@@ -196,7 +245,6 @@ export function Actions({
       <Menu shadow='md' width={200} position='bottom-end' radius='lg'>
         <Menu.Target>
           <ActionIcon
-            disabled={!authorisedForList}
             className={classes.mobile}
             variant='light'
             size='md'
@@ -207,110 +255,246 @@ export function Actions({
           </ActionIcon>
         </Menu.Target>
         <Menu.Dropdown>
-          <Menu.Label>Administration</Menu.Label>
+          <Menu.Label>Actions</Menu.Label>
           <Menu.Item
-            onClick={handleMetaEdit}
+            onClick={handleDownload}
             disabled={updating || rematching || deleting}
-            leftSection={<FontAwesomeIcon icon={faEdit} />}
+            leftSection={<FontAwesomeIcon icon={faDownload} />}
           >
-            Edit metadata
+            Download list
           </Menu.Item>
           <Menu.Item
-            onClick={handleRematch}
-            disabled={updating || rematching || deleting}
-            color='red'
-            leftSection={<FontAwesomeIcon icon={faRefresh} />}
+            onClick={() =>
+              handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH)
+            }
+            disabled={Boolean(fetchingQid)}
+            leftSection={<FontAwesomeIcon icon={faSearch} />}
           >
-            Rematch list
+            Occurrence records
           </Menu.Item>
           <Menu.Item
-            onClick={handleDelete}
-            disabled={updating || rematching || deleting}
-            color='red'
-            leftSection={<FontAwesomeIcon icon={faTrashAlt} />}
+            onClick={() => handleQidRedirect(import.meta.env.VITE_ALA_SPATIAL)}
+            disabled={Boolean(fetchingQid)}
+            leftSection={<FontAwesomeIcon icon={faGlobe} />}
           >
-            Delete list
+            Spatial portal
           </Menu.Item>
-          <Menu.Divider />
-          <Flex
-            direction='row'
-            my='xs'
-            mx='sm'
-            align='center'
-            justify='space-between'
-          >
-            <Flex align='center'>
-              <FontAwesomeIcon
-                icon={faTableColumns}
-                fontSize={14}
-                style={{ marginRight: 10 }}
-              />
-              <Text style={{ fontSize: 14, fontSizeAdjust: 'none' }}>
-                Edit fields
-              </Text>
-            </Flex>
-            <Switch
-              size='sm'
-              checked={editing}
-              onChange={(ev) => onEditingChange(ev.currentTarget.checked)}
-              disabled={updating || rematching || deleting}
-            />
-          </Flex>
+          {authorisedForList && (
+            <>
+              <Menu.Label>Administration</Menu.Label>
+              <Menu.Item
+                onClick={handleMetaEdit}
+                disabled={updating || rematching || deleting}
+                leftSection={<FontAwesomeIcon icon={faEdit} />}
+              >
+                Edit metadata
+              </Menu.Item>
+              <Menu.Item
+                onClick={handleRematch}
+                disabled={updating || rematching || deleting}
+                color='red'
+                leftSection={<FontAwesomeIcon icon={faRefresh} />}
+              >
+                Rematch list
+              </Menu.Item>
+              <Menu.Item
+                onClick={handleDelete}
+                disabled={updating || rematching || deleting}
+                color='red'
+                leftSection={<FontAwesomeIcon icon={faTrashAlt} />}
+              >
+                Delete list
+              </Menu.Item>
+              <Menu.Divider />
+              <Flex
+                direction='row'
+                my='xs'
+                mx='sm'
+                align='center'
+                justify='space-between'
+              >
+                <Flex align='center'>
+                  <FontAwesomeIcon
+                    icon={faTableColumns}
+                    fontSize={14}
+                    style={{ marginRight: 10 }}
+                  />
+                  <Text style={{ fontSize: 14, fontSizeAdjust: 'none' }}>
+                    Edit fields
+                  </Text>
+                </Flex>
+                <Switch
+                  size='sm'
+                  checked={editing}
+                  onChange={(ev) => onEditingChange(ev.currentTarget.checked)}
+                  disabled={updating || rematching || deleting}
+                />
+              </Flex>
+            </>
+          )}
         </Menu.Dropdown>
       </Menu>
       <Box className={classes.desktop}>
-        <Paper miw={226} py={8} px='sm' shadow='sm' radius='lg' withBorder>
-          <Group className={classes.desktop} gap='md'>
-            <Switch
-              disabled={
-                !authorisedForList || updating || rematching || deleting
+        <Stack gap='xs'>
+          {meta.distinctMatchCount && (
+            <Paper
+              miw={authorisedForList ? 285 : undefined}
+              py={8}
+              px='sm'
+              shadow='sm'
+              radius='lg'
+              withBorder
+            >
+              <Text
+                fw='bold'
+                style={{
+                  textAlign: 'center',
+                  fontSize: '0.8rem',
+                }}
+              >
+                <FontAwesomeIcon
+                  icon={faFingerprint}
+                  style={{ marginRight: 12 }}
+                />
+                {meta.distinctMatchCount} distinct taxa
+              </Text>
+            </Paper>
+          )}
+          {authorisedForList && (
+            <Paper
+              miw={authorisedForList ? 285 : undefined}
+              py={8}
+              px='sm'
+              shadow='sm'
+              radius='lg'
+              withBorder
+            >
+              <Group gap='xs'>
+                <Switch
+                  disabled={updating || rematching || deleting}
+                  mr='xs'
+                  size='xs'
+                  label='Edit fields'
+                  checked={editing}
+                  onChange={(ev) => onEditingChange(ev.currentTarget.checked)}
+                />
+
+                <Tooltip label='Download list' position='left'>
+                  <ActionIcon
+                    onClick={handleDownload}
+                    variant='light'
+                    size='md'
+                    radius='lg'
+                    aria-label='Download list'
+                  >
+                    <FontAwesomeIcon size='sm' icon={faDownload} />
+                  </ActionIcon>
+                </Tooltip>
+                <Tooltip label='Edit metadata' position='left'>
+                  <ActionIcon
+                    onClick={handleMetaEdit}
+                    disabled={rematching || deleting}
+                    loading={updating}
+                    variant='light'
+                    size='md'
+                    radius='lg'
+                    aria-label='Edit metadata'
+                  >
+                    <FontAwesomeIcon size='sm' icon={faEdit} />
+                  </ActionIcon>
+                </Tooltip>
+                <Tooltip label='Rematch list' position='left'>
+                  <ActionIcon
+                    onClick={handleRematch}
+                    disabled={updating || deleting}
+                    loading={rematching}
+                    variant='light'
+                    size='md'
+                    radius='lg'
+                    aria-label='Rematch list'
+                  >
+                    <FontAwesomeIcon size='sm' icon={faRefresh} />
+                  </ActionIcon>
+                </Tooltip>
+                <Tooltip label='Delete list' position='left'>
+                  <ActionIcon
+                    onClick={handleDelete}
+                    disabled={updating || rematching}
+                    loading={deleting}
+                    variant='light'
+                    size='md'
+                    radius='lg'
+                    aria-label='Delete list'
+                  >
+                    <FontAwesomeIcon size='sm' icon={faTrashAlt} />
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
+            </Paper>
+          )}
+          <Paper withBorder radius='lg'>
+            {!authorisedForList && (
+              <>
+                <Button
+                  onClick={handleDownload}
+                  fullWidth
+                  size='sm'
+                  variant='subtle'
+                  leftSection={<FontAwesomeIcon icon={faDownload} />}
+                  style={{
+                    fontSize: '0.8rem',
+                    borderRadius: 0,
+                    borderTopLeftRadius: 14,
+                    borderTopRightRadius: 14,
+                  }}
+                >
+                  Download list
+                </Button>
+                <Divider />
+              </>
+            )}
+            <Button
+              onClick={() =>
+                handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH)
               }
-              size='xs'
-              label='Edit fields'
-              checked={editing}
-              onChange={(ev) => onEditingChange(ev.currentTarget.checked)}
-            />
-            <Tooltip label='Edit metadata' position='left'>
-              <ActionIcon
-                onClick={handleMetaEdit}
-                disabled={!authorisedForList || rematching || deleting}
-                loading={updating}
-                variant='light'
-                size='lg'
-                radius='lg'
-                aria-label='Edit metadata'
-              >
-                <FontAwesomeIcon icon={faEdit} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label='Rematch list' position='left'>
-              <ActionIcon
-                onClick={handleRematch}
-                disabled={!authorisedForList || updating || deleting}
-                loading={rematching}
-                variant='light'
-                size='lg'
-                radius='lg'
-                aria-label='Rematch list'
-              >
-                <FontAwesomeIcon icon={faRefresh} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label='Delete list' position='left'>
-              <ActionIcon
-                onClick={handleDelete}
-                disabled={!authorisedForList || updating || rematching}
-                loading={deleting}
-                variant='light'
-                size='lg'
-                radius='lg'
-                aria-label='Delete list'
-              >
-                <FontAwesomeIcon icon={faTrashAlt} />
-              </ActionIcon>
-            </Tooltip>
-          </Group>
-        </Paper>
+              loading={
+                fetchingQid === import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH
+              }
+              disabled={Boolean(fetchingQid)}
+              fullWidth
+              size='sm'
+              variant='subtle'
+              leftSection={<FontAwesomeIcon icon={faSearch} />}
+              style={{
+                fontSize: '0.8rem',
+                borderRadius: 0,
+                borderTopLeftRadius: authorisedForList ? 14 : 0,
+                borderTopRightRadius: authorisedForList ? 14 : 0,
+              }}
+            >
+              View occurrence records
+            </Button>
+            <Divider />
+            <Button
+              onClick={() =>
+                handleQidRedirect(import.meta.env.VITE_ALA_SPATIAL)
+              }
+              loading={fetchingQid === import.meta.env.VITE_ALA_SPATIAL}
+              disabled={Boolean(fetchingQid)}
+              fullWidth
+              variant='subtle'
+              leftSection={<FontAwesomeIcon icon={faGlobe} />}
+              style={{
+                fontSize: '0.8rem',
+                borderRadius: 0,
+                borderBottomLeftRadius: 14,
+                borderBottomRightRadius: 14,
+              }}
+            >
+              View in spatial portal
+            </Button>
+          </Paper>
+        </Stack>
       </Box>
     </>
   );
