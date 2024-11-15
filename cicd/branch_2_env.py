@@ -21,6 +21,9 @@ if re.search('^main$|^master$', args.branch) and args.env == 'prod':
 elif re.search('^main$|^master$', args.branch):
   #print(f"Branch {args.branch} matched release")
   print('staging')
+elif re.search('^testing$', args.branch):
+  #print(f"Branch {args.branch} matched release")
+  print('testing')
 else:
   #print(f"Branch {args.branch} didnt match")
   print('development')
