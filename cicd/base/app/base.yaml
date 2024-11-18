@@ -50,6 +50,9 @@ Resources:
       AuthSessionValidity: 3
       CallbackURLs: 
         - !Sub ${pAppClientHost}
+        - !Sub ${pAppClientHost}/
+        - !Sub ${pAppClientHost}/callback?client_name=OidcClient
+        - !Sub ${pAppClientHost}/oauth2-redirect.html
       ClientName: !Sub
           - species-lists-${ResourceName}
           - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
@@ -65,6 +68,7 @@ Resources:
       IdTokenValidity: 60
       LogoutURLs: 
         - !Sub ${pAppClientHost}
+        - !Sub ${pAppClientHost}/
       PreventUserExistenceErrors: ENABLED
       RefreshTokenValidity: 30
       SupportedIdentityProviders:
