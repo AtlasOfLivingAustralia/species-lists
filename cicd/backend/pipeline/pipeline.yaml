@@ -280,7 +280,7 @@ Resources:
             OutputArtifacts: [ ]
             RunOrder: 2
 
-      - Name: Deploy_Helm_Chart
+      - Name: BuildLists
         Actions:
           - Name: BuildLists
             ActionTypeId:
@@ -290,17 +290,27 @@ Resources:
               Provider: CodeBuild
             Configuration:
               ProjectName: !Ref BuildLists
-              EnvironmentVariables: !Sub |
-                [
-                  { "name":"ALA_SECRETS_NAME", "value":"#{ExportConfigNS.ALA_SECRETS_NAME}" },
-                  { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
-                  { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
-                  { "name":"DOCKER_USERNAME", "value":"#{ExportConfigNS.DOCKER_USERNAME}" },
-                  { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
-                  { "name":"ENVIRONMENT", "value":"${pEnvironment}" },
-                  { "name":"IMAGE_NAME", "value":"#{ExportConfigNS.IMAGE_NAME}" },
-                  { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" }
-                ]
+              EnvironmentVariables:
+                Fn::Sub:
+                  - |
+                    [
+                      { "name":"ALA_SECRETS_NAME", "value":"#{ExportConfigNS.ALA_SECRETS_NAME}" },
+                      { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
+                      { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
+                      { "name":"DOCKER_USERNAME", "value":"#{ExportConfigNS.DOCKER_USERNAME}" },
+                      { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
+                      { "name":"ENVIRONMENT", "value":"${pEnvironment}" },
+                      { "name":"IMAGE_NAME", "value":"#{ExportConfigNS.IMAGE_NAME}" },
+                      { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
+                      { "name":"SERVICE_APP_CLIENT_ID", "value":"${ServiceAppClientId}" },
+                      { "name":"USER_POOL_ID", "value":"${UserPoolId}" }
+                    ]
+                  - ServiceAppClientId:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pBaseStackName}-ServiceAppClientId"
+                  - UserPoolId:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pCognitoStackName}-UserPoolId"
             InputArtifacts:
               - Name: 'SourceArtifact'
             RunOrder: 1
