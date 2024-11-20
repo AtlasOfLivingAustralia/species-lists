@@ -30,7 +30,7 @@ phases:
       - sed -i "s/webservice.client-id=.*$/webservice.client-id=$OIDC_CLIENT_ID/g" lists-service/src/main/docker/application.properties
       - sed -i "s/webservice.client-secret=.*$/webservice.client-secret=$OIDC_CLIENT_SECRET/g" lists-service/src/main/docker/application.properties
 
-      - sed -i "s/security.jwt.clientId=.*$/security.jwt.clientId=$APP_CLIENT_ID/g" lists-service/config/list-service-config.properties
+      - sed -i "s/security.jwt.clientId=.*$/security.jwt.clientId=$APP_CLIENT_ID/g" lists-service/config/lists-service-config.properties
 
   build:
     commands:
