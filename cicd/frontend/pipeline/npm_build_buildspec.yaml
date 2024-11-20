@@ -12,10 +12,10 @@ phases:
       nodejs: $NODE_VERSION
     commands:
       - cp lists-ui/vite.properties lists-ui/.env
-      - cd lists-ui
       - echo injecting app client config
       - sed -i "s/VITE_AUTH_CLIENT_ID=.*$/VITE_AUTH_CLIENT_ID=$VITE_AUTH_CLIENT_ID/g" lists-ui/config/.env.$ENVIRONMENT
       - cat lists-ui/config/.env.$ENVIRONMENT
+      - cd lists-ui
   pre_build:
     commands:
       - echo running npm install...
