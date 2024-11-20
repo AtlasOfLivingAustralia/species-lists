@@ -19,7 +19,7 @@ phases:
       - chmod 700 get_helm.sh
       - ./get_helm.sh
 
-  pre-build:
+  pre_build:
     commands:
       - echo getting app clientID and secret
       - aws cognito-idp describe-user-pool-client --user-pool-id $USER_POOL_ID --client-id $SERVICE_APP_CLIENT_ID --region $AWS_REGION > app_client.json
