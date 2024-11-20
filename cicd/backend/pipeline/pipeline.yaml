@@ -308,7 +308,7 @@ Resources:
                   - ServiceAppClientId:
                       Fn::ImportValue:
                         Fn::Sub: "${pBaseStackName}-ServiceAppClientId"
-                  - UserPoolId:
+                    UserPoolId:
                       Fn::ImportValue:
                         Fn::Sub: "${pCognitoStackName}-UserPoolId"
             InputArtifacts:
