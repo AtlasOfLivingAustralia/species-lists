@@ -1,10 +1,11 @@
 {
   "Parameters" : {
+    "pAppClientHost"        : "{{ app_client_host }}",
+    "pAppClientServiceHost" : "{{ app_client_service_host }}",
     "pBuild"                : "{{ codebuild_build_number }}",
     "pCleanBranch"          : "{{ clean_branch }}",
-    "pEnvironment"          : "{{ environment }}",
     "pCognitoStackName"     : "{{ cognito_stack_name }}",
-    "pAppClientHost"        : "{{ app_client_host }}"
+    "pEnvironment"          : "{{ environment }}"
   },
   "Tags" : {
     "product"     : "{{ product_name }}",
