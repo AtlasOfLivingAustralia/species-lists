@@ -295,6 +295,7 @@ Resources:
                   - |
                     [
                       { "name":"ALA_SECRETS_NAME", "value":"#{ExportConfigNS.ALA_SECRETS_NAME}" },
+                      { "name":"APP_CLIENT_ID", "value":"${AppClientId}" },
                       { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
                       { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
                       { "name":"DOCKER_USERNAME", "value":"#{ExportConfigNS.DOCKER_USERNAME}" },
@@ -305,7 +306,10 @@ Resources:
                       { "name":"SERVICE_APP_CLIENT_ID", "value":"${ServiceAppClientId}" },
                       { "name":"USER_POOL_ID", "value":"${UserPoolId}" }
                     ]
-                  - ServiceAppClientId:
+                  - AppClientId:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pBaseStackName}-AppClientId"
+                    ServiceAppClientId:
                       Fn::ImportValue:
                         Fn::Sub: "${pBaseStackName}-ServiceAppClientId"
                     UserPoolId:
