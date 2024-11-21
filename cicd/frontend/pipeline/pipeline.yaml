@@ -317,7 +317,7 @@ Resources:
                       ]
                     - OidcClientId:
                         Fn::ImportValue:
-                          Fn::Sub: ${pBaseStackName}-AppClientIdB
+                          Fn::Sub: ${pBaseStackName}-AppClientId
                       OidcDiscoveryUrl:
                         Fn::Sub:
                           - "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}"

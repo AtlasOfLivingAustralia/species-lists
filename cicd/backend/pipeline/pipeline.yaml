@@ -308,7 +308,7 @@ Resources:
                     ]
                   - AppClientId:
                       Fn::ImportValue:
-                        Fn::Sub: ${pBaseStackName}-AppClientIdB
+                        Fn::Sub: ${pBaseStackName}-AppClientId
                     ServiceAppClientId:
                       Fn::ImportValue:
                         Fn::Sub: ${pBaseStackName}-ServiceAppClientId
@@ -354,7 +354,7 @@ Resources:
                     ]
                   - AppClientId:
                       Fn::ImportValue:
-                        Fn::Sub: "${pBaseStackName}-AppClientIdB"
+                        Fn::Sub: "${pBaseStackName}-AppClientId"
                     EksClusterName:
                       Fn::ImportValue:
                         Fn::Sub: "${pRegolithStackName}-ClusterName"
