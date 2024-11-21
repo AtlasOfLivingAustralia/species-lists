@@ -35,6 +35,110 @@ Conditions:
 
 Resources:
 
+  ListsAppClientB:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      AccessTokenValidity: 60
+      AllowedOAuthFlows: 
+        - code
+      AllowedOAuthFlowsUserPoolClient: True
+      AllowedOAuthScopes: 
+        - ala/attrs
+        - ala/internal
+        - ala/roles
+        - email
+        - openid
+        - profile
+        - users/read
+      AuthSessionValidity: 3
+      CallbackURLs: 
+        - !Sub ${pAppClientHost}
+        - !Sub ${pAppClientHost}/
+        - !Sub ${pAppClientHost}/callback?client_name=OidcClient
+        - !Sub ${pAppClientHost}/oauth2-redirect.html
+      ClientName: !Sub
+          - species-lists-${ResourceName}
+          - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      DefaultRedirectURI: !Sub ${pAppClientHost}
+      EnablePropagateAdditionalUserContextData: False
+      EnableTokenRevocation: True
+      ExplicitAuthFlows:
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+        - ALLOW_CUSTOM_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+      GenerateSecret: False
+      IdTokenValidity: 60
+      LogoutURLs: 
+        - !Sub ${pAppClientHost}
+        - !Sub ${pAppClientHost}/
+      PreventUserExistenceErrors: ENABLED
+      RefreshTokenValidity: 30
+      SupportedIdentityProviders:
+        - COGNITO
+        - Facebook
+        - Google
+        - AAF
+        - SignInWithApple
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: days
+      UserPoolId: 
+        Fn::ImportValue:
+            !Sub ${pCognitoStackName}-UserPoolId
+
+  ListsServiceAppClientB:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      AccessTokenValidity: 60
+      AllowedOAuthFlows: 
+        - code
+      AllowedOAuthFlowsUserPoolClient: True
+      AllowedOAuthScopes: 
+        - ala/attrs
+        - ala/roles
+        - email
+        - openid
+        - profile
+        - users/read
+      AuthSessionValidity: 3
+      CallbackURLs: 
+        - !Sub ${pAppClientServiceHost}
+        - !Sub ${pAppClientServiceHost}/
+        - !Sub ${pAppClientServiceHost}/callback?client_name=OidcClient
+        - !Sub ${pAppClientServiceHost}/oauth2-redirect.html
+      ClientName: !Sub
+          - species-lists-${ResourceName}
+          - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      DefaultRedirectURI: !Sub ${pAppClientServiceHost}/callback?client_name=OidcClient
+      EnablePropagateAdditionalUserContextData: False
+      EnableTokenRevocation: True
+      ExplicitAuthFlows:
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+        - ALLOW_CUSTOM_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+      GenerateSecret: True
+      IdTokenValidity: 60
+      LogoutURLs: 
+        - !Sub ${pAppClientServiceHost}
+        - !Sub ${pAppClientServiceHost}/
+      PreventUserExistenceErrors: ENABLED
+      RefreshTokenValidity: 30
+      SupportedIdentityProviders:
+        - COGNITO
+        - Facebook
+        - Google
+        - AAF
+        - SignInWithApple
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: days
+      UserPoolId: 
+        Fn::ImportValue:
+            !Sub ${pCognitoStackName}-UserPoolId
   ListsAppClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
@@ -152,3 +256,13 @@ Outputs:
     Value: !Ref ListsServiceAppClient
     Export:
       Name: !Sub ${AWS::StackName}-ServiceAppClientId
+  AppClientIdB:
+    Description: The app client for the lists frontend
+    Value: !Ref ListsAppClientB
+    Export:
+      Name: !Sub ${AWS::StackName}-AppClientIdB
+  ServiceAppClientIdB:
+    Description: The app client for the lists backend service
+    Value: !Ref ListsServiceAppClientB
+    Export:
+      Name: !Sub ${AWS::StackName}-ServiceAppClientIdB
