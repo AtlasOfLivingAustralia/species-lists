@@ -302,7 +302,7 @@ Resources:
                   { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" }
                 ]
             InputArtifacts:
-              - Name: 'SourceArtifact'
+              - Name: SourceArtifact
             RunOrder: 1
 
           - Name: DeployLists
