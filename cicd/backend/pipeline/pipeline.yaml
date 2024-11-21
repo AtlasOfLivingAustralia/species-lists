@@ -308,15 +308,15 @@ Resources:
                     ]
                   - AppClientId:
                       Fn::ImportValue:
-                        Fn::Sub: "${pBaseStackName}-AppClientId"
+                        Fn::Sub: ${pBaseStackName}-AppClientIdB
                     ServiceAppClientId:
                       Fn::ImportValue:
-                        Fn::Sub: "${pBaseStackName}-ServiceAppClientId"
+                        Fn::Sub: ${pBaseStackName}-ServiceAppClientId
                     UserPoolId:
                       Fn::ImportValue:
-                        Fn::Sub: "${pCognitoStackName}-UserPoolId"
+                        Fn::Sub: ${pCognitoStackName}-UserPoolId
             InputArtifacts:
-              - Name: 'SourceArtifact'
+              - Name: SourceArtifact
             RunOrder: 1
 
           - Name: DeployLists
@@ -354,7 +354,7 @@ Resources:
                     ]
                   - AppClientId:
                       Fn::ImportValue:
-                        Fn::Sub: "${pBaseStackName}-AppClientId"
+                        Fn::Sub: "${pBaseStackName}-AppClientIdB"
                     EksClusterName:
                       Fn::ImportValue:
                         Fn::Sub: "${pRegolithStackName}-ClusterName"

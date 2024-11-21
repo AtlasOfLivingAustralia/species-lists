@@ -317,13 +317,13 @@ Resources:
                       ]
                     - OidcClientId:
                         Fn::ImportValue:
-                          Fn::Sub: "${pBaseStackName}-AppClientId"
+                          Fn::Sub: ${pBaseStackName}-AppClientIdB
                       OidcDiscoveryUrl:
                         Fn::Sub:
                           - "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}"
                           - UserPoolId:
                               Fn::ImportValue:
-                                Fn::Sub: "${pCognitoStackName}-UserPoolId"
+                                Fn::Sub: ${pCognitoStackName}-UserPoolId
 
               Namespace: BuildListsNS
               InputArtifacts:
