@@ -295,26 +295,14 @@ Resources:
                   - |
                     [
                       { "name":"ALA_SECRETS_NAME", "value":"#{ExportConfigNS.ALA_SECRETS_NAME}" },
-                      { "name":"APP_CLIENT_ID", "value":"${AppClientId}" },
                       { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
                       { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
                       { "name":"DOCKER_USERNAME", "value":"#{ExportConfigNS.DOCKER_USERNAME}" },
                       { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
                       { "name":"ENVIRONMENT", "value":"${pEnvironment}" },
                       { "name":"IMAGE_NAME", "value":"#{ExportConfigNS.IMAGE_NAME}" },
-                      { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
-                      { "name":"SERVICE_APP_CLIENT_ID", "value":"${ServiceAppClientId}" },
-                      { "name":"USER_POOL_ID", "value":"${UserPoolId}" }
+                      { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" }
                     ]
-                  - AppClientId:
-                      Fn::ImportValue:
-                        Fn::Sub: "${pBaseStackName}-AppClientId"
-                    ServiceAppClientId:
-                      Fn::ImportValue:
-                        Fn::Sub: "${pBaseStackName}-ServiceAppClientId"
-                    UserPoolId:
-                      Fn::ImportValue:
-                        Fn::Sub: "${pCognitoStackName}-UserPoolId"
             InputArtifacts:
               - Name: 'SourceArtifact'
             RunOrder: 1
