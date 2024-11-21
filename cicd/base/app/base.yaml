@@ -139,6 +139,7 @@ Resources:
       UserPoolId: 
         Fn::ImportValue:
             !Sub ${pCognitoStackName}-UserPoolId
+
   ListsAppClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
@@ -171,7 +172,7 @@ Resources:
         - ALLOW_CUSTOM_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
         - ALLOW_USER_SRP_AUTH
-      GenerateSecret: False
+      GenerateSecret: True
       IdTokenValidity: 60
       LogoutURLs: 
         - !Sub ${pAppClientHost}
