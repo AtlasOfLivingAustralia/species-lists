@@ -205,9 +205,9 @@ public class TaxonService {
           List<SpeciesListItem> items = speciesListItems.getContent();
           updateClassifications(items);
 
-          distinct += (int) items.stream()
-                  .filter(speciesListItem -> speciesListItem.getClassification().getSuccess())
-                  .map(speciesListItem -> speciesListItem.getClassification().getTaxonConceptID()).distinct().count();
+//          distinct += (int) items.stream()
+//                  .filter(speciesListItem -> speciesListItem.getClassification().getSuccess())
+//                  .map(speciesListItem -> speciesListItem.getClassification().getTaxonConceptID()).distinct().count();
 
           speciesListItemMongoRepository.saveAll(items);
 
@@ -220,9 +220,9 @@ public class TaxonService {
       page++;
     }
 
-    SpeciesList speciesList = optionalSp.get();
-    speciesList.setDistinctMatchCount(distinct);
-    speciesListMongoRepository.save(speciesList);
+//    SpeciesList speciesList = optionalSp.get();
+//    speciesList.setDistinctMatchCount(distinct);
+//    speciesListMongoRepository.save(speciesList);
 
     logger.info("Taxon matching " + speciesListID + " complete.");
   }
