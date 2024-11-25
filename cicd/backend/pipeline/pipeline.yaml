@@ -323,6 +323,7 @@ Resources:
                       { "name":"BIE_BASE_URL", "value":"#{ExportConfigNS.BIE_BASE_URL}" },
                       { "name":"BIOCACHE_BASE_URL", "value":"#{ExportConfigNS.BIOCACHE_BASE_URL}" },
                       { "name":"COLLECTORY_BASE_URL", "value":"#{ExportConfigNS.COLLECTORY_BASE_URL}" },
+                      { "name":"APP_CERTIFICATE", "value":"#{ExportConfigNS.APP_CERTIFICATE}" },
                       { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
                       { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
                       { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" },
