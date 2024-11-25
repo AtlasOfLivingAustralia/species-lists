@@ -15,6 +15,24 @@ phases:
     commands:
       #- echo Installing dependencies...
 
+  pre_build:
+    commands:
+      - echo getting app clientID and secret
+      - aws cognito-idp describe-user-pool-client --user-pool-id $USER_POOL_ID --client-id $SERVICE_APP_CLIENT_ID --region $AWS_REGION > app_client.json
+      - export OIDC_CLIENT_ID=$(jq -r '.UserPoolClient.ClientId' app_client.json)
+      - echo OIDC_CLIENT_ID=$OIDC_CLIENT_ID
+      - export OIDC_CLIENT_SECRET=$(jq -r '.UserPoolClient.ClientSecret' app_client.json)
+      - echo OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:0:3}************
+      - echo injecting app client details into the configs
+      - sed -i "s/webservice.client-id=.*$/webservice.client-id=$OIDC_CLIENT_ID/g" lists-service/src/main/resources/application.properties
+      - sed -i "s/webservice.client-secret=.*$/webservice.client-secret=$OIDC_CLIENT_SECRET/g" lists-service/src/main/resources/application.properties
+      - sed -i "s/security.jwt.clientId=.*$/security.jwt.clientId=$APP_CLIENT_ID/g" lists-service/src/main/resources/application.properties
+
+      - sed -i "s/webservice.client-id=.*$/webservice.client-id=$OIDC_CLIENT_ID/g" lists-service/src/main/docker/application.properties
+      - sed -i "s/webservice.client-secret=.*$/webservice.client-secret=$OIDC_CLIENT_SECRET/g" lists-service/src/main/docker/application.properties
+
+      - sed -i "s/security.jwt.clientId=.*$/security.jwt.clientId=$APP_CLIENT_ID/g" lists-service/config/lists-service-config.properties
+
   build:
     commands:
       - echo Build started on $(date)
