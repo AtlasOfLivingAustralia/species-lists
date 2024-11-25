@@ -290,31 +290,17 @@ Resources:
               Provider: CodeBuild
             Configuration:
               ProjectName: !Ref BuildLists
-              EnvironmentVariables:
-                Fn::Sub:
-                  - |
-                    [
-                      { "name":"ALA_SECRETS_NAME", "value":"#{ExportConfigNS.ALA_SECRETS_NAME}" },
-                      { "name":"APP_CLIENT_ID", "value":"${AppClientId}" },
-                      { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
-                      { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
-                      { "name":"DOCKER_USERNAME", "value":"#{ExportConfigNS.DOCKER_USERNAME}" },
-                      { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
-                      { "name":"ENVIRONMENT", "value":"${pEnvironment}" },
-                      { "name":"IMAGE_NAME", "value":"#{ExportConfigNS.IMAGE_NAME}" },
-                      { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
-                      { "name":"SERVICE_APP_CLIENT_ID", "value":"${ServiceAppClientId}" },
-                      { "name":"USER_POOL_ID", "value":"${UserPoolId}" }
-                    ]
-                  - AppClientId:
-                      Fn::ImportValue:
-                        Fn::Sub: ${pBaseStackName}-AppClientId
-                    ServiceAppClientId:
-                      Fn::ImportValue:
-                        Fn::Sub: ${pBaseStackName}-ServiceAppClientId
-                    UserPoolId:
-                      Fn::ImportValue:
-                        Fn::Sub: ${pCognitoStackName}-UserPoolId
+              EnvironmentVariables: !Sub |
+                [
+                  { "name":"ALA_SECRETS_NAME", "value":"#{ExportConfigNS.ALA_SECRETS_NAME}" },
+                  { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
+                  { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
+                  { "name":"DOCKER_USERNAME", "value":"#{ExportConfigNS.DOCKER_USERNAME}" },
+                  { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
+                  { "name":"ENVIRONMENT", "value":"${pEnvironment}" },
+                  { "name":"IMAGE_NAME", "value":"#{ExportConfigNS.IMAGE_NAME}" },
+                  { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" }
+                ]
             InputArtifacts:
               - Name: SourceArtifact
             RunOrder: 1
@@ -332,10 +318,11 @@ Resources:
                 Fn::Sub:
                   - |
                     [
+                      { "name":"APP_CERTIFICATE", "value":"#{ExportConfigNS.APP_CERTIFICATE}" },
                       { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
                       { "name":"BIE_BASE_URL", "value":"#{ExportConfigNS.BIE_BASE_URL}" },
-                      { "name":"COLLECTORY_BASE_URL", "value":"#{ExportConfigNS.COLLECTORY_BASE_URL}" },
                       { "name":"BIOCACHE_BASE_URL", "value":"#{ExportConfigNS.BIOCACHE_BASE_URL}" },
+                      { "name":"COLLECTORY_BASE_URL", "value":"#{ExportConfigNS.COLLECTORY_BASE_URL}" },
                       { "name":"APP_CERTIFICATE", "value":"#{ExportConfigNS.APP_CERTIFICATE}" },
                       { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
                       { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
