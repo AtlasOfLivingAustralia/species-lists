@@ -109,7 +109,7 @@ Resources:
           - species-lists-s2s-${ResourceName}
           - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
       DefaultRedirectURI: !Sub ${pAppClientServiceHost}/callback?client_name=OidcClient
-      EnablePropagateAdditionalUserContextData: False
+      EnablePropagateAdditionalUserContextData: True
       EnableTokenRevocation: True
       ExplicitAuthFlows:
         - ALLOW_ADMIN_USER_PASSWORD_AUTH
