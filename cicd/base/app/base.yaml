@@ -93,7 +93,7 @@ Resources:
     Properties:
       AccessTokenValidity: 60
       AllowedOAuthFlows: 
-        - code
+        - client_credentials
       AllowedOAuthFlowsUserPoolClient: True
       AllowedOAuthScopes: 
         - ala/attrs
