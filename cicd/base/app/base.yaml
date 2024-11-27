@@ -98,7 +98,6 @@ Resources:
       AllowedOAuthScopes: 
         - ala/attrs
         - ala/roles
-        - openid
         - profile
         - users/read
       AuthSessionValidity: 3
