@@ -98,7 +98,6 @@ Resources:
       AllowedOAuthScopes: 
         - ala/attrs
         - ala/roles
-        - email
         - openid
         - profile
         - users/read
