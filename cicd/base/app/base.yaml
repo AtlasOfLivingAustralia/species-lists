@@ -57,7 +57,7 @@ Resources:
         - !Sub ${pAppClientHost}/callback?client_name=OidcClient
         - !Sub ${pAppClientHost}/oauth2-redirect.html
       ClientName: !Sub
-          - species-lists-${ResourceName}
+          - species-lists-ui-${ResourceName}
           - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
       DefaultRedirectURI: !Sub ${pAppClientHost}
       EnablePropagateAdditionalUserContextData: False
@@ -109,7 +109,7 @@ Resources:
         - !Sub ${pAppClientServiceHost}/callback?client_name=OidcClient
         - !Sub ${pAppClientServiceHost}/oauth2-redirect.html
       ClientName: !Sub
-          - species-lists-${ResourceName}
+          - species-lists-s2s-${ResourceName}
           - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
       DefaultRedirectURI: !Sub ${pAppClientServiceHost}/callback?client_name=OidcClient
       EnablePropagateAdditionalUserContextData: False
