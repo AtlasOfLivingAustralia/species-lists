@@ -21,5 +21,5 @@ data:
   MONGODB_USERNAME: {{ .Values.mongodb.username | b64enc }}
   MONGODB_PASSWORD: {{ .Values.mongodb.password | b64enc }}
   OIDC_CLIENT_ID: {{ .Values.oidc.clientId | b64enc }}
-  WEBSERVICE_CLIENT_ID: {{ .Values.webservice.clientId | b64enc }}
-  WEBSERVICE_CLIENT_SECRET: {{ .Values.webservice.clientSecret | b64enc }}
+  WEBSERVICE_CLIENTID: {{ .Values.webservice.clientId | b64enc }}
+  WEBSERVICE_CLIENTSECRET: {{ .Values.webservice.clientSecret | b64enc }}
