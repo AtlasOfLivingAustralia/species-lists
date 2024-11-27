@@ -98,9 +98,6 @@ Resources:
       AllowedOAuthScopes: 
         - ala/attrs
         - ala/roles
-        - email
-        - openid
-        - profile
         - users/read
       AuthSessionValidity: 3
       CallbackURLs: 
