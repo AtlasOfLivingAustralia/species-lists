@@ -23,7 +23,7 @@ export default [
   },
   {
     flag: 'isThreatened',
-    label: 'Threatend',
+    label: 'Threatened',
     description: 'List taxa are threatened',
     icon: faExclamationCircle,
     admin: false,

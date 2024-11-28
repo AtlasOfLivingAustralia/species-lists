@@ -17,6 +17,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.data.domain.Page;
@@ -44,6 +45,21 @@ public class RESTController {
   @Autowired protected BiocacheService biocacheService;
 
   @Autowired protected AuthUtils authUtils;
+
+  @Value("${app.name}")
+  private String appName;
+
+  @Value("${app.version}")
+  private String appVersion;
+
+  @Operation(tags = "REST", summary = "Retrieve ")
+  @GetMapping("/info")
+  public ResponseEntity<Map<String, String>> info() {
+    return new ResponseEntity<>(Map.of(
+            "name", appName,
+            "version", appVersion
+    ), HttpStatus.OK);
+  }
 
   @Operation(tags = "REST", summary = "Get species list metadata")
   @Tag(name = "REST", description = "REST Services for species lists lookups")
