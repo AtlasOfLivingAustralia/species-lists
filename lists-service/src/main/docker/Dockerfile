@@ -1,5 +1,5 @@
 # Use an official Maven runtime as a parent image
-FROM maven:3.8-openjdk-17 AS builder
+FROM maven:3.8.3-openjdk-17 AS builder
 
 # Set the working directory in the container
 WORKDIR /app
@@ -11,13 +11,13 @@ COPY src ./src
 # Build the Maven project and create a WAR file
 RUN mvn clean package -DskipTests
 
-FROM ubuntu:jammy
+FROM ubuntu:focal
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV SERVER_PORT="8080"
 
 # Install initial dependencies
-RUN apt-get -y update && apt-get -y upgrade && \
+RUN apt-get -y update && \
         apt-get install -y -q add-apt-key software-properties-common
 
 ARG APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=DontWarn
