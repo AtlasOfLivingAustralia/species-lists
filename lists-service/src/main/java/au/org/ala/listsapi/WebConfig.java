@@ -9,7 +9,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @EnableWebMvc
 public class WebConfig implements WebMvcConfigurer {
 
-  @Value("${app.url}")
+  @Value("${APP_URL}")
   private String appUrl;
 
   @Override
