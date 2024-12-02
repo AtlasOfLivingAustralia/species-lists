@@ -322,6 +322,7 @@ Resources:
                       { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
                       { "name":"BIE_BASE_URL", "value":"#{ExportConfigNS.BIE_BASE_URL}" },
                       { "name":"BIOCACHE_BASE_URL", "value":"#{ExportConfigNS.BIOCACHE_BASE_URL}" },
+                      { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
                       { "name":"COLLECTORY_BASE_URL", "value":"#{ExportConfigNS.COLLECTORY_BASE_URL}" },
                       { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
                       { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
