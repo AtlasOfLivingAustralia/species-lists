@@ -71,6 +71,8 @@ phases:
                       --set ingress.hostname=$WS_SUB_DOMAIN.$HOSTED_ZONE
                       --set ingress.certificateArn=$APP_CERTIFICATE
                       -f helm_values.yaml
+                      --set deploymentAnnotations.checksum/configs="$(md5sum helm_values.yaml | awk '{print $1}')"
+                      --set deploymentAnnotations.commitHash=$CODEBUILD_RESOLVED_SOURCE_VERSION
       - helm upgrade --install $HELM_RELEASE_NAME . 
                       -n lists
                       --set image.repository=$ECR_REPO 
@@ -78,6 +80,8 @@ phases:
                       --set ingress.hostname=$WS_SUB_DOMAIN.$HOSTED_ZONE
                       --set ingress.certificateArn=$APP_CERTIFICATE
                       -f helm_values.yaml
+                      --set deploymentAnnotations.checksum/configs="$(md5sum helm_values.yaml | awk '{print $1}')"
+                      --set deploymentAnnotations.commitHash=$CODEBUILD_RESOLVED_SOURCE_VERSION
   post_build:
     commands:
       - echo Post-build phase...
