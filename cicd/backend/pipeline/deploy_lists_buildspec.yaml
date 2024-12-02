@@ -67,14 +67,14 @@ phases:
       - echo helm upgrade --install $HELM_RELEASE_NAME  . 
                       -n lists 
                       --set image.repository=$ECR_REPO 
-                      --set image.tag=$CLEAN_BRANCH-$CODEBUILD_BUILD_NUMBER
+                      --set image.tag=$BUILD_TAG
                       --set ingress.hostname=$WS_SUB_DOMAIN.$HOSTED_ZONE
                       --set ingress.certificateArn=$APP_CERTIFICATE
                       -f helm_values.yaml
       - helm upgrade --install $HELM_RELEASE_NAME . 
                       -n lists
                       --set image.repository=$ECR_REPO 
-                      --set image.tag=$CLEAN_BRANCH-$CODEBUILD_BUILD_NUMBER
+                      --set image.tag=$BUILD_TAG
                       --set ingress.hostname=$WS_SUB_DOMAIN.$HOSTED_ZONE
                       --set ingress.certificateArn=$APP_CERTIFICATE
                       -f helm_values.yaml

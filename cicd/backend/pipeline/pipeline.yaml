@@ -301,6 +301,7 @@ Resources:
                   { "name":"IMAGE_NAME", "value":"#{ExportConfigNS.IMAGE_NAME}" },
                   { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" }
                 ]
+            Namespace: BuildListsNS
             InputArtifacts:
               - Name: SourceArtifact
             RunOrder: 1
@@ -322,11 +323,11 @@ Resources:
                       { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
                       { "name":"BIE_BASE_URL", "value":"#{ExportConfigNS.BIE_BASE_URL}" },
                       { "name":"BIOCACHE_BASE_URL", "value":"#{ExportConfigNS.BIOCACHE_BASE_URL}" },
-                      { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
                       { "name":"COLLECTORY_BASE_URL", "value":"#{ExportConfigNS.COLLECTORY_BASE_URL}" },
                       { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
                       { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
                       { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" },
+                      { "name":"BUILD_TAG", "value":"#{BuildListsNS.BUILD_TAG}" },
                       { "name":"HOSTED_ZONE", "value":"#{ExportConfigNS.HOSTED_ZONE}" },
                       { "name":"IMAGES_BASE_URL", "value":"#{ExportConfigNS.IMAGES_BASE_URL}" },
                       { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
