@@ -48,7 +48,8 @@ phases:
           clientId: $WEBSERVICE_CLIENT_ID
           clientSecret: $WEBSERVICE_CLIENT_SECRET
         app:
-          url: $SUB_DOMAIN.$HOSTED_ZONE
+          url: $UI_SUB_DOMAIN.$HOSTED_ZONE
+          ws-url: $WS_SUB_DOMAIN.$HOSTED_ZONE
         bie:
           baseUrl: $BIE_BASE_URL
         biocache:
@@ -66,8 +67,8 @@ phases:
       - echo helm upgrade --install $HELM_RELEASE_NAME  . 
                       -n lists 
                       --set image.repository=$ECR_REPO 
-                      --set image.tag=$IMAGE_TAG 
-                      --set ingress.hostname=$SUB_DOMAIN.$HOSTED_ZONE
+                      --set image.tag=$BUILD_TAG
+                      --set ingress.hostname=$WS_SUB_DOMAIN.$HOSTED_ZONE
                       --set ingress.certificateArn=$APP_CERTIFICATE
                       -f helm_values.yaml
                       --set deploymentAnnotations.checksum/configs="$(md5sum helm_values.yaml | awk '{print $1}')"
@@ -75,8 +76,8 @@ phases:
       - helm upgrade --install $HELM_RELEASE_NAME . 
                       -n lists
                       --set image.repository=$ECR_REPO 
-                      --set image.tag=$IMAGE_TAG 
-                      --set ingress.hostname=$SUB_DOMAIN.$HOSTED_ZONE
+                      --set image.tag=$BUILD_TAG
+                      --set ingress.hostname=$WS_SUB_DOMAIN.$HOSTED_ZONE
                       --set ingress.certificateArn=$APP_CERTIFICATE
                       -f helm_values.yaml
                       --set deploymentAnnotations.checksum/configs="$(md5sum helm_values.yaml | awk '{print $1}')"

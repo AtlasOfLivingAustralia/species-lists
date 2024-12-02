@@ -301,6 +301,7 @@ Resources:
                   { "name":"IMAGE_NAME", "value":"#{ExportConfigNS.IMAGE_NAME}" },
                   { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" }
                 ]
+            Namespace: BuildListsNS
             InputArtifacts:
               - Name: SourceArtifact
             RunOrder: 1
@@ -326,6 +327,7 @@ Resources:
                       { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
                       { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
                       { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" },
+                      { "name":"BUILD_TAG", "value":"#{BuildListsNS.BUILD_TAG}" },
                       { "name":"HOSTED_ZONE", "value":"#{ExportConfigNS.HOSTED_ZONE}" },
                       { "name":"IMAGES_BASE_URL", "value":"#{ExportConfigNS.IMAGES_BASE_URL}" },
                       { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" },
@@ -336,7 +338,8 @@ Resources:
                       { "name":"OIDC_CLIENT_ID", "value":"${AppClientId}" },
                       { "name":"OIDC_DISCOVERY_URI", "value":"${OidcDiscoveryUrl}" },
                       { "name":"SERVICE_APP_CLIENT_ID", "value":"${ServiceAppClientId}" },
-                      { "name":"SUB_DOMAIN", "value":"#{ExportConfigNS.SUB_DOMAIN}" },
+                      { "name":"WS_SUB_DOMAIN", "value":"#{ExportConfigNS.WS_SUB_DOMAIN}" },
+                      { "name":"UI_SUB_DOMAIN", "value":"#{ExportConfigNS.UI_SUB_DOMAIN}" },
                       { "name":"USERDETAILS_BASE_URL", "value":"#{ExportConfigNS.USERDETAILS_BASE_URL}" },
                       { "name":"USER_POOL_ID", "value":"${UserPoolId}" }
                     ]
@@ -387,12 +390,15 @@ Resources:
                   { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
                   { "name":"COMMIT_ID", "value":"#{CheckoutSrcNS.CommitId}" },
                   { "name":"ENVIRONMENT", "value":"${pEnvironment}" },
+                  { "name":"HOSTED_ZONE", "value":"#{ExportConfigNS.HOSTED_ZONE}" },
                   { "name":"PRODUCT_COMPONENT", "value":"#{ExportConfigNS.PRODUCT_COMPONENT}" },
                   { "name":"PRODUCT_NAME", "value":"#{ExportConfigNS.PRODUCT_NAME}" },
                   { "name":"REPO", "value":"#{CheckoutSrcNS.FullRepositoryName}" },
                   { "name":"SLACK_ALERT_CHANNEL", "value":"#{ExportConfigNS.SLACK_ALERT_CHANNEL}" },
                   { "name":"SLACK_DEPLOY_NOTIFICATION", "value":"#{ExportConfigNS.SLACK_DEPLOY_NOTIFICATION}" },
-                  { "name":"SRC_BRANCH", "value":"${pGitHubBranch}" }
+                  { "name":"SRC_BRANCH", "value":"${pGitHubBranch}" },
+                  { "name":"UI_SUB_DOMAIN", "value":"#{ExportConfigNS.UI_SUB_DOMAIN}" },
+                  { "name":"WS_SUB_DOMAIN", "value":"#{ExportConfigNS.WS_SUB_DOMAIN}" }
                 ]
             Namespace: DeployNotificationNS
             InputArtifacts:

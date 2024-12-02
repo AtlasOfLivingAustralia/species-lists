@@ -21,7 +21,7 @@ Parameters:
   pHostedZone:
     Type: String
     Description: The hosted zone the site are accessed under
-  pSubDomain:
+  pUiSubDomain:
     Type: String
     Description: The subdomain the site are accessed on
   pCloudfrontCertificate:
@@ -67,7 +67,7 @@ Resources:
   ListsDnsRecord:
     Type: AWS::Route53::RecordSet
     Properties:
-      Name: !Sub '${pSubDomain}.${pHostedZone}'
+      Name: !Sub '${pUiSubDomain}.${pHostedZone}'
       Comment: !Sub LISTS domain for the ${pEnvironment} environment
       Type: A
       AliasTarget:
@@ -81,7 +81,7 @@ Resources:
     Properties:
       DistributionConfig:
         Aliases:
-          - !Sub '${pSubDomain}.${pHostedZone}'
+          - !Sub '${pUiSubDomain}.${pHostedZone}'
         Comment: !Sub CF Distribution for the LISTS site ${pEnvironment}
         CustomErrorResponses:
           - ErrorCode: 403
