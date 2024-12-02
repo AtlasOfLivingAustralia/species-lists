@@ -25,6 +25,7 @@ phases:
       - aws ecr get-login-password | docker login -u AWS --password-stdin "https://$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
       - echo Tagging the Docker image...
       - echo tagging
+      - echo docker tag $IMAGE_NAME:$IMAGE_TAG $ECR_REPO:$CLEAN_BRANCH-$CODEBUILD_BUILD_NUMBER
       - docker tag $IMAGE_NAME:$IMAGE_TAG $ECR_REPO:$CLEAN_BRANCH-$CODEBUILD_BUILD_NUMBER
       - docker tag $IMAGE_NAME:$IMAGE_TAG $ECR_REPO:$IMAGE_TAG
       - echo Pushing the Docker image to Amazon ECR...
