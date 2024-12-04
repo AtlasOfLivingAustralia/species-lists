@@ -1,5 +1,6 @@
 package au.org.ala.listsapi.controller;
 
+import au.org.ala.listsapi.model.Classification;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
@@ -184,17 +185,21 @@ public class DownloadController {
                       .findFirst()
                       .ifPresent(keyValue -> csvRow.add(keyValue.getValue())));
 
-          csvRow.add(speciesListItem.getClassification().getTaxonConceptID());
-          csvRow.add(speciesListItem.getClassification().getScientificName());
-          csvRow.add(speciesListItem.getClassification().getGenus());
-          csvRow.add(speciesListItem.getClassification().getFamily());
-          csvRow.add(speciesListItem.getClassification().getOrder());
-          csvRow.add(speciesListItem.getClassification().getClasss());
-          csvRow.add(speciesListItem.getClassification().getPhylum());
-          csvRow.add(speciesListItem.getClassification().getKingdom());
-          csvRow.add(speciesListItem.getClassification().getVernacularName());
-          csvRow.add(speciesListItem.getClassification().getMatchType());
-          csvRow.add(speciesListItem.getClassification().getNameType());
+          Classification classification = speciesListItem.getClassification();
+
+          if (classification != null) {
+            csvRow.add(speciesListItem.getClassification().getTaxonConceptID());
+            csvRow.add(speciesListItem.getClassification().getScientificName());
+            csvRow.add(speciesListItem.getClassification().getGenus());
+            csvRow.add(speciesListItem.getClassification().getFamily());
+            csvRow.add(speciesListItem.getClassification().getOrder());
+            csvRow.add(speciesListItem.getClassification().getClasss());
+            csvRow.add(speciesListItem.getClassification().getPhylum());
+            csvRow.add(speciesListItem.getClassification().getKingdom());
+            csvRow.add(speciesListItem.getClassification().getVernacularName());
+            csvRow.add(speciesListItem.getClassification().getMatchType());
+            csvRow.add(speciesListItem.getClassification().getNameType());
+          }
           csvWriter.writeNext(csvRow.toArray(new String[0]));
         });
   }
