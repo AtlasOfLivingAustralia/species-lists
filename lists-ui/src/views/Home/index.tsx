@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import {
   Center,
+  Checkbox,
   Container,
   Grid,
   Group,
@@ -22,7 +23,7 @@ import { getErrorMessage } from '#/helpers';
 import { FiltersDrawer } from '#/components/FiltersDrawer';
 import { useALA } from '#/helpers/context/useALA';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEyeSlash, faList, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 
 interface HomeQuery {
   lists: SpeciesListPage;
@@ -38,6 +39,7 @@ function Home() {
   const [filters, setFilters] = useState<KV[]>([]);
   const [refresh, setRefresh] = useState<boolean>(false);
   const [view, setView] = useState<string>('public');
+  const [isUser, setIsUser] = useState<boolean>(false);
 
   const ala = useALA();
   const { data, error, update } = useGQLQuery<HomeQuery>(
@@ -48,7 +50,7 @@ function Home() {
       size: size,
       filters: [],
       isPrivate: view === 'private',
-      ...(ala.isAuthenticated ? { userid: ala.userid } : {}),
+      ...(isUser ? { userid: ala.userid } : {}),
     },
     { clearDataOnUpdate: false, token: ala.token }
   );
@@ -65,10 +67,10 @@ function Home() {
       size,
       filters,
       isPrivate: view === 'private',
-      ...(ala.isAuthenticated ? { userid: ala.userid } : {}),
+      ...(isUser ? { userid: ala.userid } : {}),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, size, searchQuery, filters, refresh, view]);
+  }, [page, size, searchQuery, filters, refresh, view, isUser]);
 
   // Keep the current page in check
   useEffect(() => {
@@ -80,6 +82,8 @@ function Home() {
     setPage(0);
     setSize(10);
     setSearch('');
+    setView('public');
+    setIsUser(false);
     setRefresh(!refresh);
   }, [refresh]);
 
@@ -108,33 +112,20 @@ function Home() {
         value: 'public',
         label: (
           <Center style={{ gap: 10 }}>
-            <FontAwesomeIcon icon={faList} fontSize={14} />
+            <FontAwesomeIcon icon={faEye} fontSize={14} />
             <span>Public</span>
           </Center>
         ),
       },
       {
-        value: 'my',
+        value: 'private',
         label: (
           <Center style={{ gap: 10 }}>
-            <FontAwesomeIcon icon={faUser} fontSize={14} />
-            <span>My</span>
+            <FontAwesomeIcon icon={faEyeSlash} fontSize={14} />
+            <span>Private</span>
           </Center>
         ),
       },
-      ...(ala.isAdmin
-        ? [
-            {
-              value: 'private',
-              label: (
-                <Center style={{ gap: 10 }}>
-                  <FontAwesomeIcon icon={faEyeSlash} fontSize={14} />
-                  <span>Private</span>
-                </Center>
-              ),
-            },
-          ]
-        : []),
     ],
     [ala.isAdmin]
   );
@@ -167,13 +158,20 @@ function Home() {
               placeholder='Search list by name or taxa'
               w={200}
             />
-            {ala.isAuthenticated && (
+            {ala.isAdmin && (
               <SegmentedControl
                 disabled={!data || hasError}
                 value={view}
                 onChange={setView}
                 radius='md'
                 data={labels}
+              />
+            )}
+            {ala.isAuthenticated && (
+              <Checkbox
+                label='My Lists'
+                checked={isUser}
+                onChange={(e) => setIsUser(e.currentTarget.checked)}
               />
             )}
             <FiltersDrawer

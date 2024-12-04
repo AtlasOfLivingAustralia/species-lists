@@ -91,6 +91,7 @@ public class UploadService {
     speciesList.setFieldList(ingestJob.getFieldList());
     speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
     speciesList.setRowCount(ingestJob.getRowCount());
+    speciesList.setDistinctMatchCount(taxonService.getDistinctTaxaCount(speciesList.getId()));
 
     // If the species list is public, or authoritative, create a metadata link
     if (!speciesList.getIsPrivate() || speciesList.getIsAuthoritative()) {
