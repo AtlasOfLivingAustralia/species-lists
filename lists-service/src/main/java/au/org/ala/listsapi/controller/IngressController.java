@@ -379,14 +379,25 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Migrate data", tags = "Migrate")
-  @GetMapping("/migrate")
-  public ResponseEntity<Object> migrate(@AuthenticationPrincipal Principal principal) {
+  @Operation(summary = "Migrate all species lists", tags = "Migrate")
+  @GetMapping("/migrate/all")
+  public ResponseEntity<Object> migrateAll(@AuthenticationPrincipal Principal principal) {
 
     ResponseEntity<Object> errorResponse = checkAuthorized(principal);
     if (errorResponse != null) return errorResponse;
 
-    return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrate());
+    return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrateAll());
+  }
+
+  @SecurityRequirement(name = "JWT")
+  @Operation(summary = "Migrate authoritative species lists", tags = "Migrate")
+  @GetMapping("/migrate/authoritative")
+  public ResponseEntity<Object> migrateAuthoritative(@AuthenticationPrincipal Principal principal) {
+
+    ResponseEntity<Object> errorResponse = checkAuthorized(principal);
+    if (errorResponse != null) return errorResponse;
+
+    return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrateAuthoritative());
   }
 
   @NotNull

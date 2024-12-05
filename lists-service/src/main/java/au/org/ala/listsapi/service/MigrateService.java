@@ -34,6 +34,8 @@ public class MigrateService {
   String migrateUrl;
 
   private final RestTemplate restTemplate;
+  private final String AUTHORITATIVE_LISTS = "/ws/speciesList?isAuthoritative=eq:true&max=1000";
+  private final String ALL_LISTS = "/ws/speciesList?max=1000";
 
   public MigrateService(
       SpeciesListMongoRepository speciesListMongoRepository,
@@ -51,11 +53,11 @@ public class MigrateService {
     this.restTemplate = restTemplate;
   }
 
-  private List<SpeciesList> listOfAuthoritativeLists() {
+  private List<SpeciesList> getLegacyLists(String query) {
     try {
       ResponseEntity<Map> response =
           restTemplate.exchange(
-              migrateUrl + "/ws/speciesList?isAuthoritative=eq:true&max=1000",
+              migrateUrl + query,
               HttpMethod.GET,
               null,
               Map.class);
@@ -123,8 +125,17 @@ public class MigrateService {
     return null;
   }
 
-  public void migrate() {
-    List<SpeciesList> speciesLists = listOfAuthoritativeLists();
+  public void migrateAll() {
+    logger.info("Starting migration of ALL lists...");
+    migration(getLegacyLists(ALL_LISTS));
+  }
+
+  public void migrateAuthoritative() {
+    logger.info("Starting migration of AUTHORITATIVE lists...");
+    migration(getLegacyLists(AUTHORITATIVE_LISTS));
+  }
+
+  public void migration(List<SpeciesList> speciesLists) {
     speciesLists.forEach(
         speciesList -> {
           logger.info("Downloading file for " + speciesList.getDataResourceUid());
@@ -165,7 +176,7 @@ public class MigrateService {
 
   @GetMapping("/migrate-local")
   public void migrateLocal() {
-    List<SpeciesList> speciesLists = listOfAuthoritativeLists();
+    List<SpeciesList> speciesLists = getLegacyLists(AUTHORITATIVE_LISTS);
     speciesLists.forEach(
         speciesList -> {
           try {
