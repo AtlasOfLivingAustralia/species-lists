@@ -91,7 +91,7 @@ public class UploadService {
     speciesList.setFieldList(ingestJob.getFieldList());
     speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
     speciesList.setRowCount(ingestJob.getRowCount());
-    speciesList.setDistinctMatchCount(taxonService.getDistinctTaxaCount(speciesList.getId()));
+    speciesList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
 
     // If the species list is public, or authoritative, create a metadata link
     if (!speciesList.getIsPrivate() || speciesList.getIsAuthoritative()) {
@@ -384,7 +384,8 @@ public class UploadService {
     }
 
     if (!dryRun && !skipIndexing) {
-      taxonService.taxonMatchDataset(speciesListID);
+      long distinctMatchCount = taxonService.taxonMatchDataset(speciesListID);
+      ingestJob.setDistinctMatchCount(distinctMatchCount);
       taxonService.reindex(speciesListID);
     }
 

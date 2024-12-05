@@ -198,14 +198,15 @@ public class TaxonService {
     logger.info("Indexing " + speciesListID + " complete.");
   }
 
-  public void taxonMatchDataset(String speciesListID) {
+  public long taxonMatchDataset(String speciesListID) {
 
     logger.info("Taxon matching " + speciesListID);
     Optional<SpeciesList> optionalSp = speciesListMongoRepository.findById(speciesListID);
-    if (!optionalSp.isPresent()) return;
+    if (!optionalSp.isPresent()) return 0;
 
     int size = 100;
     int page = 0;
+    long distinct = 0;
     boolean done = false;
 
     while (!done) {
@@ -217,6 +218,10 @@ public class TaxonService {
         try {
           List<SpeciesListItem> items = speciesListItems.getContent();
           updateClassifications(items);
+
+          distinct += items.stream()
+                  .filter(speciesListItem -> speciesListItem.getClassification().getSuccess())
+                  .map(speciesListItem -> speciesListItem.getClassification().getTaxonConceptID()).distinct().count();
 
           speciesListItemMongoRepository.saveAll(items);
 
@@ -230,6 +235,8 @@ public class TaxonService {
     }
 
     logger.info("Taxon matching " + speciesListID + " complete.");
+
+    return distinct;
   }
 
   public List<SpeciesListItem> updateClassifications(List<SpeciesListItem> speciesListItems) {

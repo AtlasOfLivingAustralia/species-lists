@@ -21,6 +21,7 @@ public class IngestJob {
   List<String> originalFieldNames;
   List<String> facetList;
   int rowCount = 0;
+  long distinctMatchCount = 0;
   String localFile;
   List<String> validationErrors;
 }

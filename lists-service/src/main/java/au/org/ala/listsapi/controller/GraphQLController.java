@@ -521,6 +521,10 @@ public class GraphQLController {
     // reindex the item
     reindex(speciesListItem, speciesList);
 
+    // update distinct match count
+    speciesList.setDistinctMatchCount(taxonService.getDistinctTaxaCount(speciesList.getId()));
+    speciesListMongoRepository.save(speciesList);
+
     logger.info("Updated species list item: " + speciesListItem.getId());
     return speciesListItem;
   }
