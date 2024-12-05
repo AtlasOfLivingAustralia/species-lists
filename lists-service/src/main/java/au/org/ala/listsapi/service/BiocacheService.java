@@ -6,6 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.net.ProxySelector;
@@ -57,14 +59,16 @@ public class BiocacheService {
   }
 
   public String getQidForSpeciesList(String speciesListId) throws Exception {
-    List<SpeciesListItem> speciesListItems = speciesListItemMongoRepository.findAllBySpeciesListID(speciesListId);
+    Pageable paging = PageRequest.of(0, 200);
+    List<SpeciesListItem> speciesListItems = speciesListItemMongoRepository
+            .findBySpeciesListID(speciesListId, paging)
+            .toList();
 
     // Handle very long species lists
     Stream<String> queryBatches = batches(speciesListItems).map(this::listBatchToString);
     String query = queryBatches.collect(Collectors.joining(" OR "));
 
-    String formData = "q=" + URLEncoder.encode(query, StandardCharsets.UTF_8)
-            + "&name=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
+    String formData = "q=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
 
     HttpRequest httpRequest =
             HttpRequest.newBuilder(new URI(biocacheUrl + "/ws/qid"))
