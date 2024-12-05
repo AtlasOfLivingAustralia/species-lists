@@ -7,6 +7,7 @@ import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.ProxySelector;
@@ -21,6 +22,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
+import org.elasticsearch.action.search.SearchRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +31,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregation;
+import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregations;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
+import org.springframework.data.elasticsearch.client.erhlc.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.SearchScrollHits;
+import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.data.elasticsearch.core.query.IndexQuery;
 import org.springframework.data.elasticsearch.core.query.IndexQueryBuilder;
 import org.springframework.scheduling.annotation.Async;
@@ -41,6 +52,7 @@ public class TaxonService {
   private String namematchingQueryUrl;
 
   private static final Logger logger = LoggerFactory.getLogger(TaxonService.class);
+  public static final String SPECIES_LIST_ID = "speciesListID";
   @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
   @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
   @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
@@ -181,18 +193,20 @@ public class TaxonService {
       }
       page++;
     }
+
+
     logger.info("Indexing " + speciesListID + " complete.");
   }
 
-  public void taxonMatchDataset(String speciesListID) {
+  public long taxonMatchDataset(String speciesListID) {
 
     logger.info("Taxon matching " + speciesListID);
     Optional<SpeciesList> optionalSp = speciesListMongoRepository.findById(speciesListID);
-    if (!optionalSp.isPresent()) return;
+    if (!optionalSp.isPresent()) return 0;
 
     int size = 100;
     int page = 0;
-    int distinct = 0;
+    long distinct = 0;
     boolean done = false;
 
     while (!done) {
@@ -205,9 +219,9 @@ public class TaxonService {
           List<SpeciesListItem> items = speciesListItems.getContent();
           updateClassifications(items);
 
-//          distinct += (int) items.stream()
-//                  .filter(speciesListItem -> speciesListItem.getClassification().getSuccess())
-//                  .map(speciesListItem -> speciesListItem.getClassification().getTaxonConceptID()).distinct().count();
+          distinct += items.stream()
+                  .filter(speciesListItem -> speciesListItem.getClassification().getSuccess())
+                  .map(speciesListItem -> speciesListItem.getClassification().getTaxonConceptID()).distinct().count();
 
           speciesListItemMongoRepository.saveAll(items);
 
@@ -220,11 +234,9 @@ public class TaxonService {
       page++;
     }
 
-//    SpeciesList speciesList = optionalSp.get();
-//    speciesList.setDistinctMatchCount(distinct);
-//    speciesListMongoRepository.save(speciesList);
-
     logger.info("Taxon matching " + speciesListID + " complete.");
+
+    return distinct;
   }
 
   public List<SpeciesListItem> updateClassifications(List<SpeciesListItem> speciesListItems) {
@@ -271,4 +283,54 @@ public class TaxonService {
     }
     return null;
   }
+
+  public long getDistinctTaxaCount(String speciesListID) {
+    logger.info("Getting distinct taxonConceptID count for speciesListID: " + speciesListID);
+    try {
+      // Use NativeQueryBuilder to construct the query
+      NativeQueryBuilder queryBuilder = NativeQuery.builder();
+
+      // Add a filter to match the provided speciesListID
+      queryBuilder.withQuery(q ->
+              q.bool(b ->
+                      b.filter(f ->
+                              f.term(t ->
+                                      t.field(SPECIES_LIST_ID + ".keyword").value(speciesListID)
+                              )
+                      )
+              )
+      );
+
+      // Add a cardinality aggregation for distinct taxonConceptID
+      queryBuilder.withAggregation(
+              "distinctTaxonConceptID",
+              Aggregation.of(a -> a.cardinality(c -> c.field("classification.taxonConceptID.keyword")))
+      );
+
+      // Build the query
+      NativeQuery nativeQuery = queryBuilder.build();
+
+      // Execute the query using ElasticsearchOperations
+      SearchHits<SpeciesListIndex> searchHits =
+              elasticsearchOperations.search(nativeQuery, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
+
+      // Extract the aggregation result
+      ElasticsearchAggregations aggregations = (ElasticsearchAggregations) searchHits.getAggregations();
+      ElasticsearchAggregation cardinalityAgg =
+              aggregations.aggregations().stream()
+                      .filter(agg -> agg.aggregation().getName().equals("distinctTaxonConceptID"))
+                      .findFirst()
+                      .orElse(null);
+
+      if (cardinalityAgg != null) {
+        return cardinalityAgg.aggregation().getAggregate().cardinality().value();
+      }
+
+    } catch (Exception e) {
+      logger.error("Error fetching distinct taxonConceptID count for speciesListID: " + speciesListID, e);
+    }
+
+    return 0L; // Return 0 if an error occurs
+  }
+
 }

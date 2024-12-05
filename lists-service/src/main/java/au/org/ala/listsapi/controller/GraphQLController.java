@@ -521,6 +521,10 @@ public class GraphQLController {
     // reindex the item
     reindex(speciesListItem, speciesList);
 
+    // update distinct match count
+    speciesList.setDistinctMatchCount(taxonService.getDistinctTaxaCount(speciesList.getId()));
+    speciesListMongoRepository.save(speciesList);
+
     logger.info("Updated species list item: " + speciesListItem.getId());
     return speciesListItem;
   }
@@ -596,6 +600,8 @@ public class GraphQLController {
       return null;
     }
 
+    SpeciesList speciesList = optionalSpeciesList.get();
+
     if (!authUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
       throw new AccessDeniedException("You dont have access to this list");
     }
@@ -617,6 +623,11 @@ public class GraphQLController {
 
     // index
     reindex(speciesListItem, optionalSpeciesList.get());
+
+    // update distinct match count
+    speciesList.setDistinctMatchCount(taxonService.getDistinctTaxaCount(speciesList.getId()));
+    speciesListMongoRepository.save(speciesList);
+
     return speciesListItem;
   }
 
@@ -645,6 +656,8 @@ public class GraphQLController {
       return null;
     }
 
+    SpeciesList speciesList = optionalSpeciesList.get();
+
     if (!authUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
       throw new AccessDeniedException("You dont have access to this list");
     }
@@ -652,6 +665,10 @@ public class GraphQLController {
     // delete the list item
     speciesListItemMongoRepository.deleteById(id);
     speciesListIndexElasticRepository.deleteById(id);
+
+    // update distinct match count
+    speciesList.setDistinctMatchCount(taxonService.getDistinctTaxaCount(speciesList.getId()));
+    speciesListMongoRepository.save(speciesList);
 
     return optionalSpeciesListItem.get();
   }
