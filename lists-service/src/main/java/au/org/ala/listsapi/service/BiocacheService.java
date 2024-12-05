@@ -68,8 +68,7 @@ public class BiocacheService {
     Stream<String> queryBatches = batches(speciesListItems).map(this::listBatchToString);
     String query = queryBatches.collect(Collectors.joining(" OR "));
 
-    String formData = "q=" + URLEncoder.encode(query, StandardCharsets.UTF_8)
-            + "&name=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
+    String formData = "q=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
 
     HttpRequest httpRequest =
             HttpRequest.newBuilder(new URI(biocacheUrl + "/ws/qid"))
