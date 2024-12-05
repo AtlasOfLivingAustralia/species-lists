@@ -13,6 +13,7 @@ export const request = async <T>(
     method,
     body,
     headers,
+    signal: AbortSignal.timeout(1000 * 60 * 10),
   });
 
   // Ensure the request was successful

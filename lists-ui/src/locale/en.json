@@ -6,6 +6,8 @@
   "SPECIES_CHARACTERS": "Character List",
   "INVASIVE": "Invasive species List",
   "COMMON_HABITAT": "Common Habitat List",
+  "PROFILE": "Profile List",
+  "TEST": "Testing List",
   "OTHER": "Other List",
 
   "classification.kingdom": "Kingdom",
