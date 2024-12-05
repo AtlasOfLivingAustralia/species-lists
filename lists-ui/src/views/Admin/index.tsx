@@ -14,8 +14,10 @@ import { notifications } from '@mantine/notifications';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowsRotate,
+  faCode,
   faIdCard,
   faRightLeft,
+  faShield,
   faTrash,
   faWarning,
 } from '@fortawesome/free-solid-svg-icons';
@@ -57,6 +59,7 @@ export function Component() {
       },
       cancelProps: { radius: 'md' },
       onConfirm: async () => {
+        let cancelSucessNotification = false;
         try {
           switch (action) {
             case 'reindex':
@@ -71,6 +74,16 @@ export function Component() {
             case 'migrate-authoritative':
               await ala.rest.admin?.migrate('authoritative');
               break;
+            case 'migrate-custom':
+              const query = prompt(
+                'Please enter your custom query (i.e. /ws/speciesList?isAuthoritative=eq:true)'
+              );
+              if (query) {
+                await ala.rest.admin?.migrateCustom(decodeURIComponent(query));
+              } else {
+                cancelSucessNotification = true;
+              }
+              break;
             case 'wipe-index':
               await ala.rest.admin?.wipe('index');
               break;
@@ -79,12 +92,14 @@ export function Component() {
               break;
           }
 
-          // Show success notification
-          notifications.show({
-            message: `${verb} started successfully`,
-            position: 'bottom-left',
-            radius: 'md',
-          });
+          if (!cancelSucessNotification) {
+            // Show success notification
+            notifications.show({
+              message: `${verb} started successfully`,
+              position: 'bottom-left',
+              radius: 'md',
+            });
+          }
         } catch (error) {
           console.log('admin error', error);
           // Show error notification
@@ -128,10 +143,23 @@ export function Component() {
                   Migrate <b>authoritative</b> lists from the legacy lists tool
                 </>
               }
-              icon={faRightLeft}
+              icon={faShield}
               onClick={() =>
                 handleClick('migrate-authoritation', 'Authoritative Migration')
               }
+            />
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
+            <ActionCard
+              title='Custom'
+              description={
+                <>
+                  Migrate lists from the legacy lists tool{' '}
+                  <b>using a custom query</b>
+                </>
+              }
+              icon={faCode}
+              onClick={() => handleClick('migrate-custom', 'Custom Migration')}
             />
           </Grid.Col>
         </Grid>
@@ -179,7 +207,7 @@ export function Component() {
                   radius='md'
                 >
                   Extremely massive danger zone here.{' '}
-                  <b>Run these ONLY in the testing environment.</b>
+                  <b>Run these ONLY in development/testing environments.</b>
                 </Alert>
               </Stack>
             </Grid.Col>

@@ -135,6 +135,11 @@ public class MigrateService {
     migration(getLegacyLists(AUTHORITATIVE_LISTS));
   }
 
+  public void migrateCustom(String query) {
+    logger.info("Starting CUSTOM migration of lists with query: " + query);
+    migration(getLegacyLists(query));
+  }
+
   public void migration(List<SpeciesList> speciesLists) {
     speciesLists.forEach(
         speciesList -> {
