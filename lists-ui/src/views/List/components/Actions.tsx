@@ -336,7 +336,7 @@ export function Actions({
       </Menu>
       <Box className={classes.desktop}>
         <Stack gap='xs'>
-          {meta.distinctMatchCount && (
+          {meta.distinctMatchCount != null && (
             <Paper
               miw={authorisedForList ? 285 : undefined}
               py={8}

@@ -200,6 +200,7 @@ public class DownloadController {
             csvRow.add(speciesListItem.getClassification().getMatchType());
             csvRow.add(speciesListItem.getClassification().getNameType());
           }
+
           csvWriter.writeNext(csvRow.toArray(new String[0]));
         });
   }
