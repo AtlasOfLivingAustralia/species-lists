@@ -24,12 +24,14 @@ function useGQLQuery<T>(
   useEffect(() => {
     async function runQuery() {
       if (data && options.clearDataOnUpdate) setData(null);
+      console.log('Running query:', query, variables);
       try {
         const queryData = await performGQLQuery<T>(
           query,
           variables,
           options.token
         );
+        console.log('Query result:', queryData);
         setData(queryData);
         setError(null);
       } catch (queryError) {

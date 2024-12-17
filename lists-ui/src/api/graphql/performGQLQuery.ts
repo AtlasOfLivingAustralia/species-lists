@@ -25,6 +25,7 @@ async function performGQLQuery<T = any>(
   );
 
   const data = await response.json();
+  console.log('Response:', response, data);
   if (response.ok) {
     if (data.errors) {
       // If errorData is populated, we've recieved an error from the GraphQL server

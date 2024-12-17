@@ -850,9 +850,11 @@ public class GraphQLController {
     }
 
     Query aggQuery = builder.build();
+    logger.info(aggQuery.toString());
     SearchHits<SpeciesListIndex> results =
         elasticsearchOperations.search(aggQuery, SpeciesListIndex.class);
 
+    logger.info(Objects.requireNonNull(results.getAggregations()).toString());
     ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
 
     List<Facet> facets = new ArrayList<>();

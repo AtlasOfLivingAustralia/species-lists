@@ -50,10 +50,16 @@ function Home() {
       size: size,
       filters: [],
       isPrivate: view === 'private',
-      ...(isUser ? { userid: ala.userid } : {}),
+      ...(ala.isAuthenticated ? { userid: ala.userid } : {}),
     },
     { clearDataOnUpdate: false, token: ala.token }
   );
+
+    useEffect(() => {
+        if (error) {
+            console.error('Elasticsearch Error:', error);
+        }
+    }, [error]);
 
   // Destructure results & calculate the real page offset
   const { totalElements, totalPages, content } = data?.lists || {};
@@ -67,10 +73,10 @@ function Home() {
       size,
       filters,
       isPrivate: view === 'private',
-      ...(isUser ? { userid: ala.userid } : {}),
+      ...(ala.isAuthenticated ? { userid: ala.userid } : {}),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, size, searchQuery, filters, refresh, view, isUser]);
+  }, [page, size, searchQuery, filters, refresh, view]);
 
   // Keep the current page in check
   useEffect(() => {
