@@ -508,7 +508,7 @@ public class GraphQLController {
     updateItem(inputSpeciesListItem, speciesListItem, principal);
 
     // update last updated
-    updateLastUpdated(speciesListItem, principal);
+    speciesList = updateLastUpdated(speciesList, principal);
 
     // rematch taxonomy
     try {
@@ -611,7 +611,7 @@ public class GraphQLController {
     speciesListItem = updateItem(inputSpeciesListItem, speciesListItem, principal);
 
     // update last updated
-    updateLastUpdated(speciesListItem, principal);
+    speciesList = updateLastUpdated(speciesList, principal);
 
     // rematch taxonomy
     try {
@@ -631,14 +631,10 @@ public class GraphQLController {
     return speciesListItem;
   }
 
-  private void updateLastUpdated(SpeciesListItem speciesListItem, Principal principal) {
-    Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListItem.getSpeciesListID());
-    if (speciesList.isPresent()) {
-      SpeciesList sl = speciesList.get();
-      sl.setLastUpdated(new Date());
-      sl.setLastUpdatedBy(principal.getName());
-      speciesListMongoRepository.save(sl);
-    }
+  private SpeciesList updateLastUpdated(SpeciesList speciesList, Principal principal) {
+    speciesList.setLastUpdated(new Date());
+    speciesList.setLastUpdatedBy(principal.getName());
+    return speciesListMongoRepository.save(speciesList);
   }
 
   @SchemaMapping(typeName = "Mutation", field = "removeSpeciesListItem")
@@ -739,12 +735,15 @@ public class GraphQLController {
       toUpdate.setLastUpdatedBy(principal.getName());
       toUpdate.setTags(tags);
 
+      if (!toUpdate.getIsPrivate() || toUpdate.getIsAuthoritative()) {
+        metadataService.setMeta(toUpdate);
+      }
+
       // If the visibility has changed, update the visibility of the list items
       // in elasticsearch and mongo
       SpeciesList updatedList = speciesListMongoRepository.save(toUpdate);
       if (reindexRequired) {
         taxonService.reindex(updatedList.getId());
-        metadataService.setMeta(updatedList);
       }
 
       return updatedList;

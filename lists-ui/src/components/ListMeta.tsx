@@ -41,7 +41,10 @@ const defaultList = (list?: SpeciesList): SpeciesListSubmit => ({
   description: list?.description || '',
   isAuthoritative: list?.isAuthoritative || false,
   isInvasive: list?.isInvasive || false,
-  isPrivate: list?.isPrivate || true,
+  isPrivate:
+    list?.isPrivate !== undefined && list?.isPrivate !== null
+      ? list.isPrivate
+      : true,
   isBIE: list?.isBIE || false,
   isSDS: list?.isSDS || false,
   isThreatened: list?.isThreatened || false,
@@ -66,6 +69,8 @@ export function ListMeta({
   );
   const loaded = Boolean(constraints);
   const mounted = useMounted();
+
+  console.log(initialValues, defaultList(initialValues));
 
   // Form hook
   const form = useForm({

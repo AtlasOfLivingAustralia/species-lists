@@ -44,6 +44,7 @@ type SpeciesListSubmit = Omit<
   | 'rowCount'
   | 'lastUpdatedBy'
   | 'owner'
+  | 'distinctMatchCount'
 >;
 
 interface Release {
