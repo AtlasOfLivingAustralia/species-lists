@@ -145,7 +145,7 @@ export function Component() {
               }
               icon={faShield}
               onClick={() =>
-                handleClick('migrate-authoritation', 'Authoritative Migration')
+                handleClick('migrate-authoritative', 'Authoritative Migration')
               }
             />
           </Grid.Col>

@@ -113,7 +113,7 @@ public class TaxonService {
     logger.info("Taxon matching all datasets complete.");
   }
 
-  private void bulkIndexSafe(List<IndexQuery> updateList) {
+  private void bulkIndexSafe(List<IndexQuery> updateList, SpeciesList list) {
     try {
       elasticsearchOperations.bulkIndex(updateList, SpeciesListIndex.class);
     } catch (BulkFailureException e) {
@@ -201,7 +201,7 @@ public class TaxonService {
                 updateList.add(indexQuery);
 
                 if (updateList.size() == 1000) {
-                  bulkIndexSafe(updateList);
+                  bulkIndexSafe(updateList, speciesList);
                   updateList.clear();
                 }
               } catch (Exception e) {
@@ -209,7 +209,7 @@ public class TaxonService {
               }
             });
         if (!updateList.isEmpty()) {
-          bulkIndexSafe(updateList);
+          bulkIndexSafe(updateList, speciesList);
           updateList.clear();
         }
       } else {
