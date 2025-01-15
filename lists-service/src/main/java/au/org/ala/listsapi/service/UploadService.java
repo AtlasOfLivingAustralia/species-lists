@@ -76,12 +76,17 @@ public class UploadService {
   }
 
   public SpeciesList ingest(
-      String userId, InputSpeciesList speciesListMetadata, File fileToLoad, boolean dryRun)
+      AlaUserProfile user, InputSpeciesList speciesListMetadata, File fileToLoad, boolean dryRun)
       throws Exception {
 
     // create the species list in mongo
     SpeciesList speciesList = new SpeciesList();
-    speciesList.setOwner(userId);
+    speciesList.setOwner(user.getUserId());
+
+    if (user.getGivenName() != null && user.getFamilyName() != null) {
+      speciesList.setOwnerName(user.getGivenName() + " " + user.getFamilyName());
+    }
+
     extractUpdates(speciesListMetadata, speciesList);
 
     // If the species list is public, or authoritative, create a metadata link

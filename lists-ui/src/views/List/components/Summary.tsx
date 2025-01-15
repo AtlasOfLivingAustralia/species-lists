@@ -34,7 +34,7 @@ export function Summary({ meta, ...rest }: SummaryProps) {
           />
         </Chip>
       )}
-      {meta.owner && (
+      {meta.ownerName && (
         <Chip
           size='xs'
           variant='light'
@@ -42,7 +42,7 @@ export function Summary({ meta, ...rest }: SummaryProps) {
           checked={true}
           icon={<FontAwesomeIcon icon={faUser} fontSize={10} />}
         >
-          {meta.owner || 'Unknown Owner'}
+          {meta.ownerName}
         </Chip>
       )}
       {meta.authority && (

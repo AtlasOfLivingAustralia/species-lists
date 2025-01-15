@@ -47,6 +47,7 @@ export const QUERY_LISTS_GET = `query loadList(
     distinctMatchCount
     fieldList
     owner
+    ownerName
     authority
     editors
     tags
