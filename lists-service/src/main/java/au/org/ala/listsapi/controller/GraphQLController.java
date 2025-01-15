@@ -242,10 +242,12 @@ public class GraphQLController {
     if (userId != null) {
       // return all lists for this user
       bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
-    } else if (isPrivate != null) {
+    }
+    if (isPrivate != null) {
       // return all private lists
       bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
-    } else if (speciesListID != null) {
+    }
+    if (speciesListID != null) {
       // return this one list
       bq.filter(f -> f.term(t -> t.field("speciesListID").value(speciesListID)));
     }

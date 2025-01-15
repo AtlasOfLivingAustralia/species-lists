@@ -76,13 +76,19 @@ public class UploadService {
   }
 
   public SpeciesList ingest(
-      String name, InputSpeciesList speciesListMetadata, File fileToLoad, boolean dryRun)
+      String userId, InputSpeciesList speciesListMetadata, File fileToLoad, boolean dryRun)
       throws Exception {
 
     // create the species list in mongo
     SpeciesList speciesList = new SpeciesList();
-    speciesList.setOwner(name);
+    speciesList.setOwner(userId);
     extractUpdates(speciesListMetadata, speciesList);
+
+    // If the species list is public, or authoritative, create a metadata link
+    if (!speciesList.getIsPrivate() || speciesList.getIsAuthoritative()) {
+      metadataService.setMeta(speciesList);
+    }
+
     speciesList = speciesListMongoRepository.save(speciesList);
 
     IngestJob ingestJob = ingest(speciesList.getId(), fileToLoad, dryRun, false);
@@ -92,11 +98,6 @@ public class UploadService {
     speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
     speciesList.setRowCount(ingestJob.getRowCount());
     speciesList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
-
-    // If the species list is public, or authoritative, create a metadata link
-    if (!speciesList.getIsPrivate() || speciesList.getIsAuthoritative()) {
-      metadataService.setMeta(speciesList);
-    }
 
     speciesList = speciesListMongoRepository.save(speciesList);
 

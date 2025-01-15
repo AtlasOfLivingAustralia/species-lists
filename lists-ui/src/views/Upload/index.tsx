@@ -145,7 +145,9 @@ export function Component() {
           radius='lg'
           loading={uploading}
           disabled={uploadDisabled}
+          maxSize={10485760}
           className={uploadDisabled ? classes.disabled : undefined}
+          multiple={false}
         >
           <Flex
             className={classes.inner}

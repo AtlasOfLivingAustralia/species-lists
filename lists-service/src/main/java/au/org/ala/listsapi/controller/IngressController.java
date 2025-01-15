@@ -271,7 +271,7 @@ public class IngressController {
 
 
       SpeciesList updatedSpeciesList =
-          uploadService.ingest(alaUserProfile.getGivenName() + " " + alaUserProfile.getFamilyName(), speciesList, tempFile, false);
+          uploadService.ingest(alaUserProfile.getUserId(), speciesList, tempFile, false);
       logger.info("Ingestion complete..." + updatedSpeciesList.toString());
       return ResponseEntity.ok(updatedSpeciesList);
     } catch (Exception e) {
