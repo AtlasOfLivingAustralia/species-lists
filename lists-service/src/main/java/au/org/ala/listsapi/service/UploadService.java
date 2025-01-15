@@ -101,7 +101,7 @@ public class UploadService {
 
     speciesList = speciesListMongoRepository.save(speciesList);
 
-    releaseService.release(speciesList.getId());
+    // releaseService.release(speciesList.getId());
     return speciesList;
   }
 
@@ -148,7 +148,7 @@ public class UploadService {
         speciesList.get().setRowCount(ingestJob.getRowCount());
         speciesList.get().setOriginalFieldList(ingestJob.getOriginalFieldNames());
         SpeciesList speciesList1 = speciesListMongoRepository.save(speciesList.get());
-        releaseService.release(speciesList1.getId());
+        // releaseService.release(speciesList1.getId());
         return speciesList1;
       } else {
         return null;

@@ -321,7 +321,7 @@ public class IngressController {
       SpeciesList speciesList = uploadService.reload(speciesListID, tempFile, false);
       if (speciesList != null) {
         // release current version
-        releaseService.release(speciesListID);
+        // releaseService.release(speciesListID);
         return new ResponseEntity<>(speciesList, HttpStatus.OK);
       }
       return ResponseEntity.badRequest().body("Error while uploading the file: ");
