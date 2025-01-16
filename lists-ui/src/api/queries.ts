@@ -19,7 +19,7 @@ export const QUERY_LISTS_SEARCH = `query findList($searchQuery: String, $page: I
     totalElements
     __typename
   }
-  facets: facetSpeciesLists(searchQuery: $searchQuery, isPrivate: $isPrivate) {
+  facets: facetSpeciesLists(searchQuery: $searchQuery, isPrivate: $isPrivate, userId: $userId) {
     key
     counts {
       value
@@ -47,6 +47,7 @@ export const QUERY_LISTS_GET = `query loadList(
     distinctMatchCount
     fieldList
     owner
+    ownerName
     authority
     editors
     tags

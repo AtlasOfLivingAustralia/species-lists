@@ -46,7 +46,8 @@ public class SpeciesList {
   Boolean isBIE;
   Boolean isSDS;
 
-  private String owner; // who created the list
+  private String owner; // user id of who created the list
+  private String ownerName; // name of who created the list
   private String lastUpdatedBy;
   private List<String> editors; // who can edit the list
   private List<String> approvedViewers; // who can view the list (when list is private)

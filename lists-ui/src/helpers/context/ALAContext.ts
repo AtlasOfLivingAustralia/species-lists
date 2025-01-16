@@ -7,7 +7,7 @@ import rest from '#/api/rest';
 
 export interface ALAContextProps {
   auth: AuthContextProps | null;
-  token: string;
+  token?: string;
   userid: string;
   roles: string[];
   rest: ReturnType<typeof rest>;
@@ -18,7 +18,7 @@ export interface ALAContextProps {
 
 export default createContext<ALAContextProps | null>({
   auth: null,
-  token: '',
+  token: undefined,
   userid: '',
   roles: [],
   rest: rest('', false),

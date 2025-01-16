@@ -34,7 +34,7 @@ public class MetadataService {
         );
     }
 
-    public void setMeta(SpeciesList speciesList) {
+    public void setMeta(SpeciesList speciesList) throws Exception {
         String dataResourceUid = speciesList.getDataResourceUid();
         String entityUid = dataResourceUid != null ? "/" + dataResourceUid : "";
 
@@ -51,7 +51,7 @@ public class MetadataService {
         int statusCode = (int)response.get("statusCode");
         if (statusCode < 200 || statusCode > 299) {
             logger.error(response.get("error").toString());
-            throw new Error("Failed to create metadata entry for species list");
+            throw new Exception("Failed to create metadata entry for species list");
         }
 
         if (speciesList.getDataResourceUid() == null) {

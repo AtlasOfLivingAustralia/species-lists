@@ -5,14 +5,19 @@ import { ReactNode, useCallback, useState } from 'react';
 import {
   Alert,
   Badge,
+  Box,
   Button,
   Container,
+  em,
   Flex,
   Group,
+  Paper,
+  Progress,
   Stack,
+  Stepper,
   Text,
 } from '@mantine/core';
-import { useDocumentTitle } from '@mantine/hooks';
+import { useDocumentTitle, useMediaQuery } from '@mantine/hooks';
 import { Dropzone, FileWithPath } from '@mantine/dropzone';
 import {
   ArrowUpIcon,
@@ -32,8 +37,31 @@ import { notifications } from '@mantine/notifications';
 import classes from './index.module.css';
 import { useALA } from '#/helpers/context/useALA';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faBoxOpen,
+  faCheck,
+  faList,
+  faSearch,
+} from '@fortawesome/free-solid-svg-icons';
 
 const ACCEPTED_TYPES: string[] = ['text/csv', 'application/zip'];
+
+// Content / icon definitions for ingestion steps
+const steps = [
+  {
+    text: 'Setting up list',
+    icon: faBoxOpen,
+  },
+  {
+    text: 'Matching taxa',
+    icon: faSearch,
+  },
+  {
+    text: 'Finalizing list',
+    icon: faList,
+  },
+];
 
 export function Component() {
   useDocumentTitle('ALA Lists | Upload');
@@ -43,7 +71,12 @@ export function Component() {
   const [error, setError] = useState<string | null>(null);
   const [originalName, setOriginalName] = useState<string | null>(null);
   const [result, setResult] = useState<UploadResult | null>(null);
+  const [progress, setProgress] = useState<{ elastic: number; mongo: number }>({
+    elastic: 0,
+    mongo: 0,
+  });
 
+  const isMobile = useMediaQuery(`(max-width: ${em(750)})`);
   const navigate = useNavigate();
   const ala = useALA();
 
@@ -70,9 +103,23 @@ export function Component() {
       try {
         const { id } = await ala.rest.lists.ingest(
           list,
-          result?.localFile || ''
+          result?.localFile || '',
+          true
         );
-        navigate(`/list/${id}`);
+
+        const status = async () => {
+          const progress = await ala.rest.lists.ingestProgress(id);
+
+          setProgress(progress);
+
+          // If the list has been ingested successfully, navigate to it, otherwise, wait a bit and check again
+          if (result?.rowCount === progress.elastic) {
+            setTimeout(() => navigate(`/list/${id}`), 500);
+          } else {
+            setTimeout(() => status(), 1500);
+          }
+        };
+        status();
       } catch (error) {
         setIngesting(false);
 
@@ -89,6 +136,7 @@ export function Component() {
   const handleReset = useCallback(() => {
     setError(null);
     setResult(null);
+    setProgress({ mongo: 0, elastic: 0 });
   }, []);
 
   // Redirect to the home screen if not authenticated
@@ -136,6 +184,16 @@ export function Component() {
 
   const uploadDisabled = Boolean(result);
 
+  // Calculate ingest step
+  let step = 0;
+  if (ingesting) {
+    if (progress.mongo > 0 && progress.mongo < (result?.rowCount || 0)) {
+      step = 1;
+    } else if (progress.mongo === (result?.rowCount || 0)) {
+      step = 2;
+    }
+  }
+
   return (
     <Container size='lg'>
       <Stack>
@@ -145,7 +203,9 @@ export function Component() {
           radius='lg'
           loading={uploading}
           disabled={uploadDisabled}
+          maxSize={26214400}
           className={uploadDisabled ? classes.disabled : undefined}
+          multiple={false}
         >
           <Flex
             className={classes.inner}
@@ -205,6 +265,47 @@ export function Component() {
             onSubmit={handleIngest}
           />
         )}
+        <Box
+          mt='sm'
+          h={ingesting ? 92 : 0}
+          style={{
+            overflow: 'hidden',
+            transition: 'height 250ms ease-in-out',
+          }}
+        >
+          <Paper p='sm' radius='lg' withBorder>
+            {isMobile ? (
+              <Group justify='center'>
+                <FontAwesomeIcon icon={steps[step].icon} />
+                <Text fw='bold' size='lg'>
+                  {steps[step].text}
+                </Text>
+              </Group>
+            ) : (
+              <Stepper
+                active={step}
+                allowNextStepsSelect={false}
+                completedIcon={<FontAwesomeIcon icon={faCheck} />}
+              >
+                {steps.map((step) => (
+                  <Stepper.Step
+                    icon={<FontAwesomeIcon icon={step.icon} />}
+                    label={step.text}
+                  />
+                ))}
+              </Stepper>
+            )}
+            <Progress
+              mt='md'
+              animated={step !== 1}
+              value={
+                step === 0
+                  ? 100
+                  : (progress.mongo / (result?.rowCount || 0)) * 100
+              }
+            />
+          </Paper>
+        </Box>
       </Stack>
     </Container>
   );

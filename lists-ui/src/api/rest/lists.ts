@@ -68,7 +68,8 @@ export default (token: string) => ({
   },
   ingest: async (
     list: SpeciesListSubmit,
-    file: string
+    file: string,
+    async: boolean = false
   ): Promise<SpeciesList> => {
     // Create a new FormData object
     const form = new FormData();
@@ -90,7 +91,22 @@ export default (token: string) => ({
     form.append('file', file);
 
     // First the request
-    return request(import.meta.env.VITE_API_LIST_INGEST, 'POST', form, token);
+    return request(
+      `${import.meta.env.VITE_API_LIST_INGEST}${async ? '/async' : ''}`,
+      'POST',
+      form,
+      token
+    );
+  },
+  ingestProgress: async (
+    speciesListID: string
+  ): Promise<{ mongo: number; elastic: number }> => {
+    // First the request
+    return await request<{ mongo: number; elastic: number }>(
+      `${import.meta.env.VITE_API_LIST_INGEST}/${speciesListID}/progress`,
+      'GET',
+      null
+    );
   },
   constraints: async (
     type?: 'lists' | 'licenses' | 'countries'

@@ -71,6 +71,7 @@ type SpeciesList {
   lastUploaded: String
   lastUpdatedBy: String
   owner: String
+  ownerName: String
   editors: [String]
   tags:[String]
 }

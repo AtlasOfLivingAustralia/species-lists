@@ -1,9 +1,13 @@
 package au.org.ala.listsapi.controller;
 
 import au.org.ala.listsapi.model.*;
+import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.*;
 import au.org.ala.ws.security.profile.AlaUserProfile;
+import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
+import co.elastic.clients.elasticsearch._types.aggregations.Buckets;
+import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -15,14 +19,30 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.File;
 import java.security.Principal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregation;
+import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregations;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -48,13 +68,17 @@ public class IngressController {
 
   private static final Logger logger = LoggerFactory.getLogger(IngressController.class);
 
+  public static final String SPECIES_LIST_ID = "speciesListID";
   @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
+  @Autowired protected ElasticsearchOperations elasticsearchOperations;
 
   @Autowired protected TaxonService taxonService;
   @Autowired protected ReleaseService releaseService;
   @Autowired protected UploadService uploadService;
   @Autowired protected MigrateService migrateService;
   @Autowired protected ValidationService validationService;
+  @Autowired protected StatsService statsService;
+  @Autowired protected MongoTemplate mongoTemplate;
 
   @Autowired protected AuthUtils authUtils;
 
@@ -213,7 +237,7 @@ public class IngressController {
       logger.info("Upload to temporary area started...");
       File tempFile = uploadService.getFileTemp(file);
       file.transferTo(tempFile);
-      IngestJob ingestJob = uploadService.ingest(tempFile, true, true);
+      IngestJob ingestJob = uploadService.ingest(null, tempFile, true, true);
       return ResponseEntity.ok(ingestJob);
     } catch (Exception e) {
       logger.error("Error while uploading the file: " + e.getMessage(), e);
@@ -268,11 +292,78 @@ public class IngressController {
         return ResponseEntity.badRequest().body("File not uploaded yet");
       }
 
+      SpeciesList updatedSpeciesList =
+          uploadService.ingest(alaUserProfile, speciesList, tempFile, false);
+      logger.info("Ingestion complete..." + updatedSpeciesList.toString());
+      return ResponseEntity.ok(updatedSpeciesList);
+    } catch (Exception e) {
+      logger.error("Error while ingesting the file: " + e.getMessage(), e);
+      return ResponseEntity.badRequest().body("Error while uploading the file: " + e.getMessage());
+    }
+  }
 
+
+  @Operation(
+          summary = "Get the number of completed rows for an ingest job",
+          tags = "Ingress")
+  @GetMapping("/ingest/{speciesListID}/progress")
+  public ResponseEntity<Object> rows(@PathVariable("speciesListID") String speciesListID) {
+    long elasticCount = statsService.getListElasticRecordCount(speciesListID);
+    long mongoCount = statsService.getListMongoRecordCount(speciesListID);
+
+    return ResponseEntity.ok().body(Map.of("elastic", elasticCount, "mongo", mongoCount));
+  }
+
+  @SecurityRequirement(name = "JWT")
+  @Operation(
+          summary = "Asynchronously ingest a species list",
+          tags = "Ingress",
+          description =
+                  "Asynchronously ingest a species list. This is step 2 of a 2 step process. "
+                          + "The file is uploaded to a temporary area and then ingested. "
+                          + "The first step is to upload the species list.")
+  @PostMapping("/ingest/async")
+  @ApiResponses(
+          value = {
+                  @ApiResponse(
+                          responseCode = "200",
+                          description = "Successfully ingested",
+                          content = {
+                                  @Content(
+                                          mediaType = "application/json",
+                                          schema = @Schema(implementation = SpeciesList.class))
+                          }),
+                  @ApiResponse(
+                          responseCode = "400",
+                          description = "Bad Request",
+                          content = {@Content(mediaType = "text/plain")})
+          })
+  public ResponseEntity<Object> ingestAsync(
+          @RequestParam("file") String fileName,
+          InputSpeciesList speciesList,
+          @AuthenticationPrincipal Principal principal) {
+    try {
+
+      // check user logged in
+      AlaUserProfile alaUserProfile = (AlaUserProfile) principal;
+      if (alaUserProfile == null) {
+        return ResponseEntity.badRequest().body("User not found");
+      }
+
+      // check that the supplied list type, region and license is valid
+      if (!validationService.isListValid(speciesList)) {
+        return ResponseEntity.badRequest().body("Supplied list contains invalid properties for a controlled value (list type, license, region)");
+      }
+
+      logger.info("Async ingestion started...");
+      File tempFile = new File(tempDir + "/" + fileName);
+      if (!tempFile.exists()) {
+        return ResponseEntity.badRequest().body("File not uploaded yet");
+      }
 
       SpeciesList updatedSpeciesList =
-          uploadService.ingest(alaUserProfile.getGivenName() + " " + alaUserProfile.getFamilyName(), speciesList, tempFile, false);
-      logger.info("Ingestion complete..." + updatedSpeciesList.toString());
+              uploadService.asyncIngest(alaUserProfile, speciesList, tempFile, false);
+
       return ResponseEntity.ok(updatedSpeciesList);
     } catch (Exception e) {
       logger.error("Error while ingesting the file: " + e.getMessage(), e);
@@ -321,7 +412,7 @@ public class IngressController {
       SpeciesList speciesList = uploadService.reload(speciesListID, tempFile, false);
       if (speciesList != null) {
         // release current version
-        releaseService.release(speciesListID);
+        // releaseService.release(speciesListID);
         return new ResponseEntity<>(speciesList, HttpStatus.OK);
       }
       return ResponseEntity.badRequest().body("Error while uploading the file: ");

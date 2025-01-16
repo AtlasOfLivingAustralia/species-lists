@@ -34,15 +34,17 @@ export function Summary({ meta, ...rest }: SummaryProps) {
           />
         </Chip>
       )}
-      <Chip
-        size='xs'
-        variant='light'
-        color='gray'
-        checked={true}
-        icon={<FontAwesomeIcon icon={faUser} fontSize={10} />}
-      >
-        {meta.owner || 'Unknown Owner'}
-      </Chip>
+      {meta.ownerName && (
+        <Chip
+          size='xs'
+          variant='light'
+          color='gray'
+          checked={true}
+          icon={<FontAwesomeIcon icon={faUser} fontSize={10} />}
+        >
+          {meta.ownerName}
+        </Chip>
+      )}
       {meta.authority && (
         <Chip
           size='xs'

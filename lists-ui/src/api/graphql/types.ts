@@ -30,6 +30,7 @@ interface SpeciesList {
   title: string;
   lastUpdatedBy: string;
   owner: string;
+  ownerName: string | null;
   wkt: string;
   tags: string[];
 }
@@ -44,6 +45,8 @@ type SpeciesListSubmit = Omit<
   | 'rowCount'
   | 'lastUpdatedBy'
   | 'owner'
+  | 'ownerName'
+  | 'distinctMatchCount'
 >;
 
 interface Release {
