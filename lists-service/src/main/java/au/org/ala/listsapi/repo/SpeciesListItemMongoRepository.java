@@ -9,7 +9,6 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 public interface SpeciesListItemMongoRepository extends MongoRepository<SpeciesListItem, String> {
 
   Page<SpeciesListItem> findBySpeciesListID(String speciesListID, Pageable pageable);
-  List<SpeciesListItem> findAllBySpeciesListID(String speciesListID);
 
   void deleteBySpeciesListID(String speciesListID);
 }

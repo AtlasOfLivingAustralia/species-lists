@@ -70,8 +70,6 @@ export function ListMeta({
   const loaded = Boolean(constraints);
   const mounted = useMounted();
 
-  console.log(initialValues, defaultList(initialValues));
-
   // Form hook
   const form = useForm({
     initialValues: defaultList(initialValues),

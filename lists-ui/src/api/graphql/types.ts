@@ -45,6 +45,7 @@ type SpeciesListSubmit = Omit<
   | 'rowCount'
   | 'lastUpdatedBy'
   | 'owner'
+  | 'ownerName'
   | 'distinctMatchCount'
 >;
 

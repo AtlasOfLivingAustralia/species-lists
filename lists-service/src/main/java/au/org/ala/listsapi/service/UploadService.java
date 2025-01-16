@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.apache.commons.lang3.StringUtils;
@@ -29,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -110,6 +112,41 @@ public class UploadService {
     return speciesList;
   }
 
+  public SpeciesList asyncIngest(
+          AlaUserProfile user, InputSpeciesList speciesListMetadata, File fileToLoad, boolean dryRun)
+          throws Exception {
+
+    // create the species list in mongo
+    SpeciesList speciesList = new SpeciesList();
+    speciesList.setOwner(user.getUserId());
+
+    if (user.getGivenName() != null && user.getFamilyName() != null) {
+      speciesList.setOwnerName(user.getGivenName() + " " + user.getFamilyName());
+    }
+
+    extractUpdates(speciesListMetadata, speciesList);
+
+    // If the species list is public, or authoritative, create a metadata link
+    if (!speciesList.getIsPrivate() || speciesList.getIsAuthoritative()) {
+      metadataService.setMeta(speciesList);
+    }
+
+    speciesList = speciesListMongoRepository.save(speciesList);
+    final SpeciesList ingestList = speciesList;
+
+    CompletableFuture.runAsync(
+      () -> {
+          try {
+              asyncIngest(ingestList, fileToLoad, dryRun, false);
+          } catch (Exception e) {
+              throw new RuntimeException(e);
+          }
+      });
+
+    // releaseService.release(speciesList.getId());
+    return speciesList;
+  }
+
   private void extractUpdates(InputSpeciesList speciesListMetadata, SpeciesList speciesList) {
     speciesList.setAuthority(speciesListMetadata.getAuthority());
     speciesList.setDescription(speciesListMetadata.getDescription());
@@ -163,10 +200,6 @@ public class UploadService {
     }
   }
 
-  public IngestJob ingest(File fileToLoad, boolean dryRun, boolean skipIndexing) throws Exception {
-    return ingest(null, fileToLoad, dryRun, skipIndexing);
-  }
-
   public IngestJob ingest(
       String speciesListID, File fileToLoad, boolean dryRun, boolean skipIndexing)
       throws Exception {
@@ -196,6 +229,44 @@ public class UploadService {
     }
 
     return null;
+  }
+
+  public void asyncIngest(
+          SpeciesList speciesList, File fileToLoad, boolean dryRun, boolean skipIndexing)
+          throws Exception {
+
+    IngestJob ingestJob = null;
+
+    Path path = fileToLoad.toPath();
+    String mimeType = Files.probeContentType(path);
+
+    // handle CSV
+    if (mimeType.equals("text/csv")) {
+      // load a CSV
+      ingestJob = ingestCSV(speciesList.getId(), fileToLoad, dryRun, skipIndexing);
+    }
+
+    // handle zip file
+    if (mimeType.equals("application/zip")) {
+      try (ZipFile zipFile = new ZipFile(fileToLoad)) {
+        // load a zip file
+        ingestJob = ingestZip(speciesList.getId(), zipFile, dryRun, skipIndexing);
+      }
+    }
+
+    if (ingestJob != null) {
+      ingestJob.setLocalFile(fileToLoad.getName());
+
+      speciesList.setFacetList(ingestJob.getFacetList());
+      speciesList.setFieldList(ingestJob.getFieldList());
+      speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
+      speciesList.setRowCount(ingestJob.getRowCount());
+      speciesList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
+
+      speciesListMongoRepository.save(speciesList);
+
+      logger.info("Async ingestion complete... " + speciesList);
+    }
   }
 
   public IngestJob ingestCSV(String speciesListID, File file, boolean dryRun, boolean skipIndexing)
@@ -339,6 +410,7 @@ public class UploadService {
                 cleanField(genus),
                 keyValues,
                 null, //classification
+                false,
                 new Date(), // dateCreated
                 new Date(), // lastUpdated,
                 null
