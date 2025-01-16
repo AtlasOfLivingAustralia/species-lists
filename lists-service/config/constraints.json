@@ -19,7 +19,23 @@
     { "value": "CC-BY", "label": "Creative Commons By Attribution" },
     {
       "value": "CC-BY-NC",
-      "label": "Creative Commons Attribution-Noncommercial"
+      "label": "Creative Commons By Attribution-Noncommercial"
+    },
+    {
+      "value": "CC-BY-NC-ND",
+      "label": "Creative Commons By Attribution-Noncommercial-Noderivatives"
+    },
+    {
+      "value": "CC-BY-NC-SA",
+      "label": "Creative Commons By Attribution-Noncommercial-Sharealike"
+    },
+    {
+      "value": "CC-BY-ND",
+      "label": "Creative Commons By Attribution-Noderivatives"
+    },
+    {
+      "value": "CC-BY-SA",
+      "label": "Creative Commons By Attribution-Sharealike"
     }
   ]
 }

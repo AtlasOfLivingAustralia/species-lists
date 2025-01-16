@@ -50,7 +50,7 @@ function Home() {
       size: size,
       filters: [],
       isPrivate: view === 'private',
-      ...(isUser ? { userid: ala.userid } : {}),
+      ...(isUser ? { userId: ala.userid } : {}),
     },
     { clearDataOnUpdate: false, token: ala.token }
   );
@@ -67,7 +67,7 @@ function Home() {
       size,
       filters,
       isPrivate: view === 'private',
-      ...(isUser ? { userid: ala.userid } : {}),
+      ...(isUser ? { userId: ala.userid } : {}),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, size, searchQuery, filters, refresh, view, isUser]);
