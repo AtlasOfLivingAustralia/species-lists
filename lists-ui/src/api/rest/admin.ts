@@ -29,4 +29,6 @@ export default (token: string) => ({
       null,
       token
     ),
+  reboot: async (): Promise<void> =>
+    request(`${import.meta.env.VITE_API_ADMIN_REBOOT}`, 'POST', null, token),
 });

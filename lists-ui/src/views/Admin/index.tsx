@@ -16,6 +16,7 @@ import {
   faArrowsRotate,
   faCode,
   faIdCard,
+  faRefresh,
   faRightLeft,
   faShield,
   faTrash,
@@ -89,6 +90,9 @@ export function Component() {
               break;
             case 'wipe-docs':
               await ala.rest.admin?.wipe('docs');
+              break;
+            case 'reboot':
+              await ala.rest.admin?.reboot();
               break;
           }
 
@@ -225,6 +229,14 @@ export function Component() {
                 description='Clear all data from the Elasticsearch index'
                 icon={faTrash}
                 onClick={() => handleClick('wipe-docs', 'Document Deletion')}
+              />
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
+              <ActionCard
+                title='Reboot'
+                description='Reboot the lists application'
+                icon={faRefresh}
+                onClick={() => handleClick('reboot', 'Reboot')}
               />
             </Grid.Col>
           </Grid>

@@ -1,6 +1,7 @@
 package au.org.ala.listsapi.controller;
 
 
+import au.org.ala.listsapi.ListsApiApplication;
 import au.org.ala.listsapi.service.*;
 import au.org.ala.ws.security.profile.AlaUserProfile;
 import io.swagger.v3.oas.annotations.Hidden;
@@ -53,7 +54,7 @@ public class AdminController {
   @Hidden
   @SecurityRequirement(name = "JWT")
   @Operation(summary = "Delete the ES index", tags = "Admin")
-  @DeleteMapping("/wipe/index")
+  @DeleteMapping("/admin/wipe/index")
   public ResponseEntity<Object> deleteIndex(@AuthenticationPrincipal Principal principal) {
 
     ResponseEntity<Object> errorResponse = checkAuthorized(principal);
@@ -69,7 +70,7 @@ public class AdminController {
   @Hidden
   @SecurityRequirement(name = "JWT")
   @Operation(summary = "Delete the MongoDB documents", tags = "Admin")
-  @DeleteMapping("/wipe/docs")
+  @DeleteMapping("/admin/wipe/docs")
   public ResponseEntity<Object> deleteDocs(@AuthenticationPrincipal Principal principal) {
 
     ResponseEntity<Object> errorResponse = checkAuthorized(principal);
@@ -78,6 +79,21 @@ public class AdminController {
     logger.info("Deleting all MongoDB documents...");
     adminService.deleteDocs();
     logger.info("Deleted all MongoDB documents");
+
+    return new ResponseEntity<>(HttpStatus.OK);
+  }
+
+  @Hidden
+  @SecurityRequirement(name = "JWT")
+  @Operation(summary = "Delete the MongoDB documents", tags = "Admin")
+  @PostMapping("/admin/reboot")
+  public ResponseEntity<Object> reboot(@AuthenticationPrincipal Principal principal) {
+
+    ResponseEntity<Object> errorResponse = checkAuthorized(principal);
+    if (errorResponse != null) return errorResponse;
+
+    logger.info("Rebooting lists...");
+    ListsApiApplication.restart();
 
     return new ResponseEntity<>(HttpStatus.OK);
   }
