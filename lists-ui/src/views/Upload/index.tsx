@@ -203,7 +203,7 @@ export function Component() {
           radius='lg'
           loading={uploading}
           disabled={uploadDisabled}
-          maxSize={26214400}
+          maxSize={52428800}
           className={uploadDisabled ? classes.disabled : undefined}
           multiple={false}
         >
