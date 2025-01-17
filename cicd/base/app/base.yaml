@@ -38,7 +38,7 @@ Resources:
   ListsAppClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
-      AccessTokenValidity: 60
+      AccessTokenValidity: 8
       AllowedOAuthFlows: 
         - code
       AllowedOAuthFlowsUserPoolClient: True
@@ -68,7 +68,7 @@ Resources:
         - ALLOW_REFRESH_TOKEN_AUTH
         - ALLOW_USER_SRP_AUTH
       GenerateSecret: False
-      IdTokenValidity: 60
+      IdTokenValidity: 8
       LogoutURLs: 
         - !Sub ${pAppClientHost}
         - !Sub ${pAppClientHost}/
@@ -81,8 +81,8 @@ Resources:
         - AAF
         - SignInWithApple
       TokenValidityUnits:
-        AccessToken: minutes
-        IdToken: minutes
+        AccessToken: hours
+        IdToken: hours
         RefreshToken: days
       UserPoolId: 
         Fn::ImportValue:
@@ -91,7 +91,7 @@ Resources:
   ListsServiceAppClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
-      AccessTokenValidity: 60
+      AccessTokenValidity: 8
       AllowedOAuthFlows: 
         - client_credentials
       AllowedOAuthFlowsUserPoolClient: True
@@ -118,7 +118,7 @@ Resources:
         - ALLOW_REFRESH_TOKEN_AUTH
         - ALLOW_USER_SRP_AUTH
       GenerateSecret: True
-      IdTokenValidity: 60
+      IdTokenValidity: 8
       LogoutURLs: 
         - !Sub ${pAppClientServiceHost}
         - !Sub ${pAppClientServiceHost}/
@@ -131,8 +131,8 @@ Resources:
         - AAF
         - SignInWithApple
       TokenValidityUnits:
-        AccessToken: minutes
-        IdToken: minutes
+        AccessToken: hours
+        IdToken: hours
         RefreshToken: days
       UserPoolId: 
         Fn::ImportValue:
