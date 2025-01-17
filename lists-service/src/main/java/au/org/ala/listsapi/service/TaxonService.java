@@ -7,7 +7,9 @@ import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.ProxySelector;
@@ -15,14 +17,11 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import jakarta.json.Json;
 import org.elasticsearch.action.search.SearchRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +30,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.BulkFailureException;
+import org.springframework.data.elasticsearch.UncategorizedElasticsearchException;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregation;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregations;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
@@ -118,6 +119,29 @@ public class TaxonService {
     logger.info("Taxon matching all datasets complete.");
   }
 
+  private void bulkIndexSafe(List<IndexQuery> updateList, SpeciesList list) {
+    try {
+      elasticsearchOperations.bulkIndex(updateList, SpeciesListIndex.class);
+    } catch (BulkFailureException e) {
+      logger.error(e.getMessage(), e);
+
+      Set<String> failedIds = e.getFailedDocuments().keySet();
+      logger.error(" -- FAILED IDS --");
+      logger.error(failedIds.toString(), e);
+
+      try {
+        Optional<IndexQuery> failedItem = updateList.stream().filter(item -> failedIds.contains(item.getId())).findFirst();
+        ObjectMapper mapper = new ObjectMapper();
+
+        logger.error(" -- FAILED DOCUMENT EXAMPLE --");
+        logger.error(mapper.writeValueAsString(failedItem.get()));
+        logger.error(" -- FAILED DOCUMENTS --");
+      } catch (JsonProcessingException ex) {
+        logger.error("Failed to write update list to console", ex);
+      }
+    }
+  }
+
   public void reindex(String speciesListID) {
 
     logger.info("Indexing " + speciesListID);
@@ -183,7 +207,7 @@ public class TaxonService {
                 updateList.add(indexQuery);
 
                 if (updateList.size() == 1000) {
-                  elasticsearchOperations.bulkIndex(updateList, SpeciesListIndex.class);
+                  bulkIndexSafe(updateList, speciesList);
                   updateList.clear();
                 }
               } catch (Exception e) {
@@ -191,7 +215,7 @@ public class TaxonService {
               }
             });
         if (!updateList.isEmpty()) {
-          elasticsearchOperations.bulkIndex(updateList, SpeciesListIndex.class);
+          bulkIndexSafe(updateList, speciesList);
           updateList.clear();
         }
       } else {
