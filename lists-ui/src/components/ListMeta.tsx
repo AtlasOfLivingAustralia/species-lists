@@ -168,7 +168,7 @@ export function ListMeta({
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
           <MultiSelect
             label='Tags'
-            data={['biocollect', 'galah', 'spatial-portal', 'profiles']}
+            data={['biocollect', 'galah', 'spatial-portal', 'profiles', 'arga']}
             placeholder={
               (form.values['tags'] || []).length > 0 ? undefined : 'Select tags'
             }
