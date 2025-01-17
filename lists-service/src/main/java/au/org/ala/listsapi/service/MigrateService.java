@@ -172,7 +172,7 @@ public class MigrateService {
             speciesList.setFacetList(ingestJob.getFacetList());
             speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
             speciesListMongoRepository.save(speciesList);
-            releaseService.release(speciesList.getId());
+            // releaseService.release(speciesList.getId());
           } catch (Exception e) {
             logger.error(e.getMessage(), e);
           }
@@ -197,7 +197,7 @@ public class MigrateService {
             speciesList.setFacetList(ingestJob.getFacetList());
             speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
             speciesListMongoRepository.save(speciesList);
-            releaseService.release(speciesList.getId());
+            // releaseService.release(speciesList.getId());
           } catch (Exception e) {
             logger.error(e.getMessage(), e);
           }

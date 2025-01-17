@@ -27,5 +27,5 @@ export const request = async <T>(
     }
   }
 
-  throw new Error(JSON.parse(text).error);
+  throw new Error(text);
 };

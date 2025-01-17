@@ -43,6 +43,11 @@ import org.springframework.data.elasticsearch.core.SearchScrollHits;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.data.elasticsearch.core.query.IndexQuery;
 import org.springframework.data.elasticsearch.core.query.IndexQueryBuilder;
+import org.springframework.data.mongodb.core.BulkOperations;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -58,6 +63,7 @@ public class TaxonService {
   @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
   @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
+  @Autowired protected MongoTemplate mongoTemplate;
 
   @Async("processExecutor")
   public void reindex() {
@@ -222,9 +228,19 @@ public class TaxonService {
     logger.info("Indexing " + speciesListID + " complete.");
   }
 
-  public long taxonMatchDataset(String speciesListID) {
+  private void resetMatchCheckForDataset(String speciesListID) {
+    var query = new Query(Criteria.where("speciesListID").is(speciesListID));
+    Update update = new Update();
 
+    update.set("matchChecked", false);
+    mongoTemplate.updateMulti(query, update, SpeciesListItem.class);
+  }
+
+  public long taxonMatchDataset(String speciesListID) {
     logger.info("Taxon matching " + speciesListID);
+
+    resetMatchCheckForDataset(speciesListID);
+
     Optional<SpeciesList> optionalSp = speciesListMongoRepository.findById(speciesListID);
     if (!optionalSp.isPresent()) return 0;
 
@@ -268,6 +284,7 @@ public class TaxonService {
       List<Classification> classification = lookupTaxa(speciesListItems);
       for (int i = 0; i < speciesListItems.size(); i++) {
         speciesListItems.get(i).setClassification(classification.get(i));
+        speciesListItems.get(i).setMatchChecked(true);
       }
       // write to mongo
     } catch (Exception e) {
