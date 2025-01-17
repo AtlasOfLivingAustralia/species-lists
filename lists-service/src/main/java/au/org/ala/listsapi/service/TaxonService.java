@@ -7,7 +7,6 @@ import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
-import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -21,8 +20,6 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import jakarta.json.Json;
-import org.elasticsearch.action.search.SearchRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,19 +28,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.BulkFailureException;
-import org.springframework.data.elasticsearch.UncategorizedElasticsearchException;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregation;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregations;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
-import org.springframework.data.elasticsearch.client.erhlc.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHits;
-import org.springframework.data.elasticsearch.core.SearchScrollHits;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.data.elasticsearch.core.query.IndexQuery;
 import org.springframework.data.elasticsearch.core.query.IndexQueryBuilder;
-import org.springframework.data.mongodb.core.BulkOperations;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -258,6 +251,7 @@ public class TaxonService {
         try {
           List<SpeciesListItem> items = speciesListItems.getContent();
           updateClassifications(items);
+          updateMatchChecked(items);
 
           distinct += items.stream()
                   .filter(speciesListItem -> speciesListItem.getClassification().getSuccess())
@@ -279,18 +273,20 @@ public class TaxonService {
     return distinct;
   }
 
-  public List<SpeciesListItem> updateClassifications(List<SpeciesListItem> speciesListItems) {
+  public void updateClassifications(List<SpeciesListItem> speciesListItems) {
     try {
       List<Classification> classification = lookupTaxa(speciesListItems);
       for (int i = 0; i < speciesListItems.size(); i++) {
         speciesListItems.get(i).setClassification(classification.get(i));
-        speciesListItems.get(i).setMatchChecked(true);
       }
       // write to mongo
     } catch (Exception e) {
       logger.error(e.getMessage());
     }
-    return speciesListItems;
+  }
+
+  public void updateMatchChecked(List<SpeciesListItem> speciesListItems) {
+    speciesListItems.forEach(speciesListItem -> speciesListItem.setMatchChecked(true));
   }
 
   public Classification lookupTaxon(SpeciesListItem item) throws Exception {
