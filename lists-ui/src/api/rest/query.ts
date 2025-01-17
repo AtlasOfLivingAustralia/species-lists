@@ -2,17 +2,19 @@ export const request = async <T>(
   input: RequestInfo | URL,
   method?: 'GET' | 'PUT' | 'POST' | 'DELETE',
   body?: BodyInit | null,
-  token?: string
+  token?: string,
+  additionalHeaders?: HeadersInit
 ): Promise<T> => {
   const headers: HeadersInit = token
-    ? { Authorization: `Bearer ${token}` }
-    : {};
+    ? { Authorization: `Bearer ${token}`, ...(additionalHeaders || {}) }
+    : additionalHeaders || {};
 
   // Perform the request
   const resp = await fetch(import.meta.env.VITE_API_BASEURL + input, {
     method,
     body,
     headers,
+    signal: AbortSignal.timeout(1000 * 60 * 10),
   });
 
   // Ensure the request was successful

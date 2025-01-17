@@ -47,13 +47,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 /** Ingress REST API */
@@ -152,7 +146,7 @@ public class IngressController {
       tags = "Ingress",
       description = "Rematch the taxonomy for all species lists. This is a long running process.",
       summary = "Rematch the taxonomy for all species lists")
-  @GetMapping("/rematch")
+  @GetMapping("/admin/rematch")
   public ResponseEntity<Object> rematch(@AuthenticationPrincipal Principal principal) {
     try {
       ResponseEntity<Object> errorResponse = checkAuthorized(principal);
@@ -192,7 +186,7 @@ public class IngressController {
       summary = "Reindex all species lists",
       description = "Reindex all species lists into the ElasticSearch index.",
       tags = "Ingress")
-  @GetMapping("/reindex")
+  @GetMapping("/admin/reindex")
   public ResponseEntity<Object> reindex(@AuthenticationPrincipal Principal principal) {
     try {
       ResponseEntity<Object> errorResponse = checkAuthorized(principal);
@@ -470,14 +464,36 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Migrate data", tags = "Migrate")
-  @GetMapping("/migrate")
-  public ResponseEntity<Object> migrate(@AuthenticationPrincipal Principal principal) {
+  @Operation(summary = "Migrate all species lists", tags = "Migrate")
+  @GetMapping("/admin/migrate/all")
+  public ResponseEntity<Object> migrateAll(@AuthenticationPrincipal Principal principal) {
 
     ResponseEntity<Object> errorResponse = checkAuthorized(principal);
     if (errorResponse != null) return errorResponse;
 
-    return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrate());
+    return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrateAll());
+  }
+
+  @SecurityRequirement(name = "JWT")
+  @Operation(summary = "Migrate authoritative species lists", tags = "Migrate")
+  @GetMapping("/admin/migrate/authoritative")
+  public ResponseEntity<Object> migrateAuthoritative(@AuthenticationPrincipal Principal principal) {
+
+    ResponseEntity<Object> errorResponse = checkAuthorized(principal);
+    if (errorResponse != null) return errorResponse;
+
+    return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrateAuthoritative());
+  }
+
+  @SecurityRequirement(name = "JWT")
+  @Operation(summary = "Migrate species lists with custom query", tags = "Migrate")
+  @PostMapping(value ="/admin/migrate/custom", consumes = {MediaType.APPLICATION_JSON_VALUE})
+  public ResponseEntity<Object> migrateCustom(@RequestBody CustomLegacyQuery query, @AuthenticationPrincipal Principal principal) {
+
+    ResponseEntity<Object> errorResponse = checkAuthorized(principal);
+    if (errorResponse != null) return errorResponse;
+
+    return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrateCustom(query.getQuery()));
   }
 
   @NotNull

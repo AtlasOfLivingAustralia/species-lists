@@ -2,8 +2,10 @@ package au.org.ala.listsapi;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.task.TaskExecutor;
@@ -20,9 +22,22 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 public class ListsApiApplication {
 
   private static final Logger logger = LoggerFactory.getLogger(ListsApiApplication.class);
+  private static ConfigurableApplicationContext context;
 
   public static void main(String[] args) {
-    SpringApplication.run(ListsApiApplication.class, args);
+    context = SpringApplication.run(ListsApiApplication.class, args);
+  }
+
+  public static void restart() {
+    ApplicationArguments args = context.getBean(ApplicationArguments.class);
+
+    Thread thread = new Thread(() -> {
+      context.close();
+      context = SpringApplication.run(ListsApiApplication.class, args.getSourceArgs());
+    });
+
+    thread.setDaemon(false);
+    thread.start();
   }
 
   @Bean(name = "processExecutor")

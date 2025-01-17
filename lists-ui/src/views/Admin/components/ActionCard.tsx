@@ -1,3 +1,4 @@
+import { ReactNode } from 'react';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -15,7 +16,7 @@ import classes from './ActionCard.module.css';
 interface ActionCardProps
   extends PolymorphicComponentProps<'button', UnstyledButtonProps> {
   title: string;
-  description: string;
+  description: ReactNode;
   icon: IconProp;
 }
 

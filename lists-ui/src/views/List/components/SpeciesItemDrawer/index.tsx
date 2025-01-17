@@ -166,7 +166,7 @@ export function SpeciesItemDrawer({
           <Box className={classes.imageBackground}>
             <Center>
               <TaxonImage
-                taxonID={item.classification?.taxonConceptID}
+                taxonID={item?.classification?.taxonConceptID}
                 h={200}
                 w='100%'
               />
