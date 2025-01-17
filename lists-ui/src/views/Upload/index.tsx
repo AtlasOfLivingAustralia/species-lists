@@ -107,13 +107,31 @@ export function Component() {
           true
         );
 
+        // For tracking stalls (i.e. when the stats don't update for a while after they have previously, meaning list hs probably been ingested)
+        let stalls = 0;
+        let lastProgress: { elastic: number; mongo: number } | null = null;
+
         const status = async () => {
           const progress = await ala.rest.lists.ingestProgress(id);
 
           setProgress(progress);
+          if (lastProgress != null) {
+            // Did the record numbers not increase, when they have increased previously?
+            if (
+              progress.elastic !== 0 &&
+              progress.mongo !== 0 &&
+              progress.elastic === lastProgress.elastic &&
+              progress.mongo === lastProgress.mongo
+            ) {
+              stalls += 1;
+              console.log(`Upload progress has stalled (${stalls})`);
+            }
+          }
+
+          lastProgress = progress;
 
           // If the list has been ingested successfully, navigate to it, otherwise, wait a bit and check again
-          if (result?.rowCount === progress.elastic) {
+          if (result?.rowCount === progress.elastic || stalls >= 6) {
             setTimeout(() => navigate(`/list/${id}`), 500);
           } else {
             setTimeout(() => status(), 1500);
