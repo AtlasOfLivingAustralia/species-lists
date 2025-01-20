@@ -107,7 +107,6 @@ export function Component() {
           true
         );
 
-        // For tracking stalls (i.e. when the stats don't update for a while after they have previously, meaning list hs probably been ingested)
         const status = async () => {
           const progress = await ala.rest.lists.ingestProgress(id);
 
@@ -117,7 +116,7 @@ export function Component() {
           if (result?.rowCount === progress.elastic) {
             setTimeout(() => navigate(`/list/${id}`), 500);
           } else {
-            setTimeout(() => status(), 1000);
+            setTimeout(status, (result?.rowCount || 0) > 10000 ? 3000 : 1500);
           }
         };
         status();
@@ -288,10 +287,10 @@ export function Component() {
                 allowNextStepsSelect={false}
                 completedIcon={<FontAwesomeIcon icon={faCheck} />}
               >
-                {steps.map((step) => (
+                {steps.map((stepInfo) => (
                   <Stepper.Step
-                    icon={<FontAwesomeIcon icon={step.icon} />}
-                    label={step.text}
+                    icon={<FontAwesomeIcon icon={stepInfo.icon} />}
+                    label={stepInfo.text}
                   />
                 ))}
               </Stepper>
@@ -302,7 +301,8 @@ export function Component() {
               value={
                 step === 0
                   ? 100
-                  : (progress.mongo / (result?.rowCount || 0)) * 100
+                  : (progress.mongo / (result?.rowCount || 0)) * 80 +
+                    (progress.elastic / (result?.rowCount || 0)) * 20
               }
             />
           </Paper>
