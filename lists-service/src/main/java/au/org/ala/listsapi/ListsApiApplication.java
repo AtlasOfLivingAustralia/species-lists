@@ -11,11 +11,13 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.mongodb.config.EnableMongoAuditing;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @SpringBootApplication
 @EnableAsync
 @EnableMongoAuditing
+@EnableScheduling
 @PropertySource(
     value = "file:///data/lists-service/config/lists-service-config.properties",
     ignoreResourceNotFound = true)

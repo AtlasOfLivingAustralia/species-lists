@@ -32,17 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregation;
-import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregations;
-import org.springframework.data.elasticsearch.client.elc.NativeQuery;
-import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.data.elasticsearch.core.SearchHits;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -71,8 +61,7 @@ public class IngressController {
   @Autowired protected UploadService uploadService;
   @Autowired protected MigrateService migrateService;
   @Autowired protected ValidationService validationService;
-  @Autowired protected StatsService statsService;
-  @Autowired protected MongoTemplate mongoTemplate;
+  @Autowired protected ProgressService progressService;
 
   @Autowired protected AuthUtils authUtils;
 
@@ -301,11 +290,10 @@ public class IngressController {
           summary = "Get the number of completed rows for an ingest job",
           tags = "Ingress")
   @GetMapping("/ingest/{speciesListID}/progress")
-  public ResponseEntity<Object> rows(@PathVariable("speciesListID") String speciesListID) {
-    long elasticCount = statsService.getListElasticRecordCount(speciesListID);
-    long mongoCount = statsService.getListMongoRecordCount(speciesListID);
+  public ResponseEntity<Object> progress(@PathVariable("speciesListID") String speciesListID) {
+    IngestProgressItem ingestProgress = progressService.getProgress(speciesListID);
 
-    return ResponseEntity.ok().body(Map.of("elastic", elasticCount, "mongo", mongoCount));
+    return ResponseEntity.ok().body(Map.of("elastic", ingestProgress.getElasticProgress(), "mongo", ingestProgress.getMongoProgress()));
   }
 
   @SecurityRequirement(name = "JWT")

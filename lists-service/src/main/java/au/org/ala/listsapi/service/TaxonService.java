@@ -37,10 +37,6 @@ import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.data.elasticsearch.core.query.IndexQuery;
 import org.springframework.data.elasticsearch.core.query.IndexQueryBuilder;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -56,7 +52,7 @@ public class TaxonService {
   @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
   @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
-  @Autowired protected MongoTemplate mongoTemplate;
+  @Autowired protected ProgressService progressService;
 
   @Async("processExecutor")
   public void reindex() {
@@ -115,6 +111,7 @@ public class TaxonService {
   private void bulkIndexSafe(List<IndexQuery> updateList, SpeciesList list) {
     try {
       elasticsearchOperations.bulkIndex(updateList, SpeciesListIndex.class);
+      progressService.addElasticProgress(list.getId(), updateList.size());
     } catch (BulkFailureException e) {
       logger.error(e.getMessage(), e);
 
@@ -221,18 +218,8 @@ public class TaxonService {
     logger.info("Indexing " + speciesListID + " complete.");
   }
 
-  private void resetMatchCheckForDataset(String speciesListID) {
-    var query = new Query(Criteria.where("speciesListID").is(speciesListID));
-    Update update = new Update();
-
-    update.set("matchChecked", false);
-    mongoTemplate.updateMulti(query, update, SpeciesListItem.class);
-  }
-
   public long taxonMatchDataset(String speciesListID) {
     logger.info("Taxon matching " + speciesListID);
-
-    resetMatchCheckForDataset(speciesListID);
 
     Optional<SpeciesList> optionalSp = speciesListMongoRepository.findById(speciesListID);
     if (!optionalSp.isPresent()) return 0;
@@ -251,14 +238,13 @@ public class TaxonService {
         try {
           List<SpeciesListItem> items = speciesListItems.getContent();
           updateClassifications(items);
-          updateMatchChecked(items);
 
           distinct += items.stream()
                   .filter(speciesListItem -> speciesListItem.getClassification().getSuccess())
                   .map(speciesListItem -> speciesListItem.getClassification().getTaxonConceptID()).distinct().count();
 
           speciesListItemMongoRepository.saveAll(items);
-
+          progressService.addMongoProgress(speciesListID, items.size());
         } catch (Exception e) {
           logger.error(e.getMessage(), e);
         }
@@ -283,10 +269,6 @@ public class TaxonService {
     } catch (Exception e) {
       logger.error(e.getMessage());
     }
-  }
-
-  public void updateMatchChecked(List<SpeciesListItem> speciesListItems) {
-    speciesListItems.forEach(speciesListItem -> speciesListItem.setMatchChecked(true));
   }
 
   public Classification lookupTaxon(SpeciesListItem item) throws Exception {

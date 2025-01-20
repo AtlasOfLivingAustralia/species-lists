@@ -516,7 +516,6 @@ public class GraphQLController {
     try {
       Classification classification = taxonService.lookupTaxon(speciesListItem);
       speciesListItem.setClassification(classification);
-      speciesListItem.setMatchChecked(true);
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
     }
@@ -620,7 +619,6 @@ public class GraphQLController {
     try {
       Classification classification = taxonService.lookupTaxon(speciesListItem);
       speciesListItem.setClassification(classification);
-      speciesListItem.setMatchChecked(true);
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
     }
