@@ -34,10 +34,6 @@ public class SpeciesListItem {
   private List<KeyValue> properties;
   private Classification classification;
 
-  // a flag for whether this species list item has been checked against name matching,
-  // used for matching progress upon initial ingestion
-  private Boolean matchChecked;
-
   @CreatedDate public Date dateCreated;
   @LastModifiedDate public Date lastUpdated;
   private String lastUpdatedBy;
