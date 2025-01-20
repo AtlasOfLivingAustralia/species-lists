@@ -30,7 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -45,6 +44,7 @@ public class UploadService {
   @Autowired protected ReleaseService releaseService;
   @Autowired protected MetadataService metadataService;
   @Autowired protected AuthUtils authUtils;
+  @Autowired protected ProgressService progressService;
 
   @Value("${temp.dir:/tmp}")
   private String tempDir;
@@ -410,7 +410,6 @@ public class UploadService {
                 cleanField(genus),
                 keyValues,
                 null, //classification
-                false,
                 new Date(), // dateCreated
                 new Date(), // lastUpdated,
                 null
