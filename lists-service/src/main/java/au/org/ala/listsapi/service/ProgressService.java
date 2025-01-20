@@ -1,43 +1,50 @@
 package au.org.ala.listsapi.service;
 
-import au.org.ala.listsapi.controller.GraphQLController;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import au.org.ala.listsapi.repo.IngestProgressMongoRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import au.org.ala.listsapi.model.IngestProgressItem;
 
-import java.util.HashMap;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ProgressService {
-    private final HashMap<String, IngestProgressItem> ingestion = new HashMap<>();
+    @Autowired protected IngestProgressMongoRepository ingestProgressMongoRepository;
     private final long HALF_DAY_IN_MS = 43200000;
 
     @Scheduled(fixedRate = HALF_DAY_IN_MS)
     private void cullEmptyProgress() {
-        long NOW = System.currentTimeMillis();
-        ingestion.forEach((key, value) -> {
-            // Any entries older than a day, remove
-            if (value.getCreatedTimestamp() + HALF_DAY_IN_MS < NOW) {
-                ingestion.remove(key);
-            }
-        });
+        Date HALF_DAY_OLD = new Date(System.currentTimeMillis() - HALF_DAY_IN_MS);
+        ingestProgressMongoRepository.deleteIngestProgressItemsByStartedBefore(HALF_DAY_OLD);
     }
 
     public IngestProgressItem getProgress(String speciesListId) {
-        return ingestion.getOrDefault(speciesListId, new IngestProgressItem(0, 0, System.currentTimeMillis()));
+        Optional<IngestProgressItem> item = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListId(speciesListId);
+        return item.orElseGet(() -> new IngestProgressItem(speciesListId, 0, 0));
     }
 
     public void addMongoProgress(String speciesListId, long progress) {
-        IngestProgressItem current = ingestion.getOrDefault(speciesListId, new IngestProgressItem(0,0, System.currentTimeMillis()));
-        current.setMongoProgress(current.getMongoProgress() + progress);
-        ingestion.put(speciesListId, current);
+        Optional<IngestProgressItem> item = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListId(speciesListId);
+        if (item.isPresent()) {
+            IngestProgressItem currentItem = item.get();
+            currentItem.setMongoProgress(currentItem.getMongoProgress() + progress);
+
+            ingestProgressMongoRepository.save(currentItem);
+        } else {
+            ingestProgressMongoRepository.save(new IngestProgressItem(speciesListId, progress, 0));
+        }
     }
 
     public void addElasticProgress(String speciesListId, long progress) {
-        IngestProgressItem current = ingestion.getOrDefault(speciesListId, new IngestProgressItem(0,0, System.currentTimeMillis()));
-        current.setElasticProgress(current.getElasticProgress() + progress);
-        ingestion.put(speciesListId, current);
+        Optional<IngestProgressItem> item = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListId(speciesListId);
+        if (item.isPresent()) {
+            IngestProgressItem currentItem = item.get();
+            currentItem.setElasticProgress(currentItem.getElasticProgress() + progress);
+
+            ingestProgressMongoRepository.save(currentItem);
+        }
     }
 }
