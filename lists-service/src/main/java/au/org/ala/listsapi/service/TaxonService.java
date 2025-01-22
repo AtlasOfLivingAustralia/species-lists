@@ -95,7 +95,9 @@ public class TaxonService {
         speciesLists.forEach(
             speciesList -> {
               try {
-                taxonMatchDataset(speciesList.getId());
+                long distinctMatchCount = taxonMatchDataset(speciesList.getId());
+                speciesList.setDistinctMatchCount(distinctMatchCount);
+                speciesListMongoRepository.save(speciesList);
               } catch (Exception e) {
                 logger.error(e.getMessage(), e);
               }
@@ -222,7 +224,7 @@ public class TaxonService {
     logger.info("Taxon matching " + speciesListID);
 
     Optional<SpeciesList> optionalSp = speciesListMongoRepository.findById(speciesListID);
-    if (!optionalSp.isPresent()) return 0;
+    if (optionalSp.isEmpty()) return 0;
 
     int size = 100;
     int page = 0;
@@ -278,7 +280,7 @@ public class TaxonService {
   public List<Classification> lookupTaxa(List<SpeciesListItem> items) throws Exception {
 
     List<Map<String, String>> values =
-        items.stream().map(item -> item.toTaxonMap()).collect(Collectors.toList());
+        items.stream().map(SpeciesListItem::toTaxonMap).collect(Collectors.toList());
     ObjectMapper om = new ObjectMapper();
     String json = om.writeValueAsString(values);
     HttpRequest httpRequest =
@@ -299,6 +301,8 @@ public class TaxonService {
       List<Classification> classifications =
           objectMapper.readValue(response.body(), new TypeReference<List<Classification>>() {});
       return classifications;
+    } else {
+      logger.error("Classification lookup failed " + items);
     }
     return null;
   }

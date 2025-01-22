@@ -176,22 +176,28 @@ public class UploadService {
       throws Exception {
     if (speciesListID != null) {
 
-      Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListID);
-      if (speciesList.isPresent()) {
+      Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findById(speciesListID);
+      if (optionalSpeciesList.isPresent()) {
+        SpeciesList speciesList = optionalSpeciesList.get();
+
         // delete from index
         speciesListIndexElasticRepository.deleteSpeciesListItemBySpeciesListID(speciesListID);
+
         // delete from mongo
         speciesListItemMongoRepository.deleteBySpeciesListID(speciesListID);
 
         IngestJob ingestJob = ingest(speciesListID, fileToLoad, dryRun, false);
 
-        speciesList.get().setFieldList(ingestJob.getFieldList());
-        speciesList.get().setFacetList(ingestJob.getFacetList());
-        speciesList.get().setRowCount(ingestJob.getRowCount());
-        speciesList.get().setOriginalFieldList(ingestJob.getOriginalFieldNames());
-        SpeciesList speciesList1 = speciesListMongoRepository.save(speciesList.get());
-        // releaseService.release(speciesList1.getId());
-        return speciesList1;
+        speciesList.setFieldList(ingestJob.getFieldList());
+        speciesList.setFacetList(ingestJob.getFacetList());
+        speciesList.setRowCount(ingestJob.getRowCount());
+        speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
+        speciesList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
+
+        speciesList = speciesListMongoRepository.save(speciesList);
+        // releaseService.release(speciesList.getId());
+
+        return speciesList;
       } else {
         return null;
       }

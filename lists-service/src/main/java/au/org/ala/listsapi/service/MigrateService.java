@@ -167,11 +167,15 @@ public class MigrateService {
             IngestJob ingestJob =
                 uploadService.loadCSV(
                     speciesList.getId(), new FileInputStream(localFile), false, true, true);
+
             speciesList.setRowCount(ingestJob.getRowCount());
             speciesList.setFieldList(ingestJob.getFieldList());
             speciesList.setFacetList(ingestJob.getFacetList());
             speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
+            speciesList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
+
             speciesListMongoRepository.save(speciesList);
+
             // releaseService.release(speciesList.getId());
           } catch (Exception e) {
             logger.error(e.getMessage(), e);
@@ -192,11 +196,15 @@ public class MigrateService {
             IngestJob ingestJob =
                 uploadService.loadCSV(
                     speciesList.getId(), new FileInputStream(localFile), false, true, true);
+
             speciesList.setRowCount(ingestJob.getRowCount());
             speciesList.setFieldList(ingestJob.getFieldList());
             speciesList.setFacetList(ingestJob.getFacetList());
             speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
+            speciesList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
+
             speciesListMongoRepository.save(speciesList);
+
             // releaseService.release(speciesList.getId());
           } catch (Exception e) {
             logger.error(e.getMessage(), e);
