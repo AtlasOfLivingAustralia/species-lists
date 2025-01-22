@@ -289,6 +289,7 @@ export function Component() {
               >
                 {steps.map((stepInfo) => (
                   <Stepper.Step
+                    key={stepInfo.text}
                     icon={<FontAwesomeIcon icon={stepInfo.icon} />}
                     label={stepInfo.text}
                   />

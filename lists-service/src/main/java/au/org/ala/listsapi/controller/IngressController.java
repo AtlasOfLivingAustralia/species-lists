@@ -120,7 +120,19 @@ public class IngressController {
       if (errorResponse != null) {
         return errorResponse;
       }
-      taxonService.taxonMatchDataset(speciesListID);
+      Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findById(speciesListID);
+
+      if (optionalSpeciesList.isEmpty()) {
+        return ResponseEntity.badRequest().body("Species list does not exist!");
+      }
+
+      SpeciesList speciesList = optionalSpeciesList.get();
+
+      long distinctMatchCount = taxonService.taxonMatchDataset(speciesListID);
+      speciesList.setDistinctMatchCount(distinctMatchCount);
+
+      speciesListMongoRepository.save(speciesList);
+
       taxonService.reindex(speciesListID);
       return new ResponseEntity<>(HttpStatus.OK);
     } catch (Exception e) {
