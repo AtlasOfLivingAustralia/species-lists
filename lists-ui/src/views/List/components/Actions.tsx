@@ -14,7 +14,7 @@ import {
   Button,
   Divider,
 } from '@mantine/core';
-import { DotsThreeIcon } from '@atlasoflivingaustralia/ala-mantine';
+import { DotsThreeIcon, FolderIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrashAlt } from '@fortawesome/free-regular-svg-icons';
 import {
@@ -67,26 +67,29 @@ export function Actions({
   const authorisedForList = ala.isAuthorisedForList(meta);
 
   // Download callback handler
-  const handleQidRedirect = useCallback(async (url: string) => {
-    if (!listQid.current) {
-      setFetchingQid(url);
-      try {
-        listQid.current = await ala.rest.lists.qid(meta.id);
-      } catch (error) {
-        notifications.show({
-          message: getErrorMessage(error),
-          position: 'bottom-left',
-          radius: 'md',
-        });
+  const handleQidRedirect = useCallback(
+    async (url: string) => {
+      if (!listQid.current) {
+        setFetchingQid(url);
+        try {
+          listQid.current = await ala.rest.lists.qid(meta.id);
+        } catch (error) {
+          notifications.show({
+            message: getErrorMessage(error),
+            position: 'bottom-left',
+            radius: 'md',
+          });
 
-        return;
+          return;
+        }
+        setFetchingQid(null);
       }
-      setFetchingQid(null);
-    }
 
-    if (listQid.current)
-      window.open(`${url}?q=qid:${listQid.current}`, '_blank');
-  }, []);
+      if (listQid.current)
+        window.open(`${url}?q=qid:${listQid.current}`, '_blank');
+    },
+    [ala, meta, listQid.current]
+  );
 
   // Download callback handler
   const handleDownload = useCallback(async () => {
@@ -99,7 +102,7 @@ export function Actions({
         radius: 'md',
       });
     }
-  }, []);
+  }, [ala, meta]);
 
   // Delete callback handler
   const handleDelete = useCallback(() => {
@@ -138,7 +141,7 @@ export function Actions({
         }
       },
     });
-  }, []);
+  }, [ala, meta]);
 
   const handleRematch = useCallback(() => {
     modals.openConfirmModal({
@@ -183,7 +186,7 @@ export function Actions({
         setRematching(false);
       },
     });
-  }, []);
+  }, [meta]);
 
   const handleMetaEdit = useCallback(() => {
     modals.open({
@@ -238,7 +241,7 @@ export function Actions({
         />
       ),
     });
-  }, []);
+  }, [ala, meta]);
 
   return (
     <>
@@ -336,15 +339,15 @@ export function Actions({
       </Menu>
       <Box className={classes.desktop}>
         <Stack gap='xs'>
-          {meta.distinctMatchCount != null && (
-            <Paper
-              miw={authorisedForList ? 285 : undefined}
-              py={8}
-              px='sm'
-              shadow='sm'
-              radius='lg'
-              withBorder
-            >
+          <Paper
+            miw={authorisedForList ? 285 : undefined}
+            py={8}
+            px='sm'
+            shadow='sm'
+            radius='lg'
+            withBorder
+          >
+            <Stack gap={8}>
               <Text
                 fw='bold'
                 style={{
@@ -352,14 +355,29 @@ export function Actions({
                   fontSize: '0.8rem',
                 }}
               >
-                <FontAwesomeIcon
-                  icon={faFingerprint}
-                  style={{ marginRight: 12 }}
-                />
-                {meta.distinctMatchCount} distinct taxa
+                <FolderIcon size={12} style={{ marginRight: 12 }} />
+                {meta.rowCount} total
               </Text>
-            </Paper>
-          )}
+              {meta.distinctMatchCount && (
+                <>
+                  <Divider />
+                  <Text
+                    fw='bold'
+                    style={{
+                      textAlign: 'center',
+                      fontSize: '0.8rem',
+                    }}
+                  >
+                    <FontAwesomeIcon
+                      icon={faFingerprint}
+                      style={{ marginRight: 12 }}
+                    />
+                    {meta.distinctMatchCount} distinct taxa
+                  </Text>
+                </>
+              )}
+            </Stack>
+          </Paper>
           {authorisedForList && (
             <Paper
               miw={authorisedForList ? 285 : undefined}

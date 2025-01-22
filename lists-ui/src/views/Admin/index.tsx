@@ -8,7 +8,7 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { useDocumentTitle } from '@mantine/hooks';
+import { useDocumentTitle, useMounted } from '@mantine/hooks';
 import { modals } from '@mantine/modals';
 import { notifications } from '@mantine/notifications';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -22,19 +22,61 @@ import {
   faTrash,
   faWarning,
 } from '@fortawesome/free-solid-svg-icons';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 // Local components
 import { ActionCard } from './components/ActionCard';
 import { getErrorMessage } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
+import { useEffect } from 'react';
 
 export function Component() {
   useDocumentTitle('ALA Lists | Admin');
 
   const ala = useALA();
+  const navigate = useNavigate();
+  const mounted = useMounted();
 
   if (!ala.isAdmin) return <Navigate to='/' />;
+
+  useEffect(() => {
+    if (mounted) {
+      modals.openConfirmModal({
+        title: (
+          <Group>
+            <FontAwesomeIcon icon={faWarning} />
+            <Text fw='bold' size='lg'>
+              Proceed with caution
+            </Text>
+          </Group>
+        ),
+        children: (
+          <Stack>
+            <Text>
+              The functions on this page are{' '}
+              <u>only intended for developer use</u>.
+            </Text>
+            <Text fw='bold'>
+              Please do not trigger without due notice/confirmation.
+            </Text>
+            <Text fw='bold'>Please click confirm to acknowledge this.</Text>
+          </Stack>
+        ),
+        labels: { confirm: 'Confirm', cancel: 'Cancel' },
+        confirmProps: {
+          variant: 'filled',
+          radius: 'md',
+        },
+        cancelProps: { radius: 'md' },
+        onCancel: () => navigate('/'),
+        closeOnClickOutside: false,
+        withCloseButton: false,
+        transitionProps: {
+          transition: 'pop',
+        },
+      });
+    }
+  }, [mounted]);
 
   const handleClick = (action: string, verb: string) => {
     modals.openConfirmModal({
