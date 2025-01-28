@@ -61,7 +61,19 @@ phases:
         namematching:
           baseUrl: $NAMEMATCHING_BASE_URL
         userdetails:
-          baseUrl: $USERDETAILS_BASE_URL" > helm_values.yaml
+          baseUrl: $USERDETAILS_BASE_URL
+        elasticsearch:
+          deployment:
+            name: $ELASTIC_HOST
+          service:
+            name: $ELASTIC_HOST
+            host: $ELASTIC_HOST
+            port: $ELASTIC_PORT
+          pv:
+            name: pv-$ELASTIC_HOST
+            volumeHandle: $FILE_SYSTEM_ID
+          pvc:
+            name: pvc-$ELASTIC_HOST" > helm_values.yaml
       - echo helm values
       - cat helm_values.yaml
       - echo helm upgrade --install $HELM_RELEASE_NAME  . 

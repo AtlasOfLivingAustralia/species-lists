@@ -108,3 +108,18 @@ namematching:
 
 userdetails:
   baseUrl: ""
+
+elasticsearch:
+  deployment:
+    name: "elasticsearch"
+  enabled: true
+  service:
+    name: "elasticsearch"
+    host: ""
+    port: 9200
+  pvc:
+    name: "elasticsearch-pvc"
+  pv:
+    name: "elasticsearch-pv"
+    size: "5Gi"
+    volumeHandle: fs-xxxxxxxxxxxxx
