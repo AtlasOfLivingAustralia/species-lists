@@ -351,7 +351,7 @@ public class GraphQLController {
       boolean finished = false;
       while (!finished) {
         Page<SpeciesListItem> page =
-            speciesListItemMongoRepository.findBySpeciesListID(id, pageable);
+            speciesListItemMongoRepository.findBySpeciesListIDOrderById(id, pageable);
         List<SpeciesListItem> toSave = new ArrayList<>();
         for (SpeciesListItem item : page) {
           item.getProperties().add(new KeyValue(fieldName, fieldValue));
@@ -402,7 +402,7 @@ public class GraphQLController {
     boolean finished = false;
 
     while (!finished) {
-      Page<SpeciesListItem> page = speciesListItemMongoRepository.findBySpeciesListID(id, pageable);
+      Page<SpeciesListItem> page = speciesListItemMongoRepository.findBySpeciesListIDOrderById(id, pageable);
       List<SpeciesListItem> toSave = new ArrayList<>();
       for (SpeciesListItem item : page) {
 
@@ -454,7 +454,7 @@ public class GraphQLController {
 
     boolean finished = false;
     while (!finished) {
-      Page<SpeciesListItem> page = speciesListItemMongoRepository.findBySpeciesListID(id, pageable);
+      Page<SpeciesListItem> page = speciesListItemMongoRepository.findBySpeciesListIDOrderById(id, pageable);
       List<SpeciesListItem> toSave = new ArrayList<>();
       for (SpeciesListItem item : page) {
 

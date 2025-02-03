@@ -131,7 +131,7 @@ public class RESTController {
 
         Pageable paging = PageRequest.of(page - 1, pageSize);
         Page<SpeciesListItem> speciesListItems =
-                speciesListItemMongoRepository.findBySpeciesListID(speciesListID, paging);
+                speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesListID, paging);
         return new ResponseEntity<>(speciesListItems.getContent(), HttpStatus.OK);
       }
 

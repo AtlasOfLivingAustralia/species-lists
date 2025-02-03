@@ -100,7 +100,7 @@ public class ReleaseService {
       while (!done) {
         Pageable paging = PageRequest.of(page, size);
         Page<SpeciesListItem> speciesListItems =
-            speciesListItemMongoRepository.findBySpeciesListID(speciesListID, paging);
+            speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesListID, paging);
         if (!speciesListItems.getContent().isEmpty()) {
           speciesListItems.forEach(
               speciesListItem -> {
