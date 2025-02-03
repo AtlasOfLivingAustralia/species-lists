@@ -146,7 +146,7 @@ public class TaxonService {
       Pageable paging = PageRequest.of(page, size);
       List<IndexQuery> updateList = new ArrayList<>();
       Page<SpeciesListItem> speciesListItems =
-          speciesListItemMongoRepository.findBySpeciesListID(speciesListID, paging);
+          speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesListID, paging);
 
       if (!speciesListItems.getContent().isEmpty()) {
         speciesListItems.forEach(
