@@ -289,10 +289,6 @@ public class TaxonService {
             .header("Content-Type", "application/json")
             .build();
 
-    logger.info("-- MATCH REQUEST --");
-    logger.info(namematchingQueryUrl + "/api/searchAllByClassification");
-    logger.info(json);
-
     HttpResponse<String> response =
         HttpClient.newBuilder()
             .proxy(ProxySelector.getDefault())
