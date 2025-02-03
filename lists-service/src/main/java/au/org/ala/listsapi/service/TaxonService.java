@@ -228,11 +228,12 @@ public class TaxonService {
     int page = 0;
     Pageable paging = PageRequest.of(page, size);
 
-    long distinct = 0;
+    Set<String> distinctTaxa = new HashSet<>();
+
     boolean finished = false;
     while (!finished) {
       Page<SpeciesListItem> speciesListItems =
-          speciesListItemMongoRepository.findBySpeciesListID(speciesListID, paging);
+          speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesListID, paging);
 
       if (speciesListItems.isEmpty()) {
         finished = true;
@@ -248,9 +249,9 @@ public class TaxonService {
           speciesListItemMongoRepository.saveAll(items);
           progressService.addMongoProgress(speciesListID, items.size());
 
-          distinct += items.stream()
+          items.stream()
                   .filter(speciesListItem -> speciesListItem.getClassification().getSuccess())
-                  .map(speciesListItem -> speciesListItem.getClassification().getTaxonConceptID()).distinct().count();
+                  .forEach(speciesListItem -> distinctTaxa.add(speciesListItem.getTaxonID()));
 
           page += 1;
           paging = PageRequest.of(page, size);
@@ -262,7 +263,7 @@ public class TaxonService {
 
     logger.info("Taxon matching " + speciesListID + " complete.");
 
-    return distinct;
+    return distinctTaxa.size();
   }
 
   public void updateClassifications(List<SpeciesListItem> speciesListItems) {
@@ -292,10 +293,6 @@ public class TaxonService {
             .POST(HttpRequest.BodyPublishers.ofString(json))
             .header("Content-Type", "application/json")
             .build();
-
-    logger.info("-- MATCH REQUEST --");
-    logger.info(namematchingQueryUrl + "/api/searchAllByClassification");
-    logger.info(json);
 
     HttpResponse<String> response =
         HttpClient.newBuilder()
