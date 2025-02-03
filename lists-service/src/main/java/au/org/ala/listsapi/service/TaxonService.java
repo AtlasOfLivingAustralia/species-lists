@@ -249,9 +249,7 @@ public class TaxonService {
           speciesListItemMongoRepository.saveAll(items);
           progressService.addMongoProgress(speciesListID, items.size());
 
-          items.stream()
-                  .filter(speciesListItem -> speciesListItem.getClassification().getSuccess())
-                  .forEach(speciesListItem -> distinctTaxa.add(speciesListItem.getTaxonID()));
+          items.forEach(speciesListItem -> distinctTaxa.add(speciesListItem.getClassification().getTaxonConceptID()));
 
           page += 1;
           paging = PageRequest.of(page, size);
