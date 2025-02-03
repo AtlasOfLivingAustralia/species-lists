@@ -35,7 +35,12 @@ import {
   SpeciesListSubmit,
 } from '#/api';
 import { FormattedMessage, FormattedNumber } from 'react-intl';
-import { useLoaderData, useParams } from 'react-router-dom';
+import {
+  Outlet,
+  useLoaderData,
+  useLocation,
+  useParams,
+} from 'react-router-dom';
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
@@ -76,6 +81,7 @@ export function Component() {
     list: loaderList,
     facets: rawFacets,
   } = useLoaderData() as ListLoaderData;
+
   const [list, setList] = useState<FilteredSpeciesList>(loaderList);
   const [meta, setMeta] = useState<SpeciesList>(rawMeta);
 
@@ -94,6 +100,7 @@ export function Component() {
   const [sort, setSort] = useState<string>('scientificName');
   const [dir, setDir] = useState<'asc' | 'desc'>('asc');
 
+  const location = useLocation();
   const mounted = useMounted();
   const params = useParams();
   const ala = useALA();
@@ -106,27 +113,34 @@ export function Component() {
   const { totalElements, totalPages } = list;
   const realPage = page + 1;
 
+  // If we're on the reingest page
+  const isReingest = location.pathname.endsWith('reingest');
+
   // Update the search query
   useEffect(() => {
     async function runQuery() {
       try {
-        const { list: updatedList, facets: updatedFacets } =
-          await performGQLQuery(
-            queries.QUERY_LISTS_GET,
-            {
-              speciesListID: params.id,
-              searchQuery,
-              page,
-              size,
-              filters: toKV(filters),
-              isPrivate: false,
-              sort,
-              dir,
-            },
-            ala.token
-          );
+        const {
+          meta: updatedMeta,
+          list: updatedList,
+          facets: updatedFacets,
+        } = await performGQLQuery(
+          queries.QUERY_LISTS_GET,
+          {
+            speciesListID: params.id,
+            searchQuery,
+            page,
+            size,
+            filters: toKV(filters),
+            isPrivate: false,
+            sort,
+            dir,
+          },
+          ala.token
+        );
 
         setError(null);
+        setMeta(updatedMeta);
         setList(updatedList);
         setFacets(updatedFacets);
       } catch (error) {
@@ -136,7 +150,7 @@ export function Component() {
 
     if (mounted) runQuery();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, size, filters, searchQuery, refresh, sort, dir]);
+  }, [page, size, filters, searchQuery, refresh, sort, dir, isReingest]);
 
   // Keep the current page in check
   useEffect(() => {
@@ -332,161 +346,176 @@ export function Component() {
                   <Flags meta={meta} />
                 </Group>
               </Stack>
-              <Actions
-                meta={meta}
-                editing={editing}
-                onEditingChange={setEditing}
-                onMetaEdited={handleListMetaUpdated}
-                onRematched={() => setRefresh(!refresh)}
-              />
+              {!isReingest && (
+                <Actions
+                  meta={meta}
+                  editing={editing}
+                  onEditingChange={setEditing}
+                  onMetaEdited={handleListMetaUpdated}
+                  onRematched={() => setRefresh(!refresh)}
+                />
+              )}
             </Flex>
           </Grid.Col>
-          <Grid.Col span={12}>
-            <Group justify='space-between'>
-              <Group>
-                <Select
-                  disabled={hasError}
-                  w={110}
-                  value={size?.toString()}
-                  onChange={handleSizeChange}
-                  data={['10', '20', '40'].map((value) => ({
-                    label: `${value} items`,
-                    value,
-                  }))}
-                  aria-label='Select number of results'
-                />
-                <TextInput
-                  disabled={hasError}
-                  defaultValue={searchQuery}
-                  onChange={(event) => {
-                    setSearch(event.currentTarget.value);
-                  }}
-                  placeholder='Search within list'
-                  w={200}
-                />
-              </Group>
-              <Group>
-                <FiltersDrawer
-                  active={toKV(filters)}
-                  facets={facets}
-                  onSelect={handleFilterClick}
-                  onReset={() => setFilters({})}
-                />
-                <Text opacity={0.75} size='sm'>
-                  {(realPage - 1) * size + 1}-
-                  {Math.min((realPage - 1) * size + size, totalElements || 0)}{' '}
-                  of <FormattedNumber value={totalElements} /> total records
-                </Text>
-              </Group>
-            </Group>
-          </Grid.Col>
-          <Grid.Col span={12}>
-            <Box style={{ overflowX: 'auto' }}>
-              {error ? (
-                <Message
-                  title='An error occured'
-                  subtitle={getErrorMessage(error)}
-                  icon={<StopIcon size={18} />}
-                  action='Retry'
-                  onAction={handleRetry}
-                />
-              ) : totalElements === 0 ? (
-                <Message />
-              ) : (
-                <Table
-                  highlightOnHover
-                  classNames={tableClasses}
-                  withColumnBorders
-                  withRowBorders
-                >
-                  <Table.Thead>
-                    <Table.Tr>
-                      <ThSortable
-                        active={sort === 'scientificName'}
-                        dir={dir}
-                        onSort={() => handleSortClick('scientificName')}
-                      >
-                        <FormattedMessage
-                          id='suppliedName'
-                          defaultMessage='Supplied name'
-                        />
-                      </ThSortable>
-                      <ThSortable
-                        active={sort === 'classification.scientificName'}
-                        dir={dir}
-                        onSort={() =>
-                          handleSortClick('classification.scientificName')
-                        }
-                      >
-                        <FormattedMessage
-                          id='scientificName'
-                          defaultMessage='Scientific name'
-                        />
-                      </ThSortable>
-                      {meta.fieldList.map((field) => (
-                        <ThEditable
-                          key={field}
-                          id={meta.id}
-                          editing={editing}
-                          field={field}
-                          token={ala.token || ''}
-                          onDelete={() => handleFieldDeleted(field)}
-                          onRename={(newField) =>
-                            handleFieldRenamed(field, newField)
-                          }
-                        />
-                      ))}
-                      {editing && (
-                        <ThCreate
-                          id={meta.id}
-                          token={ala.token || ''}
-                          onCreate={handleFieldCreated}
-                        />
-                      )}
-                      {classificationFields.map((field) => (
-                        <ThSortable
-                          key={field}
-                          active={sort === `classification.${field}`}
-                          dir={dir}
-                          onSort={() =>
-                            handleSortClick(`classification.${field}`)
-                          }
-                        >
-                          <FormattedMessage id={`classification.${field}`} />
-                        </ThSortable>
-                      ))}
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {list.content.map((item) => (
-                      <TrItem
-                        key={item.id}
-                        row={item}
-                        fields={meta.fieldList}
-                        classification={classificationFields}
-                        editing={editing}
-                        onClick={() => handleRowClick(item)}
-                      />
-                    ))}
-                  </Table.Tbody>
-                </Table>
-              )}
-            </Box>
-          </Grid.Col>
-          <Grid.Col span={12} py='xl'>
-            <Center>
-              <Pagination
-                disabled={(totalPages || 0) < 1 || hasError}
-                value={realPage}
-                onChange={(value) => setPage(value - 1)}
-                total={totalPages || 9}
-                radius='md'
-                getControlProps={(control) => ({
-                  'aria-label': `${control} page`,
-                })}
-              />
-            </Center>
-          </Grid.Col>
+          {isReingest ? (
+            <Grid.Col span={12}>
+              <Outlet />
+            </Grid.Col>
+          ) : (
+            <>
+              <Grid.Col span={12}>
+                <Group justify='space-between'>
+                  <Group>
+                    <Select
+                      disabled={hasError}
+                      w={110}
+                      value={size?.toString()}
+                      onChange={handleSizeChange}
+                      data={['10', '20', '40'].map((value) => ({
+                        label: `${value} items`,
+                        value,
+                      }))}
+                      aria-label='Select number of results'
+                    />
+                    <TextInput
+                      disabled={hasError}
+                      defaultValue={searchQuery}
+                      onChange={(event) => {
+                        setSearch(event.currentTarget.value);
+                      }}
+                      placeholder='Search within list'
+                      w={200}
+                    />
+                  </Group>
+                  <Group>
+                    <FiltersDrawer
+                      active={toKV(filters)}
+                      facets={facets}
+                      onSelect={handleFilterClick}
+                      onReset={() => setFilters({})}
+                    />
+                    <Text opacity={0.75} size='sm'>
+                      {(realPage - 1) * size + 1}-
+                      {Math.min(
+                        (realPage - 1) * size + size,
+                        totalElements || 0
+                      )}{' '}
+                      of <FormattedNumber value={totalElements} /> total records
+                    </Text>
+                  </Group>
+                </Group>
+              </Grid.Col>
+              <Grid.Col span={12}>
+                <Box style={{ overflowX: 'auto' }}>
+                  {error ? (
+                    <Message
+                      title='An error occured'
+                      subtitle={getErrorMessage(error)}
+                      icon={<StopIcon size={18} />}
+                      action='Retry'
+                      onAction={handleRetry}
+                    />
+                  ) : totalElements === 0 ? (
+                    <Message />
+                  ) : (
+                    <Table
+                      highlightOnHover
+                      classNames={tableClasses}
+                      withColumnBorders
+                      withRowBorders
+                    >
+                      <Table.Thead>
+                        <Table.Tr>
+                          <ThSortable
+                            active={sort === 'scientificName'}
+                            dir={dir}
+                            onSort={() => handleSortClick('scientificName')}
+                          >
+                            <FormattedMessage
+                              id='suppliedName'
+                              defaultMessage='Supplied name'
+                            />
+                          </ThSortable>
+                          <ThSortable
+                            active={sort === 'classification.scientificName'}
+                            dir={dir}
+                            onSort={() =>
+                              handleSortClick('classification.scientificName')
+                            }
+                          >
+                            <FormattedMessage
+                              id='scientificName'
+                              defaultMessage='Scientific name'
+                            />
+                          </ThSortable>
+                          {meta.fieldList.map((field) => (
+                            <ThEditable
+                              key={field}
+                              id={meta.id}
+                              editing={editing}
+                              field={field}
+                              token={ala.token || ''}
+                              onDelete={() => handleFieldDeleted(field)}
+                              onRename={(newField) =>
+                                handleFieldRenamed(field, newField)
+                              }
+                            />
+                          ))}
+                          {editing && (
+                            <ThCreate
+                              id={meta.id}
+                              token={ala.token || ''}
+                              onCreate={handleFieldCreated}
+                            />
+                          )}
+                          {classificationFields.map((field) => (
+                            <ThSortable
+                              key={field}
+                              active={sort === `classification.${field}`}
+                              dir={dir}
+                              onSort={() =>
+                                handleSortClick(`classification.${field}`)
+                              }
+                            >
+                              <FormattedMessage
+                                id={`classification.${field}`}
+                              />
+                            </ThSortable>
+                          ))}
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {list.content.map((item) => (
+                          <TrItem
+                            key={item.id}
+                            row={item}
+                            fields={meta.fieldList}
+                            classification={classificationFields}
+                            editing={editing}
+                            onClick={() => handleRowClick(item)}
+                          />
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  )}
+                </Box>
+              </Grid.Col>
+              <Grid.Col span={12} py='xl'>
+                <Center>
+                  <Pagination
+                    disabled={(totalPages || 0) < 1 || hasError}
+                    value={realPage}
+                    onChange={(value) => setPage(value - 1)}
+                    total={totalPages || 9}
+                    radius='md'
+                    getControlProps={(control) => ({
+                      'aria-label': `${control} page`,
+                    })}
+                  />
+                </Center>
+              </Grid.Col>
+            </>
+          )}
         </Grid>
       </Container>
     </>

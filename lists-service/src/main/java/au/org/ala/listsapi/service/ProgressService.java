@@ -26,6 +26,10 @@ public class ProgressService {
         return item.orElseGet(() -> new IngestProgressItem(speciesListId, 0, 0));
     }
 
+    public void clearProgress(String speciesListId) {
+        ingestProgressMongoRepository.deleteIngestProgressItemBySpeciesListId(speciesListId);
+    }
+
     public void addMongoProgress(String speciesListId, long progress) {
         Optional<IngestProgressItem> item = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListId(speciesListId);
         if (item.isPresent()) {
