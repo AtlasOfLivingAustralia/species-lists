@@ -43,6 +43,7 @@ export const QUERY_LISTS_GET = `query loadList(
     id
     title
     description
+    dataResourceUid
     rowCount
     distinctMatchCount
     fieldList

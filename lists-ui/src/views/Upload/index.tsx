@@ -36,7 +36,7 @@ import { ListMeta } from '#/components/ListMeta';
 import { notifications } from '@mantine/notifications';
 import classes from './index.module.css';
 import { useALA } from '#/helpers/context/useALA';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBoxOpen,
