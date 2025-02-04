@@ -36,7 +36,7 @@ import { useALA } from '#/helpers/context/useALA';
 
 // Local styles
 import classes from './Actions.module.css';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { getErrorMessage } from '#/helpers';
 import { ListMeta } from '#/components/ListMeta';
 import { MUTATION_LIST_UPDATE } from '#/api/queries';

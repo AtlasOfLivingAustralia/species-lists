@@ -35,7 +35,7 @@ import { useALA } from '#/helpers/context/useALA';
 // Display & edit components
 import { Display } from './components/Display';
 import { Edit } from './components/Edit';
-import { useRouteLoaderData } from 'react-router-dom';
+import { useRouteLoaderData } from 'react-router';
 
 interface SpeciesItemDrawerProps {
   item: SpeciesListItem;

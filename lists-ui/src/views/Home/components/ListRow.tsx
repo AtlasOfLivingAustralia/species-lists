@@ -4,7 +4,7 @@ import { FolderIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { SpeciesList } from '#/api';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-regular-svg-icons';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 
 interface ListRowProps {
   list?: SpeciesList;

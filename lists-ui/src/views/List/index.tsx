@@ -35,7 +35,7 @@ import {
   SpeciesListSubmit,
 } from '#/api';
 import { FormattedMessage, FormattedNumber } from 'react-intl';
-import { useLoaderData, useParams } from 'react-router-dom';
+import { useLoaderData, useParams } from 'react-router';
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';

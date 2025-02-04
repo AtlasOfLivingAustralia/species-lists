@@ -22,7 +22,7 @@ import {
   faTrash,
   faWarning,
 } from '@fortawesome/free-solid-svg-icons';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router';
 
 // Local components
 import { ActionCard } from './components/ActionCard';
