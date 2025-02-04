@@ -7,8 +7,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 public interface SpeciesListItemMongoRepository extends MongoRepository<SpeciesListItem, String> {
-
-  Page<SpeciesListItem> findBySpeciesListID(String speciesListID, Pageable pageable);
   Page<SpeciesListItem> findBySpeciesListIDOrderById(String speciesListID, Pageable pageable);
 
   void deleteBySpeciesListID(String speciesListID);

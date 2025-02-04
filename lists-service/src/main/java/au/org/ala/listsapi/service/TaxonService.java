@@ -146,7 +146,7 @@ public class TaxonService {
       Pageable paging = PageRequest.of(page, size);
       List<IndexQuery> updateList = new ArrayList<>();
       Page<SpeciesListItem> speciesListItems =
-          speciesListItemMongoRepository.findBySpeciesListID(speciesListID, paging);
+          speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesListID, paging);
 
       if (!speciesListItems.getContent().isEmpty()) {
         speciesListItems.forEach(
@@ -249,9 +249,7 @@ public class TaxonService {
           speciesListItemMongoRepository.saveAll(items);
           progressService.addMongoProgress(speciesListID, items.size());
 
-          items.stream()
-                  .filter(speciesListItem -> speciesListItem.getClassification().getSuccess())
-                  .forEach(speciesListItem -> distinctTaxa.add(speciesListItem.getTaxonID()));
+          items.forEach(speciesListItem -> distinctTaxa.add(speciesListItem.getClassification().getTaxonConceptID()));
 
           page += 1;
           paging = PageRequest.of(page, size);
