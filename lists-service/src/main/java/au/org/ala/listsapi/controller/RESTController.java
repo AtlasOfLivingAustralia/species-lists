@@ -52,7 +52,7 @@ public class RESTController {
   @Value("${app.version}")
   private String appVersion;
 
-  @Operation(tags = "REST", summary = "Retrieve ")
+  @Operation(tags = "REST", summary = "Retrieve information about the lists service")
   @GetMapping("/info")
   public ResponseEntity<Map<String, String>> info() {
     return new ResponseEntity<>(Map.of(
@@ -66,7 +66,7 @@ public class RESTController {
   @GetMapping("/speciesList/{speciesListID}")
   public ResponseEntity<SpeciesList> speciesList(
       @PathVariable("speciesListID") String speciesListID) {
-    Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListID);
+    Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
     return speciesList.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
   }
 
@@ -120,18 +120,19 @@ public class RESTController {
       @RequestParam(name = "pageSize", defaultValue = "10") int pageSize,
       @AuthenticationPrincipal Principal principal) {
     try {
-      Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListID);
+      Optional<SpeciesList> speciesListOptional = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
 
-      if (speciesList.isPresent()) {
-        SpeciesList list = speciesList.get();
+      // Ensure the species list exists
+      if (speciesListOptional.isPresent()) {
+        SpeciesList speciesList = speciesListOptional.get();
 
-        if (list.getIsPrivate() && !authUtils.isAuthorized(list, principal)) {
+        if (speciesList.getIsPrivate() && !authUtils.isAuthorized(speciesList, principal)) {
           return ResponseEntity.status(400).body("You don't have access to this list");
         }
 
         Pageable paging = PageRequest.of(page - 1, pageSize);
         Page<SpeciesListItem> speciesListItems =
-                speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesListID, paging);
+                speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesList.getId(), paging);
         return new ResponseEntity<>(speciesListItems.getContent(), HttpStatus.OK);
       }
 
@@ -146,8 +147,15 @@ public class RESTController {
   public ResponseEntity<Object> speciesListPid(
           @PathVariable("speciesListID") String speciesListID) {
     try {
-      String qid = biocacheService.getQidForSpeciesList(speciesListID);
-      return new ResponseEntity<>(Collections.singletonMap("qid", qid), HttpStatus.OK);
+      Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+
+      // Ensure the species list exists
+      if (speciesList.isPresent()) {
+        String qid = biocacheService.getQidForSpeciesList(speciesList.get().getId());
+        return new ResponseEntity<>(Collections.singletonMap("qid", qid), HttpStatus.OK);
+      }
+
+      return ResponseEntity.status(404).body("Species list not found");
     } catch (Exception e) {
       return ResponseEntity.badRequest().body(e.getMessage());
     }

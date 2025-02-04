@@ -64,12 +64,13 @@ public class UploadService {
 
   public boolean deleteList(String speciesListID, AlaUserProfile userProfile) {
 
-    Optional<SpeciesList> list = speciesListMongoRepository.findById(speciesListID);
-    if (list.isPresent() && authUtils.isAuthorized(list.get(), userProfile)) {
+    Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+    if (optionalSpeciesList.isPresent() && authUtils.isAuthorized(optionalSpeciesList.get(), userProfile)) {
+      String ID = optionalSpeciesList.get().getId();
       logger.info("Deleting speciesListID " + speciesListID);
-      speciesListIndexElasticRepository.deleteSpeciesListItemBySpeciesListID(speciesListID);
-      speciesListItemMongoRepository.deleteBySpeciesListID(speciesListID);
-      speciesListMongoRepository.deleteById(speciesListID);
+      speciesListIndexElasticRepository.deleteSpeciesListItemBySpeciesListID(ID);
+      speciesListItemMongoRepository.deleteBySpeciesListID(ID);
+      speciesListMongoRepository.deleteById(ID);
       logger.info("Deleted speciesListID " + speciesListID);
       return true;
     } else {
@@ -176,17 +177,17 @@ public class UploadService {
       throws Exception {
     if (speciesListID != null) {
 
-      Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findById(speciesListID);
+      Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
       if (optionalSpeciesList.isPresent()) {
         SpeciesList speciesList = optionalSpeciesList.get();
 
         // delete from index
-        speciesListIndexElasticRepository.deleteSpeciesListItemBySpeciesListID(speciesListID);
+        speciesListIndexElasticRepository.deleteSpeciesListItemBySpeciesListID(speciesList.getId());
 
         // delete from mongo
-        speciesListItemMongoRepository.deleteBySpeciesListID(speciesListID);
+        speciesListItemMongoRepository.deleteBySpeciesListID(speciesList.getId());
 
-        IngestJob ingestJob = ingest(speciesListID, fileToLoad, dryRun, false);
+        IngestJob ingestJob = ingest(speciesList.getId(), fileToLoad, dryRun, false);
 
         speciesList.setFieldList(ingestJob.getFieldList());
         speciesList.setFacetList(ingestJob.getFacetList());

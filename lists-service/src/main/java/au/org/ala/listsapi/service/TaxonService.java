@@ -135,9 +135,13 @@ public class TaxonService {
   }
 
   public void reindex(String speciesListID) {
-
     logger.info("Indexing " + speciesListID);
-    SpeciesList speciesList = speciesListMongoRepository.findById(speciesListID).get();
+    Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+
+    if (optionalSpeciesList.isEmpty()) return;
+
+    SpeciesList speciesList = optionalSpeciesList.get();
+
     int size = 1000;
     int page = 0;
     boolean done = false;
@@ -146,7 +150,7 @@ public class TaxonService {
       Pageable paging = PageRequest.of(page, size);
       List<IndexQuery> updateList = new ArrayList<>();
       Page<SpeciesListItem> speciesListItems =
-          speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesListID, paging);
+          speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesList.getId(), paging);
 
       if (!speciesListItems.getContent().isEmpty()) {
         speciesListItems.forEach(
@@ -221,8 +225,11 @@ public class TaxonService {
   }
 
   public long taxonMatchDataset(String speciesListID) {
-    Optional<SpeciesList> optionalSp = speciesListMongoRepository.findById(speciesListID);
-    if (optionalSp.isEmpty()) return 0;
+    Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+
+    if (optionalSpeciesList.isEmpty()) return 0;
+
+    SpeciesList speciesList = optionalSpeciesList.get();
 
     int size = 100;
     int page = 0;
@@ -233,21 +240,17 @@ public class TaxonService {
     boolean finished = false;
     while (!finished) {
       Page<SpeciesListItem> speciesListItems =
-          speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesListID, paging);
+          speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesList.getId(), paging);
 
       if (speciesListItems.isEmpty()) {
         finished = true;
       } else {
-        logger.info("Taxon matching " + speciesListID + " page " + page + " page size " + speciesListItems.stream().count());
         try {
           List<SpeciesListItem> items = speciesListItems.getContent();
-
-          logger.info("Matching for: " + items.stream().map(SpeciesListItem::getScientificName).collect(Collectors.joining(",")));
-
           updateClassifications(items);
 
           speciesListItemMongoRepository.saveAll(items);
-          progressService.addMongoProgress(speciesListID, items.size());
+          progressService.addMongoProgress(speciesList.getId(), items.size());
 
           items.forEach(speciesListItem -> distinctTaxa.add(speciesListItem.getClassification().getTaxonConceptID()));
 
