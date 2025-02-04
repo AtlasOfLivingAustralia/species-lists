@@ -50,6 +50,7 @@ type SpeciesList {
   version: Int
   title: String
   description: String
+  dataResourceUid: String
   rowCount: Int
   distinctMatchCount: Int
   fieldList:[String]

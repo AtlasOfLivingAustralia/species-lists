@@ -294,22 +294,20 @@ public class GraphQLController {
   @QueryMapping
   public SpeciesList getSpeciesListMetadata(
       @Argument String speciesListID, @AuthenticationPrincipal Principal principal) {
-    Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findById(speciesListID);
-    if (optionalSpeciesList.isPresent()) {
-      Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListID);
-      if (speciesList.isEmpty()) {
-        return null;
-      }
+    Optional<SpeciesList> speciesListOptional = speciesListMongoRepository.findById(speciesListID);
+    if (speciesListOptional.isPresent()) {
+      SpeciesList speciesList = speciesListOptional.get();
 
       // private list, check user is authorized
-      if (speciesList.get().getIsPrivate()
-          && !authUtils.isAuthorized(speciesList.get(), principal)) {
+      if (speciesList.getIsPrivate()
+          && !authUtils.isAuthorized(speciesList, principal)) {
         logger.info("User not authorized to private access list: " + speciesListID);
-        throw new AccessDeniedException("You dont have access to this list");
+        throw new AccessDeniedException("You don't have access to this list");
       }
 
-      return optionalSpeciesList.get();
+      return speciesList;
     }
+
     return null;
   }
 
@@ -765,20 +763,30 @@ public class GraphQLController {
       @Argument String dir,
       @AuthenticationPrincipal Principal principal) {
 
+    String ID;
+
     if (speciesListID != null) {
 
       Optional<SpeciesList> speciesListOptional =
-          speciesListMongoRepository.findById(speciesListID);
+          speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+
       if (speciesListOptional.isEmpty()) {
         return null;
       }
-      if (speciesListOptional.get().getIsPrivate()) {
+
+      SpeciesList speciesList = speciesListOptional.get();
+
+      if (speciesList.getIsPrivate()) {
         // private list, check user is authorized
-        if (!authUtils.isAuthorized(speciesListOptional.get(), principal)) {
+        if (!authUtils.isAuthorized(speciesList, principal)) {
           logger.info("User not authorized to private access list: " + speciesListID);
           throw new AccessDeniedException("You dont have access to this list");
         }
       }
+
+      ID = speciesList.getId();
+    } else {
+      ID = null;
     }
 
     Pageable pageableRequest = PageRequest.of(page, size);
@@ -787,7 +795,7 @@ public class GraphQLController {
         q ->
             q.bool(
                 bq -> {
-                  buildQuery(cleanRawQuery(searchQuery), speciesListID, null, null, filters, bq);
+                  buildQuery(cleanRawQuery(searchQuery), ID, null, null, filters, bq);
                   return bq;
                 }));
 
@@ -907,14 +915,16 @@ public class GraphQLController {
       @Argument Integer size,
       @AuthenticationPrincipal Principal principal) {
 
-    Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListID);
-    if (speciesList.isEmpty()) {
+    Optional<SpeciesList> speciesListOptional = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+    if (speciesListOptional.isEmpty()) {
       return null;
     }
 
+    SpeciesList speciesList = speciesListOptional.get();
+
     // private list, check user is authorized
-    if (speciesList.get().getIsPrivate()) {
-      if (!authUtils.isAuthorized(speciesList.get(), principal)) {
+    if (speciesList.getIsPrivate()) {
+      if (!authUtils.isAuthorized(speciesList, principal)) {
         logger.info("User not authorized to private access list: " + speciesListID);
         throw new AccessDeniedException("You dont have access to this list");
       }
@@ -923,7 +933,7 @@ public class GraphQLController {
     // get facet fields unique to this list
     if (facetFields == null || facetFields.isEmpty()) {
 
-      facetFields = speciesList.get().getFacetList();
+      facetFields = speciesList.getFacetList();
     }
 
     // retrieve field list from species_list
@@ -932,7 +942,7 @@ public class GraphQLController {
         q ->
             q.bool(
                 bq -> {
-                  buildQuery(cleanRawQuery(searchQuery), speciesListID, null, null, filters, bq);
+                  buildQuery(cleanRawQuery(searchQuery), speciesList.getId(), null, null, filters, bq);
                   return bq;
                 }));
 

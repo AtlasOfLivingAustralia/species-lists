@@ -9,6 +9,7 @@ interface SpeciesListPage {
 
 interface SpeciesList {
   authority: string;
+  dataResourceUid: string;
   dateCreated: string;
   description: string;
   doi: string;
