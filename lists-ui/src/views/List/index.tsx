@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   Badge,
   Box,
+  Button,
   Center,
   Container,
   Flex,
@@ -57,6 +58,8 @@ import { Actions } from './components/Actions';
 import { Summary } from './components/Summary';
 import { FiltersDrawer } from '#/components/FiltersDrawer';
 import { ThSortable } from './components/Table/ThSortable';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPlus } from '@fortawesome/free-solid-svg-icons';
 
 interface ListLoaderData {
   meta: SpeciesList;
@@ -100,7 +103,7 @@ export function Component() {
 
   // Selection drawer
   const [opened, { open, close }] = useDisclosure();
-  const [selected, setSelected] = useState<SpeciesListItem>(list.content[0]);
+  const [selected, setSelected] = useState<SpeciesListItem | null>(null);
 
   // Destructure results & calculate the real page offset
   const { totalElements, totalPages } = list;
@@ -273,6 +276,11 @@ export function Component() {
     open();
   }, []);
 
+  const handleAddClick = useCallback(() => {
+    setSelected(null);
+    open();
+  }, []);
+
   const handleFilterClick = useCallback(
     (filter: KV) => {
       if (filters[filter.key] === filter.value) {
@@ -343,7 +351,15 @@ export function Component() {
           </Grid.Col>
           <Grid.Col span={12}>
             <Group justify='space-between'>
-              <Group>
+              <Group gap='sm'>
+                <Button
+                  radius='md'
+                  leftSection={<FontAwesomeIcon icon={faPlus} />}
+                  variant='light'
+                  onClick={handleAddClick}
+                >
+                  Add species
+                </Button>
                 <Select
                   disabled={hasError}
                   w={110}
@@ -365,7 +381,7 @@ export function Component() {
                   w={200}
                 />
               </Group>
-              <Group>
+              <Group gap='sm'>
                 <FiltersDrawer
                   active={toKV(filters)}
                   facets={facets}
