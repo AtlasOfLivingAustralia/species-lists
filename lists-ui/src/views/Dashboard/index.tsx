@@ -15,7 +15,7 @@ import {
 } from '@mantine/nprogress';
 
 // Routing
-import { Outlet, useNavigation } from 'react-router-dom';
+import { Outlet, useNavigation } from 'react-router';
 
 // Authentication
 import { useAuth } from 'react-oidc-context';

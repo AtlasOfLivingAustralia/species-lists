@@ -6,7 +6,7 @@ import classes from './Edit.module.css';
 import { FormattedMessage } from 'react-intl';
 import { useForm } from '@mantine/form';
 import { useEffect } from 'react';
-import { useRouteLoaderData } from 'react-router-dom';
+import { useRouteLoaderData } from 'react-router';
 
 interface ListLoaderData {
   meta: SpeciesList;

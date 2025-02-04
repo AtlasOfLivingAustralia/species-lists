@@ -2,7 +2,7 @@ import { useALA } from '#/helpers/context/useALA';
 import { faCog, faUpload } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Group } from '@mantine/core';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 
 export function ActionButtons() {
   const ala = useALA();
