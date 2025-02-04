@@ -1,11 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { SpeciesListItem } from '#/api';
+import { useRouteLoaderData } from 'react-router';
+import { SpeciesList, SpeciesListItem } from '#/api';
 import { useState } from 'react';
 import { Group, Switch, Table, Textarea, Title } from '@mantine/core';
 
 import classes from './Display.module.css';
 import displayClasses from './TextArea.module.css';
 import { FormattedMessage } from 'react-intl';
+
+interface ListLoaderData {
+  meta: SpeciesList;
+}
 
 interface SpeciesItemDisplayProps {
   item: SpeciesListItem;
@@ -23,6 +28,7 @@ const classificationFields = [
 ];
 
 export function Display({ item }: SpeciesItemDisplayProps) {
+  const { meta } = useRouteLoaderData('list') as ListLoaderData;
   const [expandedTaxonomy, setExpandedTaxonomy] = useState<boolean>(false);
   const expandedStyle = {
     padding: 0,
@@ -85,16 +91,19 @@ export function Display({ item }: SpeciesItemDisplayProps) {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {item.properties.map(({ key, value }) => (
-            <Table.Tr key={key}>
-              <Table.Td>{key}</Table.Td>
+          {meta.fieldList.map((field) => (
+            <Table.Tr key={field}>
+              <Table.Td>{field}</Table.Td>
               <Table.Td>
                 <Textarea
-                  aria-label={key}
+                  aria-label={field}
                   disabled
                   classNames={displayClasses}
                   autosize
-                  value={value}
+                  value={
+                    item.properties.find(({ key }) => key === field)?.value ||
+                    ''
+                  }
                 />
               </Table.Td>
             </Table.Tr>

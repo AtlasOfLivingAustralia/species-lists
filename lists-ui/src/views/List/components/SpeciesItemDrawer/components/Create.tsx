@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { InputSpeciesList, KV, SpeciesList, SpeciesListItem } from '#/api';
+import { InputSpeciesList, KV, SpeciesList } from '#/api';
 import { Group, Table, Textarea, TextInput, Title } from '@mantine/core';
 
 import { FormattedMessage } from 'react-intl';
@@ -11,9 +11,8 @@ interface ListLoaderData {
   meta: SpeciesList;
 }
 
-interface SpeciesItemEditProps {
-  item: SpeciesListItem;
-  onItemUpdated: (item: InputSpeciesList) => void;
+interface SpeciesItemCreateProps {
+  onItemUpdated: (item: InputSpeciesList | null) => void;
 }
 
 const classificationFields = [
@@ -27,24 +26,24 @@ const classificationFields = [
   'genus',
 ];
 
-export function Edit({ item, onItemUpdated }: SpeciesItemEditProps) {
+export function Create({ onItemUpdated }: SpeciesItemCreateProps) {
   const { meta } = useRouteLoaderData('list') as ListLoaderData;
 
   const classificationForm = useForm({
     initialValues: classificationFields.reduce(
       (prev, cur) => ({
         ...prev,
-        [cur]: (item as any)[cur] || '',
+        [cur]: '',
       }),
       {}
     ),
   });
 
   const propertiesForm = useForm({
-    initialValues: item.properties.reduce(
-      (prev, { key, value }) => ({
+    initialValues: meta.fieldList.reduce(
+      (prev, field) => ({
         ...prev,
-        [key]: value || '',
+        [field]: '',
       }),
       {}
     ),
@@ -52,9 +51,18 @@ export function Edit({ item, onItemUpdated }: SpeciesItemEditProps) {
 
   // Trigger the item updated callback if the form has been changed
   useEffect(() => {
+    const classificationValues = Object.values(
+      classificationForm.values
+    ) as string[];
+
+    // Ensure at lease one of the classification fields has a value in it
+    if (classificationValues.join('').length < 1) {
+      onItemUpdated(null);
+      return;
+    }
+
     if (classificationForm.isDirty() || propertiesForm.isDirty()) {
       onItemUpdated({
-        id: item.id,
         speciesListID: meta.id,
         ...classificationForm.values,
         properties: Object.entries(propertiesForm.values).map(
