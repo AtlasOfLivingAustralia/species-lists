@@ -4,8 +4,7 @@ import au.org.ala.listsapi.model.Classification;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
-import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
-import au.org.ala.ws.security.profile.AlaUserProfile;
+import au.org.ala.listsapi.repo.SpeciesListMongoRepository;;
 import com.opencsv.CSVWriter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -211,12 +210,12 @@ public class DownloadController {
 
     // check user logged in
     if (authUtils.getUserProfile(principal) == null) {
-      return ResponseEntity.badRequest().body("User not logged in");
+      return ResponseEntity.status(401).body("User not logged in");
     }
 
     // check authorised
     if (!authUtils.isAuthorized(speciesList, principal)) {
-      return ResponseEntity.badRequest().body("User not authorized");
+      return ResponseEntity.status(401).body("User not authorized");
     }
     return null;
   }
