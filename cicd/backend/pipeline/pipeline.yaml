@@ -326,6 +326,7 @@ Resources:
                       { "name":"COLLECTORY_BASE_URL", "value":"#{ExportConfigNS.COLLECTORY_BASE_URL}" },
                       { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
                       { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
+                      { "name":"FILE_SYSTEM_ID", "value":"${FileSystemId}" },
                       { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" },
                       { "name":"BUILD_TAG", "value":"#{BuildListsNS.BUILD_TAG}" },
                       { "name":"HOSTED_ZONE", "value":"#{ExportConfigNS.HOSTED_ZONE}" },
@@ -341,6 +342,8 @@ Resources:
                       { "name":"WS_SUB_DOMAIN", "value":"#{ExportConfigNS.WS_SUB_DOMAIN}" },
                       { "name":"UI_SUB_DOMAIN", "value":"#{ExportConfigNS.UI_SUB_DOMAIN}" },
                       { "name":"USERDETAILS_BASE_URL", "value":"#{ExportConfigNS.USERDETAILS_BASE_URL}" },
+                      { "name":"ELASTIC_HOST", "value":"#{ExportConfigNS.ELASTIC_HOST}" },
+                      { "name":"ELASTIC_PORT", "value":"#{ExportConfigNS.ELASTIC_PORT}" },
                       { "name":"USER_POOL_ID", "value":"${UserPoolId}" }
                     ]
                   - AppClientId:
@@ -349,6 +352,9 @@ Resources:
                     EksClusterName:
                       Fn::ImportValue:
                         Fn::Sub: "${pRegolithStackName}-ClusterName"
+                    FileSystemId:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pRegolithStackName}-FileSystemId"
                     ListSecretName:
                       Fn::ImportValue:
                         Fn::Sub: "${pDatabaseStackName}-DocDbPasswordSecretName"
