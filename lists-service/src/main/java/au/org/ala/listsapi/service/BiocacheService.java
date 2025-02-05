@@ -61,7 +61,7 @@ public class BiocacheService {
   public String getQidForSpeciesList(String speciesListId) throws Exception {
     Pageable paging = PageRequest.of(0, 200);
     List<SpeciesListItem> speciesListItems = speciesListItemMongoRepository
-            .findBySpeciesListID(speciesListId, paging)
+            .findBySpeciesListIDOrderById(speciesListId, paging)
             .toList();
 
     // Handle very long species lists

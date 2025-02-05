@@ -135,7 +135,7 @@ public class DownloadController {
       boolean finished = false;
       while (!finished) {
         Page<SpeciesListItem> page =
-            speciesListItemMongoRepository.findBySpeciesListID(speciesListID, pageable);
+            speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesListID, pageable);
         if (page.isEmpty()) {
           finished = true;
         } else {

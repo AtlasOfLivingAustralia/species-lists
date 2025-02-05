@@ -1,4 +1,4 @@
-import { createBrowserRouter, redirect } from 'react-router-dom';
+import { createBrowserRouter, redirect } from 'react-router';
 
 // Views
 import Dashboard from './views/Dashboard';

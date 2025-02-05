@@ -120,7 +120,7 @@ public class IngressController {
       if (errorResponse != null) {
         return errorResponse;
       }
-      Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findById(speciesListID);
+      Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
 
       if (optionalSpeciesList.isEmpty()) {
         return ResponseEntity.badRequest().body("Species list does not exist!");
@@ -128,12 +128,12 @@ public class IngressController {
 
       SpeciesList speciesList = optionalSpeciesList.get();
 
-      long distinctMatchCount = taxonService.taxonMatchDataset(speciesListID);
+      long distinctMatchCount = taxonService.taxonMatchDataset(speciesList.getId());
       speciesList.setDistinctMatchCount(distinctMatchCount);
 
       speciesListMongoRepository.save(speciesList);
 
-      taxonService.reindex(speciesListID);
+      taxonService.reindex(speciesList.getId());
       return new ResponseEntity<>(HttpStatus.OK);
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
@@ -425,13 +425,13 @@ public class IngressController {
     }
 
     // check it exists
-    Optional<SpeciesList> speciesListOptional = speciesListMongoRepository.findById(speciesListID);
-    if (speciesListOptional.isEmpty()) {
+    Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+    if (optionalSpeciesList.isEmpty()) {
       return ResponseEntity.badRequest().body("Species list not found");
     }
 
     // check authorised
-    if (!authUtils.isAuthorized(speciesListOptional.get(), principal)) {
+    if (!authUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
       return ResponseEntity.badRequest().body("User not authorized");
     }
     return null;

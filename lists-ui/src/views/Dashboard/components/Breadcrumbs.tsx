@@ -6,7 +6,7 @@ import {
   Text,
   Group,
 } from '@mantine/core';
-import { Link, useLocation, useRouteLoaderData } from 'react-router-dom';
+import { Link, useLocation, useRouteLoaderData } from 'react-router';
 
 import classes from './Breadcrumbs.module.css';
 import { ChevronRightIcon } from '@atlasoflivingaustralia/ala-mantine';

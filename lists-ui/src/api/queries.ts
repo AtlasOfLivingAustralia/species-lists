@@ -43,6 +43,7 @@ export const QUERY_LISTS_GET = `query loadList(
     id
     title
     description
+    dataResourceUid
     rowCount
     distinctMatchCount
     fieldList
@@ -165,6 +166,45 @@ export const QUERY_IMAGE_GET = `query loadImage($taxonID: String!) {
   image: getTaxonImage(taxonID: $taxonID) {
     url
     __typename
+  }
+}`;
+
+export const MUTATION_LIST_ITEM_CREATE = `mutation create($createItem: InputSpeciesListItem) {
+  newItem: addSpeciesListItem(inputSpeciesListItem: $createItem) {
+    id
+    scientificName
+    vernacularName
+    genus
+    family
+    classs
+    order
+    phylum
+    kingdom
+    properties {
+      key
+      value
+    }
+    classification {
+      scientificName
+      scientificNameAuthorship
+      vernacularName
+      taxonConceptID
+      kingdom
+      phylum
+      classs
+      order
+      family
+      genus
+      kingdomID
+      phylumID
+      classID
+      orderID
+      familyID
+      genusID
+    }
+    dateCreated
+    lastUpdated
+    lastUpdatedBy
   }
 }`;
 

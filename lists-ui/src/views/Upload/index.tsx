@@ -31,7 +31,7 @@ import { ListMeta } from '#/components/ListMeta';
 import { notifications } from '@mantine/notifications';
 import classes from './index.module.css';
 import { useALA } from '#/helpers/context/useALA';
-import { Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router';
 import { IngestProgress } from '#/components/IngestProgress';
 
 const ACCEPTED_TYPES: string[] = ['text/csv', 'application/zip'];

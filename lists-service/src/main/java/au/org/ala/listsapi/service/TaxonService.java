@@ -135,9 +135,13 @@ public class TaxonService {
   }
 
   public void reindex(String speciesListID) {
-
     logger.info("Indexing " + speciesListID);
-    SpeciesList speciesList = speciesListMongoRepository.findById(speciesListID).get();
+    Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+
+    if (optionalSpeciesList.isEmpty()) return;
+
+    SpeciesList speciesList = optionalSpeciesList.get();
+
     int size = 1000;
     int page = 0;
     boolean done = false;
@@ -146,7 +150,7 @@ public class TaxonService {
       Pageable paging = PageRequest.of(page, size);
       List<IndexQuery> updateList = new ArrayList<>();
       Page<SpeciesListItem> speciesListItems =
-          speciesListItemMongoRepository.findBySpeciesListID(speciesListID, paging);
+          speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesList.getId(), paging);
 
       if (!speciesListItems.getContent().isEmpty()) {
         speciesListItems.forEach(
@@ -221,44 +225,46 @@ public class TaxonService {
   }
 
   public long taxonMatchDataset(String speciesListID) {
-    logger.info("Taxon matching " + speciesListID);
+    Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
 
-    Optional<SpeciesList> optionalSp = speciesListMongoRepository.findById(speciesListID);
-    if (optionalSp.isEmpty()) return 0;
+    if (optionalSpeciesList.isEmpty()) return 0;
+
+    SpeciesList speciesList = optionalSpeciesList.get();
 
     int size = 100;
     int page = 0;
-    long distinct = 0;
-    boolean done = false;
+    Pageable paging = PageRequest.of(page, size);
 
-    while (!done) {
-      Pageable paging = PageRequest.of(page, size);
+    Set<String> distinctTaxa = new HashSet<>();
+
+    boolean finished = false;
+    while (!finished) {
       Page<SpeciesListItem> speciesListItems =
-          speciesListItemMongoRepository.findBySpeciesListID(speciesListID, paging);
+          speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesList.getId(), paging);
 
-      if (!speciesListItems.getContent().isEmpty()) {
+      if (speciesListItems.isEmpty()) {
+        finished = true;
+      } else {
         try {
           List<SpeciesListItem> items = speciesListItems.getContent();
           updateClassifications(items);
 
-          distinct += items.stream()
-                  .filter(speciesListItem -> speciesListItem.getClassification().getSuccess())
-                  .map(speciesListItem -> speciesListItem.getClassification().getTaxonConceptID()).distinct().count();
-
           speciesListItemMongoRepository.saveAll(items);
-          progressService.addMongoProgress(speciesListID, items.size());
+          progressService.addMongoProgress(speciesList.getId(), items.size());
+
+          items.forEach(speciesListItem -> distinctTaxa.add(speciesListItem.getClassification().getTaxonConceptID()));
+
+          page += 1;
+          paging = PageRequest.of(page, size);
         } catch (Exception e) {
           logger.error(e.getMessage(), e);
         }
-      } else {
-        done = true;
       }
-      page++;
     }
 
     logger.info("Taxon matching " + speciesListID + " complete.");
 
-    return distinct;
+    return distinctTaxa.size();
   }
 
   public void updateClassifications(List<SpeciesListItem> speciesListItems) {

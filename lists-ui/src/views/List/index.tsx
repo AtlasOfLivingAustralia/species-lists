@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   Badge,
   Box,
+  Button,
   Center,
   Container,
   Flex,
@@ -40,7 +41,7 @@ import {
   useLoaderData,
   useLocation,
   useParams,
-} from 'react-router-dom';
+} from 'react-router';
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
@@ -62,6 +63,8 @@ import { Actions } from './components/Actions';
 import { Summary } from './components/Summary';
 import { FiltersDrawer } from '#/components/FiltersDrawer';
 import { ThSortable } from './components/Table/ThSortable';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPlus } from '@fortawesome/free-solid-svg-icons';
 
 interface ListLoaderData {
   meta: SpeciesList;
@@ -107,7 +110,7 @@ export function Component() {
 
   // Selection drawer
   const [opened, { open, close }] = useDisclosure();
-  const [selected, setSelected] = useState<SpeciesListItem>(list.content[0]);
+  const [selected, setSelected] = useState<SpeciesListItem | null>(null);
 
   // Destructure results & calculate the real page offset
   const { totalElements, totalPages } = list;
@@ -287,6 +290,11 @@ export function Component() {
     open();
   }, []);
 
+  const handleAddClick = useCallback(() => {
+    setSelected(null);
+    open();
+  }, []);
+
   const handleFilterClick = useCallback(
     (filter: KV) => {
       if (filters[filter.key] === filter.value) {
@@ -356,6 +364,146 @@ export function Component() {
                 />
               )}
             </Flex>
+          </Grid.Col>
+          <Grid.Col span={12}>
+            <Group justify='space-between'>
+              <Group gap='sm'>
+                <Button
+                  radius='md'
+                  leftSection={<FontAwesomeIcon icon={faPlus} />}
+                  variant='light'
+                  onClick={handleAddClick}
+                >
+                  Add species
+                </Button>
+                <Select
+                  disabled={hasError}
+                  w={110}
+                  value={size?.toString()}
+                  onChange={handleSizeChange}
+                  data={['10', '20', '40'].map((value) => ({
+                    label: `${value} items`,
+                    value,
+                  }))}
+                  aria-label='Select number of results'
+                />
+                <TextInput
+                  disabled={hasError}
+                  defaultValue={searchQuery}
+                  onChange={(event) => {
+                    setSearch(event.currentTarget.value);
+                  }}
+                  placeholder='Search within list'
+                  w={200}
+                />
+              </Group>
+              <Group gap='sm'>
+                <FiltersDrawer
+                  active={toKV(filters)}
+                  facets={facets}
+                  onSelect={handleFilterClick}
+                  onReset={() => setFilters({})}
+                />
+                <Text opacity={0.75} size='sm'>
+                  {(realPage - 1) * size + 1}-
+                  {Math.min((realPage - 1) * size + size, totalElements || 0)}{' '}
+                  of <FormattedNumber value={totalElements} /> total records
+                </Text>
+              </Group>
+            </Group>
+          </Grid.Col>
+          <Grid.Col span={12}>
+            <Box style={{ overflowX: 'auto' }}>
+              {error ? (
+                <Message
+                  title='An error occured'
+                  subtitle={getErrorMessage(error)}
+                  icon={<StopIcon size={18} />}
+                  action='Retry'
+                  onAction={handleRetry}
+                />
+              ) : totalElements === 0 ? (
+                <Message />
+              ) : (
+                <Table
+                  highlightOnHover
+                  classNames={tableClasses}
+                  withColumnBorders
+                  withRowBorders
+                >
+                  <Table.Thead>
+                    <Table.Tr>
+                      <ThSortable
+                        active={sort === 'scientificName'}
+                        dir={dir}
+                        onSort={() => handleSortClick('scientificName')}
+                      >
+                        <FormattedMessage
+                          id='suppliedName'
+                          defaultMessage='Supplied name'
+                        />
+                      </ThSortable>
+                      <ThSortable
+                        active={sort === 'classification.scientificName'}
+                        dir={dir}
+                        onSort={() =>
+                          handleSortClick('classification.scientificName')
+                        }
+                      >
+                        <FormattedMessage
+                          id='scientificName'
+                          defaultMessage='Scientific name'
+                        />
+                      </ThSortable>
+                      {meta.fieldList.map((field) => (
+                        <ThEditable
+                          key={field}
+                          id={meta.id}
+                          editing={editing}
+                          field={field}
+                          token={ala.token || ''}
+                          onDelete={() => handleFieldDeleted(field)}
+                          onRename={(newField) =>
+                            handleFieldRenamed(field, newField)
+                          }
+                        />
+                      ))}
+                      {editing && (
+                        <ThCreate
+                          id={meta.id}
+                          token={ala.token || ''}
+                          onCreate={handleFieldCreated}
+                        />
+                      )}
+                      {classificationFields.map((field) => (
+                        <ThSortable
+                          key={field}
+                          active={sort === `classification.${field}`}
+                          dir={dir}
+                          onSort={() =>
+                            handleSortClick(`classification.${field}`)
+                          }
+                        >
+                          <FormattedMessage id={`classification.${field}`} />
+                        </ThSortable>
+                      ))}
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {list.content.map((item) => (
+                      <TrItem
+                        key={item.id}
+                        row={item}
+                        fields={meta.fieldList}
+                        classification={classificationFields}
+                        editing={editing}
+                        onClick={() => handleRowClick(item)}
+                      />
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              )}
+            </Box>
           </Grid.Col>
           {isReingest ? (
             <Grid.Col span={12}>

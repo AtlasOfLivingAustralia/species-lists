@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 // Routing
-import { RouterProvider } from 'react-router-dom';
+import { RouterProvider } from 'react-router/dom';
 import routes from './Router';
 
 // Authentication
@@ -19,9 +19,13 @@ function App() {
     if (auth.isAuthenticated) {
       // Create an interval to silently refresh the token
       const interval = setInterval(async () => {
-        if (auth.isAuthenticated && !auth.isLoading && (auth.user?.expires_in || 0) <= 60) {
+        if (
+          auth.isAuthenticated &&
+          !auth.isLoading &&
+          (auth.user?.expires_in || 0) <= 60
+        ) {
           setSilentRenew(true);
-          
+
           try {
             await auth.signinSilent();
           } catch (error) {
@@ -38,7 +42,7 @@ function App() {
   }, [auth]);
 
   // If the user hasn't been authenticated, show a page loader instead
-  return (auth.isLoading && !silentRenew) ? (
+  return auth.isLoading && !silentRenew ? (
     <div style={{ width: '100vw', height: '100vh' }}>
       <PageLoader />
     </div>
