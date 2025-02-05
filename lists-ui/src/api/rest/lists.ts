@@ -8,6 +8,29 @@ import {
 } from '../graphql/types';
 import { FileWithPath } from '@mantine/dropzone';
 
+const listToForm = (list: SpeciesListSubmit, file: string): FormData => {
+  // Create a new FormData object
+  const form = new FormData();
+
+  // Add the list properties to it
+  form.append('title', list.title);
+  form.append('description', list.description);
+  form.append('listType', list.listType);
+  form.append('region', list.region);
+  form.append('authority', list.authority);
+  form.append('licence', list.licence);
+  form.append('isPrivate', list.isPrivate.toString());
+  form.append('isAuthoritative', list.isAuthoritative.toString());
+  form.append('isBIE', list.isBIE.toString());
+  form.append('isThreatened', list.isThreatened.toString());
+  form.append('isInvasive', list.isInvasive.toString());
+  form.append('isSDS', list.isSDS?.toString());
+  form.append('tags', list.tags?.toString());
+  form.append('file', file);
+
+  return form;
+};
+
 export default (token: string) => ({
   delete: async (id: string): Promise<void> =>
     request(
@@ -63,7 +86,7 @@ export default (token: string) => ({
     const form = new FormData();
     form.append('file', file);
 
-    // First the request
+    // Fire the request
     return request(import.meta.env.VITE_API_LIST_UPLOAD, 'POST', form, token);
   },
   ingest: async (
@@ -72,25 +95,9 @@ export default (token: string) => ({
     async: boolean = false
   ): Promise<SpeciesList> => {
     // Create a new FormData object
-    const form = new FormData();
+    const form = listToForm(list, file);
 
-    // Add the list properties to it
-    form.append('title', list.title);
-    form.append('description', list.description);
-    form.append('listType', list.listType);
-    form.append('region', list.region);
-    form.append('authority', list.authority);
-    form.append('licence', list.licence);
-    form.append('isPrivate', list.isPrivate.toString());
-    form.append('isAuthoritative', list.isAuthoritative.toString());
-    form.append('isBIE', list.isBIE.toString());
-    form.append('isThreatened', list.isThreatened.toString());
-    form.append('isInvasive', list.isInvasive.toString());
-    form.append('isSDS', list.isSDS?.toString());
-    form.append('tags', list.tags?.toString());
-    form.append('file', file);
-
-    // First the request
+    // Fire the request
     return request(
       `${import.meta.env.VITE_API_LIST_INGEST}${async ? '/async' : ''}`,
       'POST',
@@ -101,11 +108,24 @@ export default (token: string) => ({
   ingestProgress: async (
     speciesListID: string
   ): Promise<{ mongo: number; elastic: number }> => {
-    // First the request
+    // Fire the request
     return await request<{ mongo: number; elastic: number }>(
       `${import.meta.env.VITE_API_LIST_INGEST}/${speciesListID}/progress`,
       'GET',
       null
+    );
+  },
+  reingest: async (id: string, file: string): Promise<SpeciesList> => {
+    // Create a new FormData object
+    const form = new FormData();
+    form.append('file', file);
+
+    // Fire the request
+    return request(
+      `${import.meta.env.VITE_API_LIST_INGEST}/${id}`,
+      'POST',
+      form,
+      token
     );
   },
   constraints: async (

@@ -43,6 +43,12 @@ const router = createBrowserRouter([
           return data;
         },
         errorElement: <PageError />,
+        children: [
+          {
+            path: 'reingest',
+            lazy: () => import('./views/Reingest'),
+          },
+        ],
       },
       {
         path: '/upload',

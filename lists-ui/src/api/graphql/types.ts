@@ -73,6 +73,11 @@ interface UploadResult {
   validationErrors: string[];
 }
 
+interface IngestProgress {
+  elastic: number;
+  mongo: number;
+}
+
 interface Breadcrumb {
   title: string;
   href: string | undefined | null;
@@ -175,6 +180,7 @@ interface SpeciesListConstraints {
 export type {
   Breadcrumb,
   UploadResult,
+  IngestProgress,
   InputSpeciesList,
   SpeciesList,
   SpeciesListSubmit,

@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface IngestProgressMongoRepository extends MongoRepository<IngestProgressItem, String> {
   Optional<IngestProgressItem> findIngestProgressItemBySpeciesListId(String speciesListId);
   void deleteIngestProgressItemsByStartedBefore(Date started);
+
+  void deleteIngestProgressItemBySpeciesListId(String speciesListId);
 }
