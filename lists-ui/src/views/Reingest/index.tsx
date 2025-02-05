@@ -33,7 +33,7 @@ import { getErrorMessage } from '#/helpers';
 // Helpers & local components
 import { notifications } from '@mantine/notifications';
 import { useALA } from '#/helpers/context/useALA';
-import { Navigate, useRouteLoaderData } from 'react-router-dom';
+import { Navigate, useRouteLoaderData } from 'react-router';
 import { IngestProgress } from '#/components/IngestProgress';
 import classes from './index.module.css';
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Box, em, Group, Paper, Progress, Stepper, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {

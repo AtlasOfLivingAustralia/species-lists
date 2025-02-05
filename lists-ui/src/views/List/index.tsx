@@ -36,12 +36,7 @@ import {
   SpeciesListSubmit,
 } from '#/api';
 import { FormattedMessage, FormattedNumber } from 'react-intl';
-import {
-  Outlet,
-  useLoaderData,
-  useLocation,
-  useParams,
-} from 'react-router';
+import { Outlet, useLoaderData, useLocation, useParams } from 'react-router';
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
@@ -365,146 +360,6 @@ export function Component() {
               )}
             </Flex>
           </Grid.Col>
-          <Grid.Col span={12}>
-            <Group justify='space-between'>
-              <Group gap='sm'>
-                <Button
-                  radius='md'
-                  leftSection={<FontAwesomeIcon icon={faPlus} />}
-                  variant='light'
-                  onClick={handleAddClick}
-                >
-                  Add species
-                </Button>
-                <Select
-                  disabled={hasError}
-                  w={110}
-                  value={size?.toString()}
-                  onChange={handleSizeChange}
-                  data={['10', '20', '40'].map((value) => ({
-                    label: `${value} items`,
-                    value,
-                  }))}
-                  aria-label='Select number of results'
-                />
-                <TextInput
-                  disabled={hasError}
-                  defaultValue={searchQuery}
-                  onChange={(event) => {
-                    setSearch(event.currentTarget.value);
-                  }}
-                  placeholder='Search within list'
-                  w={200}
-                />
-              </Group>
-              <Group gap='sm'>
-                <FiltersDrawer
-                  active={toKV(filters)}
-                  facets={facets}
-                  onSelect={handleFilterClick}
-                  onReset={() => setFilters({})}
-                />
-                <Text opacity={0.75} size='sm'>
-                  {(realPage - 1) * size + 1}-
-                  {Math.min((realPage - 1) * size + size, totalElements || 0)}{' '}
-                  of <FormattedNumber value={totalElements} /> total records
-                </Text>
-              </Group>
-            </Group>
-          </Grid.Col>
-          <Grid.Col span={12}>
-            <Box style={{ overflowX: 'auto' }}>
-              {error ? (
-                <Message
-                  title='An error occured'
-                  subtitle={getErrorMessage(error)}
-                  icon={<StopIcon size={18} />}
-                  action='Retry'
-                  onAction={handleRetry}
-                />
-              ) : totalElements === 0 ? (
-                <Message />
-              ) : (
-                <Table
-                  highlightOnHover
-                  classNames={tableClasses}
-                  withColumnBorders
-                  withRowBorders
-                >
-                  <Table.Thead>
-                    <Table.Tr>
-                      <ThSortable
-                        active={sort === 'scientificName'}
-                        dir={dir}
-                        onSort={() => handleSortClick('scientificName')}
-                      >
-                        <FormattedMessage
-                          id='suppliedName'
-                          defaultMessage='Supplied name'
-                        />
-                      </ThSortable>
-                      <ThSortable
-                        active={sort === 'classification.scientificName'}
-                        dir={dir}
-                        onSort={() =>
-                          handleSortClick('classification.scientificName')
-                        }
-                      >
-                        <FormattedMessage
-                          id='scientificName'
-                          defaultMessage='Scientific name'
-                        />
-                      </ThSortable>
-                      {meta.fieldList.map((field) => (
-                        <ThEditable
-                          key={field}
-                          id={meta.id}
-                          editing={editing}
-                          field={field}
-                          token={ala.token || ''}
-                          onDelete={() => handleFieldDeleted(field)}
-                          onRename={(newField) =>
-                            handleFieldRenamed(field, newField)
-                          }
-                        />
-                      ))}
-                      {editing && (
-                        <ThCreate
-                          id={meta.id}
-                          token={ala.token || ''}
-                          onCreate={handleFieldCreated}
-                        />
-                      )}
-                      {classificationFields.map((field) => (
-                        <ThSortable
-                          key={field}
-                          active={sort === `classification.${field}`}
-                          dir={dir}
-                          onSort={() =>
-                            handleSortClick(`classification.${field}`)
-                          }
-                        >
-                          <FormattedMessage id={`classification.${field}`} />
-                        </ThSortable>
-                      ))}
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {list.content.map((item) => (
-                      <TrItem
-                        key={item.id}
-                        row={item}
-                        fields={meta.fieldList}
-                        classification={classificationFields}
-                        editing={editing}
-                        onClick={() => handleRowClick(item)}
-                      />
-                    ))}
-                  </Table.Tbody>
-                </Table>
-              )}
-            </Box>
-          </Grid.Col>
           {isReingest ? (
             <Grid.Col span={12}>
               <Outlet />
@@ -514,6 +369,14 @@ export function Component() {
               <Grid.Col span={12}>
                 <Group justify='space-between'>
                   <Group>
+                    <Button
+                      radius='md'
+                      leftSection={<FontAwesomeIcon icon={faPlus} />}
+                      variant='light'
+                      onClick={handleAddClick}
+                    >
+                      Add species
+                    </Button>
                     <Select
                       disabled={hasError}
                       w={110}
