@@ -40,12 +40,6 @@ export function Dates({ meta, ...rest }: DatesProps) {
             <FontAwesomeIcon style={{ marginRight: 10 }} icon={faCalendar} />
             <b>Updated</b> {formatDateString(meta.lastUpdated)}
           </Text>
-          {/* {meta.metadataLastUpdated && (
-          <Text size='xs' opacity={0.75}>
-            <FontAwesomeIcon style={{ marginRight: 10 }} icon={faCalendarAlt} />
-            <b>Metadata</b> {formatDateString(meta.metadataLastUpdated)}
-          </Text>
-        )} */}
         </Group>
       </Paper>
     </Tooltip>
