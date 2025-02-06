@@ -7,10 +7,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +52,7 @@ public class MigrateService {
     this.restTemplate = restTemplate;
   }
 
-  private List<SpeciesList> getLegacyLists(String query) {
+  private List<SpeciesList> getLegacyLists(String query, Boolean skipExisting) {
     try {
       ResponseEntity<Map> response =
           restTemplate.exchange(
@@ -66,12 +65,29 @@ public class MigrateService {
         Map<String, Object> responseMap = response.getBody();
         List<Map<String, Object>> lists = (List<Map<String, Object>>) responseMap.get("lists");
 
+        if (skipExisting) {
+          lists = filterExistingLists(lists);
+        }
+
         return lists.stream().map(this::mapListToSpeciesList).filter(Objects::nonNull).toList();
       }
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
     }
     return Collections.emptyList();
+  }
+
+  private List<SpeciesList> getLegacyLists(String query) {
+    return getLegacyLists(query, true);
+  }
+
+  private List<Map<String, Object>> filterExistingLists(List<Map<String,Object>> lists) {
+    List<String> dataResources = lists.stream().map(list -> (String)list.get("dataResourceUid")).toList();
+    Set<String> existingDrUIDs = speciesListMongoRepository
+            .findAllByDataResourceUidIsIn(dataResources)
+            .stream().map(SpeciesList::getDataResourceUid).collect(Collectors.toSet());
+
+    return lists.stream().filter(list -> !existingDrUIDs.contains((String)list.get("dataResourceUid"))).toList();
   }
 
   private SpeciesList mapListToSpeciesList(Map<String, Object> list) {
@@ -163,18 +179,18 @@ public class MigrateService {
                     return null;
                   }
                 });
-            speciesListMongoRepository.save(speciesList);
+            SpeciesList savedList = speciesListMongoRepository.save(speciesList);
             IngestJob ingestJob =
                 uploadService.loadCSV(
-                    speciesList.getId(), new FileInputStream(localFile), false, true, true);
+                    savedList.getId(), new FileInputStream(localFile), false, false, true);
 
-            speciesList.setRowCount(ingestJob.getRowCount());
-            speciesList.setFieldList(ingestJob.getFieldList());
-            speciesList.setFacetList(ingestJob.getFacetList());
-            speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
-            speciesList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
+            savedList.setRowCount(ingestJob.getRowCount());
+            savedList.setFieldList(ingestJob.getFieldList());
+            savedList.setFacetList(ingestJob.getFacetList());
+            savedList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
+            savedList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
 
-            speciesListMongoRepository.save(speciesList);
+            speciesListMongoRepository.save(savedList);
 
             // releaseService.release(speciesList.getId());
           } catch (Exception e) {

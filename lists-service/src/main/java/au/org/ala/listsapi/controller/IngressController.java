@@ -18,6 +18,8 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.File;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
@@ -310,7 +312,7 @@ public class IngressController {
       return ResponseEntity.badRequest().body("User not found");
     }
 
-    IngestProgressItem ingestProgress = progressService.getMigrationProgress(speciesListID);
+    IngestProgressItem ingestProgress = progressService.getIngestProgress(speciesListID);
 
     return ResponseEntity.ok().body(Map.of("elastic", ingestProgress.getElasticProgress(), "mongo", ingestProgress.getMongoProgress()));
   }
@@ -500,7 +502,9 @@ public class IngressController {
     ResponseEntity<Object> errorResponse = checkAuthorized(principal);
     if (errorResponse != null) return errorResponse;
 
-    return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrateCustom(query.getQuery()));
+    String cleanQuery = URLDecoder.decode(query.getQuery(), StandardCharsets.UTF_8);
+
+    return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrateCustom(cleanQuery));
   }
 
   @NotNull

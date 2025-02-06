@@ -1,9 +1,10 @@
 import {
   Alert,
-  Badge,
+  Center,
   Container,
   Grid,
   Group,
+  Image,
   Stack,
   Text,
   Title,
@@ -14,21 +15,25 @@ import { notifications } from '@mantine/notifications';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowsRotate,
+  faBank,
   faCode,
   faIdCard,
   faRefresh,
   faRightLeft,
-  faShield,
   faTrash,
   faWarning,
 } from '@fortawesome/free-solid-svg-icons';
 import { Navigate, useNavigate } from 'react-router';
 
 // Local components
+// import { IngestProgress } from '#/components/IngestProgress';
 import { ActionCard } from './components/ActionCard';
 import { getErrorMessage } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
 import { useEffect } from 'react';
+
+// Very important warning image
+import warningImage from '#/static/warning.gif';
 
 export function Component() {
   useDocumentTitle('ALA Lists | Admin');
@@ -52,12 +57,12 @@ export function Component() {
         ),
         children: (
           <Stack>
-            <Text>
-              The functions on this page are{' '}
-              <u>only intended for developer use</u>.
-            </Text>
-            <Text fw='bold'>
-              Please do not trigger without due notice/confirmation.
+            <Center>
+              <Image height={200} src={warningImage} />
+            </Center>
+            <Text mt='md'>
+              Please only trigger migration/reindexing/rematching during low
+              usage.
             </Text>
             <Text fw='bold'>Please click confirm to acknowledge this.</Text>
           </Stack>
@@ -164,10 +169,10 @@ export function Component() {
       <Stack gap='xl'>
         <Grid>
           <Grid.Col span={12}>
-            <Group>
-              <Badge variant='light'>Step 1</Badge>
-              <Title order={4}>Migrate Data</Title>
-            </Group>
+            <Title order={4}>Migration</Title>
+          </Grid.Col>
+          <Grid.Col span={12}>
+            {/* <IngestProgress id={'123'} ingesting={false} result={null} /> */}
           </Grid.Col>
           <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
             <ActionCard
@@ -189,7 +194,7 @@ export function Component() {
                   Migrate <b>authoritative</b> lists from the legacy lists tool
                 </>
               }
-              icon={faShield}
+              icon={faBank}
               onClick={() =>
                 handleClick('migrate-authoritative', 'Authoritative Migration')
               }
@@ -211,10 +216,7 @@ export function Component() {
         </Grid>
         <Grid>
           <Grid.Col span={12}>
-            <Group>
-              <Badge variant='light'>Step 2</Badge>
-              <Title order={4}>Rematch</Title>
-            </Group>
+            <Title order={4}>Tools</Title>
           </Grid.Col>
           <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
             <ActionCard
@@ -223,14 +225,6 @@ export function Component() {
               icon={faIdCard}
               onClick={() => handleClick('rematch', 'Rematching')}
             />
-          </Grid.Col>
-        </Grid>
-        <Grid>
-          <Grid.Col span={12}>
-            <Group>
-              <Badge variant='light'>Step 3</Badge>
-              <Title order={4}>Reindex</Title>
-            </Group>
           </Grid.Col>
           <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
             <ActionCard
@@ -245,7 +239,7 @@ export function Component() {
           <Grid>
             <Grid.Col span={12}>
               <Stack>
-                <Title order={4}>Tools</Title>
+                <Title order={4}>Danger Zone</Title>
                 <Alert
                   icon={<FontAwesomeIcon icon={faWarning} color='white' />}
                   title='Danger Zone'

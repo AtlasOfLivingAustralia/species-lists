@@ -33,16 +33,18 @@ interface IngestProgressProps {
   id: string | null;
   ingesting: boolean;
   result: UploadResult | null;
+  disableNavigation?: boolean;
   onProgress?: (progress: IngestProgressType) => void;
-  reingest?: boolean;
 }
 
 export function IngestProgress({
   id,
   ingesting,
   result,
+  disableNavigation = false,
   onProgress,
 }: IngestProgressProps) {
+  const [update, setUpdate] = useState<boolean>(false);
   const [progress, setProgress] = useState<IngestProgressType>({
     elastic: 0,
     mongo: 0,
@@ -64,15 +66,15 @@ export function IngestProgress({
 
   // Start polling for ingest progress when the ingest flag is true
   useEffect(() => {
-    if (id && ingesting && result) {
-      const status = async () => {
+    async function getStatus() {
+      if (id && ingesting && result) {
         const progress = await ala.rest.lists.ingestProgress(id);
 
         setProgress(progress);
         if (onProgress) onProgress(progress);
 
         // If the list has been ingested successfully, navigate to it, otherwise, wait a bit and check again
-        if (result?.rowCount === progress.elastic) {
+        if (result?.rowCount === progress.elastic && !disableNavigation) {
           setTimeout(
             () =>
               navigate(`/list/${id}`, {
@@ -81,12 +83,15 @@ export function IngestProgress({
             500
           );
         } else {
-          setTimeout(status, (result?.rowCount || 0) > 10000 ? 3000 : 1500);
+          setTimeout(
+            () => setUpdate(!update),
+            (result?.rowCount || 0) > 10000 ? 3000 : 1500
+          );
         }
-      };
-      status();
+      }
     }
-  }, [id, ingesting, result]);
+    if (id && ingesting && result) getStatus();
+  }, [id, ingesting, result, update]);
 
   return (
     <Box

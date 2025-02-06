@@ -21,7 +21,7 @@ public class ProgressService {
         ingestProgressMongoRepository.deleteIngestProgressItemsByStartedBefore(HALF_DAY_OLD);
     }
 
-    public IngestProgressItem getMigrationProgress(String speciesListId) {
+    public IngestProgressItem getIngestProgress(String speciesListId) {
         Optional<IngestProgressItem> item = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListId(speciesListId);
         return item.orElseGet(() -> new IngestProgressItem(speciesListId, 0, 0));
     }
