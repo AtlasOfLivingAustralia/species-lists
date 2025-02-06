@@ -112,7 +112,8 @@ export default (token: string) => ({
     return await request<{ mongo: number; elastic: number }>(
       `${import.meta.env.VITE_API_LIST_INGEST}/${speciesListID}/progress`,
       'GET',
-      null
+      null,
+      token
     );
   },
   reingest: async (id: string, file: string): Promise<SpeciesList> => {

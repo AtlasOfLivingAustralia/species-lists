@@ -298,11 +298,18 @@ public class IngressController {
   }
 
 
+  @SecurityRequirement(name = "JWT")
   @Operation(
           summary = "Get the number of completed rows for an ingest job",
           tags = "Ingress")
   @GetMapping("/ingest/{speciesListID}/progress")
-  public ResponseEntity<Object> progress(@PathVariable("speciesListID") String speciesListID) {
+  public ResponseEntity<Object> progress(@PathVariable("speciesListID") String speciesListID, @AuthenticationPrincipal Principal principal) {
+    // check user logged in
+    AlaUserProfile alaUserProfile = (AlaUserProfile) principal;
+    if (alaUserProfile == null) {
+      return ResponseEntity.badRequest().body("User not found");
+    }
+
     IngestProgressItem ingestProgress = progressService.getProgress(speciesListID);
 
     return ResponseEntity.ok().body(Map.of("elastic", ingestProgress.getElasticProgress(), "mongo", ingestProgress.getMongoProgress()));
