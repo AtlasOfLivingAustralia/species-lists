@@ -60,6 +60,7 @@ import { FiltersDrawer } from '#/components/FiltersDrawer';
 import { ThSortable } from './components/Table/ThSortable';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { Dates } from './components/Dates';
 
 interface ListLoaderData {
   meta: SpeciesList;
@@ -345,8 +346,9 @@ export function Component() {
                     {meta.description}
                   </Text>
                 )}
-                <Group mt='sm'>
+                <Group mt='sm' gap='xs'>
                   <Flags meta={meta} />
+                  <Dates meta={meta} />
                 </Group>
               </Stack>
               {!isReingest && (

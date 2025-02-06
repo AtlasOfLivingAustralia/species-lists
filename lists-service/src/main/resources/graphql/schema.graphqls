@@ -68,6 +68,7 @@ type SpeciesList {
   isBIE: Boolean
   isSDS: Boolean
   dateCreated: String
+  metadataLastUpdated: String
   lastUpdated: String
   lastUploaded: String
   lastUpdatedBy: String
