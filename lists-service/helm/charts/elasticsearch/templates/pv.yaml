@@ -7,7 +7,7 @@ spec:
     storage: {{ .Values.pv.size }}
   volumeMode: Filesystem
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   csi:
     driver: efs.csi.aws.com
