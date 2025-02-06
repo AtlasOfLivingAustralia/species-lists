@@ -21,6 +21,7 @@ import { Outlet, useNavigation } from 'react-router';
 import { useAuth } from 'react-oidc-context';
 import handleSignout from '../../helpers/auth/handleSignout';
 import { Breadcrumbs } from './components/Breadcrumbs';
+import { ExternalBanner } from '#/components/ExternalBanner';
 
 function Dashboard() {
   const auth = useAuth();
@@ -42,6 +43,10 @@ function Dashboard() {
         stepInterval={20}
         aria-label='Navigation progress bar'
         portalProps={{ 'aria-hidden': true }}
+      />
+      <ExternalBanner
+        url={import.meta.env.VITE_ALA_MESSAGES}
+        services={['species-lists']}
       />
       <Header
         isAuthenticated={auth.isAuthenticated}
