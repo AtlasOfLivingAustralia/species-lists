@@ -356,41 +356,43 @@ export function Actions({
           <Paper
             miw={authorisedForList ? 285 : undefined}
             py={8}
-            px='sm'
+            px='xs'
             shadow='sm'
             radius='lg'
             withBorder
           >
-            <Stack gap={8}>
+            <Flex>
               <Text
                 fw='bold'
                 style={{
                   textAlign: 'center',
                   fontSize: '0.8rem',
+                  flexBasis: '100%',
                 }}
               >
-                <FolderIcon size={12} style={{ marginRight: 12 }} />
+                <FolderIcon size={14} style={{ marginRight: 10 }} />
                 {meta.rowCount} total
               </Text>
               {meta.distinctMatchCount && (
                 <>
-                  <Divider />
+                  <Divider orientation='vertical' mx='xs' />
                   <Text
                     fw='bold'
                     style={{
                       textAlign: 'center',
                       fontSize: '0.8rem',
+                      flexBasis: '100%',
                     }}
                   >
                     <FontAwesomeIcon
                       icon={faFingerprint}
-                      style={{ marginRight: 12 }}
+                      style={{ marginRight: 10 }}
                     />
-                    {meta.distinctMatchCount} distinct taxa
+                    {meta.distinctMatchCount} distinct
                   </Text>
                 </>
               )}
-            </Stack>
+            </Flex>
           </Paper>
           {authorisedForList && (
             <Paper

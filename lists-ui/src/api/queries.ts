@@ -55,6 +55,8 @@ export const QUERY_LISTS_GET = `query loadList(
     region
     licence
     listType
+    metadataLastUpdated
+    lastUpdated
     isAuthoritative
     isInvasive
     isPrivate

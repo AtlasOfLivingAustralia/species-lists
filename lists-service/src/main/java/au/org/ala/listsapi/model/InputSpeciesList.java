@@ -47,9 +47,10 @@ public class InputSpeciesList {
   private List<String> editors; // who can edit the list
   private List<String> approvedViewers; // who can view the list (when list is private)
 
-  private Classification classification; // who created the list
+  private Classification classification;
 
   @CreatedDate public Date dateCreated;
+  @LastModifiedDate public Date metadataLastUpdated;
+  public Date lastUpdated;
   public Date lastUploaded;
-  @LastModifiedDate public Date lastUpdated;
 }

@@ -106,6 +106,7 @@ public class UploadService {
     speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
     speciesList.setRowCount(ingestJob.getRowCount());
     speciesList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
+    speciesList.setLastUpdated(new Date());
 
     speciesList = speciesListMongoRepository.save(speciesList);
 
@@ -271,6 +272,7 @@ public class UploadService {
       speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
       speciesList.setRowCount(ingestJob.getRowCount());
       speciesList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
+      speciesList.setLastUpdated(new Date());
 
       speciesListMongoRepository.save(speciesList);
 

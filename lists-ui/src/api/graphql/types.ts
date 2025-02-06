@@ -23,6 +23,7 @@ interface SpeciesList {
   isSDS: boolean;
   isThreatened: boolean;
   lastUpdated: string;
+  metadataLastUpdated: string;
   licence: string;
   listType: string;
   region: string;
