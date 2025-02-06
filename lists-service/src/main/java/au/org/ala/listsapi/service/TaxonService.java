@@ -113,7 +113,7 @@ public class TaxonService {
   private void bulkIndexSafe(List<IndexQuery> updateList, SpeciesList list) {
     try {
       elasticsearchOperations.bulkIndex(updateList, SpeciesListIndex.class);
-      progressService.addElasticProgress(list.getId(), updateList.size());
+      progressService.addIngestElasticProgress(list.getId(), updateList.size());
     } catch (BulkFailureException e) {
       logger.error(e.getMessage(), e);
 
@@ -250,7 +250,7 @@ public class TaxonService {
           updateClassifications(items);
 
           speciesListItemMongoRepository.saveAll(items);
-          progressService.addMongoProgress(speciesList.getId(), items.size());
+          progressService.addIngestMongoProgress(speciesList.getId(), items.size());
 
           items.forEach(speciesListItem -> distinctTaxa.add(speciesListItem.getClassification().getTaxonConceptID()));
 

@@ -21,16 +21,16 @@ public class ProgressService {
         ingestProgressMongoRepository.deleteIngestProgressItemsByStartedBefore(HALF_DAY_OLD);
     }
 
-    public IngestProgressItem getProgress(String speciesListId) {
+    public IngestProgressItem getMigrationProgress(String speciesListId) {
         Optional<IngestProgressItem> item = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListId(speciesListId);
         return item.orElseGet(() -> new IngestProgressItem(speciesListId, 0, 0));
     }
 
-    public void clearProgress(String speciesListId) {
+    public void clearIngestProgress(String speciesListId) {
         ingestProgressMongoRepository.deleteIngestProgressItemBySpeciesListId(speciesListId);
     }
 
-    public void addMongoProgress(String speciesListId, long progress) {
+    public void addIngestMongoProgress(String speciesListId, long progress) {
         Optional<IngestProgressItem> item = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListId(speciesListId);
         if (item.isPresent()) {
             IngestProgressItem currentItem = item.get();
@@ -42,7 +42,7 @@ public class ProgressService {
         }
     }
 
-    public void addElasticProgress(String speciesListId, long progress) {
+    public void addIngestElasticProgress(String speciesListId, long progress) {
         Optional<IngestProgressItem> item = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListId(speciesListId);
         if (item.isPresent()) {
             IngestProgressItem currentItem = item.get();

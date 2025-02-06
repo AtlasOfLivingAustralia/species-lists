@@ -310,7 +310,7 @@ public class IngressController {
       return ResponseEntity.badRequest().body("User not found");
     }
 
-    IngestProgressItem ingestProgress = progressService.getProgress(speciesListID);
+    IngestProgressItem ingestProgress = progressService.getMigrationProgress(speciesListID);
 
     return ResponseEntity.ok().body(Map.of("elastic", ingestProgress.getElasticProgress(), "mongo", ingestProgress.getMongoProgress()));
   }
@@ -508,28 +508,6 @@ public class IngressController {
     if (asyncTask == null || asyncTask.isDone()) {
       asyncTask = CompletableFuture.runAsync(runnable);
       taskName = name;
-      return new ResponseEntity<>(HttpStatus.OK);
-    } else {
-      logger.warn("Already running...");
-      return new ResponseEntity<>(HttpStatus.CONFLICT);
-    }
-  }
-
-  @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Migrate data from local storage", tags = "Migrate")
-  @GetMapping("/migrate-local")
-  public ResponseEntity<Object> migrateLocal(@AuthenticationPrincipal Principal principal) {
-
-    ResponseEntity<Object> errorResponse = checkAuthorized(principal);
-    if (errorResponse != null) return errorResponse;
-
-    if (asyncTask == null || asyncTask.isDone()) {
-      asyncTask =
-          CompletableFuture.runAsync(
-              () -> {
-                migrateService.migrateLocal();
-              });
-      taskName = "MIGRATION";
       return new ResponseEntity<>(HttpStatus.OK);
     } else {
       logger.warn("Already running...");

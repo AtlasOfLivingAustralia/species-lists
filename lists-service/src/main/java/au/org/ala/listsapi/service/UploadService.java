@@ -178,7 +178,7 @@ public class UploadService {
       throws Exception {
     if (speciesListID != null) {
       // remove any existing progress
-      progressService.clearProgress(speciesListID);
+      progressService.clearIngestProgress(speciesListID);
 
       Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
       if (optionalSpeciesList.isPresent()) {

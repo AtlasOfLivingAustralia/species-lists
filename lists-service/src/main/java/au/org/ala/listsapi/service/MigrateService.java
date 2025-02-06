@@ -182,33 +182,4 @@ public class MigrateService {
           }
         });
   }
-
-  @GetMapping("/migrate-local")
-  public void migrateLocal() {
-    List<SpeciesList> speciesLists = getLegacyLists(AUTHORITATIVE_LISTS);
-    speciesLists.forEach(
-        speciesList -> {
-          try {
-            File localFile =
-                new File(
-                    tempDir + "/species-list-migrate-" + speciesList.getDataResourceUid() + ".csv");
-            speciesListMongoRepository.save(speciesList);
-            IngestJob ingestJob =
-                uploadService.loadCSV(
-                    speciesList.getId(), new FileInputStream(localFile), false, true, true);
-
-            speciesList.setRowCount(ingestJob.getRowCount());
-            speciesList.setFieldList(ingestJob.getFieldList());
-            speciesList.setFacetList(ingestJob.getFacetList());
-            speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
-            speciesList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
-
-            speciesListMongoRepository.save(speciesList);
-
-            // releaseService.release(speciesList.getId());
-          } catch (Exception e) {
-            logger.error(e.getMessage(), e);
-          }
-        });
-  }
 }
