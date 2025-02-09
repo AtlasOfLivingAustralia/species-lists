@@ -81,7 +81,7 @@ export function Component() {
 
   // Effect hook for ingestion errors
   useEffect(() => {
-    if (ingestError && (progress === null || progress.mongo === 0)) {
+    if (ingestError && (progress === null || progress.mongoTotal === 0)) {
       setIngesting(false);
 
       notifications.show({
@@ -225,7 +225,6 @@ export function Component() {
       <IngestProgress
         id={meta.id}
         ingesting={ingesting}
-        result={result}
         onProgress={(newProgress) => setProgress(newProgress)}
       />
     </Stack>

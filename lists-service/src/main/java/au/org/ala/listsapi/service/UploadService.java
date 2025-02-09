@@ -134,6 +134,7 @@ public class UploadService {
     }
 
     speciesList = speciesListMongoRepository.save(speciesList);
+
     final SpeciesList ingestList = speciesList;
 
     CompletableFuture.runAsync(
@@ -472,8 +473,11 @@ public class UploadService {
     }
 
     if (!dryRun && !skipIndexing) {
+      progressService.setupIngestProgress(speciesListID, rowCount);
+
       long distinctMatchCount = taxonService.taxonMatchDataset(speciesListID);
       ingestJob.setDistinctMatchCount(distinctMatchCount);
+
       taxonService.reindex(speciesListID);
     }
 

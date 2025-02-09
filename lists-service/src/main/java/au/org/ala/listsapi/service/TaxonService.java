@@ -115,7 +115,7 @@ public class TaxonService {
       elasticsearchOperations.bulkIndex(updateList, SpeciesListIndex.class);
       progressService.addIngestElasticProgress(list.getId(), updateList.size());
     } catch (BulkFailureException e) {
-      logger.error(e.getMessage(), e);
+      logger.error(e.getMessage());
 
       Set<String> failedIds = e.getFailedDocuments().keySet();
       logger.error(" -- FAILED IDS --");

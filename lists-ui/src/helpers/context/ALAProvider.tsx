@@ -6,13 +6,17 @@ import { SpeciesList } from '../../api';
 import ALAContext from './ALAContext';
 import rest from '#/api/rest';
 
+const JWT_ROLES = import.meta.env.VITE_AUTH_JWT_ROLES;
+const JWT_USERID = import.meta.env.VITE_AUTH_JWT_USERID;
+const JWT_ADMIN_ROLE = import.meta.env.VITE_AUTH_JWT_ADMIN_ROLE;
+
 export const ALAProvider = ({ children }: PropsWithChildren) => {
   const auth = useAuth();
 
   // Extract the user
-  const userid = (auth.user?.profile['cognito:username'] || '') as string;
-  const roles = (auth.user?.profile['cognito:groups'] || []) as string[];
-  const isAdmin = auth.isAuthenticated && roles.includes('admin');
+  const userid = (auth.user?.profile[JWT_USERID] || '') as string;
+  const roles = (auth.user?.profile[JWT_ROLES] || []) as string[];
+  const isAdmin = auth.isAuthenticated && roles.includes(JWT_ADMIN_ROLE);
 
   const isAuthorisedForList = (list: SpeciesList) =>
     auth.isAuthenticated && (isAdmin || list.owner === userid);

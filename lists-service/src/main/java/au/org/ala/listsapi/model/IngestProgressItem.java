@@ -19,15 +19,15 @@ import java.util.Date;
 @org.springframework.data.mongodb.core.mapping.Document(collection = "ingestionProgress")
 public class IngestProgressItem {
     @Id private String id;
-    private String speciesListId;
-    private long mongoProgress;
-    private long elasticProgress;
+    private String speciesListID;
+    private long rowCount;
+    private long mongoTotal = 0;
+    private long elasticTotal = 0;
 
     @CreatedDate public Date started;
 
-    public IngestProgressItem(String speciesListId, long mongoProgress, long elasticProgress) {
-        this.speciesListId = speciesListId;
-        this.mongoProgress = mongoProgress;
-        this.elasticProgress = elasticProgress;
+    public IngestProgressItem(String speciesListID, long rowCount) {
+        this.speciesListID = speciesListID;
+        this.rowCount = rowCount;
     }
 }

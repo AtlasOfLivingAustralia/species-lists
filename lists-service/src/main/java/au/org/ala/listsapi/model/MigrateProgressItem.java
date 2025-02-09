@@ -17,10 +17,14 @@ import java.util.Date;
 @Jacksonized
 @org.springframework.data.mongodb.core.mapping.Document(collection = "migrationProgress")
 public class MigrateProgressItem {
-    @Id private String id;
+    @Id private String id = "_";
     private SpeciesList currentSpeciesList;
     private long completed = 0;
     private long total;
 
     @CreatedDate public Date started;
+
+    public MigrateProgressItem(long total) {
+        this.total = total;
+    }
 }

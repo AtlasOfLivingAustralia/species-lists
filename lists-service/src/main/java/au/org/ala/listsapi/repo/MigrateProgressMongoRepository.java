@@ -8,5 +8,4 @@ import java.util.Date;
 import java.util.Optional;
 
 public interface MigrateProgressMongoRepository extends MongoRepository<MigrateProgressItem, String> {
-  Optional<MigrateProgressItem> findMigrateProgressItemById(String id);
 }

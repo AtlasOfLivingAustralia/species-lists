@@ -302,10 +302,10 @@ public class IngressController {
 
   @SecurityRequirement(name = "JWT")
   @Operation(
-          summary = "Get the number of completed rows for an ingest job",
+          summary = "Gets the progress of a current ingestion job",
           tags = "Ingress")
   @GetMapping("/ingest/{speciesListID}/progress")
-  public ResponseEntity<Object> progress(@PathVariable("speciesListID") String speciesListID, @AuthenticationPrincipal Principal principal) {
+  public ResponseEntity<Object> ingestProgress(@PathVariable("speciesListID") String speciesListID, @AuthenticationPrincipal Principal principal) {
     // check user logged in
     AlaUserProfile alaUserProfile = (AlaUserProfile) principal;
     if (alaUserProfile == null) {
@@ -314,7 +314,7 @@ public class IngressController {
 
     IngestProgressItem ingestProgress = progressService.getIngestProgress(speciesListID);
 
-    return ResponseEntity.ok().body(Map.of("elastic", ingestProgress.getElasticProgress(), "mongo", ingestProgress.getMongoProgress()));
+    return ResponseEntity.ok(ingestProgress);
   }
 
   @SecurityRequirement(name = "JWT")
@@ -462,21 +462,21 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Migration status", tags = "Migrate")
-  @GetMapping("/migrate/status")
-  public ResponseEntity<Object> migrateStatus() {
-    if (asyncTask != null && !asyncTask.isDone()) {
-      return new ResponseEntity<>(new AsyncTaskStatus(taskName, true), HttpStatus.OK);
-    } else {
-      return new ResponseEntity<>(new AsyncTaskStatus(taskName, false), HttpStatus.OK);
-    }
+  @Operation(summary = "Migration progress", tags = "Migrate")
+  @GetMapping("/admin/migrate/progress")
+  public ResponseEntity<Object> migrateProgress(@AuthenticationPrincipal Principal principal) {
+    ResponseEntity<Object> errorResponse = checkAuthorized(principal);
+    if (errorResponse != null) return errorResponse;
+
+    MigrateProgressItem migrateProgress = progressService.getMigrationProgress();
+
+    return ResponseEntity.ok(migrateProgress);
   }
 
   @SecurityRequirement(name = "JWT")
   @Operation(summary = "Migrate all species lists", tags = "Migrate")
   @GetMapping("/admin/migrate/all")
   public ResponseEntity<Object> migrateAll(@AuthenticationPrincipal Principal principal) {
-
     ResponseEntity<Object> errorResponse = checkAuthorized(principal);
     if (errorResponse != null) return errorResponse;
 

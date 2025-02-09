@@ -24,10 +24,17 @@ export function ActionCard({
   title,
   description,
   icon,
+  disabled,
   ...rest
 }: ActionCardProps) {
   return (
-    <UnstyledButton {...rest} className={classes.card} w='100%' h='100%'>
+    <UnstyledButton
+      {...rest}
+      disabled={disabled}
+      className={!disabled ? classes.card : classes.disabled}
+      w='100%'
+      h='100%'
+    >
       <Paper h='100%' p='lg' shadow='sm' radius='lg' withBorder>
         <Stack>
           <Group gap='lg' align='center'>

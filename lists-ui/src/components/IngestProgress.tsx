@@ -11,7 +11,7 @@ import {
   faSearch,
 } from '@fortawesome/free-solid-svg-icons';
 import { useALA } from '#/helpers/context/useALA';
-import { IngestProgress as IngestProgressType, UploadResult } from '#/api';
+import { IngestProgress as IngestProgressType } from '#/api';
 
 // Content / icon definitions for ingestion steps
 const steps = [
@@ -32,7 +32,6 @@ const steps = [
 interface IngestProgressProps {
   id: string | null;
   ingesting: boolean;
-  result: UploadResult | null;
   disableNavigation?: boolean;
   onProgress?: (progress: IngestProgressType) => void;
 }
@@ -40,14 +39,17 @@ interface IngestProgressProps {
 export function IngestProgress({
   id,
   ingesting,
-  result,
   disableNavigation = false,
   onProgress,
 }: IngestProgressProps) {
   const [update, setUpdate] = useState<boolean>(false);
   const [progress, setProgress] = useState<IngestProgressType>({
-    elastic: 0,
-    mongo: 0,
+    id: '',
+    speciesListId: '',
+    rowCount: 0,
+    elasticTotal: 0,
+    mongoTotal: 0,
+    started: 0,
   });
 
   const ala = useALA();
@@ -57,9 +59,9 @@ export function IngestProgress({
   // Calculate ingest step
   let step = 0;
   if (ingesting) {
-    if (progress.mongo > 0 && progress.mongo < (result?.rowCount || 0)) {
+    if (progress.mongoTotal > 0 && progress.mongoTotal < progress.rowCount) {
       step = 1;
-    } else if (progress.mongo === (result?.rowCount || 0)) {
+    } else if (progress.mongoTotal === progress.rowCount) {
       step = 2;
     }
   }
@@ -67,14 +69,18 @@ export function IngestProgress({
   // Start polling for ingest progress when the ingest flag is true
   useEffect(() => {
     async function getStatus() {
-      if (id && ingesting && result) {
+      if (id && ingesting) {
         const progress = await ala.rest.lists.ingestProgress(id);
 
         setProgress(progress);
         if (onProgress) onProgress(progress);
 
         // If the list has been ingested successfully, navigate to it, otherwise, wait a bit and check again
-        if (result?.rowCount === progress.elastic && !disableNavigation) {
+        if (
+          progress.elasticTotal === progress.rowCount &&
+          progress.rowCount > 0 &&
+          !disableNavigation
+        ) {
           setTimeout(
             () =>
               navigate(`/list/${id}`, {
@@ -85,13 +91,13 @@ export function IngestProgress({
         } else {
           setTimeout(
             () => setUpdate(!update),
-            (result?.rowCount || 0) > 10000 ? 3000 : 1500
+            progress.rowCount > 10000 ? 3000 : 1500
           );
         }
       }
     }
-    if (id && ingesting && result) getStatus();
-  }, [id, ingesting, result, update]);
+    if (id && ingesting) getStatus();
+  }, [id, ingesting, update]);
 
   return (
     <Box
@@ -131,8 +137,8 @@ export function IngestProgress({
           value={
             step === 0
               ? 100
-              : (progress.mongo / (result?.rowCount || 0)) * 80 +
-                (progress.elastic / (result?.rowCount || 0)) * 20
+              : (progress.mongoTotal / progress.rowCount) * 80 +
+                (progress.elasticTotal / progress.rowCount) * 20
           }
         />
       </Paper>

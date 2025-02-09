@@ -75,8 +75,20 @@ interface UploadResult {
 }
 
 interface IngestProgress {
-  elastic: number;
-  mongo: number;
+  id: string;
+  speciesListId: string;
+  rowCount: number;
+  elasticTotal: number;
+  mongoTotal: number;
+  started: number;
+}
+
+interface MigrateProgress {
+  id: string;
+  currentSpeciesList: SpeciesList | null;
+  completed: number;
+  total: number;
+  started: number;
 }
 
 interface Breadcrumb {
@@ -182,6 +194,7 @@ export type {
   Breadcrumb,
   UploadResult,
   IngestProgress,
+  MigrateProgress,
   InputSpeciesList,
   SpeciesList,
   SpeciesListSubmit,

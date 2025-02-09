@@ -69,7 +69,6 @@ function ExternalBanner({ url, services }: ExternalBannerProps) {
   // Effect hook for fetching messages
   useEffect(() => {
     async function fetchMessages() {
-      console.log('fetching');
       try {
         const req = await fetch(url || '');
 

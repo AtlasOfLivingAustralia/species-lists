@@ -1,10 +1,14 @@
 import {
   Alert,
+  Badge,
   Center,
   Container,
+  Flex,
   Grid,
   Group,
   Image,
+  Paper,
+  Progress,
   Stack,
   Text,
   Title,
@@ -23,27 +27,81 @@ import {
   faTrash,
   faWarning,
 } from '@fortawesome/free-solid-svg-icons';
-import { Navigate, useNavigate } from 'react-router';
+import { Navigate, useLoaderData, useNavigate } from 'react-router';
 
 // Local components
-// import { IngestProgress } from '#/components/IngestProgress';
 import { ActionCard } from './components/ActionCard';
+import { IngestProgress } from '#/components/IngestProgress';
 import { getErrorMessage } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 // Very important warning image
 import warningImage from '#/static/warning.gif';
+import { MigrateProgress } from '#/api';
 
 export function Component() {
   useDocumentTitle('ALA Lists | Admin');
 
+  // State hooks
+  const migrationLoader = useLoaderData();
+  const [migrationDisabled, setMigrationDisabled] = useState<boolean>(
+    Boolean(migrationLoader)
+  );
+  const [migrationProgress, setMigrationProgress] =
+    useState<MigrateProgress | null>(migrationLoader);
+
+  // Function hooks
   const ala = useALA();
   const navigate = useNavigate();
   const mounted = useMounted();
 
   if (!ala.isAdmin) return <Navigate to='/' />;
 
+  // Watch migration progress
+  useEffect(() => {
+    async function checkMigrationProgress() {
+      try {
+        setMigrationProgress(await ala.rest.admin!.migrateProgress());
+      } catch (error) {
+        console.log('admin error', error);
+        // Show error notification
+        notifications.show({
+          message: getErrorMessage(error),
+          position: 'bottom-left',
+          radius: 'md',
+        });
+      }
+    }
+
+    // If migration has started, continually check it
+    if (ala.rest.admin && migrationProgress) {
+      setTimeout(checkMigrationProgress, 10000);
+    }
+  }, [migrationProgress, ala]);
+
+  // Start polling for migration progress to appear
+  const handleMigrationStart = useCallback(async () => {
+    setMigrationDisabled(true);
+    const check = async () => {
+      try {
+        const progress = await ala.rest.admin!.migrateProgress();
+        if (progress) {
+          setMigrationProgress(progress);
+          setMigrationDisabled(false);
+        } else {
+          setTimeout(check, 2000);
+        }
+      } catch (error) {
+        console.log('Migration progress error', error);
+        setMigrationDisabled(false);
+      }
+    };
+
+    setTimeout(check, 3000);
+  }, [ala]);
+
+  // Show warning message on page navigation
   useEffect(() => {
     if (mounted) {
       modals.openConfirmModal({
@@ -83,86 +141,96 @@ export function Component() {
     }
   }, [mounted]);
 
-  const handleClick = (action: string, verb: string) => {
-    modals.openConfirmModal({
-      title: (
-        <Text fw='bold' size='lg'>
-          Confirm {verb}
-        </Text>
-      ),
-      children: (
-        <Stack>
-          <Text>Please confirm that you wish to perform this action</Text>
-          {action.startsWith('wipe') && (
-            <Text fw='bold' c='rust'>
-              This deletion will be irreversible!
-            </Text>
-          )}
-        </Stack>
-      ),
-      labels: { confirm: 'Confirm', cancel: 'Cancel' },
-      confirmProps: {
-        variant: 'filled',
-        radius: 'md',
-      },
-      cancelProps: { radius: 'md' },
-      onConfirm: async () => {
-        let cancelSucessNotification = false;
-        try {
-          switch (action) {
-            case 'reindex':
-              await ala.rest.admin?.reindex();
-              break;
-            case 'rematch':
-              await ala.rest.admin?.rematch();
-              break;
-            case 'migrate-all':
-              await ala.rest.admin?.migrate('all');
-              break;
-            case 'migrate-authoritative':
-              await ala.rest.admin?.migrate('authoritative');
-              break;
-            case 'migrate-custom':
-              const query = prompt(
-                'Please enter your custom query (i.e. /ws/speciesList?isAuthoritative=eq:true)'
-              );
-              if (query) {
-                await ala.rest.admin?.migrateCustom(decodeURIComponent(query));
-              } else {
-                cancelSucessNotification = true;
-              }
-              break;
-            case 'wipe-index':
-              await ala.rest.admin?.wipe('index');
-              break;
-            case 'wipe-docs':
-              await ala.rest.admin?.wipe('docs');
-              break;
-            case 'reboot':
-              await ala.rest.admin?.reboot();
-              break;
-          }
+  const handleClick = useCallback(
+    (action: string, verb: string) => {
+      if (migrationProgress !== null) return;
 
-          if (!cancelSucessNotification) {
-            // Show success notification
+      modals.openConfirmModal({
+        title: (
+          <Text fw='bold' size='lg'>
+            Confirm {verb}
+          </Text>
+        ),
+        children: (
+          <Stack>
+            <Text>Please confirm that you wish to perform this action</Text>
+            {action.startsWith('wipe') && (
+              <Text fw='bold' c='rust'>
+                This deletion will be irreversible!
+              </Text>
+            )}
+          </Stack>
+        ),
+        labels: { confirm: 'Confirm', cancel: 'Cancel' },
+        confirmProps: {
+          variant: 'filled',
+          radius: 'md',
+        },
+        cancelProps: { radius: 'md' },
+        onConfirm: async () => {
+          let cancelSucessNotification = false;
+          try {
+            switch (action) {
+              case 'reindex':
+                await ala.rest.admin?.reindex();
+                break;
+              case 'rematch':
+                await ala.rest.admin?.rematch();
+                break;
+              case 'migrate-all':
+                handleMigrationStart();
+                await ala.rest.admin?.migrate('all');
+                break;
+              case 'migrate-authoritative':
+                handleMigrationStart();
+                await ala.rest.admin?.migrate('authoritative');
+                break;
+              case 'migrate-custom':
+                const query = prompt(
+                  'Please enter your custom query (i.e. /ws/speciesList?isAuthoritative=eq:true)'
+                );
+                if (query) {
+                  handleMigrationStart();
+                  await ala.rest.admin?.migrateCustom(
+                    decodeURIComponent(query)
+                  );
+                } else {
+                  cancelSucessNotification = true;
+                }
+                break;
+              case 'wipe-index':
+                await ala.rest.admin?.wipe('index');
+                break;
+              case 'wipe-docs':
+                await ala.rest.admin?.wipe('docs');
+                break;
+              case 'reboot':
+                await ala.rest.admin?.reboot();
+                break;
+            }
+
+            if (!cancelSucessNotification) {
+              // Show success notification
+              notifications.show({
+                message: `${verb} started successfully`,
+                position: 'bottom-left',
+                radius: 'md',
+              });
+            }
+          } catch (error) {
+            console.log('admin error', error);
+            // Show error notification
             notifications.show({
-              message: `${verb} started successfully`,
+              message: getErrorMessage(error),
               position: 'bottom-left',
               radius: 'md',
             });
           }
-        } catch (error) {
-          console.log('admin error', error);
-          // Show error notification
-          notifications.show({
-            message: getErrorMessage(error),
-            position: 'bottom-left',
-            radius: 'md',
-          });
-        }
-      },
-    });
-  };
+        },
+      });
+    },
+    [ala, migrationProgress]
+  );
 
   return (
     <Container fluid>
@@ -172,10 +240,45 @@ export function Component() {
             <Title order={4}>Migration</Title>
           </Grid.Col>
           <Grid.Col span={12}>
-            {/* <IngestProgress id={'123'} ingesting={false} result={null} /> */}
+            <Stack>
+              {migrationProgress && (
+                <Paper p='md' radius='lg' withBorder>
+                  <Stack>
+                    <Flex justify='space-between'>
+                      <Text>
+                        {migrationProgress.currentSpeciesList ? (
+                          <>
+                            <b>Migrating: </b>{' '}
+                            {migrationProgress.currentSpeciesList.title}
+                          </>
+                        ) : (
+                          'Starting migration'
+                        )}
+                      </Text>
+                      <Badge miw={50}>
+                        {migrationProgress.completed}/{migrationProgress.total}
+                      </Badge>
+                    </Flex>
+                    <Progress
+                      value={
+                        (migrationProgress.completed /
+                          migrationProgress.total) *
+                        100
+                      }
+                    />
+                  </Stack>
+                </Paper>
+              )}
+              <IngestProgress
+                id={migrationProgress?.currentSpeciesList?.id || null}
+                ingesting={Boolean(migrationProgress)}
+                disableNavigation
+              />
+            </Stack>
           </Grid.Col>
           <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
             <ActionCard
+              disabled={Boolean(migrationProgress) || migrationDisabled}
               title='All'
               description={
                 <>
@@ -188,6 +291,7 @@ export function Component() {
           </Grid.Col>
           <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
             <ActionCard
+              disabled={Boolean(migrationProgress) || migrationDisabled}
               title='Authoritative'
               description={
                 <>
@@ -202,6 +306,7 @@ export function Component() {
           </Grid.Col>
           <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
             <ActionCard
+              disabled={Boolean(migrationProgress) || migrationDisabled}
               title='Custom'
               description={
                 <>
@@ -220,6 +325,7 @@ export function Component() {
           </Grid.Col>
           <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
             <ActionCard
+              disabled={Boolean(migrationProgress) || migrationDisabled}
               title='Rematch'
               description='Rematch the taxonomy for all lists'
               icon={faIdCard}
@@ -228,6 +334,7 @@ export function Component() {
           </Grid.Col>
           <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
             <ActionCard
+              disabled={Boolean(migrationProgress) || migrationDisabled}
               title='Reindex'
               description='Regenerate the elastic search index for all lists'
               icon={faArrowsRotate}
@@ -253,6 +360,7 @@ export function Component() {
             </Grid.Col>
             <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
               <ActionCard
+                disabled={Boolean(migrationProgress) || migrationDisabled}
                 title='Delete index'
                 description='Clear all data from the Elasticsearch index'
                 icon={faTrash}
@@ -261,6 +369,7 @@ export function Component() {
             </Grid.Col>
             <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
               <ActionCard
+                disabled={Boolean(migrationProgress) || migrationDisabled}
                 title='Delete docs'
                 description='Clear all data from the Elasticsearch index'
                 icon={faTrash}
@@ -269,6 +378,7 @@ export function Component() {
             </Grid.Col>
             <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
               <ActionCard
+                disabled={Boolean(migrationProgress) || migrationDisabled}
                 title='Reboot'
                 description='Reboot the lists application'
                 icon={faRefresh}

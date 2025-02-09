@@ -210,7 +210,7 @@ export function Component() {
             onSubmit={handleIngest}
           />
         )}
-        <IngestProgress id={ingestId} ingesting={ingesting} result={result} />
+        <IngestProgress id={ingestId} ingesting={ingesting} />
       </Stack>
     </Container>
   );
