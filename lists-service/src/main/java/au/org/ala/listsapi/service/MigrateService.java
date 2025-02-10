@@ -55,42 +55,61 @@ public class MigrateService {
     this.restTemplate = restTemplate;
   }
 
-  private List<SpeciesList> getLegacyLists(String query, Boolean skipExisting) {
+  private List<SpeciesList> fetchLegacyLists(String query, int offset) {
     try {
       ResponseEntity<Map> response =
-          restTemplate.exchange(
-              migrateUrl + query,
-              HttpMethod.GET,
-              null,
-              Map.class);
+              restTemplate.exchange(
+                      migrateUrl + query + "&offset=" + offset,
+                      HttpMethod.GET,
+                      null,
+                      Map.class);
+
+      logger.info("Fetching legacy lists: " + migrateUrl + query + "&offset=" + offset);
 
       if (response.getStatusCode() == HttpStatus.OK) {
         Map<String, Object> responseMap = response.getBody();
         List<Map<String, Object>> lists = (List<Map<String, Object>>) responseMap.get("lists");
 
-        if (skipExisting) {
-          lists = filterExistingLists(lists);
-        }
-
         return lists.stream().map(this::mapListToSpeciesList).filter(Objects::nonNull).toList();
+
       }
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
     }
+
     return Collections.emptyList();
+  }
+
+  private List<SpeciesList> getLegacyLists(String query, Boolean skipExisting) {
+    int offset = 0;
+    boolean done = false;
+    List<SpeciesList> lists = new ArrayList<>();
+
+    while (!done) {
+      List<SpeciesList> batch = fetchLegacyLists(query, offset);
+      lists.addAll(skipExisting ? filterExistingLists(batch) : batch);
+
+      if (batch.size() < 1000) {
+        done = true;
+      } else {
+        offset += 1000;
+      }
+    }
+
+    return lists;
   }
 
   private List<SpeciesList> getLegacyLists(String query) {
     return getLegacyLists(query, true);
   }
 
-  private List<Map<String, Object>> filterExistingLists(List<Map<String,Object>> lists) {
-    List<String> dataResources = lists.stream().map(list -> (String)list.get("dataResourceUid")).toList();
+  private List<SpeciesList> filterExistingLists(List<SpeciesList> lists) {
+    List<String> dataResources = lists.stream().map(SpeciesList::getDataResourceUid).toList();
     Set<String> existingDrUIDs = speciesListMongoRepository
             .findAllByDataResourceUidIsIn(dataResources)
             .stream().map(SpeciesList::getDataResourceUid).collect(Collectors.toSet());
 
-    return lists.stream().filter(list -> !existingDrUIDs.contains((String)list.get("dataResourceUid"))).toList();
+    return lists.stream().filter(list -> !existingDrUIDs.contains(list.getDataResourceUid())).toList();
   }
 
   private SpeciesList mapListToSpeciesList(Map<String, Object> list) {

@@ -62,7 +62,9 @@ export function Component() {
   useEffect(() => {
     async function checkMigrationProgress() {
       try {
-        setMigrationProgress(await ala.rest.admin!.migrateProgress());
+        const progress = await ala.rest.admin!.migrateProgress();
+        setMigrationProgress(progress);
+        if (progress == null) setMigrationDisabled(false);
       } catch (error) {
         console.log('admin error', error);
         // Show error notification
@@ -88,13 +90,11 @@ export function Component() {
         const progress = await ala.rest.admin!.migrateProgress();
         if (progress) {
           setMigrationProgress(progress);
-          setMigrationDisabled(false);
         } else {
           setTimeout(check, 2000);
         }
       } catch (error) {
-        console.log('Migration progress error', error);
-        setMigrationDisabled(false);
+        console.log('Migration start error', error);
       }
     };
 
@@ -304,20 +304,24 @@ export function Component() {
               }
             />
           </Grid.Col>
-          <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
-            <ActionCard
-              disabled={Boolean(migrationProgress) || migrationDisabled}
-              title='Custom'
-              description={
-                <>
-                  Migrate lists from the legacy lists tool{' '}
-                  <b>using a custom query</b>
-                </>
-              }
-              icon={faCode}
-              onClick={() => handleClick('migrate-custom', 'Custom Migration')}
-            />
-          </Grid.Col>
+          {['56599'].includes(ala.userid) && (
+            <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
+              <ActionCard
+                disabled={Boolean(migrationProgress) || migrationDisabled}
+                title='Custom'
+                description={
+                  <>
+                    Migrate lists from the legacy lists tool{' '}
+                    <b>using a custom query</b>
+                  </>
+                }
+                icon={faCode}
+                onClick={() =>
+                  handleClick('migrate-custom', 'Custom Migration')
+                }
+              />
+            </Grid.Col>
+          )}
         </Grid>
         <Grid>
           <Grid.Col span={12}>

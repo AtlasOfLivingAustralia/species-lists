@@ -8,6 +8,7 @@ import au.org.ala.ws.security.profile.AlaUserProfile;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.aggregations.Buckets;
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
+import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -494,9 +495,7 @@ public class IngressController {
     return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrateAuthoritative());
   }
 
-  @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Migrate species lists with custom query", tags = "Migrate")
-  @PostMapping(value ="/admin/migrate/custom", consumes = {MediaType.APPLICATION_JSON_VALUE})
+  @Hidden
   public ResponseEntity<Object> migrateCustom(@RequestBody CustomLegacyQuery query, @AuthenticationPrincipal Principal principal) {
 
     ResponseEntity<Object> errorResponse = checkAuthorized(principal);

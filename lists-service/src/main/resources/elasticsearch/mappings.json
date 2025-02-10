@@ -1,4 +1,5 @@
 {
+  "dynamic": false,
   "properties": {
     "all": {
       "type": "text",
