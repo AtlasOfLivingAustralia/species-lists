@@ -255,7 +255,7 @@ export function Component() {
                           'Starting migration'
                         )}
                       </Text>
-                      <Badge miw={50}>
+                      <Badge miw={80} ml='xs'>
                         {migrationProgress.completed}/{migrationProgress.total}
                       </Badge>
                     </Flex>

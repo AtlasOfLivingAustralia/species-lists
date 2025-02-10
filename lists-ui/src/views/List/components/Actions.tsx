@@ -371,7 +371,7 @@ export function Actions({
                 }}
               >
                 <FolderIcon size={14} style={{ marginRight: 10 }} />
-                {meta.rowCount} total
+                {new Intl.NumberFormat().format(meta.rowCount)} total
               </Text>
               {meta.distinctMatchCount && (
                 <>
@@ -388,7 +388,8 @@ export function Actions({
                       icon={faFingerprint}
                       style={{ marginRight: 10 }}
                     />
-                    {meta.distinctMatchCount} distinct
+                    {new Intl.NumberFormat().format(meta.distinctMatchCount)}{' '}
+                    distinct
                   </Text>
                 </>
               )}
