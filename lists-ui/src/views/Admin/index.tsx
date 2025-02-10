@@ -119,8 +119,7 @@ export function Component() {
               <Image height={200} src={warningImage} />
             </Center>
             <Text mt='md'>
-              Please only trigger migration/reindexing/rematching during low
-              usage.
+              Please only trigger any these functions during low usage.
             </Text>
             <Text fw='bold'>Please click confirm to acknowledge this.</Text>
           </Stack>
@@ -325,7 +324,19 @@ export function Component() {
         </Grid>
         <Grid>
           <Grid.Col span={12}>
-            <Title order={4}>Tools</Title>
+            <Stack>
+              <Title order={4}>Tools</Title>
+              <Text c='dimmed'>
+                Please use the following tools <b>with caution</b> and{' '}
+                <b>verify</b> that these really need to be run first.
+              </Text>
+              <Text c='dimmed'>
+                <u>
+                  These tasks do not have UI feedback and must be tracked by
+                  tailing logs.
+                </u>
+              </Text>
+            </Stack>
           </Grid.Col>
           <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
             <ActionCard
