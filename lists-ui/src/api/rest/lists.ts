@@ -1,6 +1,7 @@
 import { request } from './query';
 
 import {
+  IngestProgress,
   SpeciesList,
   SpeciesListConstraints,
   SpeciesListSubmit,
@@ -105,14 +106,13 @@ export default (token: string) => ({
       token
     );
   },
-  ingestProgress: async (
-    speciesListID: string
-  ): Promise<{ mongo: number; elastic: number }> => {
+  ingestProgress: async (speciesListID: string): Promise<IngestProgress> => {
     // Fire the request
-    return await request<{ mongo: number; elastic: number }>(
+    return await request<IngestProgress>(
       `${import.meta.env.VITE_API_LIST_INGEST}/${speciesListID}/progress`,
       'GET',
-      null
+      null,
+      token
     );
   },
   reingest: async (id: string, file: string): Promise<SpeciesList> => {

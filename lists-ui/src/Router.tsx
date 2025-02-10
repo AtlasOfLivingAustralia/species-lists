@@ -1,4 +1,5 @@
 import { createBrowserRouter, redirect } from 'react-router';
+import { jwtDecode } from 'jwt-decode';
 
 // Views
 import Dashboard from './views/Dashboard';
@@ -10,6 +11,12 @@ import PageError from './components/PageError';
 
 import { performGQLQuery, queries } from './api';
 import { getAccessToken } from './helpers/utils/getAccessToken';
+
+// Admin API
+import adminApi from './api/rest/admin';
+
+const JWT_ROLES = import.meta.env.VITE_AUTH_JWT_ROLES;
+const JWT_ADMIN_ROLE = import.meta.env.VITE_AUTH_JWT_ADMIN_ROLE;
 
 const router = createBrowserRouter([
   {
@@ -57,6 +64,26 @@ const router = createBrowserRouter([
       {
         path: '/admin',
         lazy: () => import('./views/Admin'),
+        hydrateFallbackElement: <PageLoader />,
+        loader: async () => {
+          // Fetch the access token
+          const token = getAccessToken();
+          if (!token) return redirect('/');
+
+          // Ensure the user is an admin
+          const parsed = jwtDecode(token) as any;
+          if (!parsed[JWT_ROLES] || !parsed[JWT_ROLES].includes(JWT_ADMIN_ROLE))
+            return redirect('/');
+
+          try {
+            const admin = adminApi(token);
+            return await admin.migrateProgress();
+          } catch (error) {
+            console.log(error);
+            return redirect('/');
+          }
+        },
+        errorElement: <PageError />,
       },
       {
         path: '*',

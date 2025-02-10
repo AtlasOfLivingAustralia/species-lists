@@ -8,6 +8,7 @@ import au.org.ala.ws.security.profile.AlaUserProfile;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.aggregations.Buckets;
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
+import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -18,6 +19,8 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.File;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
@@ -298,14 +301,21 @@ public class IngressController {
   }
 
 
+  @SecurityRequirement(name = "JWT")
   @Operation(
-          summary = "Get the number of completed rows for an ingest job",
+          summary = "Gets the progress of a current ingestion job",
           tags = "Ingress")
   @GetMapping("/ingest/{speciesListID}/progress")
-  public ResponseEntity<Object> progress(@PathVariable("speciesListID") String speciesListID) {
-    IngestProgressItem ingestProgress = progressService.getProgress(speciesListID);
+  public ResponseEntity<Object> ingestProgress(@PathVariable("speciesListID") String speciesListID, @AuthenticationPrincipal Principal principal) {
+    // check user logged in
+    AlaUserProfile alaUserProfile = (AlaUserProfile) principal;
+    if (alaUserProfile == null) {
+      return ResponseEntity.badRequest().body("User not found");
+    }
 
-    return ResponseEntity.ok().body(Map.of("elastic", ingestProgress.getElasticProgress(), "mongo", ingestProgress.getMongoProgress()));
+    IngestProgressItem ingestProgress = progressService.getIngestProgress(speciesListID);
+
+    return ResponseEntity.ok(ingestProgress);
   }
 
   @SecurityRequirement(name = "JWT")
@@ -453,21 +463,21 @@ public class IngressController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Migration status", tags = "Migrate")
-  @GetMapping("/migrate/status")
-  public ResponseEntity<Object> migrateStatus() {
-    if (asyncTask != null && !asyncTask.isDone()) {
-      return new ResponseEntity<>(new AsyncTaskStatus(taskName, true), HttpStatus.OK);
-    } else {
-      return new ResponseEntity<>(new AsyncTaskStatus(taskName, false), HttpStatus.OK);
-    }
+  @Operation(summary = "Migration progress", tags = "Migrate")
+  @GetMapping("/admin/migrate/progress")
+  public ResponseEntity<Object> migrateProgress(@AuthenticationPrincipal Principal principal) {
+    ResponseEntity<Object> errorResponse = checkAuthorized(principal);
+    if (errorResponse != null) return errorResponse;
+
+    MigrateProgressItem migrateProgress = progressService.getMigrationProgress();
+
+    return ResponseEntity.ok(migrateProgress);
   }
 
   @SecurityRequirement(name = "JWT")
   @Operation(summary = "Migrate all species lists", tags = "Migrate")
   @GetMapping("/admin/migrate/all")
   public ResponseEntity<Object> migrateAll(@AuthenticationPrincipal Principal principal) {
-
     ResponseEntity<Object> errorResponse = checkAuthorized(principal);
     if (errorResponse != null) return errorResponse;
 
@@ -485,15 +495,15 @@ public class IngressController {
     return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrateAuthoritative());
   }
 
-  @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Migrate species lists with custom query", tags = "Migrate")
-  @PostMapping(value ="/admin/migrate/custom", consumes = {MediaType.APPLICATION_JSON_VALUE})
+  @Hidden
   public ResponseEntity<Object> migrateCustom(@RequestBody CustomLegacyQuery query, @AuthenticationPrincipal Principal principal) {
 
     ResponseEntity<Object> errorResponse = checkAuthorized(principal);
     if (errorResponse != null) return errorResponse;
 
-    return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrateCustom(query.getQuery()));
+    String cleanQuery = URLDecoder.decode(query.getQuery(), StandardCharsets.UTF_8);
+
+    return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrateCustom(cleanQuery));
   }
 
   @NotNull
@@ -501,28 +511,6 @@ public class IngressController {
     if (asyncTask == null || asyncTask.isDone()) {
       asyncTask = CompletableFuture.runAsync(runnable);
       taskName = name;
-      return new ResponseEntity<>(HttpStatus.OK);
-    } else {
-      logger.warn("Already running...");
-      return new ResponseEntity<>(HttpStatus.CONFLICT);
-    }
-  }
-
-  @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Migrate data from local storage", tags = "Migrate")
-  @GetMapping("/migrate-local")
-  public ResponseEntity<Object> migrateLocal(@AuthenticationPrincipal Principal principal) {
-
-    ResponseEntity<Object> errorResponse = checkAuthorized(principal);
-    if (errorResponse != null) return errorResponse;
-
-    if (asyncTask == null || asyncTask.isDone()) {
-      asyncTask =
-          CompletableFuture.runAsync(
-              () -> {
-                migrateService.migrateLocal();
-              });
-      taskName = "MIGRATION";
       return new ResponseEntity<>(HttpStatus.OK);
     } else {
       logger.warn("Already running...");

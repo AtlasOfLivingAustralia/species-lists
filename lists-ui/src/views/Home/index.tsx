@@ -183,7 +183,7 @@ function Home() {
             <Text opacity={0.75} size='sm'>
               {(realPage - 1) * size + 1}-
               {Math.min((realPage - 1) * size + size, totalElements || 0)} of{' '}
-              <FormattedNumber value={totalElements || 0} /> total records
+              <FormattedNumber value={totalElements || 0} /> records
             </Text>
           </Group>
         </Grid.Col>

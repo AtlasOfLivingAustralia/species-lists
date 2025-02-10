@@ -2,7 +2,6 @@ package au.org.ala.listsapi.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.jackson.Jacksonized;
@@ -16,18 +15,16 @@ import java.util.Date;
 @SuperBuilder
 @AllArgsConstructor
 @Jacksonized
-@org.springframework.data.mongodb.core.mapping.Document(collection = "ingestionProgress")
-public class IngestProgressItem {
-    @Id private String id;
-    private String speciesListID;
-    private long rowCount;
-    private long mongoTotal = 0;
-    private long elasticTotal = 0;
+@org.springframework.data.mongodb.core.mapping.Document(collection = "migrationProgress")
+public class MigrateProgressItem {
+    @Id private String id = "_";
+    private SpeciesList currentSpeciesList;
+    private long completed = 0;
+    private long total;
 
     @CreatedDate public Date started;
 
-    public IngestProgressItem(String speciesListID, long rowCount) {
-        this.speciesListID = speciesListID;
-        this.rowCount = rowCount;
+    public MigrateProgressItem(long total) {
+        this.total = total;
     }
 }

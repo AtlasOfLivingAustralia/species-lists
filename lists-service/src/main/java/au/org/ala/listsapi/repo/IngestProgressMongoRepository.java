@@ -7,8 +7,8 @@ import java.util.Date;
 import java.util.Optional;
 
 public interface IngestProgressMongoRepository extends MongoRepository<IngestProgressItem, String> {
-  Optional<IngestProgressItem> findIngestProgressItemBySpeciesListId(String speciesListId);
+  Optional<IngestProgressItem> findIngestProgressItemBySpeciesListID(String speciesListID);
   void deleteIngestProgressItemsByStartedBefore(Date started);
 
-  void deleteIngestProgressItemBySpeciesListId(String speciesListId);
+  void deleteIngestProgressItemBySpeciesListID(String speciesListID);
 }

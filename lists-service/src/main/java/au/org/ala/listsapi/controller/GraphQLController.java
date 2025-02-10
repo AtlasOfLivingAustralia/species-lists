@@ -633,6 +633,7 @@ public class GraphQLController {
 
     // update distinct match count
     speciesList.setDistinctMatchCount(taxonService.getDistinctTaxaCount(speciesList.getId()));
+    speciesList.setRowCount(speciesList.getRowCount() + 1);
     speciesListMongoRepository.save(speciesList);
 
     return speciesListItem;
@@ -671,6 +672,7 @@ public class GraphQLController {
 
     // update distinct match count
     speciesList.setDistinctMatchCount(taxonService.getDistinctTaxaCount(speciesList.getId()));
+    speciesList.setRowCount(speciesList.getRowCount() - 1);
     speciesListMongoRepository.save(speciesList);
 
     return optionalSpeciesListItem.get();
@@ -923,12 +925,12 @@ public class GraphQLController {
       @Argument Integer size,
       @AuthenticationPrincipal Principal principal) {
 
-    Optional<SpeciesList> speciesListOptional = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
-    if (speciesListOptional.isEmpty()) {
+    Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+    if (optionalSpeciesList.isEmpty()) {
       return null;
     }
 
-    SpeciesList speciesList = speciesListOptional.get();
+    SpeciesList speciesList = optionalSpeciesList.get();
 
     // private list, check user is authorized
     if (speciesList.getIsPrivate()) {
@@ -940,7 +942,6 @@ public class GraphQLController {
 
     // get facet fields unique to this list
     if (facetFields == null || facetFields.isEmpty()) {
-
       facetFields = speciesList.getFacetList();
     }
 
@@ -966,9 +967,9 @@ public class GraphQLController {
 
     List<String> classificationFields = new ArrayList<>();
     classificationFields.add("classification.family");
-    //    classificationFields.add("classification.order");
-    //    classificationFields.add("classification.class");
-    //    classificationFields.add("classification.phylum");
+    classificationFields.add("classification.order");
+    classificationFields.add("classification.class");
+    classificationFields.add("classification.phylum");
     classificationFields.add("classification.kingdom");
     classificationFields.add("classification.speciesSubgroup");
 

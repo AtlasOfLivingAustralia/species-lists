@@ -134,6 +134,7 @@ public class UploadService {
     }
 
     speciesList = speciesListMongoRepository.save(speciesList);
+
     final SpeciesList ingestList = speciesList;
 
     CompletableFuture.runAsync(
@@ -178,7 +179,7 @@ public class UploadService {
       throws Exception {
     if (speciesListID != null) {
       // remove any existing progress
-      progressService.clearProgress(speciesListID);
+      progressService.clearIngestProgress(speciesListID);
 
       Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
       if (optionalSpeciesList.isPresent()) {
@@ -472,8 +473,11 @@ public class UploadService {
     }
 
     if (!dryRun && !skipIndexing) {
+      progressService.setupIngestProgress(speciesListID, rowCount);
+
       long distinctMatchCount = taxonService.taxonMatchDataset(speciesListID);
       ingestJob.setDistinctMatchCount(distinctMatchCount);
+
       taxonService.reindex(speciesListID);
     }
 

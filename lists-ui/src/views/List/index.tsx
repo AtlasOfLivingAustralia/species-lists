@@ -413,7 +413,7 @@ export function Component() {
                         (realPage - 1) * size + size,
                         totalElements || 0
                       )}{' '}
-                      of <FormattedNumber value={totalElements} /> total records
+                      of <FormattedNumber value={totalElements} /> records
                     </Text>
                   </Group>
                 </Group>
