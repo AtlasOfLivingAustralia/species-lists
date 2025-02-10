@@ -55,8 +55,8 @@ public class SpeciesList {
 
   private Classification classification; // who created the list
 
-  public Date lastUploaded;
-
   @CreatedDate public Date dateCreated;
-  @LastModifiedDate public Date lastUpdated;
+  @LastModifiedDate public Date metadataLastUpdated;
+  public Date lastUpdated;
+  public Date lastUploaded;
 }

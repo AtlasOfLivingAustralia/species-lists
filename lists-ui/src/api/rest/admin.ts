@@ -1,3 +1,4 @@
+import { MigrateProgress } from '../graphql/types';
 import { request } from './query';
 
 export default (token: string) => ({
@@ -21,6 +22,16 @@ export default (token: string) => ({
       token,
       { 'Content-Type': 'application/json' }
     );
+  },
+  migrateProgress: async (): Promise<MigrateProgress | null> => {
+    const progress = await request(
+      import.meta.env.VITE_API_ADMIN_MIGRATE_PROGRESS,
+      'GET',
+      null,
+      token
+    );
+
+    return progress !== '' ? (progress as MigrateProgress) : null;
   },
   wipe: async (target: 'index' | 'docs'): Promise<void> =>
     request(

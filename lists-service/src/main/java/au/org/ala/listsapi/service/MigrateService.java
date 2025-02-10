@@ -7,13 +7,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -27,9 +27,11 @@ public class MigrateService {
 
   private static final Logger logger = LoggerFactory.getLogger(MigrateService.class);
 
-  SpeciesListMongoRepository speciesListMongoRepository;
-  UploadService uploadService;
-  ReleaseService releaseService;
+  @Autowired SpeciesListMongoRepository speciesListMongoRepository;
+  @Autowired UploadService uploadService;
+  @Autowired ReleaseService releaseService;
+  @Autowired ProgressService progressService;
+
   String tempDir;
   String migrateUrl;
 
@@ -53,25 +55,61 @@ public class MigrateService {
     this.restTemplate = restTemplate;
   }
 
-  private List<SpeciesList> getLegacyLists(String query) {
+  private List<SpeciesList> fetchLegacyLists(String query, int offset) {
     try {
       ResponseEntity<Map> response =
-          restTemplate.exchange(
-              migrateUrl + query,
-              HttpMethod.GET,
-              null,
-              Map.class);
+              restTemplate.exchange(
+                      migrateUrl + query + "&offset=" + offset,
+                      HttpMethod.GET,
+                      null,
+                      Map.class);
+
+      logger.info("Fetching legacy lists: " + migrateUrl + query + "&offset=" + offset);
 
       if (response.getStatusCode() == HttpStatus.OK) {
         Map<String, Object> responseMap = response.getBody();
         List<Map<String, Object>> lists = (List<Map<String, Object>>) responseMap.get("lists");
 
         return lists.stream().map(this::mapListToSpeciesList).filter(Objects::nonNull).toList();
+
       }
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
     }
+
     return Collections.emptyList();
+  }
+
+  private List<SpeciesList> getLegacyLists(String query, Boolean skipExisting) {
+    int offset = 0;
+    boolean done = false;
+    List<SpeciesList> lists = new ArrayList<>();
+
+    while (!done) {
+      List<SpeciesList> batch = fetchLegacyLists(query, offset);
+      lists.addAll(skipExisting ? filterExistingLists(batch) : batch);
+
+      if (batch.size() < 1000) {
+        done = true;
+      } else {
+        offset += 1000;
+      }
+    }
+
+    return lists;
+  }
+
+  private List<SpeciesList> getLegacyLists(String query) {
+    return getLegacyLists(query, true);
+  }
+
+  private List<SpeciesList> filterExistingLists(List<SpeciesList> lists) {
+    List<String> dataResources = lists.stream().map(SpeciesList::getDataResourceUid).toList();
+    Set<String> existingDrUIDs = speciesListMongoRepository
+            .findAllByDataResourceUidIsIn(dataResources)
+            .stream().map(SpeciesList::getDataResourceUid).collect(Collectors.toSet());
+
+    return lists.stream().filter(list -> !existingDrUIDs.contains(list.getDataResourceUid())).toList();
   }
 
   private SpeciesList mapListToSpeciesList(Map<String, Object> list) {
@@ -141,6 +179,8 @@ public class MigrateService {
   }
 
   public void migration(List<SpeciesList> speciesLists) {
+    progressService.setupMigrationProgress(speciesLists.size());
+
     speciesLists.forEach(
         speciesList -> {
           logger.info("Downloading file for " + speciesList.getDataResourceUid());
@@ -163,52 +203,28 @@ public class MigrateService {
                     return null;
                   }
                 });
-            speciesListMongoRepository.save(speciesList);
+            SpeciesList savedList = speciesListMongoRepository.save(speciesList);
+
+            progressService.updateMigrationProgress(savedList);
+
             IngestJob ingestJob =
                 uploadService.loadCSV(
-                    speciesList.getId(), new FileInputStream(localFile), false, true, true);
+                    savedList.getId(), new FileInputStream(localFile), false, false, true);
 
-            speciesList.setRowCount(ingestJob.getRowCount());
-            speciesList.setFieldList(ingestJob.getFieldList());
-            speciesList.setFacetList(ingestJob.getFacetList());
-            speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
-            speciesList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
+            savedList.setRowCount(ingestJob.getRowCount());
+            savedList.setFieldList(ingestJob.getFieldList());
+            savedList.setFacetList(ingestJob.getFacetList());
+            savedList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
+            savedList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
 
-            speciesListMongoRepository.save(speciesList);
+            speciesListMongoRepository.save(savedList);
 
             // releaseService.release(speciesList.getId());
           } catch (Exception e) {
             logger.error(e.getMessage(), e);
           }
         });
-  }
 
-  @GetMapping("/migrate-local")
-  public void migrateLocal() {
-    List<SpeciesList> speciesLists = getLegacyLists(AUTHORITATIVE_LISTS);
-    speciesLists.forEach(
-        speciesList -> {
-          try {
-            File localFile =
-                new File(
-                    tempDir + "/species-list-migrate-" + speciesList.getDataResourceUid() + ".csv");
-            speciesListMongoRepository.save(speciesList);
-            IngestJob ingestJob =
-                uploadService.loadCSV(
-                    speciesList.getId(), new FileInputStream(localFile), false, true, true);
-
-            speciesList.setRowCount(ingestJob.getRowCount());
-            speciesList.setFieldList(ingestJob.getFieldList());
-            speciesList.setFacetList(ingestJob.getFacetList());
-            speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
-            speciesList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
-
-            speciesListMongoRepository.save(speciesList);
-
-            // releaseService.release(speciesList.getId());
-          } catch (Exception e) {
-            logger.error(e.getMessage(), e);
-          }
-        });
+    progressService.clearMigrationProgress();
   }
 }

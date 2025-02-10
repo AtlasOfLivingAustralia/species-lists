@@ -24,6 +24,7 @@ import {
   faRefresh,
   faSearch,
   faTableColumns,
+  faUpload,
 } from '@fortawesome/free-solid-svg-icons';
 
 // Mantine Notifications & Modals manager
@@ -102,6 +103,11 @@ export function Actions({
         radius: 'md',
       });
     }
+  }, [ala, meta]);
+
+  // Download callback handler
+  const handleReingest = useCallback(() => {
+    navigate(`/list/${meta.id}/reingest`);
   }, [ala, meta]);
 
   // Delete callback handler
@@ -301,6 +307,14 @@ export function Actions({
                 Rematch list
               </Menu.Item>
               <Menu.Item
+                onClick={handleReingest}
+                disabled={updating || rematching || deleting}
+                color='red'
+                leftSection={<FontAwesomeIcon icon={faUpload} />}
+              >
+                Reingest list
+              </Menu.Item>
+              <Menu.Item
                 onClick={handleDelete}
                 disabled={updating || rematching || deleting}
                 color='red'
@@ -342,41 +356,44 @@ export function Actions({
           <Paper
             miw={authorisedForList ? 285 : undefined}
             py={8}
-            px='sm'
+            px='xs'
             shadow='sm'
             radius='lg'
             withBorder
           >
-            <Stack gap={8}>
+            <Flex>
               <Text
                 fw='bold'
                 style={{
                   textAlign: 'center',
                   fontSize: '0.8rem',
+                  flexBasis: '100%',
                 }}
               >
-                <FolderIcon size={12} style={{ marginRight: 12 }} />
-                {meta.rowCount} total
+                <FolderIcon size={14} style={{ marginRight: 10 }} />
+                {new Intl.NumberFormat().format(meta.rowCount)} total
               </Text>
               {meta.distinctMatchCount && (
                 <>
-                  <Divider />
+                  <Divider orientation='vertical' mx='xs' />
                   <Text
                     fw='bold'
                     style={{
                       textAlign: 'center',
                       fontSize: '0.8rem',
+                      flexBasis: '100%',
                     }}
                   >
                     <FontAwesomeIcon
                       icon={faFingerprint}
-                      style={{ marginRight: 12 }}
+                      style={{ marginRight: 10 }}
                     />
-                    {meta.distinctMatchCount} distinct taxa
+                    {new Intl.NumberFormat().format(meta.distinctMatchCount)}{' '}
+                    distinct
                   </Text>
                 </>
               )}
-            </Stack>
+            </Flex>
           </Paper>
           {authorisedForList && (
             <Paper
@@ -396,18 +413,6 @@ export function Actions({
                   checked={editing}
                   onChange={(ev) => onEditingChange(ev.currentTarget.checked)}
                 />
-
-                <Tooltip label='Download list' position='left'>
-                  <ActionIcon
-                    onClick={handleDownload}
-                    variant='light'
-                    size='md'
-                    radius='lg'
-                    aria-label='Download list'
-                  >
-                    <FontAwesomeIcon size='sm' icon={faDownload} />
-                  </ActionIcon>
-                </Tooltip>
                 <Tooltip label='Edit metadata' position='left'>
                   <ActionIcon
                     onClick={handleMetaEdit}
@@ -434,6 +439,17 @@ export function Actions({
                     <FontAwesomeIcon size='sm' icon={faRefresh} />
                   </ActionIcon>
                 </Tooltip>
+                <Tooltip label='Reingest list' position='left'>
+                  <ActionIcon
+                    onClick={handleReingest}
+                    variant='light'
+                    size='md'
+                    radius='lg'
+                    aria-label='Reingest list'
+                  >
+                    <FontAwesomeIcon size='sm' icon={faUpload} />
+                  </ActionIcon>
+                </Tooltip>
                 <Tooltip label='Delete list' position='left'>
                   <ActionIcon
                     onClick={handleDelete}
@@ -451,26 +467,22 @@ export function Actions({
             </Paper>
           )}
           <Paper withBorder radius='lg'>
-            {!authorisedForList && (
-              <>
-                <Button
-                  onClick={handleDownload}
-                  fullWidth
-                  size='sm'
-                  variant='subtle'
-                  leftSection={<FontAwesomeIcon icon={faDownload} />}
-                  style={{
-                    fontSize: '0.8rem',
-                    borderRadius: 0,
-                    borderTopLeftRadius: 14,
-                    borderTopRightRadius: 14,
-                  }}
-                >
-                  Download list
-                </Button>
-                <Divider />
-              </>
-            )}
+            <Button
+              onClick={handleDownload}
+              fullWidth
+              size='sm'
+              variant='subtle'
+              leftSection={<FontAwesomeIcon icon={faDownload} />}
+              style={{
+                fontSize: '0.8rem',
+                borderRadius: 0,
+                borderTopLeftRadius: 14,
+                borderTopRightRadius: 14,
+              }}
+            >
+              Download list
+            </Button>
+            <Divider />
             <Button
               onClick={() =>
                 handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH)
@@ -486,8 +498,8 @@ export function Actions({
               style={{
                 fontSize: '0.8rem',
                 borderRadius: 0,
-                borderTopLeftRadius: authorisedForList ? 14 : 0,
-                borderTopRightRadius: authorisedForList ? 14 : 0,
+                borderTopLeftRadius: 0,
+                borderTopRightRadius: 0,
               }}
             >
               View occurrence records

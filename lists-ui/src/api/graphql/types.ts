@@ -23,6 +23,7 @@ interface SpeciesList {
   isSDS: boolean;
   isThreatened: boolean;
   lastUpdated: string;
+  metadataLastUpdated: string;
   licence: string;
   listType: string;
   region: string;
@@ -71,6 +72,23 @@ interface UploadResult {
   originalFieldNames: string[];
   rowCount: number;
   validationErrors: string[];
+}
+
+interface IngestProgress {
+  id: string;
+  speciesListId: string;
+  rowCount: number;
+  elasticTotal: number;
+  mongoTotal: number;
+  started: number;
+}
+
+interface MigrateProgress {
+  id: string;
+  currentSpeciesList: SpeciesList | null;
+  completed: number;
+  total: number;
+  started: number;
 }
 
 interface Breadcrumb {
@@ -175,6 +193,8 @@ interface SpeciesListConstraints {
 export type {
   Breadcrumb,
   UploadResult,
+  IngestProgress,
+  MigrateProgress,
   InputSpeciesList,
   SpeciesList,
   SpeciesListSubmit,
