@@ -40,8 +40,12 @@ ingress:
   tls: []
 
 resources:
+  requests:
+    memory: 4096Mi
+    cpu: 1
   limits:
     memory: 4096Mi
+    cpu: 2
 
 livenessProbe:
   httpGet:

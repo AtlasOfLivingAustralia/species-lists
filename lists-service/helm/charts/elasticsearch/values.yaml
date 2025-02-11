@@ -1,6 +1,9 @@
 replicaCount: 1
 image: "docker.elastic.co/elasticsearch/elasticsearch:7.17.3"
 resources:
+  requests:
+    cpu: "1"
+    memory: "2Gi"
   limits:
     cpu: "1"
     memory: "2Gi"
