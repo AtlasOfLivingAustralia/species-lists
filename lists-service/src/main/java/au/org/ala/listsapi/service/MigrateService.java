@@ -221,6 +221,7 @@ public class MigrateService {
 
             // releaseService.release(speciesList.getId());
           } catch (Exception e) {
+            logger.error("Download for " + speciesList.getDataResourceUid() + "failed");
             logger.error(e.getMessage(), e);
           }
         });
