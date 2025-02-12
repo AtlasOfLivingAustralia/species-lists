@@ -102,7 +102,7 @@ export function IngestProgress({
   return (
     <Box
       mt='sm'
-      h={ingesting ? 92 : 0}
+      h={ingesting ? 110 : 0}
       style={{
         overflow: 'hidden',
         transition: 'height 250ms ease-in-out',
@@ -131,16 +131,32 @@ export function IngestProgress({
             ))}
           </Stepper>
         )}
-        <Progress
-          mt='md'
-          animated={step !== 1}
-          value={
-            step === 0
-              ? 100
-              : (progress.mongoTotal / progress.rowCount) * 80 +
-                (progress.elasticTotal / progress.rowCount) * 20
-          }
-        />
+        <Progress.Root h={20} mt='md' radius='md'>
+          <Progress.Section
+            animated={step !== 1}
+            value={
+              step === 0
+                ? 100
+                : (progress.mongoTotal / progress.rowCount) * 80 +
+                  (progress.elasticTotal / progress.rowCount) * 20
+            }
+          >
+            {step === 1 && (
+              <Text
+                c='white'
+                size='xs'
+                style={{ overflow: 'hidden', textWrap: 'nowrap' }}
+              >
+                <b>
+                  {Math.floor((progress.mongoTotal / progress.rowCount) * 100)}%
+                </b>
+                <span style={{ marginLeft: 8, opacity: 0.7 }}>
+                  {progress.mongoTotal}/{progress.rowCount}
+                </span>
+              </Text>
+            )}
+          </Progress.Section>
+        </Progress.Root>
       </Paper>
     </Box>
   );
