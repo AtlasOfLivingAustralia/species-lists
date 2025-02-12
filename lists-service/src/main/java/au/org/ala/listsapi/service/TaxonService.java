@@ -111,11 +111,13 @@ public class TaxonService {
   }
 
   private void bulkIndexSafe(List<IndexQuery> updateList, SpeciesList list) {
+    long startTime = System.nanoTime();
+    logger.info("[" + list.getId() + "] Indexing " + updateList.size() + " items");
     try {
       elasticsearchOperations.bulkIndex(updateList, SpeciesListIndex.class);
       progressService.addIngestElasticProgress(list.getId(), updateList.size());
     } catch (BulkFailureException e) {
-      logger.error(e.getMessage());
+      logger.error("[" + list.getId() + "] Indexing error: " + e.getMessage());
 
       Set<String> failedIds = e.getFailedDocuments().keySet();
       logger.error(" -- FAILED IDS --");
@@ -132,6 +134,8 @@ public class TaxonService {
         logger.error("Failed to write update list to console", ex);
       }
     }
+    long elapsed = System.nanoTime() - startTime;
+    logger.info("[" + list.getId() + "] Indexing " + updateList.size() + " items took " + (elapsed / 1000000) + "ms");
   }
 
   public void reindex(String speciesListID) {
@@ -250,10 +254,18 @@ public class TaxonService {
         try {
           List<SpeciesListItem> items = speciesListItems.getContent();
 
-          // logger.info("[" + speciesListID + "] Updating classifications (page " + (page + 1) + ")");
+          long startTime = System.nanoTime();
+          logger.info("[" + speciesListID + "] Updating classifications (page " + (page + 1) + ")");
           updateClassifications(items);
+          long elapsed = System.nanoTime() - startTime;
+          logger.info("[" + speciesListID + "] Updating classifications took " + (elapsed / 1000000) + "ms");
 
+          startTime = System.nanoTime();
+          logger.info("[" + speciesListID + "] Saving items in mongo repository (page " + (page + 1) + ")");
           speciesListItemMongoRepository.saveAll(items);
+          elapsed = System.nanoTime() - startTime;
+          logger.info("[" + speciesListID + "] Saving items took " + (elapsed / 1000000) + "ms");
+
           progressService.addIngestMongoProgress(speciesList.getId(), items.size());
 
           items.forEach(speciesListItem -> distinctTaxa.add(speciesListItem.getClassification().getTaxonConceptID()));
