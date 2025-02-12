@@ -245,8 +245,12 @@ public class TaxonService {
 
     boolean finished = false;
     while (!finished) {
+      long startTime = System.nanoTime();
+      logger.info("[" + speciesListID + "] Fetching species list items (page " + (page + 1) + ")");
       Page<SpeciesListItem> speciesListItems =
           speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesList.getId(), paging);
+      long elapsed = System.nanoTime() - startTime;
+      logger.info("[" + speciesListID + "] Fetching species list items took " + (elapsed / 1000000) + "ms");
 
       if (speciesListItems.isEmpty()) {
         finished = true;
@@ -254,10 +258,10 @@ public class TaxonService {
         try {
           List<SpeciesListItem> items = speciesListItems.getContent();
 
-          long startTime = System.nanoTime();
+          startTime = System.nanoTime();
           logger.info("[" + speciesListID + "] Updating classifications (page " + (page + 1) + ")");
           updateClassifications(items);
-          long elapsed = System.nanoTime() - startTime;
+          elapsed = System.nanoTime() - startTime;
           logger.info("[" + speciesListID + "] Updating classifications took " + (elapsed / 1000000) + "ms");
 
           startTime = System.nanoTime();
@@ -266,7 +270,11 @@ public class TaxonService {
           elapsed = System.nanoTime() - startTime;
           logger.info("[" + speciesListID + "] Saving items took " + (elapsed / 1000000) + "ms");
 
+          startTime = System.nanoTime();
+          logger.info("[" + speciesListID + "] Adding ingest progress (page " + (page + 1) + ")");
           progressService.addIngestMongoProgress(speciesList.getId(), items.size());
+          elapsed = System.nanoTime() - startTime;
+          logger.info("[" + speciesListID + "] Adding ingest progress took " + (elapsed / 1000000) + "ms");
 
           items.forEach(speciesListItem -> distinctTaxa.add(speciesListItem.getClassification().getTaxonConceptID()));
 
