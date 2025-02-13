@@ -7,14 +7,16 @@ Parameters:
     Description: The username for the DocumentDB admin user
     Type: String
     Default: admin
-  pInstanceClass:
-    Description: The DocumentDB instance class
-    Type: String
-    Default: db.t4g.medium
   pBackupRetentionPeriod:
     Description: The number of days to retain backups for
     Type: Number
     Default: 7
+  pBuild:
+    Description: The CodeBuild build number
+    Type: Number
+  pCleanBranch:
+    Description: The clean branch
+    Type: String
   pDbEngineVersion:
     Description: The DocumentDB engine version
     Type: String
@@ -23,22 +25,12 @@ Parameters:
     Description: The DocumentDB parameter group family
     Type: String
     Default: docdb4.0
-  pInstanceCount:
-    Description: The number of instances in the DocumentDB cluster
-    Type: Number
-    Default: 1
-  pVpcStackName:
-    Description: The name of the Bedrock VPC stack
+  pEnablePerformanceInsights:
+    Description: Set performance insights on or off for the DocumentDB instance
     Type: String
-  pBuild:
-    Description: The CodeBuild build number
-    Type: Number
-  pCleanBranch:
-    Description: The clean branch
-    Type: String
-  pProductName:
-    Description: The product name
-    Type: String
+    AllowedValues:
+      - "true"
+      - "false"
   pEnvironment:
     Description: Environment for this DocumentDB instance
     AllowedValues:
@@ -46,6 +38,20 @@ Parameters:
       - testing
       - staging
       - production
+    Type: String
+  pInstanceClass:
+    Description: The DocumentDB instance class
+    Type: String
+    Default: db.t4g.medium
+  pInstanceCount:
+    Description: The number of instances in the DocumentDB cluster
+    Type: Number
+    Default: 1
+  pProductName:
+    Description: The product name
+    Type: String
+  pVpcStackName:
+    Description: The name of the Bedrock VPC stack
     Type: String
 
 Conditions:
@@ -167,6 +173,7 @@ Resources:
       DBClusterIdentifier: !Ref DocDbCluster
       DBInstanceClass: !Ref pInstanceClass
       AutoMinorVersionUpgrade: true
+      EnablePerformanceInsights: !Ref pEnablePerformanceInsights
       Tags:
         - Key: Name
           Value: !Sub
