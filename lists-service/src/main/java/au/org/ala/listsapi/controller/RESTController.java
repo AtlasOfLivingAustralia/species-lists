@@ -6,6 +6,7 @@ import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.BiocacheService;
+import au.org.ala.ws.security.profile.AlaUserProfile;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -80,6 +81,11 @@ public class RESTController {
     try {
       if (!authUtils.isAuthorized(principal)) {
         speciesList.setIsPrivate("false");
+      } else {
+        AlaUserProfile profile = authUtils.getUserProfile(principal);
+        if (!authUtils.hasAdminRole(profile) && (speciesList.getIsPrivate() == null || speciesList.getIsPrivate().equals("true"))) {
+          speciesList.setOwner(profile.getUserId());
+        }
       }
 
       Pageable paging = PageRequest.of(page - 1, pageSize);
@@ -93,6 +99,7 @@ public class RESTController {
               .withIgnoreCase()
               .withIgnoreNullValues()
               .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
+
       // Create an Example from the exampleProduct with the matcher
       Example<SpeciesList> example = Example.of(speciesList.convertTo(), matcher);
       Page<SpeciesList> results = speciesListMongoRepository.findAll(example, paging);
