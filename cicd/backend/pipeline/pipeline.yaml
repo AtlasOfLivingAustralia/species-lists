@@ -357,7 +357,7 @@ Resources:
                         Fn::Sub: "${pRegolithStackName}-FileSystemId"
                     ListSecretName:
                       Fn::ImportValue:
-                        Fn::Sub: "${pDatabaseStackName}-DocDbPasswordSecretName"
+                        Fn::Sub: "${pBaseStackName}-DocDbPasswordSecretName"
                     MongoDbHost:
                       Fn::ImportValue:
                         Fn::Sub: "${pDatabaseStackName}-DocDbClusterEndpoint"
