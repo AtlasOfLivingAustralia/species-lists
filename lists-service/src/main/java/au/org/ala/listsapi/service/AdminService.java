@@ -35,7 +35,7 @@ public class AdminService {
   @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
   @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
-  @Autowired protected  MongoTemplate mongoTemplate;
+  @Autowired protected MongoTemplate mongoTemplate;
 
   public void deleteDocs() {
     speciesListMongoRepository.deleteAll();
