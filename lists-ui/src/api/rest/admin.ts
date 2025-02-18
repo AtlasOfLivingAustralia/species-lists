@@ -41,5 +41,7 @@ export default (token: string) => ({
       token
     ),
   reboot: async (): Promise<void> =>
-    request(`${import.meta.env.VITE_API_ADMIN_REBOOT}`, 'POST', null, token),
+    request(import.meta.env.VITE_API_ADMIN_REBOOT, 'POST', null, token),
+  indexes: async (): Promise<unknown> =>
+    request(import.meta.env.VITE_API_ADMIN_INDEXES, 'GET', null, token),
 });

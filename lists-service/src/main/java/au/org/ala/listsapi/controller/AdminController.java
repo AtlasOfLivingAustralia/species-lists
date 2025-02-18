@@ -97,4 +97,16 @@ public class AdminController {
 
     return new ResponseEntity<>(HttpStatus.OK);
   }
+
+  @Hidden
+  @SecurityRequirement(name = "JWT")
+  @Operation(summary = "Get indexes for MongoDB collections", tags = "Admin")
+  @GetMapping("/admin/indexes")
+  public ResponseEntity<Object> indexes(@AuthenticationPrincipal Principal principal) {
+
+    ResponseEntity<Object> errorResponse = checkAuthorized(principal);
+    if (errorResponse != null) return errorResponse;
+
+    return new ResponseEntity<>(adminService.getMongoIndexes(), HttpStatus.OK);
+  }
 }

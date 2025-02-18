@@ -24,6 +24,7 @@ import {
   faIdCard,
   faRefresh,
   faRightLeft,
+  faSearch,
   faTrash,
   faWarning,
 } from '@fortawesome/free-solid-svg-icons';
@@ -31,6 +32,7 @@ import { Navigate, useLoaderData, useNavigate } from 'react-router';
 
 // Local components
 import { ActionCard } from './components/ActionCard';
+import { FetchInfo } from './components/FetchInfo';
 import { IngestProgress } from '#/components/IngestProgress';
 import { getErrorMessage } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
@@ -354,6 +356,24 @@ export function Component() {
               description='Regenerate the elastic search index for all lists'
               icon={faArrowsRotate}
               onClick={() => handleClick('reindex', 'Reindexing')}
+            />
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
+            <ActionCard
+              title='Mongo indexes'
+              description='View indexed fields for MongoDB collections'
+              icon={faSearch}
+              onClick={() => {
+                modals.open({
+                  size: 'xl',
+                  title: (
+                    <Text fw='bold' size='lg'>
+                      Mongo Indexes
+                    </Text>
+                  ),
+                  children: <FetchInfo fetcher={ala.rest.admin?.indexes} />,
+                });
+              }}
             />
           </Grid.Col>
         </Grid>
