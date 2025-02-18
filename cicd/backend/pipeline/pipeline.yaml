@@ -352,12 +352,12 @@ Resources:
                     EksClusterName:
                       Fn::ImportValue:
                         Fn::Sub: "${pRegolithStackName}-ClusterName"
-                    FileSystemId:
+                    FileSystemId: 
                       Fn::ImportValue:
                         Fn::Sub: "${pRegolithStackName}-FileSystemId"
                     ListSecretName:
                       Fn::ImportValue:
-                        Fn::Sub: "${pDatabaseStackName}-DocDbPasswordSecretName"
+                        Fn::Sub: "${pBaseStackName}-DocDbPasswordSecretName"
                     MongoDbHost:
                       Fn::ImportValue:
                         Fn::Sub: "${pDatabaseStackName}-DocDbClusterEndpoint"

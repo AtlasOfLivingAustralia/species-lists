@@ -64,24 +64,6 @@ Conditions:
 
 Resources:
 
-  DocDbPasswordSecret:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      # if the name of the secret is changed make sure you change the value for the DocDbCluster.Properties.MasterUserPassword 
-      # and the  stack Output.DocDbPasswordSecretName
-      Name: !Sub 
-              - lists-${ResourceName}
-              - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
-      Description: !Sub Lists app ${pEnvironment} secrets
-      GenerateSecretString: 
-        GenerateStringKey: db-password
-        PasswordLength: 12
-        ExcludeCharacters: "/@\" \\+%:"
-        SecretStringTemplate: |
-                {
-                   "db-password" : ""
-                }
-
   DocDbSubnetGrp:
     Type: AWS::DocDB::DBSubnetGroup
     Properties:
@@ -137,7 +119,6 @@ Resources:
   DocDbCluster:
     Type: AWS::DocDB::DBCluster
     DependsOn: 
-      - DocDbPasswordSecret
       - DocDbClusterParameterGroup
       - DocDbSecurityGrp
       - DocDbSubnetGrp
@@ -187,20 +168,6 @@ Outputs:
     Value: !Ref pAdminUser
     Export: 
       Name: !Sub ${AWS::StackName}-DocDbUsername
-
-  DocDbPasswordSecret:
-    Description: The Secrets name for lists 
-    Value: !Ref DocDbPasswordSecret
-    Export:
-      Name: !Sub ${AWS::StackName}-DocDbPasswordSecret
-
-  DocDbPasswordSecretName:
-    Description: The Secrets name for lists 
-    Value: !Sub
-      - lists-${ResourceName}
-      - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
-    Export:
-      Name: !Sub ${AWS::StackName}-DocDbPasswordSecretName
 
   DocDbClusterEndpoint:
     Description: The endpoint of the DocumentDB cluster

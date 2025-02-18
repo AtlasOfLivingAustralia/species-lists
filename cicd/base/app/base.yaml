@@ -35,6 +35,14 @@ Conditions:
 
 Resources:
 
+  DocDbPasswordSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub 
+              - lists-${ResourceName}
+              - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      Description: !Sub Lists app ${pEnvironment} secrets
+
   ListsAppClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
@@ -145,6 +153,15 @@ Outputs:
     Value: !Ref ListsAppClient
     Export:
       Name: !Sub ${AWS::StackName}-AppClientId
+
+  DocDbPasswordSecretName:
+    Description: The Secrets name for lists 
+    Value: !Sub
+      - lists-${ResourceName}
+      - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+    Export:
+      Name: !Sub ${AWS::StackName}-DocDbPasswordSecretName
+
   ServiceAppClientId:
     Description: The app client for the lists backend service
     Value: !Ref ListsServiceAppClient
