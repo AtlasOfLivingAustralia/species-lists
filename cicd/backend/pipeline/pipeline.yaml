@@ -355,9 +355,9 @@ Resources:
                     FileSystemId: 
                       Fn::ImportValue:
                         Fn::Sub: "${pRegolithStackName}-FileSystemId"
-                    ListSecretName: ala-lists-base-development
-                    #  Fn::ImportValue:
-                    #    Fn::Sub: "${pBaseStackName}-DocDbPasswordSecretName"
+                    ListSecretName:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pBaseStackName}-DocDbPasswordSecretName"
                     MongoDbHost:
                       Fn::ImportValue:
                         Fn::Sub: "${pDatabaseStackName}-DocDbClusterEndpoint"
