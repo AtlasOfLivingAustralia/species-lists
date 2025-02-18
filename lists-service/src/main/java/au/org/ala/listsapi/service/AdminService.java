@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.index.IndexInfo;
 import org.springframework.stereotype.Service;
 
 import java.net.ProxySelector;
@@ -20,6 +22,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -32,6 +35,7 @@ public class AdminService {
   @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
   @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
+  @Autowired protected  MongoTemplate mongoTemplate;
 
   public void deleteDocs() {
     speciesListMongoRepository.deleteAll();
@@ -40,5 +44,14 @@ public class AdminService {
 
   public void deleteIndex() {
     elasticsearchOperations.indexOps(IndexCoordinates.of("species-lists")).delete();
+  }
+
+  public HashMap<String, List<IndexInfo>> getMongoIndexes() {
+    HashMap<String, List<IndexInfo>> indexData = new HashMap<>();
+    mongoTemplate
+            .getCollectionNames()
+            .forEach(collection -> indexData.put(collection, mongoTemplate.indexOps(collection).getIndexInfo()));
+
+    return indexData;
   }
 }
