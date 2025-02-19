@@ -49,6 +49,7 @@ import { TrItem } from './components/Table/TrItem';
 import { ThCreate } from './components/Table/ThCreate';
 
 // Local component imports
+import { IngestProgress } from '#/components/IngestProgress';
 import { Message } from '#/components/Message';
 import { getErrorMessage } from '#/helpers';
 import { SpeciesItemDrawer } from './components/SpeciesItemDrawer';
@@ -94,6 +95,8 @@ export function Component() {
   const [error, setError] = useState<Error | null>(null);
   const [refresh, setRefresh] = useState<boolean>(false);
   const [editing, setEditing] = useState<boolean>(false);
+  const [rematching, setRematching] = useState<boolean>(false);
+  const [lastProgress, setLastProgress] = useState<boolean>(false);
 
   // Sorting state
   const [sort, setSort] = useState<string>('scientificName');
@@ -355,12 +358,37 @@ export function Component() {
                 <Actions
                   meta={meta}
                   editing={editing}
+                  rematching={rematching}
                   onEditingChange={setEditing}
                   onMetaEdited={handleListMetaUpdated}
-                  onRematched={() => setRefresh(!refresh)}
+                  onRematch={() => {
+                    setRematching(true);
+                  }}
                 />
               )}
             </Flex>
+          </Grid.Col>
+          <Grid.Col span={12}>
+            <IngestProgress
+              ingesting={rematching}
+              id={params.id || ''}
+              disableNavigation={true}
+              onProgress={(progress) => {
+                if (
+                  progress.elasticTotal === progress.rowCount &&
+                  lastProgress
+                ) {
+                  setRematching(false);
+                  setRefresh(!refresh);
+                  setLastProgress(false);
+                } else if (
+                  progress.elasticTotal < progress.rowCount &&
+                  !lastProgress
+                ) {
+                  setLastProgress(true);
+                }
+              }}
+            />
           </Grid.Col>
           {isReingest ? (
             <Grid.Col span={12}>

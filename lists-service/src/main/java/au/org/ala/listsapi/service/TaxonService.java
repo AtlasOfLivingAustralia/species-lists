@@ -20,6 +20,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -138,155 +139,139 @@ public class TaxonService {
     logger.info("[" + list.getId() + "] Indexing " + updateList.size() + " items took " + (elapsed / 1000000) + "ms");
   }
 
+  private SpeciesListIndex listItemToIndex(SpeciesList speciesList, SpeciesListItem speciesListItem) {
+    Map<String, String> map = new HashMap<>();
+    speciesListItem.getProperties().forEach(kv -> map.put(kv.getKey(), kv.getValue()));
+
+    // write the data to Elasticsearch
+    return new SpeciesListIndex(
+                    speciesListItem.getId().toString(),
+                    speciesList.getDataResourceUid(),
+                    speciesList.getTitle(),
+                    speciesList.getListType(),
+                    speciesListItem.getSpeciesListID(),
+                    speciesListItem.getScientificName(),
+                    speciesListItem.getVernacularName(),
+                    speciesListItem.getTaxonID(),
+                    speciesListItem.getKingdom(),
+                    speciesListItem.getPhylum(),
+                    speciesListItem.getClasss(),
+                    speciesListItem.getOrder(),
+                    speciesListItem.getFamily(),
+                    speciesListItem.getGenus(),
+                    map,
+                    speciesListItem.getClassification(),
+                    speciesList.getIsPrivate() != null ? speciesList.getIsPrivate() : false,
+                    speciesList.getIsAuthoritative() != null
+                            ? speciesList.getIsAuthoritative()
+                            : false,
+                    speciesList.getIsBIE() != null ? speciesList.getIsBIE() : false,
+                    speciesList.getIsSDS() != null ? speciesList.getIsSDS() : false,
+                    speciesList.getRegion() != null || speciesList.getWkt() != null,
+                    speciesList.getOwner(),
+                    speciesList.getEditors(),
+                    speciesList.getTags() != null ? speciesList.getTags() : new ArrayList<>(),
+                    speciesList.getDateCreated() != null ? speciesList.getDateCreated().toString(): null,
+                    speciesList.getLastUpdated() != null ? speciesList.getLastUpdated().toString(): null,
+                    speciesList.getLastUpdatedBy()
+            );
+  }
+
   public void reindex(String speciesListID) {
-    logger.info("[" + speciesListID + "] Starting indexing");
+    logger.info("[{}] Starting indexing", speciesListID);
     Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
 
     if (optionalSpeciesList.isEmpty()) return;
 
     SpeciesList speciesList = optionalSpeciesList.get();
 
-    int size = 1000;
-    int page = 0;
-    boolean done = false;
+    int batchSize = 1000;
+    ObjectId lastId = null;
 
-    while (!done) {
-      Pageable paging = PageRequest.of(page, size);
-      List<IndexQuery> updateList = new ArrayList<>();
-      Page<SpeciesListItem> speciesListItems =
-          speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesList.getId(), paging);
+    boolean finished = false;
+    while (!finished) {
+      List<SpeciesListItem> speciesListItems =
+          speciesListItemMongoRepository.findNextBatch(speciesList.getId(), lastId, PageRequest.of(0, batchSize));
 
-      if (!speciesListItems.getContent().isEmpty()) {
-        speciesListItems.forEach(
-            speciesListItem -> {
-              try {
+      if (!speciesListItems.isEmpty()) {
+        List<IndexQuery> updateList = new ArrayList<>();
+        for (SpeciesListItem item : speciesListItems) {
+          updateList.add(
+                  new IndexQueryBuilder()
+                  .withId(item.getId().toString())
+                  .withObject(listItemToIndex(speciesList, item))
+                  .build()
+          );
+        }
 
-                Map<String, String> map = new HashMap<>();
-                speciesListItem.getProperties().forEach(kv -> map.put(kv.getKey(), kv.getValue()));
-
-                // write the data to Elasticsearch
-                SpeciesListIndex speciesListIndex =
-                    new SpeciesListIndex(
-                        speciesListItem.getId(),
-                        speciesList.getDataResourceUid(),
-                        speciesList.getTitle(),
-                        speciesList.getListType(),
-                        speciesListItem.getSpeciesListID(),
-                        speciesListItem.getScientificName(),
-                        speciesListItem.getVernacularName(),
-                        speciesListItem.getTaxonID(),
-                        speciesListItem.getKingdom(),
-                        speciesListItem.getPhylum(),
-                        speciesListItem.getClasss(),
-                        speciesListItem.getOrder(),
-                        speciesListItem.getFamily(),
-                        speciesListItem.getGenus(),
-                        map,
-                        speciesListItem.getClassification(),
-                        speciesList.getIsPrivate() != null ? speciesList.getIsPrivate() : false,
-                        speciesList.getIsAuthoritative() != null
-                            ? speciesList.getIsAuthoritative()
-                            : false,
-                        speciesList.getIsBIE() != null ? speciesList.getIsBIE() : false,
-                        speciesList.getIsSDS() != null ? speciesList.getIsSDS() : false,
-                        speciesList.getRegion() != null || speciesList.getWkt() != null,
-                        speciesList.getOwner(),
-                        speciesList.getEditors(),
-                        speciesList.getTags() != null ? speciesList.getTags() : new ArrayList<>(),
-                        speciesList.getDateCreated() != null ? speciesList.getDateCreated().toString(): null,
-                        speciesList.getLastUpdated() != null ? speciesList.getLastUpdated().toString(): null,
-                        speciesList.getLastUpdatedBy()
-                );
-
-                IndexQuery indexQuery =
-                    new IndexQueryBuilder()
-                        .withId(speciesListItem.getId())
-                        .withObject(speciesListIndex)
-                        .build();
-
-                updateList.add(indexQuery);
-
-                if (updateList.size() == 1000) {
-                  bulkIndexSafe(updateList, speciesList);
-                  updateList.clear();
-                }
-              } catch (Exception e) {
-                logger.error(e.getMessage(), e);
-              }
-            });
-        if (!updateList.isEmpty()) {
+        try {
           bulkIndexSafe(updateList, speciesList);
           updateList.clear();
+        } catch (Exception e) {
+          logger.error(e.getMessage(), e);
         }
+
+        lastId = speciesListItems.get(speciesListItems.size() - 1).getId();
       } else {
-        done = true;
+        finished = true;
       }
-      page++;
     }
 
 
-    logger.info("[" + speciesListID + "] Indexing complete.");
+    logger.info("[{}] Indexing complete.", speciesListID);
   }
 
   public long taxonMatchDataset(String speciesListID) {
     Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
 
     if (optionalSpeciesList.isEmpty()) return 0;
-
     SpeciesList speciesList = optionalSpeciesList.get();
 
-    logger.info("[" + speciesListID + "] Started taxon matching");
+    // Reset ingestion progress
+    progressService.resetIngestProgress(speciesList.getId());
 
-    int size = 100;
-    int page = 0;
-    Pageable paging = PageRequest.of(page, size);
+    logger.info("[{}] Started taxon matching", speciesListID);
+
+    int batchSize = 250;
+    ObjectId lastId = null;
 
     Set<String> distinctTaxa = new HashSet<>();
 
     boolean finished = false;
     while (!finished) {
       long startTime = System.nanoTime();
-      logger.info("[" + speciesListID + "] Fetching species list items (page " + (page + 1) + ")");
-      Page<SpeciesListItem> speciesListItems =
-          speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesList.getId(), paging);
-      long elapsed = System.nanoTime() - startTime;
-      logger.info("[" + speciesListID + "] Fetching species list items took " + (elapsed / 1000000) + "ms");
 
-      if (speciesListItems.isEmpty()) {
+      List<SpeciesListItem> items = speciesListItemMongoRepository.findNextBatch(speciesList.getId(), lastId, PageRequest.of(0, batchSize));
+      long elapsed = System.nanoTime() - startTime;
+
+      logger.info("[{}] Fetched {} items in {} ms",
+              speciesListID, items.size(), elapsed / 1_000_000);
+
+      if (items.isEmpty()) {
         finished = true;
       } else {
         try {
-          List<SpeciesListItem> items = speciesListItems.getContent();
 
-          startTime = System.nanoTime();
-          logger.info("[" + speciesListID + "] Updating classifications (page " + (page + 1) + ")");
+          // Update classifications
           updateClassifications(items);
-          elapsed = System.nanoTime() - startTime;
-          logger.info("[" + speciesListID + "] Updating classifications took " + (elapsed / 1000000) + "ms");
 
-          startTime = System.nanoTime();
-          logger.info("[" + speciesListID + "] Saving items in mongo repository (page " + (page + 1) + ")");
+          // Save updated items
           speciesListItemMongoRepository.saveAll(items);
-          elapsed = System.nanoTime() - startTime;
-          logger.info("[" + speciesListID + "] Saving items took " + (elapsed / 1000000) + "ms");
 
-          startTime = System.nanoTime();
-          logger.info("[" + speciesListID + "] Adding ingest progress (page " + (page + 1) + ")");
+          // Record progress
           progressService.addIngestMongoProgress(speciesList.getId(), items.size());
-          elapsed = System.nanoTime() - startTime;
-          logger.info("[" + speciesListID + "] Adding ingest progress took " + (elapsed / 1000000) + "ms");
 
           items.forEach(speciesListItem -> distinctTaxa.add(speciesListItem.getClassification().getTaxonConceptID()));
+          lastId = items.get(items.size() - 1).getId();
 
-          page += 1;
-          paging = PageRequest.of(page, size);
         } catch (Exception e) {
           logger.error(e.getMessage(), e);
         }
       }
     }
 
-    logger.info("[" + speciesListID + "] taxon matching complete.");
+    logger.info("[{}] Taxon matching complete. Found {} distinct taxa.",
+            speciesListID, distinctTaxa.size());
 
     return distinctTaxa.size();
   }
