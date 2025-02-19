@@ -26,6 +26,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
+import org.bson.types.ObjectId;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,9 +91,6 @@ public class GraphQLController {
           "isSDS",
           "tags");
 
-  public static final List<String> CORE_BOOL_FIELDS =
-      List.of("isBIE", "isAuthoritative", "hasRegion", "isSDS");
-
   public static final String SPECIES_LIST_ID = "speciesListID";
   @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
   @Autowired protected ReleaseMongoRepository releaseMongoRepository;
@@ -108,7 +106,7 @@ public class GraphQLController {
   public static SpeciesListItem convert(SpeciesListIndex index) {
 
     SpeciesListItem speciesListItem = new SpeciesListItem();
-    speciesListItem.setId(index.getId());
+    speciesListItem.setId(new ObjectId(index.getId()));
     speciesListItem.setSpeciesListID(index.getSpeciesListID());
     speciesListItem.setScientificName(index.getScientificName());
     speciesListItem.setVernacularName(index.getVernacularName());
@@ -137,11 +135,6 @@ public class GraphQLController {
     } catch (Exception e) {
       return null;
     }
-  }
-
-
-  public static List<SpeciesListItem> convertList(List<SpeciesListIndex> list) {
-    return list.stream().map(index -> convert(index)).collect(Collectors.toList());
   }
 
   /**
@@ -175,7 +168,7 @@ public class GraphQLController {
         q ->
             q.bool(
                 bq -> {
-                  buildQuery(cleanRawQuery(searchQuery), null, userId, isPrivate, filters, bq);
+                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), null, userId, isPrivate, filters, bq);
                   return bq;
                 }));
 
@@ -220,57 +213,6 @@ public class GraphQLController {
     speciesLists.forEach(result::add);
 
     return new PageImpl<>(result, PageRequest.of(page, size), noOfLists);
-  }
-
-  private static BoolQuery.Builder buildQuery(
-      String searchQuery,
-      String speciesListID,
-      String userId,
-      Boolean isPrivate,
-      List<Filter> filters,
-      BoolQuery.Builder bq) {
-
-    bq.should(
-        m ->
-            m.matchPhrase(
-                mq -> mq.field("all").query(searchQuery.toLowerCase() + "*").boost(2.0f)));
-
-    if (StringUtils.trimToNull(searchQuery) != null && searchQuery.length() > 1) {
-      bq.minimumShouldMatch("1");
-    }
-
-    if (userId != null) {
-      // return all lists for this user
-      bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
-    }
-    if (isPrivate != null) {
-      // return all private lists
-      bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
-    }
-    if (speciesListID != null) {
-      // return this one list
-      bq.filter(f -> f.term(t -> t.field("speciesListID").value(speciesListID)));
-    }
-
-    if (filters != null) {
-      filters.forEach(filter -> addFilter(filter, bq));
-    }
-    return bq;
-  }
-
-  static void addFilter(Filter filter, BoolQuery.Builder bq) {
-    if (!CORE_BOOL_FIELDS.contains(filter.getKey())) {
-      bq.filter(
-          f ->
-              f.queryString(
-                  qs ->
-                      qs.defaultOperator(Operator.And)
-                          .fields(getPropertiesFacetField(filter.getKey()))
-                          .query(filter.getValue())));
-
-    } else {
-      bq.filter(f -> f.term(t -> t.field(filter.getKey()).value(filter.getValue())));
-    }
   }
 
   @GraphQlExceptionHandler
@@ -344,27 +286,24 @@ public class GraphQLController {
     toUpdate.getFieldList().add(fieldName);
 
     if (StringUtils.isNotEmpty(fieldValue)) {
-      int startIndex = 0;
-      int pageSize = 1000;
-      Pageable pageable = PageRequest.of(startIndex, pageSize);
+      int batchSize = 1000;
+      ObjectId lastId = null;
 
       boolean finished = false;
       while (!finished) {
-        Page<SpeciesListItem> page =
-            speciesListItemMongoRepository.findBySpeciesListIDOrderById(toUpdate.getId(), pageable);
-        List<SpeciesListItem> toSave = new ArrayList<>();
-        for (SpeciesListItem item : page) {
+        List<SpeciesListItem> items =
+            speciesListItemMongoRepository.findNextBatch(toUpdate.getId(), lastId, PageRequest.of(0, batchSize));
+
+        for (SpeciesListItem item : items) {
           item.getProperties().add(new KeyValue(fieldName, fieldValue));
-          toSave.add(item);
         }
 
-        speciesListItemMongoRepository.saveAll(toSave);
+        speciesListItemMongoRepository.saveAll(items);
 
-        if (page.isEmpty()) {
+        if (items.isEmpty()) {
           finished = true;
         } else {
-          startIndex += 1;
-          pageable = PageRequest.of(startIndex, pageSize);
+          lastId = items.get(items.size() - 1).getId();
         }
       }
       // reindex
@@ -398,31 +337,25 @@ public class GraphQLController {
     toUpdate.getFieldList().remove(oldName);
     toUpdate.getFieldList().add(newName);
 
-    int startIndex = 0;
-    int pageSize = 1000;
-    Pageable pageable = PageRequest.of(startIndex, pageSize);
+    int batchSize = 1000;
+    ObjectId lastId = null;
+
     boolean finished = false;
-
     while (!finished) {
-      Page<SpeciesListItem> page = speciesListItemMongoRepository.findBySpeciesListIDOrderById(toUpdate.getId(), pageable);
-      List<SpeciesListItem> toSave = new ArrayList<>();
-      for (SpeciesListItem item : page) {
+      List<SpeciesListItem> items = speciesListItemMongoRepository.findNextBatch(toUpdate.getId(), lastId, PageRequest.of(0, batchSize));
 
+      for (SpeciesListItem item : items) {
         Optional<KeyValue> kv =
             item.getProperties().stream().filter(k -> k.getKey().equals(oldName)).findFirst();
-        if (kv.isPresent()) {
-          kv.get().setKey(newName);
-          toSave.add(item);
-        }
+          kv.ifPresent(keyValue -> keyValue.setKey(newName));
       }
 
-      speciesListItemMongoRepository.saveAll(toSave);
+      speciesListItemMongoRepository.saveAll(items);
 
-      if (page.isEmpty()) {
+      if (items.isEmpty()) {
         finished = true;
       } else {
-        startIndex += 1;
-        pageable = PageRequest.of(startIndex, pageSize);
+        lastId = items.get(items.size() - 1).getId();
       }
     }
     // reindex
@@ -452,30 +385,24 @@ public class GraphQLController {
 
     toUpdate.getFieldList().remove(fieldName);
 
-    int startIndex = 0;
-    int pageSize = 1000;
-    Pageable pageable = PageRequest.of(startIndex, pageSize);
+    int batchSize = 1000;
+    ObjectId lastId = null;
 
     boolean finished = false;
     while (!finished) {
-      Page<SpeciesListItem> page = speciesListItemMongoRepository.findBySpeciesListIDOrderById(toUpdate.getId(), pageable);
-      List<SpeciesListItem> toSave = new ArrayList<>();
-      for (SpeciesListItem item : page) {
+      List<SpeciesListItem> items = speciesListItemMongoRepository.findNextBatch(toUpdate.getId(), lastId, PageRequest.of(0, batchSize));
 
+      for (SpeciesListItem item : items) {
         Optional<KeyValue> kv =
             item.getProperties().stream().filter(k -> k.getKey().equals(fieldName)).findFirst();
-        if (kv.isPresent()) {
-          item.getProperties().remove(kv.get());
-          toSave.add(item);
-        }
+          kv.ifPresent(keyValue -> item.getProperties().remove(keyValue));
       }
-      speciesListItemMongoRepository.saveAll(toSave);
+      speciesListItemMongoRepository.saveAll(items);
 
-      if (page.isEmpty()) {
+      if (items.isEmpty()) {
         finished = true;
       } else {
-        startIndex += 1;
-        pageable = PageRequest.of(startIndex, pageSize);
+        lastId = items.get(items.size() - 1).getId();
       }
     }
 
@@ -562,7 +489,7 @@ public class GraphQLController {
     // write the data to Elasticsearch
     SpeciesListIndex speciesListIndex =
         new SpeciesListIndex(
-            speciesListItem.getId(),
+            speciesListItem.getId().toString(),
             speciesList.getDataResourceUid(),
             speciesList.getTitle(),
             speciesList.getListType(),
@@ -805,7 +732,7 @@ public class GraphQLController {
         q ->
             q.bool(
                 bq -> {
-                  buildQuery(cleanRawQuery(searchQuery), ID, null, null, filters, bq);
+                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), ID, null, null, filters, bq);
                   return bq;
                 }));
 
@@ -824,7 +751,8 @@ public class GraphQLController {
             query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
 
     List<SpeciesListItem> speciesLists =
-        convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
+        ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
+
     return new PageImpl<>(speciesLists, pageableRequest, results.getTotalHits());
   }
 
@@ -850,7 +778,7 @@ public class GraphQLController {
           q ->
               q.bool(
                   bq -> {
-                    buildQuery(cleanRawQuery(searchQuery), null, userId, isPrivate, filters, bq);
+                    ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), null, userId, isPrivate, filters, bq);
                     return bq;
                   }));
     }
@@ -951,7 +879,7 @@ public class GraphQLController {
         q ->
             q.bool(
                 bq -> {
-                  buildQuery(cleanRawQuery(searchQuery), speciesList.getId(), null, null, filters, bq);
+                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), speciesList.getId(), null, null, filters, bq);
                   return bq;
                 }));
 

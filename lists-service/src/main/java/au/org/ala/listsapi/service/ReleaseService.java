@@ -99,6 +99,10 @@ public class ReleaseService {
 
       while (!done) {
         Pageable paging = PageRequest.of(page, size);
+        /*
+          TODO: Before re-implementing releases, this part must be
+           updated to use speciesListMongoRepository.findNextBatch()!! (see TaxonService.java for example)
+         */
         Page<SpeciesListItem> speciesListItems =
             speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesListID, paging);
         if (!speciesListItems.getContent().isEmpty()) {
@@ -144,7 +148,7 @@ public class ReleaseService {
 
       // write the data to Elasticsearch
       String[] originalClassification = {
-        speciesListItem.getId() != null ? speciesListItem.getId() : "",
+        speciesListItem.getId() != null ? speciesListItem.getId().toString() : "",
         speciesListItem.getScientificName() != null ? speciesListItem.getScientificName() : "",
         speciesListItem.getTaxonID() != null ? speciesListItem.getTaxonID() : "",
         speciesListItem.getKingdom() != null ? speciesListItem.getKingdom() : "",

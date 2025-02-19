@@ -30,4 +30,11 @@ public class IngestProgressItem {
         this.speciesListID = speciesListID;
         this.rowCount = rowCount;
     }
+
+    public IngestProgressItem(String speciesListID, long rowCount, long mongoTotal, long elasticTotal) {
+        this.speciesListID = speciesListID;
+        this.rowCount = rowCount;
+        this.mongoTotal = mongoTotal;
+        this.elasticTotal = elasticTotal;
+    }
 }

@@ -4,6 +4,7 @@ import au.org.ala.listsapi.model.MigrateProgressItem;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.repo.IngestProgressMongoRepository;
 import au.org.ala.listsapi.repo.MigrateProgressMongoRepository;
+import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import java.util.Optional;
 public class ProgressService {
     @Autowired protected IngestProgressMongoRepository ingestProgressMongoRepository;
     @Autowired protected MigrateProgressMongoRepository migrateProgressMongoRepository;
+    @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
 
     private final long HALF_DAY_IN_MS = 43200000;
 
@@ -73,6 +75,13 @@ public class ProgressService {
             currentItem.setMongoTotal(currentItem.getMongoTotal() + count);
 
             ingestProgressMongoRepository.save(currentItem);
+        } else {
+            Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListId, speciesListId);
+            if (optionalSpeciesList.isPresent()) {
+                SpeciesList list = optionalSpeciesList.get();
+                IngestProgressItem newItem = new IngestProgressItem(list.getId(), list.getRowCount(), count, 0);
+                ingestProgressMongoRepository.save(newItem);
+            }
         }
     }
 
@@ -81,6 +90,24 @@ public class ProgressService {
         if (item.isPresent()) {
             IngestProgressItem currentItem = item.get();
             currentItem.setElasticTotal(currentItem.getElasticTotal() + count);
+
+            ingestProgressMongoRepository.save(currentItem);
+        } else {
+            Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListId, speciesListId);
+            if (optionalSpeciesList.isPresent()) {
+                SpeciesList list = optionalSpeciesList.get();
+                IngestProgressItem newItem = new IngestProgressItem(list.getId(), list.getRowCount(), list.getRowCount(), count);
+                ingestProgressMongoRepository.save(newItem);
+            }
+        }
+    }
+
+    public void resetIngestProgress(String speciesListId) {
+        Optional<IngestProgressItem> item = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListID(speciesListId);
+        if (item.isPresent()) {
+            IngestProgressItem currentItem = item.get();
+            currentItem.setMongoTotal(0);
+            currentItem.setElasticTotal(0);
 
             ingestProgressMongoRepository.save(currentItem);
         }
