@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+
+import org.bson.types.ObjectId;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,28 +130,27 @@ public class DownloadController {
         new CSVWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8))) {
       writeCsvHeaders(csvWriter, csvHeaders);
 
-      int startIndex = 0;
-      int pageSize = 1000;
-      Pageable pageable = PageRequest.of(startIndex, pageSize);
+      int batchSize = 1000;
+      ObjectId lastId = null;
 
       boolean finished = false;
       while (!finished) {
-        Page<SpeciesListItem> page =
-            speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesListID, pageable);
-        if (page.isEmpty()) {
+        List<SpeciesListItem> items =
+            speciesListItemMongoRepository.findNextBatch(speciesListID, lastId, PageRequest.of(0, batchSize));
+        if (items.isEmpty()) {
           finished = true;
         } else {
           logger.info(
               "Writing CSV data for species list "
                   + speciesListID
-                  + " page "
-                  + startIndex
+                  + " lastId "
+                  + lastId
                   + " page size "
-                  + page.stream().count());
-          writeCsvData(csvWriter, speciesList.getFieldList(), page);
+                  + items.size());
+
+          writeCsvData(csvWriter, speciesList.getFieldList(), items);
           csvWriter.flush();
-          startIndex += 1;
-          pageable = PageRequest.of(startIndex, pageSize);
+          lastId = items.get(items.size() - 1).getId();
         }
       }
       logger.info("Finished writing CSV data for species list " + speciesListID);
@@ -171,8 +172,8 @@ public class DownloadController {
   }
 
   private void writeCsvData(
-      CSVWriter csvWriter, List<String> fieldList, Page<SpeciesListItem> page) {
-    page.forEach(
+      CSVWriter csvWriter, List<String> fieldList, List<SpeciesListItem> items) {
+    items.forEach(
         speciesListItem -> {
           List<String> csvRow = new ArrayList<>();
           // add the supplied name

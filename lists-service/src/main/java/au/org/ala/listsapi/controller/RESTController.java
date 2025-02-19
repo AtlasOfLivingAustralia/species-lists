@@ -1,30 +1,32 @@
 package au.org.ala.listsapi.controller;
 
-import au.org.ala.listsapi.model.RESTSpeciesListQuery;
-import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.model.SpeciesListItem;
+import au.org.ala.listsapi.model.*;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.BiocacheService;
+import co.elastic.clients.elasticsearch._types.FieldSort;
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.security.Principal;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Example;
-import org.springframework.data.domain.ExampleMatcher;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHitSupport;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
+import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,6 +47,8 @@ public class RESTController {
   @Autowired protected BiocacheService biocacheService;
 
   @Autowired protected AuthUtils authUtils;
+
+  @Autowired protected ElasticsearchOperations elasticsearchOperations;
 
   @Value("${app.name}")
   private String appName;
@@ -74,8 +78,8 @@ public class RESTController {
   @GetMapping("/speciesList/")
   public ResponseEntity<Object> speciesLists(
       RESTSpeciesListQuery speciesList,
-      @RequestParam(name = "page", defaultValue = "1") int page,
-      @RequestParam(name = "pageSize", defaultValue = "10") int pageSize,
+      @RequestParam(name = "page", defaultValue = "1", required = false) int page,
+      @RequestParam(name = "pageSize", defaultValue = "10", required = false) int pageSize,
       @AuthenticationPrincipal Principal principal) {
     try {
       if (!authUtils.isAuthorized(principal)) {
@@ -112,13 +116,20 @@ public class RESTController {
     return legacyFormat;
   }
 
+  private String emptyDefault(String value, String defaultValue) {
+    return value.isEmpty() ? defaultValue : value;
+  }
+
   @Operation(tags = "REST", summary = "Get species lists items for a list")
   @GetMapping("/speciesListItems/{speciesListID}")
-  public ResponseEntity<Object> speciesList(
-      @PathVariable("speciesListID") String speciesListID,
-      @RequestParam(name = "page", defaultValue = "1") int page,
-      @RequestParam(name = "pageSize", defaultValue = "10") int pageSize,
-      @AuthenticationPrincipal Principal principal) {
+  public ResponseEntity<Object> speciesListItemsElastic(
+          @PathVariable("speciesListID") String speciesListID,
+          @Nullable @RequestParam(name = "q") String searchQuery,
+          @Nullable @RequestParam(name = "page", defaultValue = "1") Integer page,
+          @Nullable @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
+          @Nullable @RequestParam(name = "sort", defaultValue="scientificName") String sort,
+          @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
+          @AuthenticationPrincipal Principal principal) {
     try {
       Optional<SpeciesList> speciesListOptional = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
 
@@ -130,10 +141,39 @@ public class RESTController {
           return ResponseEntity.status(400).body("You don't have access to this list");
         }
 
-        Pageable paging = PageRequest.of(page - 1, pageSize);
-        Page<SpeciesListItem> speciesListItems =
-                speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesList.getId(), paging);
-        return new ResponseEntity<>(speciesListItems.getContent(), HttpStatus.OK);
+        if (page < 1 || (page * pageSize) > speciesList.getRowCount()) {
+          return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+        }
+
+        ArrayList<Filter> tempFilters = new ArrayList<>();
+        Pageable pageableRequest = PageRequest.of(page - 1, pageSize);
+        NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
+        builder.withQuery(
+                q ->
+                        q.bool(
+                                bq -> {
+                                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), speciesList.getId(), null, null, tempFilters, bq);
+                                  return bq;
+                                }));
+
+        builder.withSort(
+                s ->
+                        s.field(
+                                new FieldSort.Builder()
+                                        .field(emptyDefault(sort, "scientificName"))
+                                        .order(emptyDefault(dir, "asc").equals("asc") ? SortOrder.Asc : SortOrder.Desc)
+                                        .build()));
+
+        Query query = builder.build();
+        query.setPageable(pageableRequest);
+        SearchHits<SpeciesListIndex> results =
+                elasticsearchOperations.search(
+                        query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
+
+        List<SpeciesListItem> speciesListItems =
+                ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
+
+        return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
       }
 
       return ResponseEntity.status(404).body("Species list not found");

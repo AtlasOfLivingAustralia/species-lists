@@ -118,7 +118,7 @@
     <dependency>
       <groupId>org.springdoc</groupId>
       <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-      <version>2.0.3</version>
+      <version>2.1.0</version>
     </dependency>
     <!-- name matching client has issues with Java 19 -->
     <!--    <dependency>-->

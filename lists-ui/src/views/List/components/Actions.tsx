@@ -45,20 +45,21 @@ import { MUTATION_LIST_UPDATE } from '#/api/queries';
 interface ActionsProps {
   meta: SpeciesList;
   editing: boolean;
+  rematching: boolean;
   onEditingChange: (editing: boolean) => void;
   onMetaEdited: (meta: SpeciesListSubmit) => void;
-  onRematched: () => void;
+  onRematch: () => void;
 }
 
 export function Actions({
   meta,
   editing,
+  rematching,
   onEditingChange,
   onMetaEdited,
-  onRematched,
+  onRematch,
 }: ActionsProps) {
   const [updating, setUpdating] = useState<boolean>(false);
-  const [rematching, setRematching] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
   const [fetchingQid, setFetchingQid] = useState<string | null>(null);
   const listQid = useRef<string | null>(null);
@@ -168,28 +169,17 @@ export function Actions({
       },
       cancelProps: { radius: 'md' },
       onConfirm: async () => {
-        setRematching(true);
         try {
           // Fire off the delete request
+          onRematch();
           await ala.rest.lists.rematch(meta.id);
-          onRematched();
-          notifications.show({
-            message: (
-              <>
-                Rematched <b>{meta.title}</b> successfully
-              </>
-            ),
-            position: 'bottom-left',
-            radius: 'md',
-          });
         } catch (error) {
-          notifications.show({
-            message: getErrorMessage(error),
-            position: 'bottom-left',
-            radius: 'md',
-          });
+          // notifications.show({
+          //   message: getErrorMessage(error),
+          //   position: 'bottom-left',
+          //   radius: 'md',
+          // });
         }
-        setRematching(false);
       },
     });
   }, [meta]);
@@ -442,6 +432,7 @@ export function Actions({
                 <Tooltip label='Reingest list' position='left'>
                   <ActionIcon
                     onClick={handleReingest}
+                    disabled={updating || deleting || rematching}
                     variant='light'
                     size='md'
                     radius='lg'
