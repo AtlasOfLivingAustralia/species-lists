@@ -141,7 +141,7 @@ public class RESTController {
           return ResponseEntity.status(400).body("You don't have access to this list");
         }
 
-        if (page < 1 || (page * pageSize) > speciesList.getRowCount()) {
+        if (page < 1 || (page * pageSize) > 10000) {
           return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
         }
 
