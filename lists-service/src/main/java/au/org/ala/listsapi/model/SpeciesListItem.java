@@ -13,6 +13,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.annotation.Version;
+import org.springframework.data.mongodb.core.index.Indexed;
 
 @org.springframework.data.mongodb.core.mapping.Document(collection = "listItems")
 @NoArgsConstructor
@@ -23,7 +24,7 @@ public class SpeciesListItem {
   @JsonSerialize(using = ToStringSerializer.class)
   @Id private ObjectId id;
   @Version private Integer version;
-  private String speciesListID;
+  @Indexed private String speciesListID;
   private String taxonID;
   private String scientificName;
   private String vernacularName;
