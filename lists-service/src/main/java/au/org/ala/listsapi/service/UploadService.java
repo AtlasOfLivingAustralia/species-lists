@@ -1,6 +1,7 @@
 package au.org.ala.listsapi.service;
 
 import au.org.ala.listsapi.controller.AuthUtils;
+import au.org.ala.listsapi.controller.MongoUtils;
 import au.org.ala.listsapi.model.IngestJob;
 import au.org.ala.listsapi.model.InputSpeciesList;
 import au.org.ala.listsapi.model.KeyValue;
@@ -45,6 +46,7 @@ public class UploadService {
   @Autowired protected MetadataService metadataService;
   @Autowired protected AuthUtils authUtils;
   @Autowired protected ProgressService progressService;
+  @Autowired protected MongoUtils mongoUtils;
 
   @Value("${temp.dir:/tmp}")
   private String tempDir;
@@ -309,7 +311,10 @@ public class UploadService {
       throws Exception {
 
     if (!dryRun && speciesListID != null) {
+      long findByIdStart = System.nanoTime();
       Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListID);
+      long findByIdElapsed = (System.nanoTime() - findByIdStart) / 1000000;
+      logger.info("[{}|loadCSV] Fetching species list took {}ms", speciesListID, findByIdElapsed);
       if (speciesList.isEmpty()) {
         throw new Exception("Species list not found");
       }
@@ -321,6 +326,7 @@ public class UploadService {
     MappingIterator<Map<String, String>> iterator =
         mapper.reader(Map.class).with(schema).readValues(inputStream);
 
+
     // store
     Map<String, Set<String>> facets = new HashMap<>();
     Set<String> notFacetable = new HashSet<>();
@@ -331,6 +337,7 @@ public class UploadService {
     List<String> originalFieldNames = new ArrayList<>();
     List<SpeciesListItem> batch = new ArrayList<>();
 
+    long iteratorStart = System.nanoTime();
     while (iterator.hasNext()) {
 
       Map<String, String> values = iterator.next();
@@ -430,18 +437,26 @@ public class UploadService {
         batch.add(speciesListItem);
 
         if (batch.size() == 1000) {
-          speciesListItemMongoRepository.saveAll(batch);
+          long iteratorSavingStart = System.nanoTime();
+          mongoUtils.speciesListItemsBulkSave(batch);
+          long iteratorSavingElapsed = (System.nanoTime() - iteratorSavingStart) / 1000000;
+          logger.info("[{}|loadCSV] Iterator saving took {}ms", speciesListID, iteratorSavingElapsed);
           batch.clear();
         }
       }
       rowCount++;
     }
+    long iteratorElapsed = (System.nanoTime() - iteratorStart) / 1000000;
+    logger.info("[{}|loadCSV] Iterator took {}ms", speciesListID, iteratorElapsed);
 
     if (!batch.isEmpty()) {
-      speciesListItemMongoRepository.saveAll(batch);
+      long batchSavingStart = System.nanoTime();
+      mongoUtils.speciesListItemsBulkSave(batch);
+      long batchSavingElapsed = (System.nanoTime() - batchSavingStart) / 1000000;
+      logger.info("[{}|loadCSV] Batch saving took {}ms", speciesListID, batchSavingElapsed);
       batch.clear();
     }
-    logger.info("Species list loaded into database");
+    logger.info("[{}|loadCSV] Species list loaded into database", speciesListID);
 
     IngestJob ingestJob = new IngestJob();
     logger.info("Field names = " + StringUtils.join(fieldNames, ", "));

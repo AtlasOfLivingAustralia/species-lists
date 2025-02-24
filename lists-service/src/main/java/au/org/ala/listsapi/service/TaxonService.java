@@ -1,5 +1,6 @@
 package au.org.ala.listsapi.service;
 
+import au.org.ala.listsapi.controller.MongoUtils;
 import au.org.ala.listsapi.model.Classification;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListIndex;
@@ -54,6 +55,8 @@ public class TaxonService {
   @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
   @Autowired protected ProgressService progressService;
+  @Autowired protected MongoUtils mongoUtils;
+
 
   @Async("processExecutor")
   public void reindex() {
@@ -113,12 +116,12 @@ public class TaxonService {
 
   private void bulkIndexSafe(List<IndexQuery> updateList, SpeciesList list) {
     long startTime = System.nanoTime();
-    logger.info("[" + list.getId() + "] Indexing " + updateList.size() + " items");
+    logger.info("[{}|reindex|bulkIndex] Indexing {} items", list.getId(), updateList.size());
     try {
       elasticsearchOperations.bulkIndex(updateList, SpeciesListIndex.class);
       progressService.addIngestElasticProgress(list.getId(), updateList.size());
     } catch (BulkFailureException e) {
-      logger.error("[" + list.getId() + "] Indexing error: " + e.getMessage());
+      logger.error("[{}|reindex|bulkIndex] Indexing error: {}", list.getId(), e.getMessage());
 
       Set<String> failedIds = e.getFailedDocuments().keySet();
       logger.error(" -- FAILED IDS --");
@@ -136,7 +139,7 @@ public class TaxonService {
       }
     }
     long elapsed = System.nanoTime() - startTime;
-    logger.info("[" + list.getId() + "] Indexing " + updateList.size() + " items took " + (elapsed / 1000000) + "ms");
+    logger.info("[{}|reindex|bulkIndex] Indexing " + updateList.size() + " items took " + (elapsed / 1000000) + "ms", list.getId());
   }
 
   private SpeciesListIndex listItemToIndex(SpeciesList speciesList, SpeciesListItem speciesListItem) {
@@ -178,8 +181,11 @@ public class TaxonService {
   }
 
   public void reindex(String speciesListID) {
-    logger.info("[{}] Starting indexing", speciesListID);
+    logger.info("[{}|reindex] Starting indexing", speciesListID);
+    long findByIdStart = System.nanoTime();
     Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+    long findByIdElapsed = (System.nanoTime() - findByIdStart) / 1000000;
+    logger.info("[{},reindex] Reindex find by ID {}ms", speciesListID, findByIdElapsed);
 
     if (optionalSpeciesList.isEmpty()) return;
 
@@ -218,19 +224,27 @@ public class TaxonService {
     }
 
 
-    logger.info("[{}] Indexing complete.", speciesListID);
+    logger.info("[{}|reindex] Indexing complete.", speciesListID);
   }
 
   public long taxonMatchDataset(String speciesListID) {
+    logger.info("[{}|taxonMatch] Starting taxon matching", speciesListID);
+
+    long findByIdStart = System.nanoTime();
     Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+    long findByIdElapsed = (System.nanoTime() - findByIdStart) / 1000000;
+    logger.info("[{}|taxonMatch] Taxon match find by ID OR UID {}ms", speciesListID, findByIdElapsed);
 
     if (optionalSpeciesList.isEmpty()) return 0;
     SpeciesList speciesList = optionalSpeciesList.get();
 
     // Reset ingestion progress
+    long resetProgressStart = System.nanoTime();
     progressService.resetIngestProgress(speciesList.getId());
+    long resetProgressElapsed = (System.nanoTime() - resetProgressStart) / 1000000;
+    logger.info("[{}|taxonMatch] Reset ingest progress {}ms", speciesListID, resetProgressElapsed);
 
-    logger.info("[{}] Started taxon matching", speciesListID);
+    logger.info("[{}|taxonMatch] Started taxon matching", speciesListID);
 
     int batchSize = 250;
     ObjectId lastId = null;
@@ -244,7 +258,7 @@ public class TaxonService {
       List<SpeciesListItem> items = speciesListItemMongoRepository.findNextBatch(speciesList.getId(), lastId, PageRequest.of(0, batchSize));
       long elapsed = System.nanoTime() - startTime;
 
-      logger.info("[{}] Fetched {} items in {} ms",
+      logger.info("[{}|taxonMatch] Fetched {} items in {} ms",
               speciesListID, items.size(), elapsed / 1_000_000);
 
       if (items.isEmpty()) {
@@ -256,10 +270,16 @@ public class TaxonService {
           updateClassifications(items);
 
           // Save updated items
-          speciesListItemMongoRepository.saveAll(items);
+          long saveClassStart = System.nanoTime();
+          mongoUtils.speciesListItemsBulkUpdate(items, List.of("classification"));
+          long saveClassElapsed = (System.nanoTime() - saveClassStart) / 1000000;
+          logger.info("[{}|taxonMatch] Save updated classification took {}ms", speciesListID, saveClassElapsed);
 
           // Record progress
+          long updatedProgressStart = System.nanoTime();
           progressService.addIngestMongoProgress(speciesList.getId(), items.size());
+          long updateProgressElapsed = (System.nanoTime() - updatedProgressStart) / 1000000;
+          logger.info("[{}|taxonMatch] Update mongo progress {}ms", speciesListID, updateProgressElapsed);
 
           items.forEach(speciesListItem -> distinctTaxa.add(speciesListItem.getClassification().getTaxonConceptID()));
           lastId = items.get(items.size() - 1).getId();
@@ -270,7 +290,7 @@ public class TaxonService {
       }
     }
 
-    logger.info("[{}] Taxon matching complete. Found {} distinct taxa.",
+    logger.info("[{}|taxonMatch] Taxon matching complete. Found {} distinct taxa.",
             speciesListID, distinctTaxa.size());
 
     return distinctTaxa.size();
@@ -304,11 +324,15 @@ public class TaxonService {
             .header("Content-Type", "application/json")
             .build();
 
+
+    long matchRequestStart = System.nanoTime();
     HttpResponse<String> response =
         HttpClient.newBuilder()
             .proxy(ProxySelector.getDefault())
             .build()
             .send(httpRequest, HttpResponse.BodyHandlers.ofString());
+    long matchRequestElapsed = (System.nanoTime() - matchRequestStart) / 1000000;
+    logger.info("[{}|taxonMatch] Match request took {}ms", items.get(0).getSpeciesListID(), matchRequestElapsed);
 
     ObjectMapper objectMapper = new ObjectMapper();
 
