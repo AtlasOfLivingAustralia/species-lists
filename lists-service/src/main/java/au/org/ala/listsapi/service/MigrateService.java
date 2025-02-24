@@ -183,7 +183,7 @@ public class MigrateService {
 
     speciesLists.forEach(
         speciesList -> {
-          logger.info("Downloading file for " + speciesList.getDataResourceUid());
+          logger.info("Downloading file for {}" + speciesList.getDataResourceUid());
           String downloadUrl =
               migrateUrl
                   + "/speciesListItem/downloadList/"

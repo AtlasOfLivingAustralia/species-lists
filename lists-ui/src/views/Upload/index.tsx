@@ -208,6 +208,7 @@ export function Component() {
             loading={ingesting}
             onReset={handleReset}
             onSubmit={handleIngest}
+            initialTitle={originalName || undefined}
           />
         )}
         <IngestProgress id={ingestId} ingesting={ingesting} />

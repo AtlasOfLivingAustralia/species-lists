@@ -26,6 +26,7 @@ interface ListMetaProps {
   ala: ALAContextProps;
   loading?: boolean;
   initialValues?: SpeciesList;
+  initialTitle?: string;
   onReset?: () => void;
   onSubmit: (list: SpeciesListSubmit) => void;
 }
@@ -36,7 +37,10 @@ const notEmpty = (value: string) =>
 const validGeoJSON = (value: string) =>
   /-?(?:\.\d+|\d+(?:\.\d*)?)/.test(value) ? null : 'Please enter valid GeoJSON';
 
-const defaultList = (list?: SpeciesList): SpeciesListSubmit => ({
+const defaultList = (
+  list?: SpeciesList,
+  initialTitle?: string
+): SpeciesListSubmit => ({
   authority: list?.authority || '',
   description: list?.description || '',
   isAuthoritative: list?.isAuthoritative || false,
@@ -52,15 +56,18 @@ const defaultList = (list?: SpeciesList): SpeciesListSubmit => ({
   licence: list?.licence || '',
   listType: list?.listType || '',
   region: list?.region || '',
-  title: list?.title || '',
+  title: list?.title || initialTitle || '',
   wkt: list?.wkt || '',
   tags: list?.tags || [],
+  dataResourceUid: list?.dataResourceUid || '',
+  metadataLastUpdated: list?.metadataLastUpdated || '',
 });
 
 export function ListMeta({
   ala,
   loading,
   initialValues,
+  initialTitle,
   onReset,
   onSubmit,
 }: ListMetaProps) {
@@ -72,7 +79,7 @@ export function ListMeta({
 
   // Form hook
   const form = useForm({
-    initialValues: defaultList(initialValues),
+    initialValues: defaultList(initialValues, initialTitle),
     validate: {
       wkt: (value) => (value.length > 0 ? validGeoJSON(value) : null),
       listType: notEmpty,

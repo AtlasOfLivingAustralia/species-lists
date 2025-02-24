@@ -97,6 +97,7 @@ public class GraphQLController {
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
   @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
   @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
+  @Autowired protected MongoUtils mongoUtils;
 
   @Autowired protected TaxonService taxonService;
   @Autowired protected ValidationService validationService;
@@ -298,16 +299,16 @@ public class GraphQLController {
           item.getProperties().add(new KeyValue(fieldName, fieldValue));
         }
 
-        speciesListItemMongoRepository.saveAll(items);
+        if (!items.isEmpty()) {
+          mongoUtils.speciesListItemsBulkUpdate(items, List.of("properties"));
+        }
 
-        if (items.isEmpty()) {
+        if (items.size() < batchSize) {
           finished = true;
         } else {
           lastId = items.get(items.size() - 1).getId();
         }
       }
-      // reindex
-      taxonService.reindex(toUpdate.getId());
     }
 
     return speciesListMongoRepository.save(toUpdate);
@@ -350,17 +351,16 @@ public class GraphQLController {
           kv.ifPresent(keyValue -> keyValue.setKey(newName));
       }
 
-      speciesListItemMongoRepository.saveAll(items);
+      if (!items.isEmpty()) {
+        mongoUtils.speciesListItemsBulkUpdate(items, List.of("properties"));
+      }
 
-      if (items.isEmpty()) {
+      if (items.size() < batchSize) {
         finished = true;
       } else {
         lastId = items.get(items.size() - 1).getId();
       }
     }
-    // reindex
-    taxonService.reindex(toUpdate.getId());
-
     return speciesListMongoRepository.save(toUpdate);
   }
 
@@ -397,17 +397,17 @@ public class GraphQLController {
             item.getProperties().stream().filter(k -> k.getKey().equals(fieldName)).findFirst();
           kv.ifPresent(keyValue -> item.getProperties().remove(keyValue));
       }
-      speciesListItemMongoRepository.saveAll(items);
 
-      if (items.isEmpty()) {
+      if (!items.isEmpty()) {
+        mongoUtils.speciesListItemsBulkUpdate(items, List.of("properties"));
+      }
+
+      if (items.size() < batchSize) {
         finished = true;
       } else {
         lastId = items.get(items.size() - 1).getId();
       }
     }
-
-    // reindex
-    taxonService.reindex(toUpdate.getId());
 
     return speciesListMongoRepository.save(toUpdate);
   }

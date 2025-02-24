@@ -1,9 +1,6 @@
 package au.org.ala.listsapi.model;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
@@ -55,5 +52,29 @@ public class SpeciesListItem {
     taxon.put("family", this.family);
     taxon.put("genus", this.genus);
     return taxon;
+  }
+  
+  public Object getPropFromKey(String key) {
+    switch(key) {
+      case "id": return this.id;
+      case "version": return this.version;
+      case "speciesListID": return this.speciesListID;
+      case "taxonID": return this.taxonID;
+      case "scientificName": return this.scientificName;
+      case "vernacularName": return this.vernacularName;
+      case "kingdom": return this.kingdom;
+      case "phylum": return this.phylum;
+      case "classs": return this.classs;
+      case "order": return this.order;
+      case "family": return this.family;
+      case "genus": return this.genus;
+      case "properties": return this.properties;
+      case "classification": return this.classification;
+      case "dateCreated": return this.dateCreated;
+      case "lastUpdated": return this.lastUpdated;
+      case "lastUpdatedBy": return this.lastUpdatedBy;
+    }
+
+    return null;
   }
 }

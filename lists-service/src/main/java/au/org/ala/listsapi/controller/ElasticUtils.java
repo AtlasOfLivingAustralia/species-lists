@@ -59,8 +59,6 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 /** GraphQL API for lists */
 @Component
 public class ElasticUtils {
-
-
     public static final List<String> CORE_FIELDS =
             List.of(
                     "id",
