@@ -9,6 +9,7 @@ import au.org.ala.listsapi.service.MetadataService;
 import au.org.ala.listsapi.service.ValidationService;
 import au.org.ala.listsapi.service.TaxonService;
 import co.elastic.clients.elasticsearch._types.FieldSort;
+import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.aggregations.LongTermsBucket;
@@ -159,6 +160,43 @@ public class ElasticUtils {
         if (speciesListID != null) {
             // return this one list
             bq.filter(f -> f.term(t -> t.field("speciesListID").value(speciesListID)));
+        }
+
+        if (filters != null) {
+            filters.forEach(filter -> addFilter(filter, bq));
+        }
+        return bq;
+    }
+
+    public static BoolQuery.Builder buildQuery(
+            String searchQuery,
+            List<FieldValue> speciesListIDs,
+            String userId,
+            Boolean isPrivate,
+            List<Filter> filters,
+            BoolQuery.Builder bq) {
+
+        bq.should(
+                m ->
+                        m.matchPhrase(
+                                mq -> mq.field("all").query(searchQuery.toLowerCase() + "*").boost(2.0f)));
+
+        if (StringUtils.trimToNull(searchQuery) != null && searchQuery.length() > 1) {
+            bq.minimumShouldMatch("1");
+        }
+
+        if (userId != null) {
+            // return all lists for this user
+            bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
+        }
+        if (isPrivate != null) {
+            // return all private lists
+            bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
+        }
+        if (speciesListIDs != null && !speciesListIDs.isEmpty()) {
+            // return this one list
+            bq.filter(f -> f.terms(t -> t.field("speciesListID")
+                    .terms(ta -> ta.value(speciesListIDs))));
         }
 
         if (filters != null) {
