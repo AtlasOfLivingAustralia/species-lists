@@ -7,6 +7,7 @@ import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.BiocacheService;
 import au.org.ala.ws.security.profile.AlaUserProfile;
 import co.elastic.clients.elasticsearch._types.FieldSort;
+import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -164,10 +165,10 @@ public class RESTController {
     return value.isEmpty() ? defaultValue : value;
   }
 
-  @Operation(tags = "REST", summary = "Get species lists items for a list")
-  @GetMapping("/speciesListItems/{speciesListID}")
+  @Operation(tags = "REST", summary = "Get species lists items for a list. List IDs can be a single value, or comma separated IDs.")
+  @GetMapping("/speciesListItems/{speciesListIDs}")
   public ResponseEntity<Object> speciesListItemsElastic(
-          @PathVariable("speciesListID") String speciesListID,
+          @PathVariable("speciesListIDs") String speciesListIDs,
           @Nullable @RequestParam(name = "q") String searchQuery,
           @Nullable @RequestParam(name = "page", defaultValue = "1") Integer page,
           @Nullable @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
@@ -175,17 +176,16 @@ public class RESTController {
           @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
           @AuthenticationPrincipal Principal principal) {
     try {
-      Optional<SpeciesList> speciesListOptional = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+      List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
+      List<SpeciesList> foundLists = speciesListMongoRepository.findAllByDataResourceUidIsInOrIdIsIn(IDs, IDs);
 
-      // Ensure the species list exists
-      if (speciesListOptional.isPresent()) {
-        SpeciesList speciesList = speciesListOptional.get();
+      // Ensure that some species lists were returned with the query
+      if (!foundLists.isEmpty()) {
+        List<FieldValue> validIDs = foundLists.stream()
+                .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal))
+                .map(list -> FieldValue.of(list.getId())).toList();
 
-        if (speciesList.getIsPrivate() && !authUtils.isAuthorized(speciesList, principal)) {
-          return ResponseEntity.status(400).body("You don't have access to this list");
-        }
-
-        if (page < 1 || (page * pageSize) > 10000) {
+        if (page < 1 || (page * pageSize) > 10000 || validIDs.isEmpty()) {
           return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
         }
 
@@ -196,7 +196,7 @@ public class RESTController {
                 q ->
                         q.bool(
                                 bq -> {
-                                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), speciesList.getId(), null, null, tempFilters, bq);
+                                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), validIDs, null, null, tempFilters, bq);
                                   return bq;
                                 }));
 

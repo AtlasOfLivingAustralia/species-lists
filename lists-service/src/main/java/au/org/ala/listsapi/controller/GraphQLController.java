@@ -176,7 +176,7 @@ public class GraphQLController {
         q ->
             q.bool(
                 bq -> {
-                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), null, finalUserId, isPrivate, filters, bq);
+                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null, finalUserId, isPrivate, filters, bq);
                   return bq;
                 }));
 
@@ -785,7 +785,7 @@ public class GraphQLController {
           q ->
               q.bool(
                   bq -> {
-                    ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), null, userId, isPrivate, filters, bq);
+                    ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String)null, userId, isPrivate, filters, bq);
                     return bq;
                   }));
     }
