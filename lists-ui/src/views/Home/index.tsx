@@ -158,15 +158,13 @@ function Home() {
               placeholder='Search list by name or taxa'
               w={200}
             />
-            {ala.isAdmin && (
-              <SegmentedControl
-                disabled={!data || hasError}
-                value={view}
-                onChange={setView}
-                radius='md'
-                data={labels}
-              />
-            )}
+            <SegmentedControl
+              disabled={!data || hasError}
+              value={view}
+              onChange={setView}
+              radius='md'
+              data={labels}
+            />
             {ala.isAuthenticated && (
               <Checkbox
                 label='My Lists'

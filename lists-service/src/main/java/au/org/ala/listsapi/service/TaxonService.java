@@ -246,7 +246,7 @@ public class TaxonService {
 
     logger.info("[{}|taxonMatch] Started taxon matching", speciesListID);
 
-    int batchSize = 250;
+    int batchSize = 1000;
     ObjectId lastId = null;
 
     Set<String> distinctTaxa = new HashSet<>();

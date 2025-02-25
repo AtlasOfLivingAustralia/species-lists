@@ -50,6 +50,7 @@ export function IngestProgress({
     elasticTotal: 0,
     mongoTotal: 0,
     started: 0,
+    completed: false,
   });
 
   const ala = useALA();
@@ -76,11 +77,7 @@ export function IngestProgress({
         if (onProgress) onProgress(progress);
 
         // If the list has been ingested successfully, navigate to it, otherwise, wait a bit and check again
-        if (
-          progress.elasticTotal === progress.rowCount &&
-          progress.rowCount > 0 &&
-          !disableNavigation
-        ) {
+        if (progress.completed && !disableNavigation) {
           setTimeout(
             () =>
               navigate(`/list/${id}`, {

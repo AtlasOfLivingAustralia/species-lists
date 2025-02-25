@@ -81,6 +81,7 @@ interface IngestProgress {
   elasticTotal: number;
   mongoTotal: number;
   started: number;
+  completed: boolean;
 }
 
 interface MigrateProgress {

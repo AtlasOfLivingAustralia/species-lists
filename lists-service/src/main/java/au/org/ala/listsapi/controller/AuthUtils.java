@@ -40,6 +40,10 @@ public class AuthUtils {
     return false;
   }
 
+  public boolean isAuthenticated(Principal principal) {
+    return getUserProfile(principal) != null;
+  }
+
   public boolean isAuthorized(Principal principal) {
     AlaUserProfile profile = getUserProfile(principal);
 

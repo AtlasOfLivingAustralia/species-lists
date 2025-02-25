@@ -1,9 +1,11 @@
 package au.org.ala.listsapi.controller;
 
 import au.org.ala.listsapi.model.*;
+import au.org.ala.listsapi.repo.SpeciesListCustomRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.BiocacheService;
+import au.org.ala.ws.security.profile.AlaUserProfile;
 import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,6 +44,8 @@ public class RESTController {
 
   @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
 
+  @Autowired protected SpeciesListCustomRepository speciesListCustomRepository;
+
   @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
 
   @Autowired protected BiocacheService biocacheService;
@@ -74,6 +78,12 @@ public class RESTController {
     return speciesList.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
   }
 
+  private boolean eq(String value, String equals) {
+    if (value == null) return false;
+    if (value.isEmpty()) return false;
+    return value.equals(equals);
+  }
+
   @Operation(tags = "REST", summary = "Get a list of species lists matching the query")
   @GetMapping("/speciesList/")
   public ResponseEntity<Object> speciesLists(
@@ -82,11 +92,44 @@ public class RESTController {
       @RequestParam(name = "pageSize", defaultValue = "10", required = false) int pageSize,
       @AuthenticationPrincipal Principal principal) {
     try {
-      if (!authUtils.isAuthorized(principal)) {
-        speciesList.setIsPrivate("false");
+      Pageable paging = PageRequest.of(page - 1, pageSize);
+
+      if (!authUtils.isAuthenticated(principal)) {
+        logger.info(Boolean.toString(authUtils.isAuthenticated(principal)));
+        if (eq(speciesList.getIsPrivate(), "true")) {
+          return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("You must be authenticated to query private lists");
+        }
+      } else {
+        AlaUserProfile profile = authUtils.getUserProfile(principal);
+
+        // If the user isn't an admin
+        if (!authUtils.hasAdminRole(profile)) {
+          // If the user is querying both public & private lists
+          if (speciesList.getIsPrivate() == null) {
+            // If no owner is supplied, or the owner is the current user,
+            // query all the user's private lists, and all public lists
+            if (speciesList.getOwner() == null || speciesList.getOwner().equals(profile.getUserId())) {
+              RESTSpeciesListQuery privateLists = speciesList.copy();
+              privateLists.setIsPrivate("true");
+              privateLists.setOwner(profile.getUserId());
+
+              RESTSpeciesListQuery publicLists = speciesList.copy();
+              publicLists.setIsPrivate("false");
+
+              Page<SpeciesList> results = speciesListCustomRepository.findByMultipleExamples(privateLists.convertTo(), publicLists.convertTo(), paging);
+              return new ResponseEntity<>(getLegacyFormat(results), HttpStatus.OK);
+            } else { // Otherwise, only query public lists with that userid
+              speciesList.setIsPrivate("false");
+            }
+          } else if (eq(speciesList.getIsPrivate(), "true")) {
+            if (speciesList.getOwner() != null && !speciesList.getOwner().equals(profile.getUserId())) {
+              return ResponseEntity.badRequest().body("You can only query your own private lists");
+            }
+            speciesList.setOwner(profile.getUserId());
+          }
+        }
       }
 
-      Pageable paging = PageRequest.of(page - 1, pageSize);
       if (speciesList == null || speciesList.isEmpty()) {
         Page<SpeciesList> results = speciesListMongoRepository.findAll(paging);
         return new ResponseEntity<>(getLegacyFormat(results), HttpStatus.OK);
@@ -97,6 +140,7 @@ public class RESTController {
               .withIgnoreCase()
               .withIgnoreNullValues()
               .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
+
       // Create an Example from the exampleProduct with the matcher
       Example<SpeciesList> example = Example.of(speciesList.convertTo(), matcher);
       Page<SpeciesList> results = speciesListMongoRepository.findAll(example, paging);

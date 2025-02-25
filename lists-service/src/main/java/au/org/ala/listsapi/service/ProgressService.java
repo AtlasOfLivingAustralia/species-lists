@@ -91,6 +91,10 @@ public class ProgressService {
             IngestProgressItem currentItem = item.get();
             currentItem.setElasticTotal(currentItem.getElasticTotal() + count);
 
+            if (currentItem.getElasticTotal() == currentItem.getRowCount()) {
+                currentItem.setCompleted(true);
+            }
+
             ingestProgressMongoRepository.save(currentItem);
         } else {
             Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListId, speciesListId);
