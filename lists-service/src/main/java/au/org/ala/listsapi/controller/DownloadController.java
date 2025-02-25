@@ -130,7 +130,7 @@ public class DownloadController {
         new CSVWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8))) {
       writeCsvHeaders(csvWriter, csvHeaders);
 
-      int batchSize = 1000;
+      int batchSize = 10000;
       ObjectId lastId = null;
 
       boolean finished = false;
@@ -211,7 +211,7 @@ public class DownloadController {
       SpeciesList speciesList, Principal principal) {
 
     // check user logged in
-    if (authUtils.getUserProfile(principal) == null) {
+    if (!authUtils.isAuthenticated(principal)) {
       return ResponseEntity.badRequest().body("User not logged in");
     }
 

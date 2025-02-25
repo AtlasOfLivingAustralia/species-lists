@@ -436,7 +436,7 @@ public class UploadService {
 
         batch.add(speciesListItem);
 
-        if (batch.size() == 1000) {
+        if (batch.size() == 10000) {
           long iteratorSavingStart = System.nanoTime();
           mongoUtils.speciesListItemsBulkSave(batch);
           long iteratorSavingElapsed = (System.nanoTime() - iteratorSavingStart) / 1000000;

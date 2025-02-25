@@ -8,6 +8,7 @@ import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.MetadataService;
 import au.org.ala.listsapi.service.ValidationService;
 import au.org.ala.listsapi.service.TaxonService;
+import au.org.ala.ws.security.profile.AlaUserProfile;
 import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
@@ -159,17 +160,23 @@ public class GraphQLController {
       @AuthenticationPrincipal Principal principal) {
 
     // if searching private lists, check user is authorized
-    if (isPrivate && !authUtils.isAuthorized(principal)) {
-      logger.info("User not authorized to private access lists");
-      throw new AccessDeniedException("You dont have access to this list");
+    if (isPrivate) {
+      AlaUserProfile profile = authUtils.getUserProfile(principal);
+      if (profile == null) {
+        logger.info("User not authorized to private access lists");
+        throw new AccessDeniedException("You must be logged in to view private lists");
+      } else {
+        userId = profile.getUserId();
+      }
     }
 
     NativeQueryBuilder builder = NativeQuery.builder().withPageable(PageRequest.of(1, 1));
+    String finalUserId = userId;
     builder.withQuery(
         q ->
             q.bool(
                 bq -> {
-                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), null, userId, isPrivate, filters, bq);
+                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), null, finalUserId, isPrivate, filters, bq);
                   return bq;
                 }));
 
@@ -287,7 +294,7 @@ public class GraphQLController {
     toUpdate.getFieldList().add(fieldName);
 
     if (StringUtils.isNotEmpty(fieldValue)) {
-      int batchSize = 1000;
+      int batchSize = 10000;
       ObjectId lastId = null;
 
       boolean finished = false;
@@ -338,7 +345,7 @@ public class GraphQLController {
     toUpdate.getFieldList().remove(oldName);
     toUpdate.getFieldList().add(newName);
 
-    int batchSize = 1000;
+    int batchSize = 10000;
     ObjectId lastId = null;
 
     boolean finished = false;
@@ -385,7 +392,7 @@ public class GraphQLController {
 
     toUpdate.getFieldList().remove(fieldName);
 
-    int batchSize = 1000;
+    int batchSize = 10000;
     ObjectId lastId = null;
 
     boolean finished = false;
