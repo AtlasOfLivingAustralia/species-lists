@@ -81,42 +81,6 @@ public class UploadService {
   }
 
   public SpeciesList ingest(
-      AlaUserProfile user, InputSpeciesList speciesListMetadata, File fileToLoad, boolean dryRun)
-      throws Exception {
-
-    // create the species list in mongo
-    SpeciesList speciesList = new SpeciesList();
-    speciesList.setOwner(user.getUserId());
-
-    if (user.getGivenName() != null && user.getFamilyName() != null) {
-      speciesList.setOwnerName(user.getGivenName() + " " + user.getFamilyName());
-    }
-
-    extractUpdates(speciesListMetadata, speciesList);
-
-    // If the species list is public, or authoritative, create a metadata link
-    if (!speciesList.getIsPrivate() || speciesList.getIsAuthoritative()) {
-      metadataService.setMeta(speciesList);
-    }
-
-    speciesList = speciesListMongoRepository.save(speciesList);
-
-    IngestJob ingestJob = ingest(speciesList.getId(), fileToLoad, dryRun, false);
-
-    speciesList.setFacetList(ingestJob.getFacetList());
-    speciesList.setFieldList(ingestJob.getFieldList());
-    speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
-    speciesList.setRowCount(ingestJob.getRowCount());
-    speciesList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
-    speciesList.setLastUpdated(new Date());
-
-    speciesList = speciesListMongoRepository.save(speciesList);
-
-    // releaseService.release(speciesList.getId());
-    return speciesList;
-  }
-
-  public SpeciesList asyncIngest(
           AlaUserProfile user, InputSpeciesList speciesListMetadata, File fileToLoad, boolean dryRun)
           throws Exception {
 
@@ -177,8 +141,7 @@ public class UploadService {
             + Objects.requireNonNull(file.getOriginalFilename()).replaceAll("[^a-zA-Z0-9._-]", "_"));
   }
 
-  public SpeciesList reload(String speciesListID, File fileToLoad, boolean dryRun)
-      throws Exception {
+  public SpeciesList reload(String speciesListID, File fileToLoad, boolean dryRun) {
     if (speciesListID != null) {
       // remove any existing progress
       progressService.clearIngestProgress(speciesListID);
@@ -193,17 +156,19 @@ public class UploadService {
         // delete from mongo
         speciesListItemMongoRepository.deleteBySpeciesListID(speciesList.getId());
 
-        IngestJob ingestJob = ingest(speciesList.getId(), fileToLoad, dryRun, false);
 
-        speciesList.setFieldList(ingestJob.getFieldList());
-        speciesList.setFacetList(ingestJob.getFacetList());
-        speciesList.setRowCount(ingestJob.getRowCount());
-        speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
-        speciesList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
+        final SpeciesList ingestList = speciesList;
 
-        speciesList = speciesListMongoRepository.save(speciesList);
+        CompletableFuture.runAsync(
+                () -> {
+                  try {
+                    asyncIngest(ingestList, fileToLoad, dryRun, false);
+                  } catch (Exception e) {
+                    throw new RuntimeException(e);
+                  }
+                });
+
         // releaseService.release(speciesList.getId());
-
         return speciesList;
       } else {
         return null;
@@ -213,8 +178,7 @@ public class UploadService {
     }
   }
 
-  public IngestJob ingest(
-      String speciesListID, File fileToLoad, boolean dryRun, boolean skipIndexing)
+  public IngestJob upload(File fileToLoad)
       throws Exception {
 
     IngestJob ingestJob = null;
@@ -225,14 +189,14 @@ public class UploadService {
     // handle CSV
     if (mimeType.equals("text/csv")) {
       // load a CSV
-      ingestJob = ingestCSV(speciesListID, fileToLoad, dryRun, skipIndexing);
+      ingestJob = ingestCSV(null, fileToLoad, true, true);
     }
 
     // handle zip file
     if (mimeType.equals("application/zip")) {
       try (ZipFile zipFile = new ZipFile(fileToLoad)) {
         // load a zip file
-        ingestJob = ingestZip(speciesListID, zipFile, dryRun, skipIndexing);
+        ingestJob = ingestZip(null, zipFile, true, true);
       }
     }
 
