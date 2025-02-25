@@ -23,6 +23,7 @@ public class IngestProgressItem {
     private long rowCount;
     private long mongoTotal = 0;
     private long elasticTotal = 0;
+    private boolean completed = false;
 
     @CreatedDate public Date started;
 

@@ -185,7 +185,7 @@ public class TaxonService {
     long findByIdStart = System.nanoTime();
     Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
     long findByIdElapsed = (System.nanoTime() - findByIdStart) / 1000000;
-    logger.info("[{},reindex] Reindex find by ID {}ms", speciesListID, findByIdElapsed);
+    logger.info("[{}|reindex] Reindex find by ID {}ms", speciesListID, findByIdElapsed);
 
     if (optionalSpeciesList.isEmpty()) return;
 
@@ -196,8 +196,15 @@ public class TaxonService {
 
     boolean finished = false;
     while (!finished) {
+      long startTime = System.nanoTime();
+
       List<SpeciesListItem> speciesListItems =
           speciesListItemMongoRepository.findNextBatch(speciesList.getId(), lastId, PageRequest.of(0, batchSize));
+
+      long elapsed = System.nanoTime() - startTime;
+
+      logger.info("[{}|reindex] Fetched {} items in {} ms",
+              speciesListID, speciesListItems.size(), elapsed / 1_000_000);
 
       if (!speciesListItems.isEmpty()) {
         List<IndexQuery> updateList = new ArrayList<>();
@@ -246,7 +253,7 @@ public class TaxonService {
 
     logger.info("[{}|taxonMatch] Started taxon matching", speciesListID);
 
-    int batchSize = 250;
+    int batchSize = 1000;
     ObjectId lastId = null;
 
     Set<String> distinctTaxa = new HashSet<>();

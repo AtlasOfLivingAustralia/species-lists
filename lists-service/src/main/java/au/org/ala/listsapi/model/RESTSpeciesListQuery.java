@@ -22,6 +22,7 @@ public class RESTSpeciesListQuery {
   private String doi;
   private String category;
   private String region;
+  private String owner;
   String isVersioned;
   String isAuthoritative;
   String isPrivate;
@@ -40,6 +41,7 @@ public class RESTSpeciesListQuery {
         || (doi != null && !doi.isEmpty())
         || (category != null && !category.isEmpty())
         || (region != null && !region.isEmpty())
+        || (owner != null && !owner.isEmpty())
         || (isVersioned != null && !isVersioned.isEmpty())
         || (isAuthoritative != null && !isAuthoritative.isEmpty())
         || (isPrivate != null && !isPrivate.isEmpty())
@@ -60,6 +62,7 @@ public class RESTSpeciesListQuery {
     s.setIsThreatened(parseBoolean(removeQueryExpr(this.isThreatened)));
     s.setIsBIE(parseBoolean(removeQueryExpr(this.isBIE)));
     s.setIsSDS(parseBoolean(removeQueryExpr(this.isSDS)));
+    s.setOwner(this.owner);
     s.setCategory(this.category);
     s.setRegion(this.region);
     s.setLicence(this.licence);
@@ -84,5 +87,27 @@ public class RESTSpeciesListQuery {
       return s.substring(3);
     }
     return s;
+  }
+
+  public RESTSpeciesListQuery copy() {
+    return new RESTSpeciesListQuery(
+            this.id,
+            this.dataResourceUid,
+            this.title,
+            this.description,
+            this.listType,
+            this.licence,
+            this.doi,
+            this.category,
+            this.region,
+            this.owner,
+            this.isVersioned,
+            this.isAuthoritative,
+            this.isPrivate,
+            this.isInvasive,
+            this.isThreatened,
+            this.isBIE,
+            this.isSDS
+    );
   }
 }
