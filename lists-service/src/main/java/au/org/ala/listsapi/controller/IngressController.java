@@ -74,21 +74,21 @@ public class IngressController {
   private CompletableFuture<Void> asyncTask;
   private String taskName;
 
-  @SecurityRequirement(name = "JWT")
-  @Operation(tags = "Ingress", summary = "Release a version of a species list")
-  @GetMapping("/release/{speciesListID}")
-  public ResponseEntity<Object> release(
-      @PathVariable("speciesListID") String speciesListID,
-      @AuthenticationPrincipal Principal principal) {
-    try {
-      ResponseEntity<Object> errorResponse = checkAuthorized(speciesListID, principal);
-      if (errorResponse != null) return errorResponse;
-      Release release = releaseService.release(speciesListID);
-      return ResponseEntity.ok(release);
-    } catch (Exception e) {
-      return ResponseEntity.badRequest().body("Error while releasing the file: " + e.getMessage());
-    }
-  }
+//  @SecurityRequirement(name = "JWT")
+//  @Operation(tags = "Ingress", summary = "Release a version of a species list")
+//  @GetMapping("/release/{speciesListID}")
+//  public ResponseEntity<Object> release(
+//      @PathVariable("speciesListID") String speciesListID,
+//      @AuthenticationPrincipal Principal principal) {
+//    try {
+//      ResponseEntity<Object> errorResponse = checkAuthorized(speciesListID, principal);
+//      if (errorResponse != null) return errorResponse;
+//      Release release = releaseService.release(speciesListID);
+//      return ResponseEntity.ok(release);
+//    } catch (Exception e) {
+//      return ResponseEntity.badRequest().body("Error while releasing the file: " + e.getMessage());
+//    }
+//  }
 
   @SecurityRequirement(name = "JWT")
   @Operation(tags = "Ingress", summary = "Delete a species list")
@@ -235,7 +235,7 @@ public class IngressController {
       logger.info("Upload to temporary area started...");
       File tempFile = uploadService.getFileTemp(file);
       file.transferTo(tempFile);
-      IngestJob ingestJob = uploadService.ingest(null, tempFile, true, true);
+      IngestJob ingestJob = uploadService.upload(tempFile);
       return ResponseEntity.ok(ingestJob);
     } catch (Exception e) {
       logger.error("Error while uploading the file: " + e.getMessage(), e);
@@ -245,88 +245,14 @@ public class IngressController {
 
   @SecurityRequirement(name = "JWT")
   @Operation(
-      summary = "Ingest a species list",
-      tags = "Ingress",
-      description =
-          "Ingest a species list. This is step 2 of a 2 step process. "
-              + "The file is uploaded to a temporary area and then ingested. "
-              + "The first step is to upload the species list.")
-  @PostMapping("/ingest")
-  @ApiResponses(
-      value = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "Successfully ingested",
-            content = {
-              @Content(
-                  mediaType = "application/json",
-                  schema = @Schema(implementation = SpeciesList.class))
-            }),
-        @ApiResponse(
-            responseCode = "400",
-            description = "Bad Request",
-            content = {@Content(mediaType = "text/plain")})
-      })
-  public ResponseEntity<Object> ingest(
-      @RequestParam("file") String fileName,
-      InputSpeciesList speciesList,
-      @AuthenticationPrincipal Principal principal) {
-    try {
-
-      // check user logged in
-      AlaUserProfile alaUserProfile = (AlaUserProfile) principal;
-      if (alaUserProfile == null) {
-        return ResponseEntity.badRequest().body("User not found");
-      }
-
-      // check that the supplied list type, region and license is valid
-      if (!validationService.isListValid(speciesList)) {
-        return ResponseEntity.badRequest().body("Supplied list contains invalid properties for a controlled value (list type, license, region)");
-      }
-
-      logger.info("Ingestion started...");
-      File tempFile = new File(tempDir + "/" + fileName);
-      if (!tempFile.exists()) {
-        return ResponseEntity.badRequest().body("File not uploaded yet");
-      }
-
-      SpeciesList updatedSpeciesList =
-          uploadService.ingest(alaUserProfile, speciesList, tempFile, false);
-      logger.info("Ingestion complete..." + updatedSpeciesList.toString());
-      return ResponseEntity.ok(updatedSpeciesList);
-    } catch (Exception e) {
-      logger.error("Error while ingesting the file: " + e.getMessage(), e);
-      return ResponseEntity.badRequest().body("Error while uploading the file: " + e.getMessage());
-    }
-  }
-
-
-  @SecurityRequirement(name = "JWT")
-  @Operation(
-          summary = "Gets the progress of a current ingestion job",
-          tags = "Ingress")
-  @GetMapping("/ingest/{speciesListID}/progress")
-  public ResponseEntity<Object> ingestProgress(@PathVariable("speciesListID") String speciesListID, @AuthenticationPrincipal Principal principal) {
-    // check user logged in
-    AlaUserProfile alaUserProfile = (AlaUserProfile) principal;
-    if (alaUserProfile == null) {
-      return ResponseEntity.badRequest().body("User not found");
-    }
-
-    IngestProgressItem ingestProgress = progressService.getIngestProgress(speciesListID);
-
-    return ResponseEntity.ok(ingestProgress);
-  }
-
-  @SecurityRequirement(name = "JWT")
-  @Operation(
           summary = "Asynchronously ingest a species list",
           tags = "Ingress",
           description =
                   "Asynchronously ingest a species list. This is step 2 of a 2 step process. "
                           + "The file is uploaded to a temporary area and then ingested. "
-                          + "The first step is to upload the species list.")
-  @PostMapping("/ingest/async")
+                          + "The first step is to upload the species list."
+                          + "The ID of the list being ingested will be returned, where you can then use /ingest/{ID}/progress to track ingestion progress.")
+  @PostMapping("/ingest")
   @ApiResponses(
           value = {
                   @ApiResponse(
@@ -342,7 +268,7 @@ public class IngressController {
                           description = "Bad Request",
                           content = {@Content(mediaType = "text/plain")})
           })
-  public ResponseEntity<Object> ingestAsync(
+  public ResponseEntity<Object> ingest(
           @RequestParam("file") String fileName,
           InputSpeciesList speciesList,
           @AuthenticationPrincipal Principal principal) {
@@ -366,7 +292,7 @@ public class IngressController {
       }
 
       SpeciesList updatedSpeciesList =
-              uploadService.asyncIngest(alaUserProfile, speciesList, tempFile, false);
+              uploadService.ingest(alaUserProfile, speciesList, tempFile, false);
 
       return ResponseEntity.ok(updatedSpeciesList);
     } catch (Exception e) {
@@ -374,6 +300,39 @@ public class IngressController {
       return ResponseEntity.badRequest().body("Error while uploading the file: " + e.getMessage());
     }
   }
+
+  @SecurityRequirement(name = "JWT")
+  @Operation(
+          summary = "Gets the progress of a current ingestion job, and whether it has completed.",
+          tags = "Ingress")
+  @GetMapping("/ingest/{speciesListID}/progress")
+  @ApiResponses(
+          value = {
+                  @ApiResponse(
+                          responseCode = "200",
+                          description = "Ingestion is progressing",
+                          content = {
+                                  @Content(
+                                          mediaType = "application/json",
+                                          schema = @Schema(implementation = IngestProgressItem.class))
+                          }),
+                  @ApiResponse(
+                          responseCode = "401",
+                          description = "Unauthorized",
+                          content = {@Content(mediaType = "text/plain")})
+          })
+  public ResponseEntity<Object> ingestProgress(@PathVariable("speciesListID") String speciesListID, @AuthenticationPrincipal Principal principal) {
+    // check user logged in
+    AlaUserProfile alaUserProfile = (AlaUserProfile) principal;
+    if (alaUserProfile == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("The user ");
+    }
+
+    IngestProgressItem ingestProgress = progressService.getIngestProgress(speciesListID);
+
+    return ResponseEntity.ok(ingestProgress);
+  }
+
 
   @SecurityRequirement(name = "JWT")
   @Operation(

@@ -92,19 +92,13 @@ export default (token: string) => ({
   },
   ingest: async (
     list: SpeciesListSubmit,
-    file: string,
-    async: boolean = false
+    file: string
   ): Promise<SpeciesList> => {
     // Create a new FormData object
     const form = listToForm(list, file);
 
     // Fire the request
-    return request(
-      `${import.meta.env.VITE_API_LIST_INGEST}${async ? '/async' : ''}`,
-      'POST',
-      form,
-      token
-    );
+    return request(import.meta.env.VITE_API_LIST_INGEST, 'POST', form, token);
   },
   ingestProgress: async (speciesListID: string): Promise<IngestProgress> => {
     // Fire the request

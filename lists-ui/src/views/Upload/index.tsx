@@ -71,8 +71,7 @@ export function Component() {
       try {
         const { id } = await ala.rest.lists.ingest(
           list,
-          result?.localFile || '',
-          true
+          result?.localFile || ''
         );
         setIngestId(id);
       } catch (error) {

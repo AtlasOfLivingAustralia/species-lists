@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import '@mantine/dropzone/styles.css';
 
-import { ReactNode, useCallback, useEffect, useState } from 'react';
+import { ReactNode, useCallback, useState } from 'react';
 import {
   Alert,
   Badge,
@@ -23,11 +23,7 @@ import {
 } from '@atlasoflivingaustralia/ala-mantine';
 
 import { FormattedMessage, FormattedNumber } from 'react-intl';
-import {
-  IngestProgress as IngestProgressType,
-  SpeciesList,
-  UploadResult,
-} from '#/api';
+import { SpeciesList, UploadResult } from '#/api';
 import { getErrorMessage } from '#/helpers';
 
 // Helpers & local components
@@ -47,8 +43,6 @@ export function Component() {
   const [error, setError] = useState<string | null>(null);
   const [originalName, setOriginalName] = useState<string | null>(null);
   const [result, setResult] = useState<UploadResult | null>(null);
-  const [progress, setProgress] = useState<IngestProgressType | null>(null);
-  const [ingestError, setIngestError] = useState<unknown | null>(null);
 
   const { meta } = useRouteLoaderData('list') as { meta: SpeciesList };
   const ala = useALA();
@@ -75,22 +69,14 @@ export function Component() {
     try {
       await ala.rest.lists.reingest(meta.id, result?.localFile || '');
     } catch (error) {
-      setIngestError(error);
-    }
-  }, [result?.localFile]);
-
-  // Effect hook for ingestion errors
-  useEffect(() => {
-    if (ingestError && (progress === null || progress.mongoTotal === 0)) {
-      setIngesting(false);
-
+      console.error(error);
       notifications.show({
         message: getErrorMessage(error),
         position: 'bottom-left',
         radius: 'md',
       });
     }
-  }, [ingestError, progress]);
+  }, [result?.localFile]);
 
   const handleReset = useCallback(() => {
     setError(null);
@@ -222,11 +208,7 @@ export function Component() {
           </Group>
         </Paper>
       )}
-      <IngestProgress
-        id={meta.id}
-        ingesting={ingesting}
-        onProgress={(newProgress) => setProgress(newProgress)}
-      />
+      <IngestProgress id={meta.id} ingesting={ingesting} />
     </Stack>
   );
 }
