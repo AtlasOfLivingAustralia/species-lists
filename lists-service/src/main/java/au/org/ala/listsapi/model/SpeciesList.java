@@ -11,6 +11,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.annotation.Version;
+import org.springframework.data.mongodb.core.index.Indexed;
 
 @NoArgsConstructor
 @Data
@@ -22,7 +23,7 @@ public class SpeciesList {
 
   @Id private String id;
   @Version private Integer version;
-  private String dataResourceUid;
+  @Indexed private String dataResourceUid;
   private String title;
   private String description;
   private String listType;

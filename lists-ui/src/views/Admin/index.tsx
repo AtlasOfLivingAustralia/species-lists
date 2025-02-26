@@ -26,6 +26,7 @@ import {
   faRightLeft,
   faSearch,
   faTrash,
+  faUser,
   faWarning,
 } from '@fortawesome/free-solid-svg-icons';
 import { Navigate, useLoaderData, useNavigate } from 'react-router';
@@ -199,6 +200,10 @@ export function Component() {
                   cancelSucessNotification = true;
                 }
                 break;
+                case 'migrate-userdetails':
+                  handleMigrationStart();
+                  await ala.rest.admin?.migrateUserdetails();
+                  break;
               case 'wipe-index':
                 await ala.rest.admin?.wipe('index');
                 break;
@@ -323,6 +328,19 @@ export function Component() {
               />
             </Grid.Col>
           )}
+          <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
+            <ActionCard
+              disabled={Boolean(migrationProgress) || migrationDisabled}
+              title='Userdetails'
+              description={
+                <>Migrate user data from userdetails for legacy lists</>
+              }
+              icon={faUser}
+              onClick={() =>
+                handleClick('migrate-userdetails', 'Userdetails Migration')
+              }
+            />
+          </Grid.Col>
         </Grid>
         <Grid>
           <Grid.Col span={12}>
