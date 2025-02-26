@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 public class UserdetailsService {
     @Autowired WebService webService;
 
-    @Value("${userdetails.api.url}")
+    @Value("${userDetails.api.url}")
     private String userdetailsUrl;
 
     public Map fetchUserByEmail(String email) {
