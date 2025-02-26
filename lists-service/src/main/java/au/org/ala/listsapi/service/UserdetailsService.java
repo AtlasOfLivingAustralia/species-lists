@@ -36,7 +36,10 @@ public class UserdetailsService {
         );
 
         if ((int)request.get("statusCode") == 200) {
-            return (Map)request.get("resp");
+            Map resp = (Map)request.get("resp");
+            logger.info("Userdetails fetch succeeded - {} - {}", resp.get("displayName"), resp.get("userId"));
+
+            return resp;
         } else {
             logger.info("Userdetails fetch failed ({})", request.get("statusCode"));
         }
