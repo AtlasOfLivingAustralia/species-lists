@@ -2,6 +2,8 @@ package au.org.ala.listsapi.service;
 
 import au.org.ala.listsapi.service.auth.WebService;
 import org.apache.http.entity.ContentType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -17,7 +19,11 @@ public class UserdetailsService {
     @Value("${userDetails.api.url}")
     private String userdetailsUrl;
 
+    private static final Logger logger = LoggerFactory.getLogger(UserdetailsService.class);
+
     public Map fetchUserByEmail(String email) {
+        logger.info("Userdetails fetch {} ({})", userdetailsUrl + "/userDetails/getUserDetails", email);
+
         Map params = Map.of("userName", email);
         Map request = webService.post(
                 userdetailsUrl + "/userDetails/getUserDetails",
@@ -30,7 +36,12 @@ public class UserdetailsService {
         );
 
         if ((int)request.get("statusCode") == 200) {
-            return (Map)request.get("resp");
+            Map resp = (Map)request.get("resp");
+            logger.info("Userdetails fetch succeeded - {} - {}", resp.get("displayName"), resp.get("userId"));
+
+            return resp;
+        } else {
+            logger.info("Userdetails fetch failed ({})", request.get("statusCode"));
         }
 
         return null;
