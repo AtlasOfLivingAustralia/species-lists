@@ -8,6 +8,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
@@ -15,6 +16,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +35,7 @@ public class MigrateService {
   @Autowired UploadService uploadService;
   @Autowired ReleaseService releaseService;
   @Autowired ProgressService progressService;
+  @Autowired UserdetailsService userdetailsService;
 
   String tempDir;
   String migrateUrl;
@@ -87,7 +92,7 @@ public class MigrateService {
 
     while (!done) {
       List<SpeciesList> batch = fetchLegacyLists(query, offset);
-      lists.addAll(skipExisting ? filterExistingLists(batch) : batch);
+      lists.addAll(skipExisting ? filterExistingLists(batch, false) : batch);
 
       if (batch.size() < 1000) {
         done = true;
@@ -103,13 +108,13 @@ public class MigrateService {
     return getLegacyLists(query, true);
   }
 
-  private List<SpeciesList> filterExistingLists(List<SpeciesList> lists) {
+  private List<SpeciesList> filterExistingLists(List<SpeciesList> lists, boolean doesExist) {
     List<String> dataResources = lists.stream().map(SpeciesList::getDataResourceUid).toList();
     Set<String> existingDrUIDs = speciesListMongoRepository
             .findAllByDataResourceUidIsIn(dataResources)
             .stream().map(SpeciesList::getDataResourceUid).collect(Collectors.toSet());
 
-    return lists.stream().filter(list -> !existingDrUIDs.contains(list.getDataResourceUid())).toList();
+    return lists.stream().filter(list -> existingDrUIDs.contains(list.getDataResourceUid()) == doesExist).toList();
   }
 
   private SpeciesList mapListToSpeciesList(Map<String, Object> list) {
@@ -121,7 +126,7 @@ public class MigrateService {
       speciesList.setListType((String) list.get("listType"));
       speciesList.setAuthority((String) list.get("authority"));
       speciesList.setRegion((String) list.get("region"));
-      speciesList.setLastUpdatedBy((String) list.get("username"));
+      speciesList.setOwner((String) list.get("username"));
 
       if (list.get("lastUpdated") != null) {
         String lastUpdatedString = (String) list.get("lastUpdated");
@@ -163,6 +168,22 @@ public class MigrateService {
     return null;
   }
 
+  private void updateLegacyUserDetails(SpeciesList list, HashMap<String, Map> foundUsers) {
+    Map legacyUser;
+
+    if (foundUsers.containsKey(list.getOwner())) {
+      legacyUser = foundUsers.get(list.getOwner());
+    } else {
+      legacyUser = userdetailsService.fetchUserByEmail(list.getOwner());
+      foundUsers.put(list.getOwner(), legacyUser);
+    }
+
+    if (legacyUser != null) {
+      list.setOwner((String)legacyUser.get("userId"));
+      list.setOwnerName((String)legacyUser.get("displayName"));
+    }
+  }
+
   public void migrateAll() {
     logger.info("Starting migration of ALL lists...");
     migration(getLegacyLists(ALL_LISTS));
@@ -180,6 +201,9 @@ public class MigrateService {
 
   public void migration(List<SpeciesList> speciesLists) {
     progressService.setupMigrationProgress(speciesLists.size());
+
+    // Create a map to store already retrieved user info
+    HashMap<String, Map> foundUsers = new HashMap<>();
 
     speciesLists.forEach(
         speciesList -> {
@@ -203,6 +227,9 @@ public class MigrateService {
                     return null;
                   }
                 });
+
+            updateLegacyUserDetails(speciesList, foundUsers);
+
             SpeciesList savedList = speciesListMongoRepository.save(speciesList);
 
             progressService.updateMigrationProgress(savedList);
@@ -225,6 +252,21 @@ public class MigrateService {
             logger.error(e.getMessage(), e);
           }
         });
+
+    progressService.clearMigrationProgress();
+  }
+
+  public void syncUserdeatils() {
+    List<SpeciesList> existingLegacyLists = filterExistingLists(getLegacyLists(ALL_LISTS, false), true);
+    progressService.setupMigrationProgress(existingLegacyLists.size());
+
+    // Create a map to store already retrieved user info
+    HashMap<String, Map> foundUsers = new HashMap<>();
+
+    existingLegacyLists.forEach(list -> {
+      progressService.updateMigrationProgress(list);
+      updateLegacyUserDetails(list, foundUsers);
+    });
 
     progressService.clearMigrationProgress();
   }
