@@ -33,6 +33,16 @@ export default (token: string) => ({
 
     return progress !== '' ? (progress as MigrateProgress) : null;
   },
+  migrateUserdetails: async (): Promise<MigrateProgress | null> => {
+    const progress = await request(
+      import.meta.env.VITE_API_ADMIN_MIGRATE_USERDETAILS,
+      'GET',
+      null,
+      token
+    );
+
+    return progress !== '' ? (progress as MigrateProgress) : null;
+  },
   wipe: async (target: 'index' | 'docs'): Promise<void> =>
     request(
       `${import.meta.env.VITE_API_ADMIN_WIPE}/${target}`,

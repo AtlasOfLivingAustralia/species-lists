@@ -8,6 +8,7 @@ import au.org.ala.ws.security.profile.AlaUserProfile;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.aggregations.Buckets;
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
+import co.elastic.clients.elasticsearch.nodes.Http;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -65,6 +66,7 @@ public class IngressController {
   @Autowired protected MigrateService migrateService;
   @Autowired protected ValidationService validationService;
   @Autowired protected ProgressService progressService;
+  @Autowired protected UserdetailsService userdetailsService;
 
   @Autowired protected AuthUtils authUtils;
 
@@ -478,6 +480,22 @@ public class IngressController {
     if (errorResponse != null) return errorResponse;
 
     progressService.clearMigrationProgress();
+    return new ResponseEntity<>(HttpStatus.OK);
+  }
+
+  @Hidden
+  @SecurityRequirement(name = "JWT")
+  @Operation(summary = "Sync legacy lists with userdetails", tags = "Migrate")
+  @GetMapping(value ="/admin/migrate/userdetails")
+  public ResponseEntity<Object> syncUserdetails(@AuthenticationPrincipal Principal principal) {
+
+    ResponseEntity<Object> errorResponse = checkAuthorized(principal);
+    if (errorResponse != null) return errorResponse;
+
+    startAsyncTaskIfNotBusy("USERDETAILS-SYNC", () -> {
+      migrateService.syncUserdeatils();
+    });
+
     return new ResponseEntity<>(HttpStatus.OK);
   }
 
