@@ -22,8 +22,6 @@ public class UserdetailsService {
     private static final Logger logger = LoggerFactory.getLogger(UserdetailsService.class);
 
     public Map fetchUserByEmail(String email) {
-        logger.info("Userdetails fetch {} ({})", userdetailsUrl + "/userDetails/getUserDetails", email);
-
         Map params = Map.of("userName", email);
         Map request = webService.post(
                 userdetailsUrl + "/userDetails/getUserDetails",
@@ -37,11 +35,8 @@ public class UserdetailsService {
 
         if ((int)request.get("statusCode") == 200) {
             Map resp = (Map)request.get("resp");
-            logger.info("Userdetails fetch succeeded - {} - {}", resp.get("displayName"), resp.get("userId"));
 
             return resp;
-        } else {
-            logger.info("Userdetails fetch failed ({})", request.get("statusCode"));
         }
 
         return null;

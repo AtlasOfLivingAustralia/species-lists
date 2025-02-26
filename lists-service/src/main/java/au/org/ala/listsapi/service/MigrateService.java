@@ -265,7 +265,17 @@ public class MigrateService {
 
     existingLegacyLists.forEach(list -> {
       progressService.updateMigrationProgress(list);
-      updateLegacyUserDetails(list, foundUsers);
+
+      Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByDataResourceUid(list.getDataResourceUid());
+      if (optionalSpeciesList.isPresent()) {
+        SpeciesList speciesList = optionalSpeciesList.get();
+        speciesList.setOwner(list.getOwner());
+
+        updateLegacyUserDetails(speciesList, foundUsers);
+        speciesListMongoRepository.save(speciesList);
+      } else {
+        logger.info("Legacy list {} ({}) not found in system, skipping...", list.getTitle(), list.getDataResourceUid());
+      }
     });
 
     progressService.clearMigrationProgress();
