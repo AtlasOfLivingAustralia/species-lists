@@ -17,7 +17,9 @@ public interface SpeciesListMongoRepository extends MongoRepository<SpeciesList,
 
   long count();
 
-  Optional<SpeciesList> findByIdOrDataResourceUid(String speciesListID, String dataResourceUID);
+  Optional<SpeciesList> findByIdOrDataResourceUid(String speciesListID, String dataResourceUid);
+
+  Optional<SpeciesList> findByDataResourceUid(String dataResourceUid);
 
   List<SpeciesList> findAllByDataResourceUidIsIn(Collection<String> dataResourceUIDs);
 
