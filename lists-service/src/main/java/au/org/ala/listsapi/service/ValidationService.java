@@ -50,7 +50,7 @@ public class ValidationService {
 
     try {
       List<Location> userdetailsCountries = fetchJson(userDetailsUrl + "/ws/registration/countries.json", new TypeReference<>() {});
-      List<ConstraintListItem> countries = getConstraintsByKey(ConstraintType.countries);
+      List<ConstraintListItem> countries = getConstraintsByKey(ConstraintType.region);
 
       // Map the countries list into UI constraints
       userdetailsCountries.forEach(e -> {
@@ -59,7 +59,7 @@ public class ValidationService {
         countries.add(constraint);
       });
 
-      setConstraintsByKey(ConstraintType.countries, countries);
+      setConstraintsByKey(ConstraintType.region, countries);
     } catch (Exception ex) {
       log.error("Error loading country constraints from userdetails", ex);
     }
@@ -96,8 +96,8 @@ public class ValidationService {
   public boolean isListValid(InputSpeciesList speciesList) {
     // check that the supplied list type, region and license is valid
     return (
-            isValueValid(ConstraintType.lists, speciesList.getListType()) &&
-            isValueValid(ConstraintType.licenses, speciesList.getLicence())
+            isValueValid(ConstraintType.listType, speciesList.getListType()) &&
+            isValueValid(ConstraintType.licence, speciesList.getLicence())
     );
   }
 }

@@ -256,8 +256,8 @@ public class IngressController {
           description =
                   "Asynchronously ingest a species list. This is step 2 of a 2 step process. "
                           + "The file is uploaded to a temporary area and then ingested. "
-                          + "The first step is to upload the species list."
-                          + "The ID of the list being ingested will be returned, where you can then use /ingest/{ID}/progress to track ingestion progress.")
+                          + "\n\nThe first step is to upload the species list. The ID of the list being ingested will be returned, where you can then use `/ingest/{ID}/progress` to track ingestion progress."
+                          + "\n\nThe ingested list is validated against the constraints returned from the `/constraints` endpoint, where each key is a list property that will be validated, and the value is all of the possible values for that key.")
   @PostMapping("/ingest")
   @ApiResponses(
           value = {
