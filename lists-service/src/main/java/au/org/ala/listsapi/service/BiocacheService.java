@@ -51,7 +51,7 @@ public class BiocacheService {
       if (classification != null && classification.getTaxonConceptID() != null) {
         return "lsid:" + classification.getTaxonConceptID();
       } else if (speciesListItem.getScientificName() != null) {
-        return "raw_name:" + speciesListItem.getScientificName();
+        return "raw_scientificName:\"" + speciesListItem.getScientificName() + "\"";
       }
 
       return null;
