@@ -217,8 +217,6 @@ public class RESTController {
           @Nullable @RequestParam(name = "speciesListIDs") String speciesListIDs,
           @Nullable @RequestParam(name = "page", defaultValue = "1") Integer page,
           @Nullable @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
-          @Nullable @RequestParam(name = "sort", defaultValue="scientificName") String sort,
-          @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
           @AuthenticationPrincipal Principal principal) {
     try {
       AlaUserProfile profile = authUtils.getUserProfile(principal);
@@ -261,14 +259,6 @@ public class RESTController {
 
                                 return bq;
                               }));
-
-      builder.withSort(
-              s ->
-                      s.field(
-                              new FieldSort.Builder()
-                                      .field(emptyDefault(sort, "scientificName"))
-                                      .order(emptyDefault(dir, "asc").equals("asc") ? SortOrder.Asc : SortOrder.Desc)
-                                      .build()));
 
       Query query = builder.build();
       query.setPageable(pageableRequest);
