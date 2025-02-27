@@ -54,22 +54,6 @@ public class RESTController {
   @Autowired protected AuthUtils authUtils;
 
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
-
-  @Value("${app.name}")
-  private String appName;
-
-  @Value("${app.version}")
-  private String appVersion;
-
-  @Operation(tags = "REST", summary = "Retrieve information about the lists service")
-  @GetMapping("/info")
-  public ResponseEntity<Map<String, String>> info() {
-    return new ResponseEntity<>(Map.of(
-            "name", appName,
-            "version", appVersion
-    ), HttpStatus.OK);
-  }
-
   @Operation(tags = "REST", summary = "Get species list metadata")
   @Tag(name = "REST", description = "REST Services for species lists lookups")
   @GetMapping("/speciesList/{speciesListID}")
@@ -220,8 +204,85 @@ public class RESTController {
         return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
       }
 
-      return ResponseEntity.status(404).body("Species list not found");
+      return ResponseEntity.status(404).body("Species list(s) not found");
     } catch (Exception e) {
+      return ResponseEntity.badRequest().body(e.getMessage());
+    }
+  }
+
+  @Operation(tags = "REST", summary = "Get details of species list items i.e species for a list of guid(s)")
+  @GetMapping("/species/")
+  public ResponseEntity<Object> species(
+          @RequestParam(name = "guids") String guids,
+          @Nullable @RequestParam(name = "speciesListIDs") String speciesListIDs,
+          @Nullable @RequestParam(name = "page", defaultValue = "1") Integer page,
+          @Nullable @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
+          @Nullable @RequestParam(name = "sort", defaultValue="scientificName") String sort,
+          @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
+          @AuthenticationPrincipal Principal principal) {
+    try {
+      AlaUserProfile profile = authUtils.getUserProfile(principal);
+      List<FieldValue> GUIDs = Arrays.stream(guids.split(",")).map(FieldValue::of).toList();
+      List<FieldValue> listIDs = speciesListIDs != null ?
+              Arrays.stream(speciesListIDs.split(",")).map(FieldValue::of).toList() : null;
+
+      if (page < 1 || (page * pageSize) > 10000) {
+        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+      }
+
+      Pageable pageableRequest = PageRequest.of(page - 1, pageSize);
+      NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
+      builder.withQuery(
+              q ->
+                      q.bool(
+                              bq -> {
+                                bq.filter(f -> f.terms(t -> t.field("classification.taxonConceptID")
+                                        .terms(ta -> ta.value(GUIDs))));
+
+                                if (listIDs != null) {
+                                  bq.filter(f -> f.bool(b -> b
+                                          .should(s -> s.terms(t -> t.field("speciesListID").terms(ta -> ta.value(listIDs))))
+                                          .should(s -> s.terms(t -> t.field("dataResourceUid").terms(ta -> ta.value(listIDs))))
+                                  ));
+                                }
+
+                                // If the user is not an admin, only query their private lists, and all other public lists
+                                if (!authUtils.isAuthenticated(principal)) {
+                                  bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
+                                } else if (!authUtils.hasAdminRole(profile)) {
+                                  bq.filter(f -> f.bool(b -> b
+                                          .should(s -> s.bool(b2 -> b2
+                                                  .must(m -> m.term(t -> t.field("owner").value(profile.getUserId())))
+                                                  .must(m -> m.term(t -> t.field("isPrivate").value(true)))
+                                          ))
+                                          .should(s -> s.term(t -> t.field("isPrivate").value(false)))
+                                  ));
+                                }
+
+                                return bq;
+                              }));
+
+      builder.withSort(
+              s ->
+                      s.field(
+                              new FieldSort.Builder()
+                                      .field(emptyDefault(sort, "scientificName"))
+                                      .order(emptyDefault(dir, "asc").equals("asc") ? SortOrder.Asc : SortOrder.Desc)
+                                      .build()));
+
+      Query query = builder.build();
+      query.setPageable(pageableRequest);
+      SearchHits<SpeciesListIndex> results =
+              elasticsearchOperations.search(
+                      query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
+
+      List<SpeciesListItem> speciesListItems =
+              ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
+
+      return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
+
+    } catch (Exception e) {
+      logger.info(e.getMessage());
       return ResponseEntity.badRequest().body(e.getMessage());
     }
   }
@@ -240,6 +301,62 @@ public class RESTController {
       }
 
       return ResponseEntity.status(404).body("Species list not found");
+    } catch (Exception e) {
+      return ResponseEntity.badRequest().body(e.getMessage());
+    }
+  }
+
+  private static Set<String> findCommonKeys(List<SpeciesList> lists) {
+    // Handle edge cases
+    if (lists == null || lists.isEmpty()) {
+      return Collections.emptySet();
+    }
+
+    // If there is only one list, its contents are trivially the common elements
+    if (lists.size() == 1) {
+      return new HashSet<>(lists.get(0).getFieldList());
+    }
+
+    // Sort lists by size (smallest first) to optimize intersection performance
+    lists.sort(Comparator.comparingInt(l -> l.getFieldList().size()));
+
+    // Initialize 'common' with the first (smallest) list
+    Set<String> common = new HashSet<>(lists.get(0).getFieldList());
+
+    // Intersect with each subsequent list
+    for (int i = 1; i < lists.size(); i++) {
+      common.retainAll(lists.get(i).getFieldList());
+      // If at any point the set becomes empty, we can stop
+      if (common.isEmpty()) {
+        break;
+      }
+    }
+
+    return common;
+  }
+
+  @Operation(tags = "REST", summary = "Get a list of keys from KVP common across a list multiple species lists")
+  @GetMapping("/listCommonKeys/{speciesListIDs}")
+  public ResponseEntity<Object> listCommonKeys(
+          @PathVariable("speciesListIDs") String speciesListIDs,
+          @AuthenticationPrincipal Principal principal) {
+    try {
+      List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
+      List<SpeciesList> speciesLists = speciesListMongoRepository.findAllByDataResourceUidIsInOrIdIsIn(IDs, IDs);
+
+      // Ensure that some species lists were returned with the query
+      if (!speciesLists.isEmpty()) {
+        List<SpeciesList> validLists = speciesLists.stream()
+                .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal)).toList();
+
+        if (validLists.isEmpty()) {
+          return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(findCommonKeys(speciesLists), HttpStatus.OK);
+      }
+
+      return ResponseEntity.status(404).body("Species list(s) not found");
     } catch (Exception e) {
       return ResponseEntity.badRequest().body(e.getMessage());
     }
