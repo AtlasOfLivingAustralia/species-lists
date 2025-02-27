@@ -111,6 +111,7 @@ public class IngressController {
     }
   }
 
+  @Hidden
   @SecurityRequirement(name = "JWT")
   @Operation(
       tags = "Ingress",
@@ -147,6 +148,7 @@ public class IngressController {
     }
   }
 
+  @Hidden
   @SecurityRequirement(name = "JWT")
   @Operation(
       tags = "Ingress",
@@ -165,6 +167,7 @@ public class IngressController {
     }
   }
 
+  @Hidden
   @SecurityRequirement(name = "JWT")
   @Operation(
       summary = "Reindex a species list",
@@ -186,6 +189,7 @@ public class IngressController {
     }
   }
 
+  @Hidden
   @SecurityRequirement(name = "JWT")
   @Tag(name = "Ingress", description = "Services for ingesting species lists")
   @Operation(
@@ -439,24 +443,12 @@ public class IngressController {
   @Hidden
   @SecurityRequirement(name = "JWT")
   @Operation(summary = "Migrate all species lists", tags = "Migrate")
-  @GetMapping("/admin/migrate/all")
-  public ResponseEntity<Object> migrateAll(@AuthenticationPrincipal Principal principal) {
+  @GetMapping("/admin/migrate")
+  public ResponseEntity<Object> migrate(@AuthenticationPrincipal Principal principal) {
     ResponseEntity<Object> errorResponse = checkAuthorized(principal);
     if (errorResponse != null) return errorResponse;
 
     return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrateAll());
-  }
-
-  @Hidden
-  @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Migrate authoritative species lists", tags = "Migrate")
-  @GetMapping("/admin/migrate/authoritative")
-  public ResponseEntity<Object> migrateAuthoritative(@AuthenticationPrincipal Principal principal) {
-
-    ResponseEntity<Object> errorResponse = checkAuthorized(principal);
-    if (errorResponse != null) return errorResponse;
-
-    return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrateAuthoritative());
   }
 
   @Hidden

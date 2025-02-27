@@ -70,7 +70,7 @@ public class RESTController {
   }
 
   @Operation(tags = "REST", summary = "Get a list of species lists matching the query")
-  @GetMapping("/speciesList/")
+  @GetMapping("/speciesList")
   public ResponseEntity<Object> speciesLists(
       RESTSpeciesListQuery speciesList,
       @RequestParam(name = "page", defaultValue = "1", required = false) int page,
@@ -211,7 +211,7 @@ public class RESTController {
   }
 
   @Operation(tags = "REST", summary = "Get details of species list items i.e species for a list of guid(s)")
-  @GetMapping("/species/")
+  @GetMapping("/species")
   public ResponseEntity<Object> species(
           @RequestParam(name = "guids") String guids,
           @Nullable @RequestParam(name = "speciesListIDs") String speciesListIDs,

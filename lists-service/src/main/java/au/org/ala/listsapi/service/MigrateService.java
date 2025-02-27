@@ -41,7 +41,6 @@ public class MigrateService {
   String migrateUrl;
 
   private final RestTemplate restTemplate;
-  private final String AUTHORITATIVE_LISTS = "/ws/speciesList?isAuthoritative=eq:true&max=1000";
   private final String ALL_LISTS = "/ws/speciesList?max=1000";
 
   public MigrateService(
@@ -187,11 +186,6 @@ public class MigrateService {
   public void migrateAll() {
     logger.info("Starting migration of ALL lists...");
     migration(getLegacyLists(ALL_LISTS));
-  }
-
-  public void migrateAuthoritative() {
-    logger.info("Starting migration of AUTHORITATIVE lists...");
-    migration(getLegacyLists(AUTHORITATIVE_LISTS));
   }
 
   public void migrateCustom(String query) {

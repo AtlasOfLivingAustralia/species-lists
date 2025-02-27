@@ -54,9 +54,7 @@ public class ValidationService {
 
       // Map the countries list into UI constraints
       userdetailsCountries.forEach(e -> {
-        var constraint = new ConstraintListItem();
-        constraint.setLabel(e.getName());
-        constraint.setValue(e.getIsoCode());
+        var constraint = new ConstraintListItem(e.getIsoCode(), e.getName());
 
         countries.add(constraint);
       });
@@ -101,15 +99,5 @@ public class ValidationService {
             isValueValid(ConstraintType.lists, speciesList.getListType()) &&
             isValueValid(ConstraintType.licenses, speciesList.getLicence())
     );
-  }
-
-  public List<ConstraintListItem> getConstraintList(ConstraintType constraintType) throws Exception {
-    List<ConstraintListItem> list = getConstraintsByKey(constraintType);
-
-    if (list == null) {
-      throw new Exception("Could not find corresponding constraint list for '" + constraintType + "' type!");
-    }
-
-    return list;
   }
 }
