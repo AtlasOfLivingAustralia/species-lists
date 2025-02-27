@@ -423,6 +423,7 @@ public class IngressController {
     return null;
   }
 
+  @Hidden
   @SecurityRequirement(name = "JWT")
   @Operation(summary = "Migration progress", tags = "Migrate")
   @GetMapping("/admin/migrate/progress")
@@ -435,6 +436,7 @@ public class IngressController {
     return ResponseEntity.ok(migrateProgress);
   }
 
+  @Hidden
   @SecurityRequirement(name = "JWT")
   @Operation(summary = "Migrate all species lists", tags = "Migrate")
   @GetMapping("/admin/migrate/all")
@@ -445,6 +447,7 @@ public class IngressController {
     return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrateAll());
   }
 
+  @Hidden
   @SecurityRequirement(name = "JWT")
   @Operation(summary = "Migrate authoritative species lists", tags = "Migrate")
   @GetMapping("/admin/migrate/authoritative")

@@ -3,6 +3,7 @@ package au.org.ala.listsapi.controller;
 import au.org.ala.listsapi.model.ConstraintType;
 import au.org.ala.listsapi.service.ValidationService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,10 +13,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @org.springframework.web.bind.annotation.RestController
-public class UtilsController {
+public class ValidationController {
   @Autowired protected ValidationService validationService;
 
-  @Operation(tags = "REST", summary = "Get all constraint lists")
+  @Operation(tags = "Validation", summary = "Get all constraint lists")
+  @Tag(name = "Validation", description = "Services for validating list parameters")
   @GetMapping("/constraints")
   public ResponseEntity<Object> constraints() {
     try {
@@ -28,7 +30,7 @@ public class UtilsController {
     }
   }
 
-  @Operation(tags = "REST", summary = "Get constraints for list types, licenses, countries")
+  @Operation(tags = "Validation", summary = "Get constraints for list types, licenses, countries")
   @GetMapping("/constraints/{type:lists|licenses|countries}")
   public ResponseEntity<Object> constraintsForType(
       @PathVariable("type") ConstraintType constraintType) {
