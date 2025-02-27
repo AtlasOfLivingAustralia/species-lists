@@ -204,7 +204,7 @@ public class RESTController {
         return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
       }
 
-      return ResponseEntity.status(404).body("Species list not found");
+      return ResponseEntity.status(404).body("Species list(s) not found");
     } catch (Exception e) {
       return ResponseEntity.badRequest().body(e.getMessage());
     }
@@ -301,6 +301,62 @@ public class RESTController {
       }
 
       return ResponseEntity.status(404).body("Species list not found");
+    } catch (Exception e) {
+      return ResponseEntity.badRequest().body(e.getMessage());
+    }
+  }
+
+  private static Set<String> findCommonKeys(List<SpeciesList> lists) {
+    // Handle edge cases
+    if (lists == null || lists.isEmpty()) {
+      return Collections.emptySet();
+    }
+
+    // If there is only one list, its contents are trivially the common elements
+    if (lists.size() == 1) {
+      return new HashSet<>(lists.get(0).getFieldList());
+    }
+
+    // Sort lists by size (smallest first) to optimize intersection performance
+    lists.sort(Comparator.comparingInt(l -> l.getFieldList().size()));
+
+    // Initialize 'common' with the first (smallest) list
+    Set<String> common = new HashSet<>(lists.get(0).getFieldList());
+
+    // Intersect with each subsequent list
+    for (int i = 1; i < lists.size(); i++) {
+      common.retainAll(lists.get(i).getFieldList());
+      // If at any point the set becomes empty, we can stop
+      if (common.isEmpty()) {
+        break;
+      }
+    }
+
+    return common;
+  }
+
+  @Operation(tags = "REST", summary = "Get a list of keys from KVP common across a list multiple species lists")
+  @GetMapping("/listCommonKeys/{speciesListIDs}")
+  public ResponseEntity<Object> listCommonKeys(
+          @PathVariable("speciesListIDs") String speciesListIDs,
+          @AuthenticationPrincipal Principal principal) {
+    try {
+      List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
+      List<SpeciesList> speciesLists = speciesListMongoRepository.findAllByDataResourceUidIsInOrIdIsIn(IDs, IDs);
+
+      // Ensure that some species lists were returned with the query
+      if (!speciesLists.isEmpty()) {
+        List<SpeciesList> validLists = speciesLists.stream()
+                .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal)).toList();
+
+        if (validLists.isEmpty()) {
+          return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(findCommonKeys(speciesLists), HttpStatus.OK);
+      }
+
+      return ResponseEntity.status(404).body("Species list(s) not found");
     } catch (Exception e) {
       return ResponseEntity.badRequest().body(e.getMessage());
     }
