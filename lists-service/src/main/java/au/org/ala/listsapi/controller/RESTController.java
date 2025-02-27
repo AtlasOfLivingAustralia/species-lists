@@ -54,22 +54,6 @@ public class RESTController {
   @Autowired protected AuthUtils authUtils;
 
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
-
-  @Value("${app.name}")
-  private String appName;
-
-  @Value("${app.version}")
-  private String appVersion;
-
-  @Operation(tags = "REST", summary = "Retrieve information about the lists service")
-  @GetMapping("/info")
-  public ResponseEntity<Map<String, String>> info() {
-    return new ResponseEntity<>(Map.of(
-            "name", appName,
-            "version", appVersion
-    ), HttpStatus.OK);
-  }
-
   @Operation(tags = "REST", summary = "Get species list metadata")
   @Tag(name = "REST", description = "REST Services for species lists lookups")
   @GetMapping("/speciesList/{speciesListID}")
@@ -222,6 +206,83 @@ public class RESTController {
 
       return ResponseEntity.status(404).body("Species list not found");
     } catch (Exception e) {
+      return ResponseEntity.badRequest().body(e.getMessage());
+    }
+  }
+
+  @Operation(tags = "REST", summary = "Get details of species list items i.e species for a list of guid(s)")
+  @GetMapping("/species/")
+  public ResponseEntity<Object> species(
+          @RequestParam(name = "guids") String guids,
+          @Nullable @RequestParam(name = "speciesListIDs") String speciesListIDs,
+          @Nullable @RequestParam(name = "page", defaultValue = "1") Integer page,
+          @Nullable @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
+          @Nullable @RequestParam(name = "sort", defaultValue="scientificName") String sort,
+          @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
+          @AuthenticationPrincipal Principal principal) {
+    try {
+      AlaUserProfile profile = authUtils.getUserProfile(principal);
+      List<FieldValue> GUIDs = Arrays.stream(guids.split(",")).map(FieldValue::of).toList();
+      List<FieldValue> listIDs = speciesListIDs != null ?
+              Arrays.stream(speciesListIDs.split(",")).map(FieldValue::of).toList() : null;
+
+      if (page < 1 || (page * pageSize) > 10000) {
+        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+      }
+
+      Pageable pageableRequest = PageRequest.of(page - 1, pageSize);
+      NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
+      builder.withQuery(
+              q ->
+                      q.bool(
+                              bq -> {
+                                bq.filter(f -> f.terms(t -> t.field("classification.taxonConceptID")
+                                        .terms(ta -> ta.value(GUIDs))));
+
+                                if (listIDs != null) {
+                                  bq.filter(f -> f.bool(b -> b
+                                          .should(s -> s.terms(t -> t.field("speciesListID").terms(ta -> ta.value(listIDs))))
+                                          .should(s -> s.terms(t -> t.field("dataResourceUid").terms(ta -> ta.value(listIDs))))
+                                  ));
+                                }
+
+                                // If the user is not an admin, only query their private lists, and all other public lists
+                                if (!authUtils.isAuthenticated(principal)) {
+                                  bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
+                                } else if (!authUtils.hasAdminRole(profile)) {
+                                  bq.filter(f -> f.bool(b -> b
+                                          .should(s -> s.bool(b2 -> b2
+                                                  .must(m -> m.term(t -> t.field("owner").value(profile.getUserId())))
+                                                  .must(m -> m.term(t -> t.field("isPrivate").value(true)))
+                                          ))
+                                          .should(s -> s.term(t -> t.field("isPrivate").value(false)))
+                                  ));
+                                }
+
+                                return bq;
+                              }));
+
+      builder.withSort(
+              s ->
+                      s.field(
+                              new FieldSort.Builder()
+                                      .field(emptyDefault(sort, "scientificName"))
+                                      .order(emptyDefault(dir, "asc").equals("asc") ? SortOrder.Asc : SortOrder.Desc)
+                                      .build()));
+
+      Query query = builder.build();
+      query.setPageable(pageableRequest);
+      SearchHits<SpeciesListIndex> results =
+              elasticsearchOperations.search(
+                      query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
+
+      List<SpeciesListItem> speciesListItems =
+              ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
+
+      return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
+
+    } catch (Exception e) {
+      logger.info(e.getMessage());
       return ResponseEntity.badRequest().body(e.getMessage());
     }
   }
