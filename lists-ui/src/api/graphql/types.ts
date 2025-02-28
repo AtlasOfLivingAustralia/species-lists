@@ -186,9 +186,9 @@ interface Constraint {
 }
 
 interface SpeciesListConstraints {
-  licenses: Constraint[];
-  lists: Constraint[];
-  countries: Constraint[];
+  listType: Constraint[];
+  licence: Constraint[];
+  region: Constraint[];
 }
 
 export type {

@@ -29,18 +29,4 @@ public class ValidationController {
       return ResponseEntity.badRequest().body(e.getMessage());
     }
   }
-
-  @Operation(tags = "Validation", summary = "Get constraints for list types, licenses, countries")
-  @GetMapping("/constraints/{type:lists|licenses|countries}")
-  public ResponseEntity<Object> constraintsForType(
-      @PathVariable("type") ConstraintType constraintType) {
-    try {
-      return new ResponseEntity<>(
-              validationService.getConstraintList(constraintType),
-              HttpStatus.OK
-      );
-    } catch (Exception e) {
-      return ResponseEntity.badRequest().body(e.getMessage());
-    }
-  }
 }

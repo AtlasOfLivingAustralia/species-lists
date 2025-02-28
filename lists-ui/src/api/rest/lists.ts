@@ -122,13 +122,8 @@ export default (token: string) => ({
       token
     );
   },
-  constraints: async (
-    type?: 'lists' | 'licenses' | 'countries'
-  ): Promise<SpeciesListConstraints> =>
-    request(
-      type
-        ? `${import.meta.env.VITE_API_LIST_CONSTRAINTS}/${type}`
-        : import.meta.env.VITE_API_LIST_CONSTRAINTS,
+  constraints: async (): Promise<SpeciesListConstraints> =>
+    request(import.meta.env.VITE_API_LIST_CONSTRAINTS,
       'GET',
       null
     ),

@@ -65,6 +65,9 @@ public class TaxonService {
     int page = 0;
     boolean done = false;
     AtomicInteger datasetsIndex = new AtomicInteger();
+
+    progressService.setupMigrationProgress(speciesListMongoRepository.count());
+
     while (!done) {
       Pageable paging = PageRequest.of(page, size);
       Page<SpeciesList> speciesLists = speciesListMongoRepository.findAll(paging);
@@ -72,6 +75,7 @@ public class TaxonService {
         speciesLists.forEach(
             speciesList -> {
               try {
+                progressService.updateMigrationProgress(speciesList);
                 reindex(speciesList.getId());
                 datasetsIndex.getAndIncrement();
               } catch (Exception e) {
@@ -83,6 +87,8 @@ public class TaxonService {
       }
       page++;
     }
+
+    progressService.clearMigrationProgress();
     logger.info("Indexing of all datasets complete. " + datasetsIndex + " datasets indexed.");
   }
 
@@ -92,6 +98,9 @@ public class TaxonService {
     int size = 10;
     int page = 0;
     boolean done = false;
+
+    progressService.setupMigrationProgress(speciesListMongoRepository.count());
+
     while (!done) {
       Pageable paging = PageRequest.of(page, size);
       Page<SpeciesList> speciesLists = speciesListMongoRepository.findAll(paging);
@@ -99,6 +108,8 @@ public class TaxonService {
         speciesLists.forEach(
             speciesList -> {
               try {
+                progressService.updateMigrationProgress(speciesList);
+
                 long distinctMatchCount = taxonMatchDataset(speciesList.getId());
                 speciesList.setDistinctMatchCount(distinctMatchCount);
                 speciesListMongoRepository.save(speciesList);
@@ -111,6 +122,8 @@ public class TaxonService {
       }
       page++;
     }
+
+    progressService.clearMigrationProgress();
     logger.info("Taxon matching all datasets complete.");
   }
 
@@ -143,9 +156,6 @@ public class TaxonService {
   }
 
   private SpeciesListIndex listItemToIndex(SpeciesList speciesList, SpeciesListItem speciesListItem) {
-    Map<String, String> map = new HashMap<>();
-    speciesListItem.getProperties().forEach(kv -> map.put(kv.getKey(), kv.getValue()));
-
     // write the data to Elasticsearch
     return new SpeciesListIndex(
                     speciesListItem.getId().toString(),
@@ -162,7 +172,7 @@ public class TaxonService {
                     speciesListItem.getOrder(),
                     speciesListItem.getFamily(),
                     speciesListItem.getGenus(),
-                    map,
+                    speciesListItem.getProperties(),
                     speciesListItem.getClassification(),
                     speciesList.getIsPrivate() != null ? speciesList.getIsPrivate() : false,
                     speciesList.getIsAuthoritative() != null

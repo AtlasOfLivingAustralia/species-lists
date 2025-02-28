@@ -96,13 +96,6 @@ public class ProgressService {
             }
 
             ingestProgressMongoRepository.save(currentItem);
-        } else {
-            Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListId, speciesListId);
-            if (optionalSpeciesList.isPresent()) {
-                SpeciesList list = optionalSpeciesList.get();
-                IngestProgressItem newItem = new IngestProgressItem(list.getId(), list.getRowCount(), list.getRowCount(), count);
-                ingestProgressMongoRepository.save(newItem);
-            }
         }
     }
 

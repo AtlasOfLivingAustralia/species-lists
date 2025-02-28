@@ -158,19 +158,21 @@ function Home() {
               placeholder='Search list by name or taxa'
               w={200}
             />
-            <SegmentedControl
-              disabled={!data || hasError}
-              value={view}
-              onChange={setView}
-              radius='md'
-              data={labels}
-            />
             {ala.isAuthenticated && (
-              <Checkbox
-                label='My Lists'
-                checked={isUser}
-                onChange={(e) => setIsUser(e.currentTarget.checked)}
-              />
+              <>
+                <SegmentedControl
+                  disabled={!data || hasError}
+                  value={view}
+                  onChange={setView}
+                  radius='md'
+                  data={labels}
+                />
+                <Checkbox
+                  label='My Lists'
+                  checked={isUser}
+                  onChange={(e) => setIsUser(e.currentTarget.checked)}
+                />
+              </>
             )}
             <FiltersDrawer
               facets={data?.facets || []}

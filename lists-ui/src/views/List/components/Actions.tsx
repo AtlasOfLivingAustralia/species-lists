@@ -170,7 +170,7 @@ export function Actions({
       cancelProps: { radius: 'md' },
       onConfirm: async () => {
         try {
-          // Fire off the delete request
+          // Fire off the rematch request
           onRematch();
           await ala.rest.lists.rematch(meta.id);
         } catch (error) {

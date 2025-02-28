@@ -25,6 +25,10 @@
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            },
+            "search": {
+              "type": "text",
+              "analyzer": "partial_binomial_analyzer"
             }
           }
         },
@@ -37,6 +41,10 @@
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            },
+            "search": {
+              "type": "text",
+              "analyzer": "partial_binomial_analyzer"
             }
           }
         },
@@ -58,6 +66,10 @@
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            },
+            "search": {
+              "type": "text",
+              "analyzer": "partial_binomial_analyzer"
             }
           }
         },
@@ -88,6 +100,10 @@
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            },
+            "search": {
+              "type": "text",
+              "analyzer": "partial_binomial_analyzer"
             }
           }
         },
@@ -130,6 +146,10 @@
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            },
+            "search": {
+              "type": "text",
+              "analyzer": "partial_binomial_analyzer"
             }
           }
         },
@@ -151,6 +171,10 @@
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            },
+            "search": {
+              "type": "text",
+              "analyzer": "partial_binomial_analyzer"
             }
           }
         },
@@ -169,6 +193,10 @@
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            },
+            "search": {
+              "type": "text",
+              "analyzer": "partial_binomial_analyzer"
             }
           }
         },
@@ -187,6 +215,10 @@
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            },
+            "search": {
+              "type": "text",
+              "analyzer": "partial_binomial_analyzer"
             }
           }
         },
@@ -196,6 +228,10 @@
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            },
+            "search": {
+              "type": "text",
+              "analyzer": "partial_binomial_analyzer"
             }
           }
         },
@@ -208,6 +244,10 @@
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            },
+            "search": {
+              "type": "text",
+              "analyzer": "partial_binomial_analyzer"
             }
           }
         },
@@ -220,6 +260,10 @@
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            },
+            "search": {
+              "type": "text",
+              "analyzer": "partial_binomial_analyzer"
             }
           }
         },
@@ -241,6 +285,10 @@
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            },
+            "search": {
+              "type": "text",
+              "analyzer": "partial_binomial_analyzer"
             }
           }
         },
@@ -253,6 +301,10 @@
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            },
+            "search": {
+              "type": "text",
+              "analyzer": "partial_binomial_analyzer"
             }
           }
         }
@@ -264,6 +316,10 @@
         "keyword": {
           "type": "keyword",
           "ignore_above": 256
+        },
+        "search": {
+          "type": "text",
+          "analyzer": "partial_binomial_analyzer"
         }
       }
     },
@@ -273,6 +329,10 @@
         "keyword": {
           "type": "keyword",
           "ignore_above": 256
+        },
+        "search": {
+          "type": "text",
+          "analyzer": "partial_binomial_analyzer"
         }
       }
     },
@@ -282,6 +342,10 @@
         "keyword": {
           "type": "keyword",
           "ignore_above": 256
+        },
+        "search": {
+          "type": "text",
+          "analyzer": "partial_binomial_analyzer"
         }
       }
     },
@@ -291,6 +355,10 @@
         "keyword": {
           "type": "keyword",
           "ignore_above": 256
+        },
+        "search": {
+          "type": "text",
+          "analyzer": "partial_binomial_analyzer"
         }
       }
     },
@@ -306,6 +374,18 @@
     "isPrivate": {
       "type": "boolean"
     },
+    "isAuthoritative": {
+      "type": "boolean"
+    },
+    "isBIE": {
+      "type": "boolean"
+    },
+    "isSDS": {
+      "type": "boolean"
+    },
+    "hasRegion": {
+      "type": "boolean"
+    },
     "kingdom": {
       "type": "keyword",
       "copy_to": [
@@ -315,6 +395,10 @@
         "keyword": {
           "type": "keyword",
           "ignore_above": 256
+        },
+        "search": {
+          "type": "text",
+          "analyzer": "partial_binomial_analyzer"
         }
       }
     },
@@ -324,6 +408,10 @@
         "keyword": {
           "type": "keyword",
           "ignore_above": 256
+        },
+        "search": {
+          "type": "text",
+          "analyzer": "partial_binomial_analyzer"
         }
       }
     },
@@ -336,6 +424,10 @@
         "keyword": {
           "type": "keyword",
           "ignore_above": 256
+        },
+        "search": {
+          "type": "text",
+          "analyzer": "partial_binomial_analyzer"
         }
       }
     },
@@ -345,6 +437,10 @@
         "keyword": {
           "type": "keyword",
           "ignore_above": 256
+        },
+        "search": {
+          "type": "text",
+          "analyzer": "partial_binomial_analyzer"
         }
       }
     },
@@ -357,6 +453,10 @@
         "keyword": {
           "type": "keyword",
           "ignore_above": 256
+        },
+        "search": {
+          "type": "text",
+          "analyzer": "partial_binomial_analyzer"
         }
       }
     },
@@ -369,6 +469,10 @@
         "keyword": {
           "type": "keyword",
           "ignore_above": 256
+        },
+        "search": {
+          "type": "text",
+          "analyzer": "partial_binomial_analyzer"
         }
       }
     },
@@ -390,6 +494,10 @@
         "keyword": {
           "type": "keyword",
           "ignore_above": 256
+        },
+        "search": {
+          "type": "text",
+          "analyzer": "partial_binomial_analyzer"
         }
       }
     },
@@ -411,6 +519,10 @@
         "keyword": {
           "type": "keyword",
           "ignore_above": 256
+        },
+        "search": {
+          "type": "text",
+          "analyzer": "partial_binomial_analyzer"
         }
       }
     },
@@ -438,6 +550,36 @@
         "keyword": {
           "type": "keyword",
           "ignore_above": 256
+        }
+      }
+    },
+    "properties": {
+      "type": "nested",
+      "properties": {
+        "key": {
+          "type": "keyword",
+          "copy_to": [
+            "all"
+          ],
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "value": {
+          "type": "text",
+          "analyzer": "partial_binomial_analyzer",
+          "copy_to": [
+            "all"
+          ],
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
         }
       }
     }

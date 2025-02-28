@@ -1,5 +1,5 @@
 {
-  "lists": [
+  "listType": [
     { "value": "CONSERVATION_LIST", "label": "Conservation species list" },
     { "value": "SENSITIVE_LIST", "label": "Sensitive list" },
     { "value": "INVASIVE", "label": "Invasive species list" },
@@ -9,14 +9,14 @@
     { "value": "TEST", "label": "Testing List" },
     { "value": "PROFILE", "label": "Profile List" }
   ],
-  "countries": [
+  "region": [
     { "value": "", "label": "None" },
     { "value": "OTH", "label": "Other" },
     { "value": "GLO", "label": "Global" },
     { "value": "AC", "label": "Ashmore and Cartier Islands" },
     { "value": "CS", "label": "Coral Sea Islands" }
   ],
-  "licenses": [
+  "licence": [
     { "value": "CC0", "label": "Creative Commons Zero" },
     { "value": "CC-BY", "label": "Creative Commons By Attribution" },
     {

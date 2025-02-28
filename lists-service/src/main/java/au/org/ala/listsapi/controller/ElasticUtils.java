@@ -15,6 +15,7 @@ import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.aggregations.LongTermsBucket;
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.ChildScoreMode;
 import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -82,6 +83,37 @@ public class ElasticUtils {
     public static final List<String> CORE_BOOL_FIELDS =
             List.of("isBIE", "isAuthoritative", "hasRegion", "isSDS");
 
+    private static final Set<String> TOP_LEVEL_SEARCHABLE_FIELDS = Set.of(
+            // Root-level fields that have a ".search" subfield
+            "classs",            // top-level "classs.search"
+            "dataResourceUid",   // dataResourceUid.search
+            "family",            // family.search
+            "genus",             // genus.search
+            "kingdom",           // kingdom.search
+            "listType",          // listType.search
+            "order",             // order.search
+            "owner",             // owner.search
+            "phylum",            // phylum.search
+            "scientificName",    // scientificName.search
+            "speciesListName",   // speciesListName.search
+            "tags",              // tags.search
+
+            // classification.* subfields that have a ".search" subfield
+            "classification.classs",                 // classification.classs.search
+            "classification.family",                 // classification.family.search
+            "classification.genus",                  // classification.genus.search
+            "classification.kingdom",                // classification.kingdom.search
+            "classification.order",                  // classification.order.search
+            "classification.phylum",                 // classification.phylum.search
+            "classification.rank",                   // classification.rank.search
+            "classification.scientificName",         // classification.scientificName.search
+            "classification.scientificNameAuthorship", // classification.scientificNameAuthorship.search
+            "classification.species",                // classification.species.search
+            "classification.speciesGroup",           // classification.speciesGroup.search
+            "classification.taxonConceptID",         // classification.taxonConceptID.search
+            "classification.vernacularName"          // classification.vernacularName.search
+    );
+
     public static final String SPECIES_LIST_ID = "speciesListID";
     @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
     @Autowired protected ReleaseMongoRepository releaseMongoRepository;
@@ -107,10 +139,7 @@ public class ElasticUtils {
         speciesListItem.setGenus(index.getGenus());
         speciesListItem.setTaxonID(index.getTaxonID());
         speciesListItem.setKingdom(index.getKingdom());
-        List<KeyValue> keyValues = new ArrayList<>();
-        index.getProperties().entrySet().stream()
-                .forEach(e -> keyValues.add(new KeyValue(e.getKey(), e.getValue())));
-        speciesListItem.setProperties(keyValues);
+        speciesListItem.setProperties(index.getProperties());
         speciesListItem.setClassification(index.getClassification());
         speciesListItem.setDateCreated(parsedDate(index.getDateCreated()));
         speciesListItem.setLastUpdated(parsedDate(index.getLastUpdated()));
@@ -234,5 +263,40 @@ public class ElasticUtils {
     public static String cleanRawQuery(String searchQuery) {
         if (searchQuery != null) return searchQuery.trim().replace("\"", "\\\"");
         return "";
+    }
+
+    public static void restrictFields(String searchQuery, HashSet<String> restrictedFields, BoolQuery.Builder bq) {
+        String search = cleanRawQuery(searchQuery);
+
+        for (String field : restrictedFields) {
+            if (TOP_LEVEL_SEARCHABLE_FIELDS.contains(field)) {
+                // E.g. if userField == "scientificName", the actual field to match is "scientificName.search"
+                String actualFieldToSearch = field + ".search";
+
+                bq.must(m ->
+                        m.match(mq -> mq.field(actualFieldToSearch).query(
+                                search
+                        ))
+                );
+
+            } else {
+                // Otherwise, treat it as a nested property
+                // This means userField is actually the 'key' in properties.key
+                // and we do a match on properties.value for searchText
+                bq.must(s -> s.nested(n -> n
+                        .path("properties")
+                        .scoreMode(ChildScoreMode.Avg)
+                        .query(nq -> nq.bool(nb -> {
+                            nb.must(m1 -> m1.term(t -> t
+                                    .field("properties.key")
+                                    .value(field)));
+                            nb.must(m2 -> m2.match(mt -> mt
+                                    .field("properties.value")
+                                    .query(search)));
+                            return nb;
+                        }))
+                ));
+            }
+        }
     }
 }
