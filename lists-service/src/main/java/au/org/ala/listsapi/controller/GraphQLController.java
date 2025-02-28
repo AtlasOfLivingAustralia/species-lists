@@ -105,32 +105,6 @@ public class GraphQLController {
   @Autowired protected AuthUtils authUtils;
   @Autowired protected MetadataService metadataService;
 
-  public static SpeciesListItem convert(SpeciesListIndex index) {
-
-    SpeciesListItem speciesListItem = new SpeciesListItem();
-    speciesListItem.setId(new ObjectId(index.getId()));
-    speciesListItem.setSpeciesListID(index.getSpeciesListID());
-    speciesListItem.setScientificName(index.getScientificName());
-    speciesListItem.setVernacularName(index.getVernacularName());
-    speciesListItem.setPhylum(index.getPhylum());
-    speciesListItem.setClasss(index.getClasss());
-    speciesListItem.setOrder(index.getOrder());
-    speciesListItem.setFamily(index.getFamily());
-    speciesListItem.setGenus(index.getGenus());
-    speciesListItem.setTaxonID(index.getTaxonID());
-    speciesListItem.setKingdom(index.getKingdom());
-    List<KeyValue> keyValues = new ArrayList<>();
-    index.getProperties().entrySet().stream()
-        .forEach(e -> keyValues.add(new KeyValue(e.getKey(), e.getValue())));
-    speciesListItem.setProperties(keyValues);
-    speciesListItem.setClassification(index.getClassification());
-    speciesListItem.setDateCreated(parsedDate(index.getDateCreated()));
-    speciesListItem.setLastUpdated(parsedDate(index.getLastUpdated()));
-    speciesListItem.setLastUpdatedBy(index.getLastUpdatedBy());
-
-    return speciesListItem;
-  }
-
   static Date parsedDate(String date) {
     try {
       return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").parse(date);
@@ -510,8 +484,7 @@ public class GraphQLController {
             speciesListItem.getOrder(),
             speciesListItem.getFamily(),
             speciesListItem.getGenus(),
-            speciesListItem.getProperties().stream()
-                .collect(Collectors.toMap(KeyValue::getKey, KeyValue::getValue)),
+            speciesListItem.getProperties(),
             speciesListItem.getClassification(),
             speciesList.getIsPrivate() != null ? speciesList.getIsPrivate() : false,
             speciesList.getIsAuthoritative() != null ? speciesList.getIsAuthoritative() : false,

@@ -174,9 +174,11 @@ export function Component() {
           try {
             switch (action) {
               case 'reindex':
+                handleMigrationStart();
                 await ala.rest.admin?.reindex();
                 break;
               case 'rematch':
+                handleMigrationStart();
                 await ala.rest.admin?.rematch();
                 break;
               case 'migrate-all':
@@ -200,10 +202,10 @@ export function Component() {
                   cancelSucessNotification = true;
                 }
                 break;
-                case 'migrate-userdetails':
-                  handleMigrationStart();
-                  await ala.rest.admin?.migrateUserdetails();
-                  break;
+              case 'migrate-userdetails':
+                handleMigrationStart();
+                await ala.rest.admin?.migrateUserdetails();
+                break;
               case 'wipe-index':
                 await ala.rest.admin?.wipe('index');
                 break;
@@ -349,12 +351,6 @@ export function Component() {
               <Text c='dimmed'>
                 Please use the following tools <b>with caution</b> and{' '}
                 <b>verify</b> that these really need to be run first.
-              </Text>
-              <Text c='dimmed'>
-                <u>
-                  These tasks do not have UI feedback and must be tracked by
-                  tailing logs.
-                </u>
               </Text>
             </Stack>
           </Grid.Col>

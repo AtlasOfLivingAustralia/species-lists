@@ -9,11 +9,15 @@ import au.org.ala.ws.security.profile.AlaUserProfile;
 import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.query_dsl.ChildScoreMode;
+import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
+import co.elastic.clients.elasticsearch.core.search.FieldCollapse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.security.Principal;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +58,7 @@ public class RESTController {
   @Autowired protected AuthUtils authUtils;
 
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
+
   @Operation(tags = "REST", summary = "Get species list metadata")
   @Tag(name = "REST", description = "REST Services for species lists lookups")
   @GetMapping("/speciesList/{speciesListID}")
@@ -136,6 +141,72 @@ public class RESTController {
     }
   }
 
+  @Operation(tags = "REST", summary = "Get a list of species lists that contain the specified taxon GUID")
+  @GetMapping("/speciesList/byGuid")
+  public ResponseEntity<Object> speciesListsByGuid(
+          @RequestParam(name = "guid") String guid,
+          @RequestParam(name = "page", defaultValue = "1", required = false) int page,
+          @RequestParam(name = "pageSize", defaultValue = "10", required = false) int pageSize,
+          @AuthenticationPrincipal Principal principal) {
+    try {
+        AlaUserProfile profile = authUtils.getUserProfile(principal);
+
+        if (page < 1 || (page * pageSize) > 10000) {
+          return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+        }
+
+        Pageable pageableRequest = PageRequest.of(page - 1, pageSize);
+        NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
+        builder.withQuery(
+                q ->
+                        q.bool(
+                                bq -> {
+                                  // classification.taxonConceptID.keyword == taxonValue
+                                  bq.should(s -> s.term(t -> t
+                                          .field("classification.taxonConceptID.keyword")
+                                          .value(guid)
+                                  ));
+
+                                  // taxonID.keyword == taxonValue
+                                  bq.should(s -> s.term(t -> t
+                                          .field("taxonID.keyword")
+                                          .value(guid)
+                                  ));
+
+                                  // If the user is not an admin, only query their private lists, and all other public lists
+                                  if (!authUtils.isAuthenticated(principal)) {
+                                    bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
+                                  } else if (!authUtils.hasAdminRole(profile)) {
+                                    bq.filter(f -> f.bool(b -> b
+                                            .should(s -> s.bool(b2 -> b2
+                                                    .must(m -> m.term(t -> t.field("owner").value(profile.getUserId())))
+                                                    .must(m -> m.term(t -> t.field("isPrivate").value(true)))
+                                            ))
+                                            .should(s -> s.term(t -> t.field("isPrivate").value(false)))
+                                    ));
+                                  }
+
+                                  return bq;
+                                })).withFieldCollapse(FieldCollapse.of(fc -> fc.field("speciesListID.keyword")));
+
+        Query query = builder.build();
+        query.setPageable(pageableRequest);
+
+        SearchHits<SpeciesListIndex> results =
+                elasticsearchOperations.search(
+                        query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
+
+        List<SpeciesListItem> speciesListItems =
+                ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
+
+      List<SpeciesList> speciesLists = speciesListMongoRepository.findAllById(speciesListItems.stream().map(SpeciesListItem::getSpeciesListID).toList());
+
+      return new ResponseEntity<>(speciesLists, HttpStatus.OK);
+    } catch (Exception e) {
+      return ResponseEntity.badRequest().body(e.getMessage());
+    }
+  }
+
   public Map<String, Object> getLegacyFormat(Page<SpeciesList> results) {
     Map<String, Object> legacyFormat = new HashMap<>();
     legacyFormat.put("listCount", results.getTotalElements());
@@ -151,9 +222,10 @@ public class RESTController {
 
   @Operation(tags = "REST", summary = "Get species lists items for a list. List IDs can be a single value, or comma separated IDs.")
   @GetMapping("/speciesListItems/{speciesListIDs}")
-  public ResponseEntity<Object> speciesListItemsElastic(
+  public ResponseEntity<Object> speciesListItems(
           @PathVariable("speciesListIDs") String speciesListIDs,
           @Nullable @RequestParam(name = "q") String searchQuery,
+          @Nullable @RequestParam(name = "fields") String fields,
           @Nullable @RequestParam(name = "page", defaultValue = "1") Integer page,
           @Nullable @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
           @Nullable @RequestParam(name = "sort", defaultValue="scientificName") String sort,
@@ -162,6 +234,11 @@ public class RESTController {
     try {
       List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
       List<SpeciesList> foundLists = speciesListMongoRepository.findAllByDataResourceUidIsInOrIdIsIn(IDs, IDs);
+      HashSet<String> restrictedFields = new HashSet<>();
+
+      if (fields != null && !fields.isBlank()) {
+        restrictedFields.addAll(Arrays.stream(fields.split(",")).collect(Collectors.toSet()));
+      }
 
       // Ensure that some species lists were returned with the query
       if (!foundLists.isEmpty()) {
@@ -181,6 +258,8 @@ public class RESTController {
                         q.bool(
                                 bq -> {
                                   ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), validIDs, null, null, tempFilters, bq);
+                                  ElasticUtils.restrictFields(searchQuery, restrictedFields, bq);
+
                                   return bq;
                                 }));
 
@@ -234,13 +313,13 @@ public class RESTController {
               q ->
                       q.bool(
                               bq -> {
-                                bq.filter(f -> f.terms(t -> t.field("classification.taxonConceptID")
+                                bq.filter(f -> f.terms(t -> t.field("classification.taxonConceptID.keyword")
                                         .terms(ta -> ta.value(GUIDs))));
 
                                 if (listIDs != null) {
                                   bq.filter(f -> f.bool(b -> b
-                                          .should(s -> s.terms(t -> t.field("speciesListID").terms(ta -> ta.value(listIDs))))
-                                          .should(s -> s.terms(t -> t.field("dataResourceUid").terms(ta -> ta.value(listIDs))))
+                                          .should(s -> s.terms(t -> t.field("speciesListID.keyword").terms(ta -> ta.value(listIDs))))
+                                          .should(s -> s.terms(t -> t.field("dataResourceUid.keyword").terms(ta -> ta.value(listIDs))))
                                   ));
                                 }
 

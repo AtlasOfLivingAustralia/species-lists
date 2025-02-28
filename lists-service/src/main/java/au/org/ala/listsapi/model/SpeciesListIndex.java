@@ -36,7 +36,7 @@ public class SpeciesListIndex {
   private String order;
   private String family;
   private String genus;
-  private Map<String, String> properties;
+  private List<KeyValue> properties;
   private Classification classification;
   private boolean isPrivate;
   private boolean isAuthoritative;
