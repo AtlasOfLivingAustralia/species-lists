@@ -643,8 +643,8 @@ public class GraphQLController {
 
       // check that the supplied list type, region and license is valid
       if (
-              !validationService.isValueValid(ConstraintType.lists, listType) ||
-              !validationService.isValueValid(ConstraintType.licenses, licence)
+              !validationService.isValueValid(ConstraintType.listType, listType) ||
+              !validationService.isValueValid(ConstraintType.licence, licence)
       ) {
         throw new Exception("Updated list contains invalid properties for a controlled value (list type, license)");
       }

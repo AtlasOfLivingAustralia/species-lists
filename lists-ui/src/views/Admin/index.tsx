@@ -19,7 +19,6 @@ import { notifications } from '@mantine/notifications';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowsRotate,
-  faBank,
   faCode,
   faIdCard,
   faRefresh,
@@ -181,11 +180,7 @@ export function Component() {
                 break;
               case 'migrate-all':
                 handleMigrationStart();
-                await ala.rest.admin?.migrate('all');
-                break;
-              case 'migrate-authoritative':
-                handleMigrationStart();
-                await ala.rest.admin?.migrate('authoritative');
+                await ala.rest.admin?.migrate();
                 break;
               case 'migrate-custom':
                 const query = prompt(
@@ -293,21 +288,6 @@ export function Component() {
               }
               icon={faRightLeft}
               onClick={() => handleClick('migrate-all', 'All Migration')}
-            />
-          </Grid.Col>
-          <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
-            <ActionCard
-              disabled={Boolean(migrationProgress) || migrationDisabled}
-              title='Authoritative'
-              description={
-                <>
-                  Migrate <b>authoritative</b> lists from the legacy lists tool
-                </>
-              }
-              icon={faBank}
-              onClick={() =>
-                handleClick('migrate-authoritative', 'Authoritative Migration')
-              }
             />
           </Grid.Col>
           {['56599'].includes(ala.userid) && (

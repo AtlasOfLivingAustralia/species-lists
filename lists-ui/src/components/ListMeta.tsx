@@ -137,7 +137,7 @@ export function ListMeta({
           <Select
             name='listType'
             label='Type'
-            data={constraints?.lists || []}
+            data={constraints?.listType || []}
             placeholder='List type'
             required
             disabled={!loaded || loading}
@@ -148,7 +148,7 @@ export function ListMeta({
           <Select
             name='licence'
             label='Licence'
-            data={constraints?.licenses || []}
+            data={constraints?.licence || []}
             placeholder='List licence'
             required
             disabled={!loaded || loading}
@@ -168,7 +168,7 @@ export function ListMeta({
           <Select
             name='region'
             label='Region'
-            data={constraints?.countries || []}
+            data={constraints?.region || []}
             placeholder='Region'
             searchable
             disabled={!loaded || loading}
