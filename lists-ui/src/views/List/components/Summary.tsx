@@ -32,10 +32,14 @@ export function Summary({ meta, ...rest }: SummaryProps) {
 
   return (
     <Group {...rest} gap='xs' align='center'>
-      <Text>
-        <FormattedMessage id={meta.listType} />
-      </Text>
-      <Divider mx={4} orientation='vertical' />
+      {meta.listType && (
+        <>
+          <Text>
+            <FormattedMessage id={meta.listType} />
+          </Text>
+          <Divider mx={4} orientation='vertical' />
+        </>
+      )}
       {meta.region && (
         <Chip
           size='xs'
