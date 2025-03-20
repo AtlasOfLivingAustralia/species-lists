@@ -61,7 +61,14 @@ export function Display({ item }: SpeciesItemDisplayProps) {
               <Table.Td>
                 <FormattedMessage id={`classification.${field}`} />
               </Table.Td>
-              <Table.Td pl={23}>
+              <Table.Td
+                fs={
+                  ['scientificName', 'genus'].includes(field)
+                    ? 'italic'
+                    : undefined
+                }
+                pl={23}
+              >
                 {(item.classification as any)?.[field]}
               </Table.Td>
               <Table.Td style={expandedStyle}>
