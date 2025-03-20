@@ -1,4 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Center,
   Checkbox,
@@ -13,17 +14,28 @@ import {
   TextInput,
 } from '@mantine/core';
 import { useGQLQuery, queries, SpeciesListPage, KV, Facet } from '#/api';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ListRow } from './components/ListRow';
-import { useDebouncedState, useDocumentTitle } from '@mantine/hooks';
+import { useDebouncedValue, useDocumentTitle } from '@mantine/hooks';
 import { FormattedNumber } from 'react-intl';
-import { Message } from '#/components/Message';
-import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { getErrorMessage } from '#/helpers';
-import { FiltersDrawer } from '#/components/FiltersDrawer';
-import { useALA } from '#/helpers/context/useALA';
+import {
+  parseAsBoolean,
+  parseAsInteger,
+  parseAsString,
+  useQueryState,
+} from 'nuqs';
+
+// Icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
+
+// Project components
+import { Message } from '#/components/Message';
+import { FiltersDrawer } from '#/components/FiltersDrawer';
+import { ListRow } from './components/ListRow';
+
+// Helpers
+import { getErrorMessage, parseAsFilters } from '#/helpers';
+import { useALA } from '#/helpers/context/useALA';
 
 interface HomeQuery {
   lists: SpeciesListPage;
@@ -33,22 +45,43 @@ interface HomeQuery {
 function Home() {
   useDocumentTitle('ALA Lists');
 
-  const [page, setPage] = useState<number>(0);
-  const [size, setSize] = useState<number>(10);
-  const [searchQuery, setSearch] = useDebouncedState('', 300);
-  const [filters, setFilters] = useState<KV[]>([]);
+  // Search
+  const [search, setSearch] = useQueryState<string>(
+    'search',
+    parseAsString.withDefault('')
+  );
+  const [searchDebounced] = useDebouncedValue(search, 300);
+
+  // Search query state
+  const [page, setPage] = useQueryState<number>(
+    'page',
+    parseAsInteger.withDefault(0)
+  );
+  const [size, setSize] = useQueryState<number>(
+    'size',
+    parseAsInteger.withDefault(10)
+  );
+  const [view, setView] = useQueryState<string>(
+    'view',
+    parseAsString.withDefault('public')
+  );
+  const [isUser, setIsUser] = useQueryState<boolean>(
+    'isUser',
+    parseAsBoolean.withDefault(false)
+  );
+  const [filters, setFilters] = useQueryState<KV[]>('filters', parseAsFilters);
+
+  // Internal state (not driven by search params)
   const [refresh, setRefresh] = useState<boolean>(false);
-  const [view, setView] = useState<string>('public');
-  const [isUser, setIsUser] = useState<boolean>(false);
 
   const ala = useALA();
   const { data, error, update } = useGQLQuery<HomeQuery>(
     queries.QUERY_LISTS_SEARCH,
     {
-      searchQuery: '',
+      searchQuery: search,
       page,
       size: size,
-      filters: [],
+      filters,
       isPrivate: view === 'private',
       ...(isUser ? { userId: ala.userid } : {}),
     },
@@ -62,15 +95,14 @@ function Home() {
   // Update the search query
   useEffect(() => {
     update({
-      searchQuery,
+      searchQuery: searchDebounced,
       page,
       size,
       filters,
       isPrivate: view === 'private',
       ...(isUser ? { userId: ala.userid } : {}),
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, size, searchQuery, filters, refresh, view, isUser]);
+  }, [page, size, searchDebounced, filters, refresh, view, isUser]);
 
   // Keep the current page in check
   useEffect(() => {
@@ -90,17 +122,17 @@ function Home() {
   const handleFilterClick = useCallback(
     (filter: KV) => {
       if (
-        filters.find(
+        (filters || []).find(
           ({ key, value }) => filter.key === key && filter.value === value
         )
       ) {
         setFilters(
-          filters.filter(
+          (filters || []).filter(
             ({ key, value }) => filter.key !== key || filter.value !== value
           )
         );
       } else {
-        setFilters([...filters, filter]);
+        setFilters([...(filters || []), filter]);
       }
     },
     [filters]
@@ -151,7 +183,7 @@ function Home() {
             <TextInput
               style={{ flexGrow: 1 }}
               disabled={!data || hasError}
-              defaultValue={searchQuery}
+              value={search}
               onChange={(event) => {
                 setSearch(event.currentTarget.value);
               }}
@@ -176,7 +208,7 @@ function Home() {
             )}
             <FiltersDrawer
               facets={data?.facets || []}
-              active={filters}
+              active={filters || []}
               onSelect={handleFilterClick}
               onReset={() => setFilters([])}
             />

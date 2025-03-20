@@ -14,9 +14,21 @@ import { getAccessToken } from './helpers/utils/getAccessToken';
 
 // Admin API
 import adminApi from './api/rest/admin';
+import {
+  parseAsBoolean,
+  parseAsInteger,
+  parseAsString,
+  parseAsStringEnum,
+} from 'nuqs';
+import { parseAsFilters } from './helpers';
 
 const JWT_ROLES = import.meta.env.VITE_AUTH_JWT_ROLES;
 const JWT_ADMIN_ROLE = import.meta.env.VITE_AUTH_JWT_ADMIN_ROLE;
+
+enum SortDirection {
+  ASC = 'asc',
+  DESC = 'desc',
+}
 
 const router = createBrowserRouter([
   {
@@ -33,12 +45,29 @@ const router = createBrowserRouter([
         id: 'list',
         lazy: () => import('./views/List'),
         hydrateFallbackElement: <PageLoader />,
-        loader: async ({ params }) => {
+        loader: async ({ request, params }) => {
           const token = getAccessToken();
+          const searchParams = new URL(request.url).searchParams;
+
           const data = await performGQLQuery(
             queries.QUERY_LISTS_GET,
             {
               speciesListID: params.id,
+              searchQuery: parseAsString.parse(
+                searchParams.get('search') || ''
+              ),
+              page: parseAsInteger.parse(searchParams.get('page') || '0'),
+              size: parseAsInteger.parse(searchParams.get('size') || '10'),
+              filters: parseAsFilters.parse(searchParams.get('filters') || ''),
+              isPrivate: parseAsBoolean.parse(
+                searchParams.get('isPrivate') || 'false'
+              ),
+              sort: parseAsString.parse(
+                searchParams.get('sort') || 'scientificName'
+              ),
+              dir: parseAsStringEnum<SortDirection>(
+                Object.values(SortDirection)
+              ).parse(searchParams.get('dir') || 'asc'),
             },
             token
           );

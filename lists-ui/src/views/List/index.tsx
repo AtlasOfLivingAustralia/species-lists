@@ -19,7 +19,7 @@ import {
   Title,
 } from '@mantine/core';
 import {
-  useDebouncedState,
+  useDebouncedValue,
   useDisclosure,
   useDocumentTitle,
   useMounted,
@@ -51,7 +51,7 @@ import { ThCreate } from './components/Table/ThCreate';
 // Local component imports
 import { IngestProgress } from '#/components/IngestProgress';
 import { Message } from '#/components/Message';
-import { getErrorMessage } from '#/helpers';
+import { getErrorMessage, parseAsFilters } from '#/helpers';
 import { SpeciesItemDrawer } from './components/SpeciesItemDrawer';
 import { useALA } from '#/helpers/context/useALA';
 import { Flags } from './components/Flags';
@@ -62,6 +62,12 @@ import { ThSortable } from './components/Table/ThSortable';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { Dates } from './components/Dates';
+import {
+  parseAsInteger,
+  parseAsString,
+  parseAsStringEnum,
+  useQueryState,
+} from 'nuqs';
 
 interface ListLoaderData {
   meta: SpeciesList;
@@ -69,10 +75,12 @@ interface ListLoaderData {
   facets: Facet[];
 }
 
-const classificationFields = ['family', 'kingdom', 'vernacularName'];
+enum SortDirection {
+  ASC = 'asc',
+  DESC = 'desc',
+}
 
-const toKV = (data: { [key: string]: string }) =>
-  Object.entries(data).map(([key, value]) => ({ key, value }));
+const classificationFields = ['family', 'kingdom', 'vernacularName'];
 
 export function Component() {
   // Component data
@@ -87,20 +95,41 @@ export function Component() {
 
   useDocumentTitle(`ALA Lists | ${meta.title}`);
 
-  const [page, setPage] = useState<number>(0);
-  const [size, setSize] = useState<number>(10);
-  const [searchQuery, setSearch] = useDebouncedState('', 300);
-  const [filters, setFilters] = useState<{ [key: string]: string }>({});
+  // Search
+  const [search, setSearch] = useQueryState<string>(
+    'search',
+    parseAsString.withDefault('')
+  );
+  const [searchDebounced] = useDebouncedValue(search, 300);
+
+  // Search params state
+  const [page, setPage] = useQueryState<number>(
+    'page',
+    parseAsInteger.withDefault(0)
+  );
+  const [size, setSize] = useQueryState<number>(
+    'size',
+    parseAsInteger.withDefault(10)
+  );
+  const [filters, setFilters] = useQueryState<KV[]>('filters', parseAsFilters);
+  const [sort, setSort] = useQueryState<string>(
+    'sort',
+    parseAsString.withDefault('scientificName')
+  );
+  const [dir, setDir] = useQueryState<SortDirection>(
+    'dir',
+    parseAsStringEnum<SortDirection>(Object.values(SortDirection)).withDefault(
+      SortDirection.ASC
+    )
+  );
+
+  // Internal state (not driven by search params)
   const [facets, setFacets] = useState<Facet[]>(rawFacets);
   const [error, setError] = useState<Error | null>(null);
   const [refresh, setRefresh] = useState<boolean>(false);
   const [editing, setEditing] = useState<boolean>(false);
   const [rematching, setRematching] = useState<boolean>(false);
   const [lastProgress, setLastProgress] = useState<boolean>(false);
-
-  // Sorting state
-  const [sort, setSort] = useState<string>('scientificName');
-  const [dir, setDir] = useState<'asc' | 'desc'>('asc');
 
   const location = useLocation();
   const mounted = useMounted();
@@ -130,10 +159,10 @@ export function Component() {
           queries.QUERY_LISTS_GET,
           {
             speciesListID: params.id,
-            searchQuery,
+            searchQuery: searchDebounced,
             page,
             size,
-            filters: toKV(filters),
+            filters,
             isPrivate: false,
             sort,
             dir,
@@ -152,7 +181,7 @@ export function Component() {
 
     if (mounted) runQuery();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, size, filters, searchQuery, refresh, sort, dir, isReingest]);
+  }, [page, size, filters, searchDebounced, refresh, sort, dir, isReingest]);
 
   // Keep the current page in check
   useEffect(() => {
@@ -162,10 +191,12 @@ export function Component() {
   const handleSortClick = useCallback(
     (newSort: string) => {
       if (sort === newSort) {
-        setDir(dir === 'asc' ? 'desc' : 'asc');
+        setDir(
+          dir === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC
+        );
       } else {
         setSort(newSort);
-        setDir('desc');
+        setDir(SortDirection.DESC);
       }
     },
     [sort, dir]
@@ -296,12 +327,18 @@ export function Component() {
 
   const handleFilterClick = useCallback(
     (filter: KV) => {
-      if (filters[filter.key] === filter.value) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { [filter.key]: _, ...rest } = filters;
-        setFilters(rest);
+      if (
+        (filters || []).find(
+          ({ key, value }) => filter.key === key && filter.value === value
+        )
+      ) {
+        setFilters(
+          (filters || []).filter(
+            ({ key, value }) => filter.key !== key || filter.value !== value
+          )
+        );
       } else {
-        setFilters({ ...filters, [filter.key]: filter.value });
+        setFilters([...(filters || []), filter]);
       }
     },
     [filters]
@@ -420,7 +457,7 @@ export function Component() {
                     />
                     <TextInput
                       disabled={hasError}
-                      defaultValue={searchQuery}
+                      value={search}
                       onChange={(event) => {
                         setSearch(event.currentTarget.value);
                       }}
@@ -430,10 +467,10 @@ export function Component() {
                   </Group>
                   <Group>
                     <FiltersDrawer
-                      active={toKV(filters)}
+                      active={filters || []}
                       facets={facets}
                       onSelect={handleFilterClick}
-                      onReset={() => setFilters({})}
+                      onReset={() => setFilters([])}
                     />
                     <Text opacity={0.75} size='sm'>
                       {(realPage - 1) * size + 1}-
