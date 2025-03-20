@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   Badge,
@@ -111,6 +111,9 @@ export function Component() {
   const [opened, { open, close }] = useDisclosure();
   const [selected, setSelected] = useState<SpeciesListItem | null>(null);
 
+  // Request abort controller
+  const controller = useRef<AbortController | null>(null);
+
   // Destructure results & calculate the real page offset
   const { totalElements, totalPages } = list;
   const realPage = page + 1;
@@ -122,6 +125,10 @@ export function Component() {
   useEffect(() => {
     async function runQuery() {
       try {
+        if (controller.current)
+          controller.current.abort('New GraphQL request invoked');
+        controller.current = new AbortController();
+
         const {
           meta: updatedMeta,
           list: updatedList,
@@ -138,15 +145,20 @@ export function Component() {
             sort,
             dir,
           },
-          ala.token
+          ala.token,
+          controller.current.signal
         );
+
+        controller.current = null;
 
         setError(null);
         setMeta(updatedMeta);
         setList(updatedList);
         setFacets(updatedFacets);
       } catch (error) {
-        setError(error as Error);
+        if (error !== 'New GraphQL request invoked') {
+          setError(error as Error);
+        }
       }
     }
 
