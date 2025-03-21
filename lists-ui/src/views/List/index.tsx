@@ -19,7 +19,7 @@ import {
   Title,
 } from '@mantine/core';
 import {
-  useDebouncedState,
+  useDebouncedValue,
   useDisclosure,
   useDocumentTitle,
   useMounted,
@@ -36,7 +36,14 @@ import {
   SpeciesListSubmit,
 } from '#/api';
 import { FormattedMessage, FormattedNumber } from 'react-intl';
-import { Outlet, useLoaderData, useLocation, useParams } from 'react-router';
+import { Outlet, useLocation, useParams } from 'react-router';
+import {
+  parseAsInteger,
+  parseAsString,
+  parseAsStringEnum,
+  useQueryState,
+} from 'nuqs';
+
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
@@ -51,7 +58,7 @@ import { ThCreate } from './components/Table/ThCreate';
 // Local component imports
 import { IngestProgress } from '#/components/IngestProgress';
 import { Message } from '#/components/Message';
-import { getErrorMessage } from '#/helpers';
+import { getErrorMessage, parseAsFilters } from '#/helpers';
 import { SpeciesItemDrawer } from './components/SpeciesItemDrawer';
 import { useALA } from '#/helpers/context/useALA';
 import { Flags } from './components/Flags';
@@ -62,6 +69,8 @@ import { ThSortable } from './components/Table/ThSortable';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { Dates } from './components/Dates';
+import PageLoader from '#/components/PageLoader';
+import { getAccessToken } from '#/helpers/utils/getAccessToken';
 
 interface ListLoaderData {
   meta: SpeciesList;
@@ -69,38 +78,61 @@ interface ListLoaderData {
   facets: Facet[];
 }
 
+enum SortDirection {
+  ASC = 'asc',
+  DESC = 'desc',
+}
+
 const classificationFields = ['family', 'kingdom', 'vernacularName'];
 
 const toKV = (data: { [key: string]: string }) =>
   Object.entries(data).map(([key, value]) => ({ key, value }));
 
-export function Component() {
-  // Component data
-  const {
-    meta: rawMeta,
-    list: loaderList,
-    facets: rawFacets,
-  } = useLoaderData() as ListLoaderData;
+export function List() {
+  const { id } = useParams();
+  const [_data, setData] = useState<ListLoaderData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [list, setList] = useState<FilteredSpeciesList>(loaderList);
-  const [meta, setMeta] = useState<SpeciesList>(rawMeta);
+  const [list, setList] = useState<FilteredSpeciesList | null>(null);
+  const [meta, setMeta] = useState<SpeciesList | null>(null);
 
-  useDocumentTitle(`ALA Lists | ${meta.title}`);
+  useDocumentTitle(`ALA Lists | ${meta?.title || 'Loading...'}`);
 
-  const [page, setPage] = useState<number>(0);
-  const [size, setSize] = useState<number>(10);
-  const [searchQuery, setSearch] = useDebouncedState('', 300);
-  const [filters, setFilters] = useState<{ [key: string]: string }>({});
-  const [facets, setFacets] = useState<Facet[]>(rawFacets);
+  // Search
+  const [search, setSearch] = useQueryState<string>(
+    'search',
+    parseAsString.withDefault('')
+  );
+  const [searchDebounced] = useDebouncedValue(search, 300);
+
+  // Search params state
+  const [page, setPage] = useQueryState<number>(
+    'page',
+    parseAsInteger.withDefault(0)
+  );
+  const [size, setSize] = useQueryState<number>(
+    'size',
+    parseAsInteger.withDefault(10)
+  );
+  const [filters, setFilters] = useQueryState<KV[]>('filters', parseAsFilters);
+  const [sort, setSort] = useQueryState<string>(
+    'sort',
+    parseAsString.withDefault('scientificName')
+  );
+  const [dir, setDir] = useQueryState<SortDirection>(
+    'dir',
+    parseAsStringEnum<SortDirection>(Object.values(SortDirection)).withDefault(
+      SortDirection.ASC
+    )
+  );
+
+  // Internal state (not driven by search params)
+  const [facets, setFacets] = useState<Facet[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const [refresh, setRefresh] = useState<boolean>(false);
   const [editing, setEditing] = useState<boolean>(false);
   const [rematching, setRematching] = useState<boolean>(false);
   const [lastProgress, setLastProgress] = useState<boolean>(false);
-
-  // Sorting state
-  const [sort, setSort] = useState<string>('scientificName');
-  const [dir, setDir] = useState<'asc' | 'desc'>('asc');
 
   const location = useLocation();
   const mounted = useMounted();
@@ -111,8 +143,38 @@ export function Component() {
   const [opened, { open, close }] = useDisclosure();
   const [selected, setSelected] = useState<SpeciesListItem | null>(null);
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = getAccessToken();
+        const result = await performGQLQuery(
+          queries.QUERY_LISTS_GET,
+          {
+            speciesListID: id,
+          },
+          token
+        );
+
+        if (result.meta === null || result.list === null) {
+          throw new Error('List not found');
+        }
+
+        setData(result);
+        setList(result.list);
+        setMeta(result.meta);
+        setFacets(result.facets);
+      } catch (err) {
+        setError(err as Error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id]);
+
   // Destructure results & calculate the real page offset
-  const { totalElements, totalPages } = list;
+  const { totalElements, totalPages } = list || { totalElements: 0, totalPages: 0 };
   const realPage = page + 1;
 
   // If we're on the reingest page
@@ -129,11 +191,11 @@ export function Component() {
         } = await performGQLQuery(
           queries.QUERY_LISTS_GET,
           {
-            speciesListID: params.id,
-            searchQuery,
+            speciesListID: id,
+            searchQuery: searchDebounced,
             page,
             size,
-            filters: toKV(filters),
+            filters, // filters: toKV(filters),
             isPrivate: false,
             sort,
             dir,
@@ -152,7 +214,7 @@ export function Component() {
 
     if (mounted) runQuery();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, size, filters, searchQuery, refresh, sort, dir, isReingest]);
+  }, [page, size, filters, searchDebounced, refresh, sort, dir, isReingest]);
 
   // Keep the current page in check
   useEffect(() => {
@@ -162,10 +224,12 @@ export function Component() {
   const handleSortClick = useCallback(
     (newSort: string) => {
       if (sort === newSort) {
-        setDir(dir === 'asc' ? 'desc' : 'asc');
+        setDir(
+          dir === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC
+        );
       } else {
         setSort(newSort);
-        setDir('desc');
+        setDir(SortDirection.DESC);
       }
     },
     [sort, dir]
@@ -196,92 +260,92 @@ export function Component() {
       setSelected(item);
 
       // Update the item in the list state
-      setList({
-        ...list,
-        content: list.content.map((orig) =>
+      setList((prevList) => ({
+        ...prevList!,
+        content: prevList!.content.map((orig) =>
           orig.id === item.id ? item : orig
         ),
-      });
+      }));
     },
-    [list]
+    []
   );
 
   // Item edit handler
   const handleItemDeleted = useCallback(
     (id: string) => {
       close();
-      setList({
-        ...list,
-        content: list.content.filter((item) => item.id !== id),
-      });
+      setList((prevList) => ({
+        ...prevList!,
+        content: prevList!.content.filter((item) => item.id !== id),
+      }));
     },
-    [list]
+    []
   );
 
   // Field deletion handler
   const handleFieldCreated = useCallback(
     (field: string, defaultValue?: string) => {
-      setMeta({
-        ...meta,
-        fieldList: [...meta.fieldList, field],
-      });
+      setMeta((prevMeta) => ({
+        ...prevMeta!,
+        fieldList: [...prevMeta!.fieldList, field],
+      }));
 
       // Update list properties to reflect new field
-      setList({
-        ...list,
-        content: list.content.map((item) => ({
+      setList((prevList) => ({
+        ...prevList!,
+        content: prevList!.content.map((item) => ({
           ...item,
           properties: [
             ...item.properties,
             { key: field, value: defaultValue || '' },
           ],
         })),
-      });
+      }));
     },
-    [meta, list]
+    []
   );
 
   // Field deletion handler
   const handleFieldDeleted = useCallback(
     (deletedField: string) => {
-      setMeta({
-        ...meta,
-        fieldList: meta.fieldList.filter((field) => field !== deletedField),
-      });
+      setMeta((prevMeta) => ({
+        ...prevMeta!,
+        fieldList: prevMeta!.fieldList.filter((field) => field !== deletedField),
+      }));
 
       // Update list properties to reflect new item name
-      setList({
-        ...list,
-        content: list.content.map((item) => ({
+      setList((prevList) => ({
+        ...prevList!,
+        content: prevList!.content.map((item) => ({
           ...item,
           properties: item.properties.filter(({ key }) => key !== deletedField),
         })),
-      });
+      }));
     },
-    [meta, list]
+    []
   );
 
   // Field deletion handler
   const handleFieldRenamed = useCallback(
     (from: string, to: string) => {
       // Update new list meta to update renamed field
-      setMeta({
-        ...meta,
-        fieldList: meta.fieldList.map((field) => (field === from ? to : field)),
-      });
+      setMeta((prevMeta) => ({
+        ...prevMeta!,
+        fieldList: prevMeta!.fieldList.map((field) => (field === from ? to : field)),
+      }));
 
       // Update list properties to reflect new item name
-      setList({
-        ...list,
-        content: list.content.map((item) => ({
+      setList((prevList) => ({
+        ...prevList!,
+        content: prevList!.content.map((item) => ({
           ...item,
           properties: item.properties.map(({ key, value }) =>
             key === from ? { key: to, value } : { key, value }
           ),
         })),
-      });
+      }));
     },
-    [meta, list]
+    []
   );
 
   const handleRowClick = useCallback((item: SpeciesListItem) => {
@@ -296,26 +360,40 @@ export function Component() {
 
   const handleFilterClick = useCallback(
     (filter: KV) => {
-      if (filters[filter.key] === filter.value) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { [filter.key]: _, ...rest } = filters;
-        setFilters(rest);
+      if (
+        (filters || []).find(
+          ({ key, value }) => filter.key === key && filter.value === value
+        )
+      ) {
+        setFilters(
+          (filters || []).filter(
+            ({ key, value }) => filter.key !== key || filter.value !== value
+          )
+        );
       } else {
-        setFilters({ ...filters, [filter.key]: filter.value });
+        setFilters([...(filters || []), filter]);
       }
     },
     [filters]
   );
-
+  
   const handleListMetaUpdated = useCallback(
     (item: SpeciesListSubmit) => {
-      setMeta({
-        ...meta,
+      setMeta((prevMeta) => ({
+        ...prevMeta!,
         ...item,
-      });
+      }));
     },
-    [meta]
+    []
   );
+
+  if (loading) {
+    return <PageLoader />;
+  }
+
+  if (error) {
+    return <Message title="An error occurred" subtitle={getErrorMessage(error)} />;
+  }
 
   const hasError = Boolean(error);
 
@@ -324,6 +402,7 @@ export function Component() {
       <SpeciesItemDrawer
         opened={opened}
         item={selected}
+        meta={meta} 
         onClose={close}
         onEdited={handleItemEdited}
         onDeleted={handleItemDeleted}
@@ -333,30 +412,30 @@ export function Component() {
           <Grid.Col span={12} pb='md'>
             <Flex direction='row' justify='space-between' gap={16}>
               <Stack gap='xs'>
-                <Title order={4}>{meta.title}</Title>
-                <Summary meta={meta} mr={-42} />
-                {(meta.tags || []).length > 0 && (
+                <Title order={4}>{meta?.title}</Title>
+                <Summary meta={meta!} mr={-42} />
+                {(meta?.tags || []).length > 0 && (
                   <Group mt={4} gap={4}>
-                    {meta.tags.map((tag) => (
+                    {meta!.tags.map((tag) => (
                       <Badge variant='dot' radius='md' key={tag}>
                         {tag}
                       </Badge>
                     ))}
                   </Group>
                 )}
-                {meta.description && (
+                {meta?.description && (
                   <Text c='dark-grey-1' size='sm' mt='xs' opacity={0.75}>
                     {meta.description}
                   </Text>
                 )}
                 <Group mt='sm' gap='xs'>
-                  <Flags meta={meta} />
-                  <Dates meta={meta} />
+                  <Flags meta={meta!} />
+                  <Dates meta={meta!} />
                 </Group>
               </Stack>
               {!isReingest && (
                 <Actions
-                  meta={meta}
+                  meta={meta!}
                   editing={editing}
                   rematching={rematching}
                   onEditingChange={setEditing}
@@ -371,7 +450,7 @@ export function Component() {
           <Grid.Col span={12}>
             <IngestProgress
               ingesting={rematching}
-              id={params.id || ''}
+              id={id || ''}
               disableNavigation={true}
               onProgress={(progress) => {
                 if (
@@ -420,7 +499,7 @@ export function Component() {
                     />
                     <TextInput
                       disabled={hasError}
-                      defaultValue={searchQuery}
+                      defaultValue={searchDebounced}
                       onChange={(event) => {
                         setSearch(event.currentTarget.value);
                       }}
@@ -430,10 +509,10 @@ export function Component() {
                   </Group>
                   <Group>
                     <FiltersDrawer
-                      active={toKV(filters)}
+                      active={toKV(Object.fromEntries((filters || []).map(({ key, value }) => [key, value])))}
                       facets={facets}
                       onSelect={handleFilterClick}
-                      onReset={() => setFilters({})}
+                      onReset={() => setFilters([])}
                     />
                     <Text opacity={0.75} size='sm'>
                       {(realPage - 1) * size + 1}-
@@ -489,10 +568,10 @@ export function Component() {
                               defaultMessage='Scientific name'
                             />
                           </ThSortable>
-                          {meta.fieldList.map((field) => (
+                          {meta!.fieldList.map((field) => (
                             <ThEditable
                               key={field}
-                              id={meta.id}
+                              id={meta!.id}
                               editing={editing}
                               field={field}
                               token={ala.token || ''}
@@ -504,7 +583,7 @@ export function Component() {
                           ))}
                           {editing && (
                             <ThCreate
-                              id={meta.id}
+                              id={meta!.id}
                               token={ala.token || ''}
                               onCreate={handleFieldCreated}
                             />
@@ -526,11 +605,11 @@ export function Component() {
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
-                        {list.content.map((item) => (
+                        {list!.content.map((item) => (
                           <TrItem
                             key={item.id}
                             row={item}
-                            fields={meta.fieldList}
+                            fields={meta!.fieldList}
                             classification={classificationFields}
                             editing={editing}
                             onClick={() => handleRowClick(item)}
@@ -563,4 +642,4 @@ export function Component() {
   );
 }
 
-Object.assign(Component, { displayName: 'List' });
+export default List;

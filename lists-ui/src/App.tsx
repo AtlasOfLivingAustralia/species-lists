@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 // Routing
 import { RouterProvider } from 'react-router/dom';
+import { NuqsAdapter } from 'nuqs/adapters/react-router/v7';
 import routes from './Router';
 
 // Authentication
@@ -47,7 +48,9 @@ function App() {
       <PageLoader />
     </div>
   ) : (
-    <RouterProvider router={routes} />
+    <NuqsAdapter>
+      <RouterProvider router={routes} />
+    </NuqsAdapter>
   );
 }
 
