@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
-import { useRouteLoaderData } from 'react-router';
 import {
   InputSpeciesList,
   performGQLQuery,
@@ -41,6 +40,7 @@ import { Create } from './components/Create';
 interface SpeciesItemDrawerProps {
   item: SpeciesListItem | null;
   opened: boolean;
+  meta: SpeciesList;
   onClose: () => void;
   onEdited: (item: SpeciesListItem) => void;
   onDeleted: (id: string) => void;
@@ -49,6 +49,7 @@ interface SpeciesItemDrawerProps {
 export function SpeciesItemDrawer({
   item,
   opened,
+  meta,
   onClose,
   onEdited,
   onDeleted,
@@ -56,7 +57,6 @@ export function SpeciesItemDrawer({
   const [updating, setUpdating] = useState<boolean>(false);
   const [editing, setEditing] = useState<boolean>(false);
   const [editItem, setEditItem] = useState<InputSpeciesList | null>(null);
-  const { meta } = useRouteLoaderData('list') as { meta: SpeciesList };
   const { auth, isAuthorisedForList } = useALA();
 
   // Reset the editing status when the supplied item changes
@@ -213,13 +213,15 @@ export function SpeciesItemDrawer({
                 <Edit
                   onItemUpdated={(updatedItem) => setEditItem(updatedItem)}
                   item={item}
+                  meta={meta}
                 />
               ) : (
-                <Display item={item} />
+                <Display item={item} meta={meta} />
               )
             ) : (
               <Create
                 onItemUpdated={(updatedItem) => setEditItem(updatedItem)}
+                meta={meta}
               />
             )}
           </Stack>

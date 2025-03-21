@@ -69,7 +69,10 @@ function Home() {
     'isUser',
     parseAsBoolean.withDefault(false)
   );
-  const [filters, setFilters] = useQueryState<KV[]>('filters', parseAsFilters);
+  const [filters, setFilters] = useQueryState<KV[]>(
+    'filters', 
+    parseAsFilters // Note: adding `.withDefault([])` causes infinite loop (bug in nuqs v2.4.1 ??)
+  );
 
   // Internal state (not driven by search params)
   const [refresh, setRefresh] = useState<boolean>(false);
@@ -126,12 +129,14 @@ function Home() {
           ({ key, value }) => filter.key === key && filter.value === value
         )
       ) {
+        setPage(0); // Reset 'page' when a filter is removed
         setFilters(
           (filters || []).filter(
             ({ key, value }) => filter.key !== key || filter.value !== value
           )
         );
       } else {
+        setPage(0); // Reset 'page' when a filter is added
         setFilters([...(filters || []), filter]);
       }
     },
@@ -173,7 +178,7 @@ function Home() {
               w={110}
               value={size?.toString()}
               onChange={(newSize) => setSize(parseInt(newSize || '10', 10))}
-              data={['10', '20', '40'].map((value) => ({
+              data={['10', '20', '50', '100'].map((value) => ({
                 label: `${value} items`,
                 value,
               }))}
@@ -185,6 +190,7 @@ function Home() {
               disabled={!data || hasError}
               value={search}
               onChange={(event) => {
+                setPage(0); // Reset 'page' when search is changed
                 setSearch(event.currentTarget.value);
               }}
               placeholder='Search list by name or taxa'
@@ -210,7 +216,7 @@ function Home() {
               facets={data?.facets || []}
               active={filters || []}
               onSelect={handleFilterClick}
-              onReset={() => setFilters([])}
+              onReset={() => {setFilters([]); setPage(0);}}
             />
             <Text opacity={0.75} size='sm'>
               {(realPage - 1) * size + 1}-
