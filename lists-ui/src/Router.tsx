@@ -10,28 +10,15 @@ import Home from './views/Home';
 import PageLoader from './components/PageLoader';
 import PageError from './components/PageError';
 
-import { performGQLQuery, queries } from './api';
 import { getAccessToken } from './helpers/utils/getAccessToken';
 
 // Admin API
 import adminApi from './api/rest/admin';
-import {
-  parseAsBoolean,
-  parseAsInteger,
-  parseAsString,
-  parseAsStringEnum,
-} from 'nuqs';
-import { parseAsFilters } from './helpers';
 
 const JWT_ROLES = import.meta.env.VITE_AUTH_JWT_ROLES;
 const JWT_ADMIN_ROLE = import.meta.env.VITE_AUTH_JWT_ADMIN_ROLE;
 
 const List = lazy(() => import('./views/List'));
-
-enum SortDirection {
-  ASC = 'asc',
-  DESC = 'desc',
-}
 
 const router = createBrowserRouter([
   {
