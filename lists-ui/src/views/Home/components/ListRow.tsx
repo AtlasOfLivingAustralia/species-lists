@@ -54,7 +54,8 @@ export function ListRow({ list }: ListRowProps) {
           <Stack gap={4}>
             <Group gap='xs'>
               <FolderIcon color='grey' />
-              <FormattedNumber value={list?.rowCount || 0} /> taxa
+              <FormattedNumber value={list?.rowCount || 0} />{' '}
+              { list?.rowCount === 1 ? <FormattedMessage id="taxon" /> : <FormattedMessage id="taxa" /> }
             </Group>
             <Group gap='xs'>
               <FontAwesomeIcon

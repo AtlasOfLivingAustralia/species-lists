@@ -4,10 +4,8 @@ import {
   Center,
   Checkbox,
   Container,
-  Flex,
   Grid,
   Group,
-  NativeSelect,
   Pagination,
   SegmentedControl,
   Select,
@@ -38,7 +36,6 @@ import { ListRow } from './components/ListRow';
 // Helpers
 import { getErrorMessage, parseAsFilters } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
-import { set } from 'lodash-es';
 
 interface HomeQuery {
   lists: SpeciesListPage;
@@ -46,16 +43,14 @@ interface HomeQuery {
 }
 
 enum SortField {
+  lastUpdated_desc = 'Date (newest)',
+  lastUpdated_asc = 'Date (oldest)',
   title_asc = 'Name (A-Z)',
   title_desc = 'Name (Z-A)',
   listType_asc = 'Type (A-Z)',
   listType_desc = 'Type (Z-A)',
-  rowCount_asc = 'taxa count (low to high)',
-  rowCount_desc = 'taxa count (high to low)',
-  // dateCreated_asc = 'Date created (oldest first)',
-  // dateCreated_desc = 'Date created (newest first)',
-  lastUpdated_asc = 'Date (oldest first)',
-  lastUpdated_desc = 'Date (newest first)',
+  rowCount_desc = 'taxa count (highes)',
+  rowCount_asc = 'taxa count (lowest)',
 }
 
 function Home() {

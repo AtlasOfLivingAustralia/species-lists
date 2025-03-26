@@ -28,6 +28,8 @@
   "hasRegion": "Region specified",
   "true": "yes",
   "false": "no",
+  "taxon": "taxon",
+  "taxa": "taxa",
 
   "scientificName": "Scientific name",
   "scientificNameAuthority": "Scientific name authority",
