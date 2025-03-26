@@ -1,10 +1,12 @@
-import { Anchor, Group, Skeleton, Stack, Table, Text } from '@mantine/core';
+import { Anchor, Badge, Group, Skeleton, Stack, Table, Text } from '@mantine/core';
 import { FormattedMessage, FormattedNumber } from 'react-intl';
-import { FolderIcon } from '@atlasoflivingaustralia/ala-mantine';
+import { Link } from 'react-router';
+import { formatISO } from 'date-fns';
+import { parseDate } from '#/helpers/utils/parseListDate';
 import { SpeciesList } from '#/api';
+import { FolderIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-regular-svg-icons';
-import { Link } from 'react-router';
 
 interface ListRowProps {
   list?: SpeciesList;
@@ -12,20 +14,38 @@ interface ListRowProps {
 
 export function ListRow({ list }: ListRowProps) {
   const loading = Boolean(list);
+  const lastUpdatedObj: Date | undefined = parseDate(list?.lastUpdated || '');
+  const lastUpdated: string = lastUpdatedObj instanceof Date && !isNaN(lastUpdatedObj.getTime()) 
+      ? formatISO(lastUpdatedObj, { representation: 'date' }) 
+      : 'Unknown';
 
   return (
     <Table.Tr>
       <Table.Td>
         <Stack gap={4} pb='md'>
           <Skeleton visible={!loading}>
-            <Anchor size='md' fw={500} component={Link} to={`list/${list?.id}`}>
+            <Anchor size='md' fw={600} component={Link} to={`list/${list?.id}`}>
               {list?.title || 'List title'}
             </Anchor>
           </Skeleton>
           <Skeleton w='50%' visible={!loading}>
-            <Text size='sm'>
-              <FormattedMessage id={list?.listType || 'OTHER'} />
-            </Text>
+            <Group gap='xs'>
+              <Badge 
+                  variant="outline" 
+                  color="dark.3" 
+                  size="md"
+                  radius="md"
+                  styles={{
+                    label: {
+                      textTransform: 'none',
+                      fontSize: 13,
+                    },
+                  }}
+              >
+                <FormattedMessage id={list?.listType || 'OTHER'} />
+                </Badge>
+              <Text size='sm' c='dark.5'><FormattedMessage id="date.lastUpdated" />: {lastUpdated}</Text>
+            </Group>
           </Skeleton>
         </Stack>
       </Table.Td>

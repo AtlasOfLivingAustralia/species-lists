@@ -4,8 +4,10 @@ import {
   Center,
   Checkbox,
   Container,
+  Flex,
   Grid,
   Group,
+  NativeSelect,
   Pagination,
   SegmentedControl,
   Select,
@@ -36,14 +38,28 @@ import { ListRow } from './components/ListRow';
 // Helpers
 import { getErrorMessage, parseAsFilters } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
+import { set } from 'lodash-es';
 
 interface HomeQuery {
   lists: SpeciesListPage;
   facets: Facet[];
 }
 
+enum SortField {
+  title_asc = 'Name (A-Z)',
+  title_desc = 'Name (Z-A)',
+  listType_asc = 'Type (A-Z)',
+  listType_desc = 'Type (Z-A)',
+  rowCount_asc = 'taxa count (low to high)',
+  rowCount_desc = 'taxa count (high to low)',
+  // dateCreated_asc = 'Date created (oldest first)',
+  // dateCreated_desc = 'Date created (newest first)',
+  lastUpdated_asc = 'Date (oldest first)',
+  lastUpdated_desc = 'Date (newest first)',
+}
+
 function Home() {
-  useDocumentTitle('ALA Lists');
+  useDocumentTitle('ALA Species Lists');
 
   // Search
   const [search, setSearch] = useQueryState<string>(
@@ -60,6 +76,14 @@ function Home() {
   const [size, setSize] = useQueryState<number>(
     'size',
     parseAsInteger.withDefault(10)
+  );
+  const [sort, setSort] = useQueryState<string>(
+    'sort',
+    parseAsString.withDefault('lastUpdated')
+  );
+  const [dir, setDir] = useQueryState<string>(
+    'dir',
+    parseAsString.withDefault('desc')
   );
   const [view, setView] = useQueryState<string>(
     'view',
@@ -83,6 +107,8 @@ function Home() {
     {
       searchQuery: search,
       page,
+      sort,
+      dir,
       size: size,
       filters,
       isPrivate: view === 'private',
@@ -100,12 +126,14 @@ function Home() {
     update({
       searchQuery: searchDebounced,
       page,
+      sort,
+      dir,
       size,
       filters,
       isPrivate: view === 'private',
       ...(isUser ? { userId: ala.userid } : {}),
     });
-  }, [page, size, searchDebounced, filters, refresh, view, isUser]);
+  }, [page, size, searchDebounced, sort, dir, filters, refresh, view, isUser]);
 
   // Keep the current page in check
   useEffect(() => {
@@ -116,7 +144,9 @@ function Home() {
   const handleRetry = useCallback(() => {
     setPage(0);
     setSize(10);
-    setSearch('');
+    setSort('title');
+    setDir('desc');
+    setSearch('lastUpdated');
     setView('public');
     setIsUser(false);
     setRefresh(!refresh);
@@ -217,6 +247,33 @@ function Home() {
               active={filters || []}
               onSelect={handleFilterClick}
               onReset={() => {setFilters([]); setPage(0);}}
+            />
+            <Select
+              w={260}
+              value={`${sort}_${dir}`}
+              label='Sort by'
+              withCheckIcon={true}
+              data={Object.keys(SortField).map((key) => ({
+                label: SortField[key as keyof typeof SortField],
+                value: key,
+              }))}
+              styles={{
+                root: {
+                  display: 'flex',
+                  alignItems: 'center',
+                },
+                label: {
+                  marginRight: 10,
+                },
+              }}
+              onChange={(value) => {
+                const [sort, dir] = (value ?? 'title_asc').split('_');
+                setSort(sort);
+                setDir(dir);
+                setPage(0);
+              }}
+              disabled={!data || hasError}
+              aria-label='Select field to sort results'
             />
             <Text opacity={0.75} size='sm'>
               {(realPage - 1) * size + 1}-
