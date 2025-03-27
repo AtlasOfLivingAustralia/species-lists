@@ -51,7 +51,7 @@
   "NO_RECORDS_IN_CSV": "The CSV file does not contain any records. Please ensure your CSV file contains data and try again.",
 
   "interpreted.values.warning": "Note: Interpreted values are matched against the national checklists. These may differ from the original values supplied.",
-  "date.lastUpdated": "Last updated",
+  "date.lastUpdated": "Updated",
   "date.created": "Created",
 
   "wkt": "Geographic coordinates (Well Known Text format)",
