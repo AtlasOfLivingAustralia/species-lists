@@ -251,7 +251,7 @@ function Home() {
               onReset={() => {setFilters([]); setPage(0);}}
             />
             <Select
-              w={260}
+              w={235}
               value={`${sort}_${dir}`}
               label='Sort by'
               withCheckIcon={true}

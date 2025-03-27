@@ -33,8 +33,8 @@ export function ListRow({ list, isUser }: ListRowProps) {
           </Skeleton>
           <Skeleton w='50%' visible={!loading}>
             <Group gap='5'>
-              <Text size='sm' c='dark.5'><FormattedMessage id="date.lastUpdated" defaultMessage="Updated"/>:</Text>
-              <Text size='sm' c='dark.9' fw='500'>{lastUpdated}</Text>
+              <Text size='sm'><FormattedMessage id="date.lastUpdated" defaultMessage="Updated"/>:</Text>
+              <Text size='sm' fw='500'>{lastUpdated}</Text>
             </Group>
           </Skeleton>
         </Stack>
@@ -43,14 +43,14 @@ export function ListRow({ list, isUser }: ListRowProps) {
         <Skeleton visible={!loading}>
           <Stack gap={4}>
             <Group gap='4'>
-              <FolderIcon color='grey' />
-              <Text size='sm' c='dark.5'><FormattedNumber value={list?.rowCount || 0} />{' '}</Text>
-              <Text size='sm' c='dark.5'>{ list?.rowCount === 1 ? <FormattedMessage id="taxon" /> : <FormattedMessage id="taxa" /> }</Text>
+              <FolderIcon color='grey'/>
+              <Text size='sm' ><FormattedNumber value={list?.rowCount || 0} />{' '}</Text>
+              <Text size='sm' >{ list?.rowCount === 1 ? <FormattedMessage id="taxon" /> : <FormattedMessage id="taxa" /> }</Text>
             </Group>
             <Group gap='4'>
               <Badge 
                   variant="outline" 
-                  color="dark.4" 
+                  color="gray" 
                   size="md"
                   radius="md"
                   styles={{
@@ -68,7 +68,6 @@ export function ListRow({ list, isUser }: ListRowProps) {
                 <FontAwesomeIcon
                   fontSize={14}
                   icon={list?.isPrivate ? faEyeSlash : faEye}
-                  color='grey'
                 />
                 {list?.isPrivate ? 'Private' : 'Public'}
               </Group>
