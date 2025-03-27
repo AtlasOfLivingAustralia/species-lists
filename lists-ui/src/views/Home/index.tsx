@@ -15,7 +15,7 @@ import {
 } from '@mantine/core';
 import { useGQLQuery, queries, SpeciesListPage, KV, Facet } from '#/api';
 import { useDebouncedValue, useDocumentTitle } from '@mantine/hooks';
-import { FormattedNumber } from 'react-intl';
+import { FormattedNumber, useIntl } from 'react-intl';
 import {
   parseAsBoolean,
   parseAsInteger,
@@ -42,19 +42,18 @@ interface HomeQuery {
   facets: Facet[];
 }
 
-enum SortField {
-  lastUpdated_desc = 'Date (newest)',
-  lastUpdated_asc = 'Date (oldest)',
-  title_asc = 'Name (A-Z)',
-  title_desc = 'Name (Z-A)',
-  listType_asc = 'Type (A-Z)',
-  listType_desc = 'Type (Z-A)',
-  rowCount_desc = 'taxa count (highes)',
-  rowCount_asc = 'taxa count (lowest)',
-}
+const sortField = [
+  'lastUpdated_desc',
+  'lastUpdated_asc',
+  'title_asc',
+  'title_desc',
+  'rowCount_desc',
+  'rowCount_asc',
+];
 
 function Home() {
   useDocumentTitle('ALA Species Lists');
+  const intl = useIntl();
 
   // Search
   const [search, setSearch] = useQueryState<string>(
@@ -146,6 +145,14 @@ function Home() {
     setIsUser(false);
     setRefresh(!refresh);
   }, [refresh]);
+
+  const sortOptions = useMemo(() => 
+    sortField.map((key) => ({
+      label: intl.formatMessage({ id: key, defaultMessage: key.replace(/_/g, ' ') }),
+      value: key,
+    })), 
+    [intl]
+  );
 
   const handleFilterClick = useCallback(
     (filter: KV) => {
@@ -248,10 +255,7 @@ function Home() {
               value={`${sort}_${dir}`}
               label='Sort by'
               withCheckIcon={true}
-              data={Object.keys(SortField).map((key) => ({
-                label: SortField[key as keyof typeof SortField],
-                value: key,
-              }))}
+              data={sortOptions}
               styles={{
                 root: {
                   display: 'flex',
@@ -261,8 +265,8 @@ function Home() {
                   marginRight: 10,
                 },
               }}
-              onChange={(value) => {
-                const [sort, dir] = (value ?? 'title_asc').split('_');
+              onChange={(value: string | null) => {
+                const [sort, dir] = (value || 'title_asc').split('_');
                 setSort(sort);
                 setDir(dir);
                 setPage(0);

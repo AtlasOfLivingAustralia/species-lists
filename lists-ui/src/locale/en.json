@@ -31,6 +31,13 @@
   "taxon": "taxon",
   "taxa": "taxa",
 
+  "lastUpdated_desc": "Date (latest)",
+  "lastUpdated_asc": "Date (oldest)",
+  "title_asc": "Name (A-Z)",
+  "title_desc": "Name (Z-A)",
+  "rowCount_desc": "taxa count (highest)",
+  "rowCount_asc": "taxa count (lowest)",
+
   "scientificName": "Scientific name",
   "scientificNameAuthority": "Scientific name authority",
   "vernacularName": "Vernacular name",
