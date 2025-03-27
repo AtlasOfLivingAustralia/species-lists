@@ -192,7 +192,7 @@ public class GraphQLController {
     for (SpeciesList speciesList : speciesLists) {
       speciesList.setRowCount(speciesListIDs.get(speciesList.getId()).intValue());
     }
-    // Convert to a list to allow sorting.
+    
     List<SpeciesList> result = new ArrayList<>();
     speciesLists.forEach(result::add);
 
@@ -203,11 +203,13 @@ public class GraphQLController {
       // Default sort to date(newest first) if no params are passed in.
       result.sort(getSpeciesListComparator("title", "asc"));
     }
+
     // Apply pagination after sorting.
     List<SpeciesList> paginatedResult = result.stream()
             .skip((long) page * size)
             .limit(size)
             .collect(Collectors.toList());
+            
     return new PageImpl<>(paginatedResult, PageRequest.of(page, size), noOfLists);
   }
 
