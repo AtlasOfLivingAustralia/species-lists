@@ -25,7 +25,7 @@ export function ListRow({ list, isUser }: ListRowProps) {
   return (
     <Table.Tr>
       <Table.Td>
-        <Stack gap={4} pb='md'>
+        <Stack gap={4} pb={4}>
           <Skeleton visible={!loading}>
             <Anchor size='md' fw={600} component={Link} to={`list/${list?.id}`}>
               {list?.title || 'List title'}
