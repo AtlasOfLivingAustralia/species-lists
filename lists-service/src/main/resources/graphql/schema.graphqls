@@ -1,6 +1,6 @@
 
 type Query {
-  lists(searchQuery:String, filters:[Filter], page:Int = 0, size: Int = 10, userId:String, isPrivate: Boolean = false): SpeciesListPage
+  lists(searchQuery:String, filters:[Filter], page:Int = 0, size: Int = 10, userId:String, isPrivate: Boolean = false, sort: String, dir: String): SpeciesListPage
   listsFacets(searchQuery:String): [Facet]
   listReleases(speciesListID: String, page:Int = 0, size: Int = 10): [Release]
   getSpeciesListMetadata(speciesListID: String!): SpeciesList

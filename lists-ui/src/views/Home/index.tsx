@@ -15,7 +15,7 @@ import {
 } from '@mantine/core';
 import { useGQLQuery, queries, SpeciesListPage, KV, Facet } from '#/api';
 import { useDebouncedValue, useDocumentTitle } from '@mantine/hooks';
-import { FormattedNumber } from 'react-intl';
+import { FormattedNumber, useIntl } from 'react-intl';
 import {
   parseAsBoolean,
   parseAsInteger,
@@ -42,8 +42,18 @@ interface HomeQuery {
   facets: Facet[];
 }
 
+const sortField = [
+  'lastUpdated_desc',
+  'lastUpdated_asc',
+  'title_asc',
+  'title_desc',
+  'rowCount_desc',
+  'rowCount_asc',
+];
+
 function Home() {
-  useDocumentTitle('ALA Lists');
+  useDocumentTitle('ALA Species Lists');
+  const intl = useIntl();
 
   // Search
   const [search, setSearch] = useQueryState<string>(
@@ -60,6 +70,14 @@ function Home() {
   const [size, setSize] = useQueryState<number>(
     'size',
     parseAsInteger.withDefault(10)
+  );
+  const [sort, setSort] = useQueryState<string>(
+    'sort',
+    parseAsString.withDefault('lastUpdated')
+  );
+  const [dir, setDir] = useQueryState<string>(
+    'dir',
+    parseAsString.withDefault('desc')
   );
   const [view, setView] = useQueryState<string>(
     'view',
@@ -83,6 +101,8 @@ function Home() {
     {
       searchQuery: search,
       page,
+      sort,
+      dir,
       size: size,
       filters,
       isPrivate: view === 'private',
@@ -100,12 +120,14 @@ function Home() {
     update({
       searchQuery: searchDebounced,
       page,
+      sort,
+      dir,
       size,
       filters,
       isPrivate: view === 'private',
       ...(isUser ? { userId: ala.userid } : {}),
     });
-  }, [page, size, searchDebounced, filters, refresh, view, isUser]);
+  }, [page, size, searchDebounced, sort, dir, filters, refresh, view, isUser]);
 
   // Keep the current page in check
   useEffect(() => {
@@ -116,11 +138,21 @@ function Home() {
   const handleRetry = useCallback(() => {
     setPage(0);
     setSize(10);
-    setSearch('');
+    setSort('title');
+    setDir('desc');
+    setSearch('lastUpdated');
     setView('public');
     setIsUser(false);
     setRefresh(!refresh);
   }, [refresh]);
+
+  const sortOptions = useMemo(() => 
+    sortField.map((key) => ({
+      label: intl.formatMessage({ id: key, defaultMessage: key.replace(/_/g, ' ') }),
+      value: key,
+    })), 
+    [intl]
+  );
 
   const handleFilterClick = useCallback(
     (filter: KV) => {
@@ -217,6 +249,30 @@ function Home() {
               active={filters || []}
               onSelect={handleFilterClick}
               onReset={() => {setFilters([]); setPage(0);}}
+            />
+            <Select
+              w={235}
+              value={`${sort}_${dir}`}
+              label='Sort by'
+              withCheckIcon={true}
+              data={sortOptions}
+              styles={{
+                root: {
+                  display: 'flex',
+                  alignItems: 'center',
+                },
+                label: {
+                  marginRight: 10,
+                },
+              }}
+              onChange={(value: string | null) => {
+                const [sort, dir] = (value || 'title_asc').split('_');
+                setSort(sort);
+                setDir(dir);
+                setPage(0);
+              }}
+              disabled={!data || hasError}
+              aria-label='Select field to sort results'
             />
             <Text opacity={0.75} size='sm'>
               {(realPage - 1) * size + 1}-
