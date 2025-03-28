@@ -1,3 +1,5 @@
+/// <reference types="vite-plugin-svgr/client" />
+
 import { useEffect, useState } from 'react';
 
 // Routing
