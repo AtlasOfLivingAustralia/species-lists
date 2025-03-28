@@ -146,7 +146,7 @@ public class GraphQLController {
       }
     }
 
-    NativeQueryBuilder builder = NativeQuery.builder().withPageable(PageRequest.of(page, size));
+    NativeQueryBuilder builder = NativeQuery.builder().withPageable(PageRequest.of(1, 1));
     String finalUserId = userId;
     builder.withQuery(
         q ->
