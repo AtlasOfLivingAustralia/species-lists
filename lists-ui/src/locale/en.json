@@ -37,6 +37,12 @@
   "title_desc": "Name (Z-A)",
   "rowCount_desc": "taxa count (highest)",
   "rowCount_asc": "taxa count (lowest)",
+  "access.private": "Private",
+  "access.public": "Public",
+
+  "list.isAuthoritative": "Authoritative",
+  "list.isSDS": "Sensitive data service",
+  "list.isBIE": "Species pages",
 
   "scientificName": "Scientific name",
   "scientificNameAuthority": "Scientific name authority",
