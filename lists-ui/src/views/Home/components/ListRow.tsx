@@ -9,7 +9,7 @@ import { faCalendar, faEye, faEyeSlash } from '@fortawesome/free-regular-svg-ico
 import { useALA } from '#/helpers/context/useALA';
 import { faShieldHalved } from '@fortawesome/free-solid-svg-icons';
 import { faStar } from '@fortawesome/free-regular-svg-icons';
-import { ReactComponent as AlaIcon } from '#/static/ala-logo-grey.svg';
+import AlaIcon from '#/static/ala-logo-grey.svg?react';
 
 interface ListRowProps {
   list?: SpeciesList;
