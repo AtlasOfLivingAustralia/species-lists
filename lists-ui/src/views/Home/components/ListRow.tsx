@@ -1,5 +1,5 @@
 import { Anchor, Badge, Group, Skeleton, Space, Stack, Table, Text } from '@mantine/core';
-import { FormattedDate, FormattedMessage, FormattedNumber } from 'react-intl';
+import { FormattedDate, FormattedMessage, FormattedNumber, IntlProvider } from 'react-intl';
 import { Link } from 'react-router';
 import { parseDate } from '#/helpers/utils/parseListDate';
 import { SpeciesList } from '#/api';
@@ -19,10 +19,11 @@ interface ListRowProps {
 export function ListRow({ list, isUser }: ListRowProps) {
   const loading = Boolean(list);
   const ala = useALA();
+  const locale = import.meta.env.VITE_LOCALE || 'en-AU';
   
   const lastUpdatedObj: Date | undefined = parseDate(list?.lastUpdated || '');
   const lastUpdated = lastUpdatedObj instanceof Date && !isNaN(lastUpdatedObj.getTime()) ? (
-    <FormattedDate value={lastUpdatedObj} />
+    <IntlProvider locale={locale}><FormattedDate value={lastUpdatedObj} /></IntlProvider>
   ) : 'Unknown';
 
   return (
