@@ -5,7 +5,6 @@ import { Group, Table, Textarea, TextInput, Title } from '@mantine/core';
 import { FormattedMessage } from 'react-intl';
 import { useForm } from '@mantine/form';
 import { useEffect } from 'react';
-import { useRouteLoaderData } from 'react-router';
 
 interface ListLoaderData {
   meta: SpeciesList;
@@ -14,6 +13,7 @@ interface ListLoaderData {
 interface SpeciesItemEditProps {
   item: SpeciesListItem;
   onItemUpdated: (item: InputSpeciesList) => void;
+  meta: SpeciesList;
 }
 
 const classificationFields = [
@@ -27,8 +27,7 @@ const classificationFields = [
   'genus',
 ];
 
-export function Edit({ item, onItemUpdated }: SpeciesItemEditProps) {
-  const { meta } = useRouteLoaderData('list') as ListLoaderData;
+export function Edit({ item, onItemUpdated, meta }: SpeciesItemEditProps) {
 
   const classificationForm = useForm({
     initialValues: classificationFields.reduce(

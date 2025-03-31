@@ -4,7 +4,8 @@ type Variables = { [key: string]: any };
 async function performGQLQuery<T = any>(
   query: string,
   variables?: Variables,
-  token?: string
+  token?: string,
+  signal?: AbortSignal
 ): Promise<T> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -21,6 +22,7 @@ async function performGQLQuery<T = any>(
         operationName: query.match(/(?<=mutation |query )[a-zA-Z]+/g)?.[0],
         variables: variables || {},
       }),
+      signal,
     }
   );
 

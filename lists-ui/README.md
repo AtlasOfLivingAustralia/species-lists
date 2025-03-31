@@ -1,11 +1,38 @@
-# React + TypeScript + Vite
+# Species Lists - `list-ui` React App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Due to strict CORS settings on the dev/test servers, it is easier to just run a local version of the backend. See the [README file](https://github.com/AtlasOfLivingAustralia/species-lists/blob/develop/lists-service/README.md) in the `lists-service` directory for instructions. 
 
-Currently, two official plugins are available:
+## Running the `lists-ui` app
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Ensure you have installed the following:
+- Node version v18.12.1 or later (`brew install node`)
+- Yarn version v1.22.10 or later (`brew install yarn`)
+
+For local development, take a copy of the `config/.env.development` and rename it to `.env.development.local`. DO NOT commit sensitive values to `.env.development`, noting that `.env.development.local` is protected by `.git_ignore`.
+
+```sh
+cd config
+cp .env.development .env.development.local
+```
+
+Use https://userdetails.test.ala.org.au/profile/applications to create an "application" using the `Public Client (Client-side Application)` option. Configure it to use a callback URL of `http://localhost:5173` and save its value in your `.env.development.local` copy. Ask someone about how have additional `scope` values added to your "application". See the `VITE_AUTH_SCOPE` entry for required scopes.
+
+Edit the following values in `.env.development.local`:
+
+```yaml
+VITE_API_BASEURL=http://localhost:8080 # assuming running a local backend
+VITE_AUTH_REDIRECT_URI=http://localhost:5173
+VITE_AUTH_CLIENT_ID=<your_new_client_id> # save this in a password manager
+```
+
+Running the app
+
+```bash
+yarn install # only needed first time or if new npm packages have been added
+yarn run dev
+```
+
+View the app at `http://localhost:5173/`
 
 ## Expanding the ESLint configuration
 

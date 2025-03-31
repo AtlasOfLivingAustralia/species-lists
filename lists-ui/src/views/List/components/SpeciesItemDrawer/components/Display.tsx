@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useRouteLoaderData } from 'react-router';
 import { SpeciesList, SpeciesListItem } from '#/api';
 import { useState } from 'react';
 import { Group, Switch, Table, Textarea, Title } from '@mantine/core';
@@ -8,12 +7,9 @@ import classes from './Display.module.css';
 import displayClasses from './TextArea.module.css';
 import { FormattedMessage } from 'react-intl';
 
-interface ListLoaderData {
-  meta: SpeciesList;
-}
-
 interface SpeciesItemDisplayProps {
   item: SpeciesListItem;
+  meta: SpeciesList;
 }
 
 const classificationFields = [
@@ -27,8 +23,7 @@ const classificationFields = [
   'genus',
 ];
 
-export function Display({ item }: SpeciesItemDisplayProps) {
-  const { meta } = useRouteLoaderData('list') as ListLoaderData;
+export function Display({ item, meta }: SpeciesItemDisplayProps) {
   const [expandedTaxonomy, setExpandedTaxonomy] = useState<boolean>(false);
   const expandedStyle = {
     padding: 0,

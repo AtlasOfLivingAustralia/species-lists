@@ -1,8 +1,10 @@
-export const QUERY_LISTS_SEARCH = `query findList($searchQuery: String, $page: Int, $size: Int, $isPrivate: Boolean, $filters: [Filter], $userId: String) {
+export const QUERY_LISTS_SEARCH = `query findList($searchQuery: String, $page: Int, $size: Int, $sort: String, $dir: String, $isPrivate: Boolean, $filters: [Filter], $userId: String) {
   lists(
     searchQuery: $searchQuery
     page: $page
     size: $size
+    sort: $sort
+    dir: $dir
     isPrivate: $isPrivate
     filters: $filters
     userId: $userId
@@ -11,8 +13,14 @@ export const QUERY_LISTS_SEARCH = `query findList($searchQuery: String, $page: I
       id
       title
       rowCount
+      dateCreated
+      lastUpdated
       listType
       isPrivate
+      isBIE
+      isSDS
+      isThreatened
+      isAuthoritative
       __typename
     }
     totalPages

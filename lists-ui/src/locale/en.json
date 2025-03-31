@@ -28,6 +28,21 @@
   "hasRegion": "Region specified",
   "true": "yes",
   "false": "no",
+  "taxon": "taxon",
+  "taxa": "taxa",
+
+  "lastUpdated_desc": "Date (latest)",
+  "lastUpdated_asc": "Date (oldest)",
+  "title_asc": "Name (A-Z)",
+  "title_desc": "Name (Z-A)",
+  "rowCount_desc": "taxa count (highest)",
+  "rowCount_asc": "taxa count (lowest)",
+  "access.private": "Private",
+  "access.public": "Public",
+
+  "list.isAuthoritative": "Authoritative",
+  "list.isSDS": "Sensitive data service",
+  "list.isBIE": "Species pages",
 
   "scientificName": "Scientific name",
   "scientificNameAuthority": "Scientific name authority",
@@ -42,6 +57,8 @@
   "NO_RECORDS_IN_CSV": "The CSV file does not contain any records. Please ensure your CSV file contains data and try again.",
 
   "interpreted.values.warning": "Note: Interpreted values are matched against the national checklists. These may differ from the original values supplied.",
+  "date.lastUpdated": "Updated",
+  "date.created": "Created",
 
   "wkt": "Geographic coordinates (Well Known Text format)",
   "wkt.help": "Well Known Text (WKT) is a text markup language for representing vector geometry objects on a map. For example, a point in WKT looks like this: POINT (30 10).",

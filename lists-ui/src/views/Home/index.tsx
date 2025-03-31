@@ -1,4 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Center,
   Checkbox,
@@ -13,42 +14,97 @@ import {
   TextInput,
 } from '@mantine/core';
 import { useGQLQuery, queries, SpeciesListPage, KV, Facet } from '#/api';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ListRow } from './components/ListRow';
-import { useDebouncedState, useDocumentTitle } from '@mantine/hooks';
-import { FormattedNumber } from 'react-intl';
-import { Message } from '#/components/Message';
-import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { getErrorMessage } from '#/helpers';
-import { FiltersDrawer } from '#/components/FiltersDrawer';
-import { useALA } from '#/helpers/context/useALA';
+import { useDebouncedValue, useDocumentTitle } from '@mantine/hooks';
+import { FormattedNumber, useIntl } from 'react-intl';
+import {
+  parseAsBoolean,
+  parseAsInteger,
+  parseAsString,
+  useQueryState,
+} from 'nuqs';
+
+// Icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
+
+// Project components
+import { Message } from '#/components/Message';
+import { FiltersDrawer } from '#/components/FiltersDrawer';
+import { ListRow } from './components/ListRow';
+
+// Helpers
+import { getErrorMessage, parseAsFilters } from '#/helpers';
+import { useALA } from '#/helpers/context/useALA';
 
 interface HomeQuery {
   lists: SpeciesListPage;
   facets: Facet[];
 }
 
-function Home() {
-  useDocumentTitle('ALA Lists');
+const sortField = [
+  'lastUpdated_desc',
+  'lastUpdated_asc',
+  'title_asc',
+  'title_desc',
+  'rowCount_desc',
+  'rowCount_asc',
+];
 
-  const [page, setPage] = useState<number>(0);
-  const [size, setSize] = useState<number>(10);
-  const [searchQuery, setSearch] = useDebouncedState('', 300);
-  const [filters, setFilters] = useState<KV[]>([]);
+function Home() {
+  useDocumentTitle('ALA Species Lists');
+  const intl = useIntl();
+
+  // Search
+  const [search, setSearch] = useQueryState<string>(
+    'search',
+    parseAsString.withDefault('')
+  );
+  const [searchDebounced] = useDebouncedValue(search, 300);
+
+  // Search query state
+  const [page, setPage] = useQueryState<number>(
+    'page',
+    parseAsInteger.withDefault(0)
+  );
+  const [size, setSize] = useQueryState<number>(
+    'size',
+    parseAsInteger.withDefault(10)
+  );
+  const [sort, setSort] = useQueryState<string>(
+    'sort',
+    parseAsString.withDefault('lastUpdated')
+  );
+  const [dir, setDir] = useQueryState<string>(
+    'dir',
+    parseAsString.withDefault('desc')
+  );
+  const [view, setView] = useQueryState<string>(
+    'view',
+    parseAsString.withDefault('public')
+  );
+  const [isUser, setIsUser] = useQueryState<boolean>(
+    'isUser',
+    parseAsBoolean.withDefault(false)
+  );
+  const [filters, setFilters] = useQueryState<KV[]>(
+    'filters', 
+    parseAsFilters // Note: adding `.withDefault([])` causes infinite loop (bug in nuqs v2.4.1 ??)
+  );
+
+  // Internal state (not driven by search params)
   const [refresh, setRefresh] = useState<boolean>(false);
-  const [view, setView] = useState<string>('public');
-  const [isUser, setIsUser] = useState<boolean>(false);
 
   const ala = useALA();
   const { data, error, update } = useGQLQuery<HomeQuery>(
     queries.QUERY_LISTS_SEARCH,
     {
-      searchQuery: '',
+      searchQuery: search,
       page,
+      sort,
+      dir,
       size: size,
-      filters: [],
+      filters,
       isPrivate: view === 'private',
       ...(isUser ? { userId: ala.userid } : {}),
     },
@@ -62,15 +118,16 @@ function Home() {
   // Update the search query
   useEffect(() => {
     update({
-      searchQuery,
+      searchQuery: searchDebounced,
       page,
+      sort,
+      dir,
       size,
       filters,
       isPrivate: view === 'private',
       ...(isUser ? { userId: ala.userid } : {}),
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, size, searchQuery, filters, refresh, view, isUser]);
+  }, [page, size, searchDebounced, sort, dir, filters, refresh, view, isUser]);
 
   // Keep the current page in check
   useEffect(() => {
@@ -81,26 +138,38 @@ function Home() {
   const handleRetry = useCallback(() => {
     setPage(0);
     setSize(10);
-    setSearch('');
+    setSort('title');
+    setDir('desc');
+    setSearch('lastUpdated');
     setView('public');
     setIsUser(false);
     setRefresh(!refresh);
   }, [refresh]);
 
+  const sortOptions = useMemo(() => 
+    sortField.map((key) => ({
+      label: intl.formatMessage({ id: key, defaultMessage: key.replace(/_/g, ' ') }),
+      value: key,
+    })), 
+    [intl]
+  );
+
   const handleFilterClick = useCallback(
     (filter: KV) => {
       if (
-        filters.find(
+        (filters || []).find(
           ({ key, value }) => filter.key === key && filter.value === value
         )
       ) {
+        setPage(0); // Reset 'page' when a filter is removed
         setFilters(
-          filters.filter(
+          (filters || []).filter(
             ({ key, value }) => filter.key !== key || filter.value !== value
           )
         );
       } else {
-        setFilters([...filters, filter]);
+        setPage(0); // Reset 'page' when a filter is added
+        setFilters([...(filters || []), filter]);
       }
     },
     [filters]
@@ -141,7 +210,7 @@ function Home() {
               w={110}
               value={size?.toString()}
               onChange={(newSize) => setSize(parseInt(newSize || '10', 10))}
-              data={['10', '20', '40'].map((value) => ({
+              data={['10', '20', '50', '100'].map((value) => ({
                 label: `${value} items`,
                 value,
               }))}
@@ -151,8 +220,9 @@ function Home() {
             <TextInput
               style={{ flexGrow: 1 }}
               disabled={!data || hasError}
-              defaultValue={searchQuery}
+              value={search}
               onChange={(event) => {
+                setPage(0); // Reset 'page' when search is changed
                 setSearch(event.currentTarget.value);
               }}
               placeholder='Search list by name or taxa'
@@ -176,9 +246,33 @@ function Home() {
             )}
             <FiltersDrawer
               facets={data?.facets || []}
-              active={filters}
+              active={filters || []}
               onSelect={handleFilterClick}
-              onReset={() => setFilters([])}
+              onReset={() => {setFilters([]); setPage(0);}}
+            />
+            <Select
+              w={235}
+              value={`${sort}_${dir}`}
+              label='Sort by'
+              withCheckIcon={true}
+              data={sortOptions}
+              styles={{
+                root: {
+                  display: 'flex',
+                  alignItems: 'center',
+                },
+                label: {
+                  marginRight: 10,
+                },
+              }}
+              onChange={(value: string | null) => {
+                const [sort, dir] = (value || 'title_asc').split('_');
+                setSort(sort);
+                setDir(dir);
+                setPage(0);
+              }}
+              disabled={!data || hasError}
+              aria-label='Select field to sort results'
             />
             <Text opacity={0.75} size='sm'>
               {(realPage - 1) * size + 1}-
