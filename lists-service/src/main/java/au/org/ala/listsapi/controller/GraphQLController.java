@@ -14,8 +14,6 @@ import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.aggregations.LongTermsBucket;
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
-import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
-import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.*;
@@ -121,6 +119,8 @@ public class GraphQLController {
    * @param size
    * @param userId
    * @param isPrivate
+   * @param sort
+   * @param dir
    * @return Page of SpeciesList
    */
   @QueryMapping
@@ -131,6 +131,8 @@ public class GraphQLController {
       @Argument Integer size,
       @Argument String userId,
       @Argument Boolean isPrivate,
+      @Argument String sort,
+      @Argument String dir,
       @AuthenticationPrincipal Principal principal) {
 
     // if searching private lists, check user is authorized
@@ -178,8 +180,6 @@ public class GraphQLController {
 
     Map<String, Long> speciesListIDs =
         array.stream()
-            .skip(page * size)
-            .limit(size)
             .collect(
                 Collectors.toMap(
                     bucket -> bucket.key().stringValue(), bucket -> bucket.docCount()));
@@ -187,14 +187,71 @@ public class GraphQLController {
     // lookup species list metadata
     Iterable<SpeciesList> speciesLists =
         speciesListMongoRepository.findAllById(speciesListIDs.keySet());
+
+    // Add row count
     for (SpeciesList speciesList : speciesLists) {
       speciesList.setRowCount(speciesListIDs.get(speciesList.getId()).intValue());
     }
-
+    
     List<SpeciesList> result = new ArrayList<>();
     speciesLists.forEach(result::add);
 
-    return new PageImpl<>(result, PageRequest.of(page, size), noOfLists);
+    // Sort the list using the provided sort and dir parameters
+    if (StringUtils.isNotEmpty(sort) && StringUtils.isNotEmpty(dir)) {
+      result.sort(getSpeciesListComparator(sort, dir));
+    } else {
+      // Default sort to date(newest first) if no params are passed in.
+      result.sort(getSpeciesListComparator("title", "asc"));
+    }
+
+    // Apply pagination after sorting.
+    List<SpeciesList> paginatedResult = result.stream()
+            .skip((long) page * size)
+            .limit(size)
+            .collect(Collectors.toList());
+            
+    return new PageImpl<>(paginatedResult, PageRequest.of(page, size), noOfLists);
+  }
+
+  /**
+   * Creates a comparator for sorting `SpeciesList` objects based on the given sort field and
+   * direction.
+   *
+   * @param sort The field to sort by.
+   * @param dir  The direction of the sort ("asc" or "desc").
+   * @return A `Comparator<SpeciesList>` that can be used to sort a list of `SpeciesList`
+   *     objects.
+   */
+  private Comparator<SpeciesList> getSpeciesListComparator(String sort, String dir) {
+    Comparator<SpeciesList> comparator;
+    boolean ascending = "asc".equalsIgnoreCase(dir);
+
+    switch (sort) {
+      case "title":
+        comparator = Comparator.comparing(SpeciesList::getTitle, String.CASE_INSENSITIVE_ORDER);
+        break;
+      case "listType":
+        // listType contains null values, so we need to handle nulls separately so they always appear at the end
+        // noting that order is reversed when descending
+        comparator = ascending 
+            ? Comparator.comparing(SpeciesList::getListType, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
+            : Comparator.comparing(SpeciesList::getListType, Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER));
+        break;
+      case "rowCount":
+        comparator = Comparator.comparing(SpeciesList::getRowCount, Integer::compareTo);
+        break;
+      case "lastUpdated":
+      default:
+        comparator = Comparator.comparing(SpeciesList::getLastUpdated, Date::compareTo);
+        break;
+    }
+
+    // Apply null handling based on direction
+    if (!ascending) {
+        comparator = comparator.reversed();
+    }
+
+    return comparator;
   }
 
   @GraphQlExceptionHandler

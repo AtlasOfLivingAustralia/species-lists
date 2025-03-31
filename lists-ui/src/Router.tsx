@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, redirect } from 'react-router';
 import { jwtDecode } from 'jwt-decode';
 
@@ -9,7 +10,6 @@ import Home from './views/Home';
 import PageLoader from './components/PageLoader';
 import PageError from './components/PageError';
 
-import { performGQLQuery, queries } from './api';
 import { getAccessToken } from './helpers/utils/getAccessToken';
 
 // Admin API
@@ -17,6 +17,8 @@ import adminApi from './api/rest/admin';
 
 const JWT_ROLES = import.meta.env.VITE_AUTH_JWT_ROLES;
 const JWT_ADMIN_ROLE = import.meta.env.VITE_AUTH_JWT_ADMIN_ROLE;
+
+const List = lazy(() => import('./views/List'));
 
 const router = createBrowserRouter([
   {
@@ -31,24 +33,11 @@ const router = createBrowserRouter([
       {
         path: 'list/:id',
         id: 'list',
-        lazy: () => import('./views/List'),
-        hydrateFallbackElement: <PageLoader />,
-        loader: async ({ params }) => {
-          const token = getAccessToken();
-          const data = await performGQLQuery(
-            queries.QUERY_LISTS_GET,
-            {
-              speciesListID: params.id,
-            },
-            token
-          );
-
-          if (data.meta === null || data.list === null) {
-            throw new Response('List not found', { status: 404 });
-          }
-
-          return data;
-        },
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <List />
+          </Suspense>
+        ),
         errorElement: <PageError />,
         children: [
           {
@@ -56,6 +45,11 @@ const router = createBrowserRouter([
             lazy: () => import('./views/Reingest'),
           },
         ],
+      },
+      {
+        // Legacy lists redirect
+        path: 'speciesListItem/list/:id',
+        loader: ({ params }) => redirect(`/list/${params.id}`),
       },
       {
         path: '/upload',

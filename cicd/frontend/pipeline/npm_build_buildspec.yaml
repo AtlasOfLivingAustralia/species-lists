@@ -19,7 +19,8 @@ phases:
   pre_build:
     commands:
       - echo running npm install...
-      - npm i
+      - npm install @rollup/rollup-linux-x64-gnu
+      - npm ci --platform=linux --arch=x64
   build:
     commands:
       - echo building...
