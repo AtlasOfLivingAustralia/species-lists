@@ -28,7 +28,7 @@ public class WebConfig implements WebMvcConfigurer {
    * development or testing purposes.
    * For example, "http://localhost:5173" for local development.
    */
-  @Value("${app.fallbackUrl}")
+  @Value("${app.fallbackUrl:}")
   private String fallbackAppUrl;
 
   /**
