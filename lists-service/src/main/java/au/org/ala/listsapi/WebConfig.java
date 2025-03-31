@@ -2,21 +2,50 @@ package au.org.ala.listsapi;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
+@PropertySource(
+    value = "file:///data/lists-service/config/lists-service-config.properties",
+    ignoreResourceNotFound = true)
 @EnableWebMvc
 public class WebConfig implements WebMvcConfigurer {
-
+  /**
+   * The URL of the application, used for CORS configuration.
+   * This should be set to the URL of the application in production.
+   * This property is loaded from the lists-service-config.properties file but if there is an
+   * entry in application.properties, it will override the value in the ext. config file.
+   */
   @Value("${app.url}")
   private String appUrl;
 
+  /**
+   * An optional fallback URL of the application, used for CORS configuration.
+   * This is normally empty but can be set to a different URL for local
+   * development or testing purposes.
+   * For example, "http://localhost:5173" for local development.
+   */
+  @Value("${app.fallbackUrl}")
+  private String fallbackAppUrl;
+
+  /**
+   * CORS configuration for the application.
+   * 
+   * @param registry the CORS registry to configure
+   */
   @Override
   public void addCorsMappings(CorsRegistry registry) {
+    String allowedOrigins = appUrl;
+
+    if (!fallbackAppUrl.isEmpty()) {
+      allowedOrigins = appUrl + "," + fallbackAppUrl;
+    }
+
     registry.addMapping("/**").
-        allowedOrigins("https://" + appUrl).
+        allowedOrigins(allowedOrigins).
         allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS").
         allowedHeaders("*").
         allowCredentials(false).
