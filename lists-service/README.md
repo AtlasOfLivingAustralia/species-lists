@@ -13,11 +13,20 @@ to run, use the following command:
 ```bash
 docker-compose -f src/main/docker/docker-compose.yml up
 ```
+### Local development setup
+
+Make a copy of `lists-service/config/lists-service-config.properties` and save it to `/data/lists-service/config/lists-service-config.properties`. 
+
+Add a new entry to the file, to allow localhost CORS access:
+
+```properties
+app.fallbackUrl=http://localhost:5173
+```
 
 ### Running the application locally
 
 ```bash
-./gradlew bootRun
+mvn spring-boot:run
 ```
 
 ## GraphQL

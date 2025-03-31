@@ -1,7 +1,5 @@
 # Species Lists - `list-ui` React App
 
-For local development, take a copy of the `config/.env.development` and rename it to `.env.development.local`. DO NOT commit sensitive values to `.env.development`, noting that `.env.development.local` is protected by `.git_ignore`.
-
 Due to strict CORS settings on the dev/test servers, it is easier to just run a local version of the backend. See the [README file](https://github.com/AtlasOfLivingAustralia/species-lists/blob/develop/lists-service/README.md) in the `lists-service` directory for instructions. 
 
 ## Running the `lists-ui` app

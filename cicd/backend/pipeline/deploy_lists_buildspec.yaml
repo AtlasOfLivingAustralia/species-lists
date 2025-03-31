@@ -48,7 +48,7 @@ phases:
           clientId: $WEBSERVICE_CLIENT_ID
           clientSecret: $WEBSERVICE_CLIENT_SECRET
         app:
-          url: $UI_SUB_DOMAIN.$HOSTED_ZONE
+          url: https://$UI_SUB_DOMAIN.$HOSTED_ZONE
           ws-url: $WS_SUB_DOMAIN.$HOSTED_ZONE
         bie:
           baseUrl: $BIE_BASE_URL
