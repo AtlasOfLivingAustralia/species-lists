@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMounted } from '@mantine/hooks';
 
 import performGQLQuery, { Variables } from './performGQLQuery';
@@ -19,21 +19,32 @@ function useGQLQuery<T>(
   const [variables, setVariables] = useState<Variables>(initialVariables);
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const controller = useRef<AbortController | null>(null);
   const mounted = useMounted();
 
   useEffect(() => {
     async function runQuery() {
       if (data && options.clearDataOnUpdate) setData(null);
       try {
+        if (controller.current)
+          controller.current.abort('New GraphQL request invoked');
+        controller.current = new AbortController();
+
         const queryData = await performGQLQuery<T>(
           query,
           variables,
-          options.token
+          options.token,
+          controller.current.signal
         );
+
+        controller.current = null;
+
         setData(queryData);
         setError(null);
       } catch (queryError) {
-        setError(queryError as Error);
+        if (queryError !== 'New GraphQL request invoked') {
+          setError(queryError as Error);
+        }
       }
     }
 
