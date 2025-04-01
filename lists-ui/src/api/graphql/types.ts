@@ -165,6 +165,8 @@ interface Classification {
   orderID: string;
   familyID: string;
   genusID: string;
+  rank: string;
+  rankID: number;
 }
 
 interface ListsUser {

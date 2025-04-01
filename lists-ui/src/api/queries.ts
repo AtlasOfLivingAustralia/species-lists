@@ -112,6 +112,8 @@ export const QUERY_LISTS_GET = `query loadList(
         orderID
         familyID
         genusID
+        rank
+        rankID
       }
       dateCreated
       lastUpdated
