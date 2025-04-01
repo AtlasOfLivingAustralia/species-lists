@@ -6,7 +6,6 @@ import { Group, Switch, Table, Textarea, Title } from '@mantine/core';
 import classes from './Display.module.css';
 import displayClasses from './TextArea.module.css';
 import { FormattedMessage } from 'react-intl';
-import { getStyle } from 'node_modules/@mantine/core/lib/core/styles-api/use-styles/get-style/get-style';
 import { getStyleForTaxon } from '#/helpers/utils/formatName';
 
 interface SpeciesItemDisplayProps {
