@@ -136,7 +136,6 @@ export function List() {
 
   const location = useLocation();
   const mounted = useMounted();
-  const params = useParams();
   const ala = useALA();
 
   // Selection drawer
@@ -414,7 +413,8 @@ export function List() {
       <SpeciesItemDrawer
         opened={opened}
         item={selected}
-        meta={meta} 
+        meta={meta!} 
+        setRefresh={setRefresh}
         onClose={close}
         onEdited={handleItemEdited}
         onDeleted={handleItemDeleted}

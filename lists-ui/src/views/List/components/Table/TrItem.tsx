@@ -1,6 +1,7 @@
 import { Anchor, MantineStyleProp, Table, TableTrProps } from '@mantine/core';
 import { SpeciesListItem } from '#/api';
 import find from 'lodash-es/find';
+import { getStyleForTaxon } from '#/helpers/utils/formatName';
 
 interface TrItemProps extends TableTrProps {
   row: SpeciesListItem;
@@ -35,7 +36,11 @@ export function TrItem({
       <Table.Td width='auto'>
         {row.classification?.scientificName ? (
           <Anchor
-            fs='italic'
+            fs={getStyleForTaxon(
+                  row.classification?.rank,
+                  row.classification?.rankID,
+                  'italic'
+                )}
             href={`${import.meta.env.VITE_ALA_BIE_SPECIES}/${
               row.classification?.taxonConceptID
             }`}
