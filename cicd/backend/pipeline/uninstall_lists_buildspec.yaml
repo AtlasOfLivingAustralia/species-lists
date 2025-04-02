@@ -21,12 +21,9 @@ phases:
     commands:
       - echo Build started on $(date)
       - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME
-#      - kubectl config set-context --current --namespace=$PRODUCT_NAME
-#      - printf "$(kubectl config current-context)\n"
-      # do we need to create the service account here?
       - cd lists-service/helm
-      - echo helm uninstall $HELM_RELEASE_NAME -n lists
-      - helm uninstall $HELM_RELEASE_NAME -n lists
+      - echo helm uninstall $HELM_RELEASE_NAME -n $EKS_NAMESPACE
+      - helm uninstall $HELM_RELEASE_NAME -n $EKS_NAMESPACE
 
   post_build:
     commands:

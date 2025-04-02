@@ -326,6 +326,7 @@ Resources:
                       { "name":"COLLECTORY_BASE_URL", "value":"#{ExportConfigNS.COLLECTORY_BASE_URL}" },
                       { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
                       { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
+                      { "name":"EKS_NAMESPACE", "value":"#{ExportConfigNS.EKS_NAMESPACE}" },
                       { "name":"FILE_SYSTEM_ID", "value":"${FileSystemId}" },
                       { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" },
                       { "name":"BUILD_TAG", "value":"#{BuildListsNS.BUILD_TAG}" },
@@ -434,6 +435,7 @@ Resources:
                 - |
                   [
                     { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
+                    { "name":"EKS_NAMESPACE", "value":"#{ExportConfigNS.EKS_NAMESPACE}" },
                     { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" }
                   ]
                 - EksClusterName:
