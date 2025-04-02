@@ -38,10 +38,10 @@ phases:
       - cd lists-service/helm
       - |
         # Initialize CORS fallbackUrl variable
-        fallbackUrlValue=""
+        CORS_URL="https://${UI_SUB_DOMAIN}.${HOSTED_ZONE}"
         # Conditionally set fallbackUrlValue for DEV
         if [[ "$UI_SUB_DOMAIN" == "lists-develop" ]]; then
-          fallbackUrlValue="fallbackUrl: \"*\""
+          CORS_URL="*"
         fi
       - |
         echo "mongodb:
@@ -55,7 +55,7 @@ phases:
           clientId: $WEBSERVICE_CLIENT_ID
           clientSecret: $WEBSERVICE_CLIENT_SECRET
         app:
-          url: "https://${UI_SUB_DOMAIN}.${HOSTED_ZONE}"
+          url: $CORS_URL
           ws-url: $WS_SUB_DOMAIN.$HOSTED_ZONE
           $fallbackUrlValue
         bie:
