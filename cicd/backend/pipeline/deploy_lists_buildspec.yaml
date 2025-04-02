@@ -77,7 +77,7 @@ phases:
       - echo helm values
       - cat helm_values.yaml
       - echo helm upgrade --install $HELM_RELEASE_NAME  . 
-                      -n lists 
+                      -n $EKS_NAMESPACE 
                       --set image.repository=$ECR_REPO 
                       --set image.tag=$BUILD_TAG
                       --set ingress.hostname=$WS_SUB_DOMAIN.$HOSTED_ZONE
@@ -86,7 +86,7 @@ phases:
                       --set deploymentAnnotations.checksum/configs="$(md5sum helm_values.yaml | awk '{print $1}')"
                       --set deploymentAnnotations.commitHash=$CODEBUILD_RESOLVED_SOURCE_VERSION
       - helm upgrade --install $HELM_RELEASE_NAME . 
-                      -n lists
+                      -n $EKS_NAMESPACE
                       --set image.repository=$ECR_REPO 
                       --set image.tag=$BUILD_TAG
                       --set ingress.hostname=$WS_SUB_DOMAIN.$HOSTED_ZONE
