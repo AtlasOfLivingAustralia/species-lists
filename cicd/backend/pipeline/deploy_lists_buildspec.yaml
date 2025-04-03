@@ -57,7 +57,6 @@ phases:
         app:
           url: $CORS_URL
           ws-url: $WS_SUB_DOMAIN.$HOSTED_ZONE
-          $fallbackUrlValue
         bie:
           baseUrl: $BIE_BASE_URL
         biocache:
