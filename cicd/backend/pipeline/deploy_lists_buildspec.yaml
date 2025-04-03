@@ -37,13 +37,6 @@ phases:
       # do we need to create the service account here?
       - cd lists-service/helm
       - |
-        # Initialize CORS fallbackUrl variable
-        CORS_URL="https://${UI_SUB_DOMAIN}.${HOSTED_ZONE}"
-        # Conditionally set fallbackUrlValue for DEV
-        if [[ "$UI_SUB_DOMAIN" == "lists-develop" ]]; then
-          CORS_URL="*"
-        fi
-      - |
         echo "mongodb:
           host: $MONGODB_HOST
           password: \"$MONGODB_PASSWORD\"
@@ -55,7 +48,7 @@ phases:
           clientId: $WEBSERVICE_CLIENT_ID
           clientSecret: $WEBSERVICE_CLIENT_SECRET
         app:
-          url: $CORS_URL
+          url: "https://${UI_SUB_DOMAIN}.${HOSTED_ZONE}"
           ws-url: $WS_SUB_DOMAIN.$HOSTED_ZONE
         bie:
           baseUrl: $BIE_BASE_URL
