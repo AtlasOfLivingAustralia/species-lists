@@ -1,0 +1,46 @@
+.filter {
+  /* padding: 8px 16px 8px 16px; */
+  padding: 6px;
+
+  &:hover {
+    @mixin light {
+      background-color: var(--mantine-color-grey-1);
+    }
+    @mixin dark {
+      background-color: var(--mantine-color-dark-5);
+    }
+  }
+}
+
+.heading {
+  /* position: sticky; */
+  /* top: 64px; */
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-bottom: 10px;
+  border-radius: 0; 
+  z-index: 100;
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
+.checkboxLabel { 
+  font-size: 9px;
+  width: 100%;
+  max-width: 100%;
+  flex-grow: 1;
+  display: flex;
+}
+.checkboxInner {
+  margin-top: 3px;
+}
+.checkboxLabelWrapper {
+  width: 100%;
+}
+.checkboxBody {
+  width: 100%;
+}
+
+.facetPaper {
+  padding: 5px 2px 2px 0px;
+  border-top: 1px solid var(--mantine-color-default-border);
+}

@@ -1,14 +1,18 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Box,
+  Button,
   Center,
   Checkbox,
+  Collapse,
   Container,
   Grid,
   Group,
   Pagination,
   SegmentedControl,
   Select,
+  Stack,
   Table,
   Text,
   TextInput,
@@ -25,17 +29,18 @@ import {
 
 // Icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { IconAdjustmentsHorizontal } from '@tabler/icons-react';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
 
 // Project components
 import { Message } from '#/components/Message';
-import { FiltersDrawer } from '#/components/FiltersDrawer';
 import { ListRow } from './components/ListRow';
 
 // Helpers
 import { getErrorMessage, parseAsFilters } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
+import { FiltersDrawer } from '#/components/FiltersSection';
 
 interface HomeQuery {
   lists: SpeciesListPage;
@@ -94,6 +99,10 @@ function Home() {
 
   // Internal state (not driven by search params)
   const [refresh, setRefresh] = useState<boolean>(false);
+
+  // Filters display state
+  const [filtersDisplay, setFiltersDisplay] = useState<boolean>(true); 
+  const toggleFilters = () => setFiltersDisplay((o) => !o);
 
   const ala = useALA();
   const { data, error, update } = useGQLQuery<HomeQuery>(
@@ -156,6 +165,7 @@ function Home() {
 
   const handleFilterClick = useCallback(
     (filter: KV) => {
+      console.log('Filter clicked:', filter);
       if (
         (filters || []).find(
           ({ key, value }) => filter.key === key && filter.value === value
@@ -206,17 +216,16 @@ function Home() {
       <Grid>
         <Grid.Col span={12}>
           <Group>
-            <Select
-              w={110}
-              value={size?.toString()}
-              onChange={(newSize) => setSize(parseInt(newSize || '10', 10))}
-              data={['10', '20', '50', '100'].map((value) => ({
-                label: `${value} items`,
-                value,
-              }))}
-              disabled={!data || hasError}
-              aria-label='Select number of results'
-            />
+            <Button 
+              size= 'sm' 
+              leftSection={<IconAdjustmentsHorizontal size={14} />}
+              variant='default'
+              radius="md"
+              fw="normal"
+              onClick={toggleFilters}
+            >
+              {filtersDisplay ? 'Hide Filters' : 'Show Filters'}
+            </Button>
             <TextInput
               style={{ flexGrow: 1 }}
               disabled={!data || hasError}
@@ -228,7 +237,7 @@ function Home() {
               placeholder='Search list by name or taxa'
               w={200}
             />
-            {ala.isAuthenticated && (
+            {ala.isAuthenticated && false && (
               <>
                 <SegmentedControl
                   disabled={!data || hasError}
@@ -244,12 +253,12 @@ function Home() {
                 />
               </>
             )}
-            <FiltersDrawer
+            {/* <FiltersDrawer
               facets={data?.facets || []}
               active={filters || []}
               onSelect={handleFilterClick}
               onReset={() => {setFilters([]); setPage(0);}}
-            />
+            /> */}
             <Select
               w={235}
               value={`${sort}_${dir}`}
@@ -274,49 +283,75 @@ function Home() {
               disabled={!data || hasError}
               aria-label='Select field to sort results'
             />
-            <Text opacity={0.75} size='sm'>
-              {(realPage - 1) * size + 1}-
-              {Math.min((realPage - 1) * size + size, totalElements || 0)} of{' '}
-              <FormattedNumber value={totalElements || 0} /> records
-            </Text>
+            <Select
+              w={110}
+              value={size?.toString()}
+              onChange={(newSize) => setSize(parseInt(newSize || '10', 10))}
+              data={['10', '20', '50', '100'].map((value) => ({
+                label: `${value} items`,
+                value,
+              }))}
+              disabled={!data || hasError}
+              aria-label='Select number of results'
+            />
           </Group>
         </Grid.Col>
-        <Grid.Col span={12}>
-          {totalElements === 0 && <Message title='No lists found' />}
-          {error && (
-            <Message
-              title='An error occured'
-              subtitle={getErrorMessage(error)}
-              icon={<StopIcon size={18} />}
-              action='Retry'
-              onAction={handleRetry}
-            />
-          )}
-          {!error && (
-            <Table striped={false} withRowBorders>
-              <Table.Tbody>
-                {content
-                  ? content.map((list) => <ListRow key={list.id} list={list} />)
-                  : Array.from(Array(size).keys()).map((key) => (
-                      <ListRow key={key} />
-                    ))}
-              </Table.Tbody>
-            </Table>
-          )}
-        </Grid.Col>
-        <Grid.Col span={12} py='xl'>
-          <Center>
-            <Pagination
-              disabled={(totalPages || 0) < 1 || hasError}
-              value={realPage}
-              onChange={(value) => setPage(value - 1)}
-              total={totalPages || 9}
-              radius='md'
-              getControlProps={(control) => ({
-                'aria-label': `${control} page`,
-              })}
-            />
-          </Center>
+        {filtersDisplay && (
+          <Grid.Col span={2}>
+            <Collapse in={filtersDisplay}>
+                {/* Filters appear here */}
+                <FiltersDrawer
+                  facets={data?.facets || []}
+                  active={filters || []}
+                  onSelect={handleFilterClick}
+                  onReset={() => {setFilters([]); setPage(0);}}
+                />
+            </Collapse>
+          </Grid.Col>
+        )}
+        <Grid.Col span={filtersDisplay ? 10 : 12}>
+          <Grid.Col span={12}>
+            {totalElements === 0 && <Message title='No lists found' />}
+            {error && (
+              <Message
+                title='An error occured'
+                subtitle={getErrorMessage(error)}
+                icon={<StopIcon size={18} />}
+                action='Retry'
+                onAction={handleRetry}
+              />
+            )}
+            {!error && (
+              <Table striped={false} withRowBorders>
+                <Table.Tbody>
+                  {content
+                    ? content.map((list) => <ListRow key={list.id} list={list} />)
+                    : Array.from(Array(size).keys()).map((key) => (
+                        <ListRow key={key} />
+                      ))}
+                </Table.Tbody>
+              </Table>
+            )}
+            <Stack align="center" justify="center" gap="xs" w="100%" py="xl">
+              <Box>
+                <Text opacity={0.8} size='sm'>
+                  {(realPage - 1) * size + 1}-
+                  {Math.min((realPage - 1) * size + size, totalElements || 0)} of{' '}
+                  <FormattedNumber value={totalElements || 0} /> records
+                </Text>
+              </Box>
+              <Pagination
+                disabled={(totalPages || 0) < 1 || hasError}
+                value={realPage}
+                onChange={(value) => setPage(value - 1)}
+                total={totalPages || 9}
+                radius='md'
+                getControlProps={(control) => ({
+                  'aria-label': `${control} page`,
+                })}
+              />
+            </Stack>
+          </Grid.Col>
         </Grid.Col>
       </Grid>
     </Container>

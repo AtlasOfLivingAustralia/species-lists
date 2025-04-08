@@ -64,7 +64,7 @@ import { useALA } from '#/helpers/context/useALA';
 import { Flags } from './components/Flags';
 import { Actions } from './components/Actions';
 import { Summary } from './components/Summary';
-import { FiltersDrawer } from '#/components/FiltersDrawer';
+import { FiltersDrawer } from '#/components/FiltersSection';
 import { ThSortable } from './components/Table/ThSortable';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';

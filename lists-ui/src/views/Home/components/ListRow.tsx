@@ -81,7 +81,7 @@ export function ListRow({ list, isUser }: ListRowProps) {
               { list?.isBIE && (
                 <>
                   <Space w={3} />
-                  <AlaIcon size={15} color='grey' width="22px" height="18px"/>
+                  <AlaIcon color='grey' width="22px" height="18px"/>
                   <Text size='sm' fw='400' ml={-1}><FormattedMessage id="list.isBIE" defaultMessage="Species page"/></Text>
                 </>
               )}
