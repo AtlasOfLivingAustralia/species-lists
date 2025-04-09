@@ -10,6 +10,7 @@ import { useALA } from '#/helpers/context/useALA';
 import { faShieldHalved } from '@fortawesome/free-solid-svg-icons';
 import { faStar } from '@fortawesome/free-regular-svg-icons';
 import AlaIcon from '#/static/ala-logo-grey.svg?react';
+import { ListTypeBadge } from '#/components/ListTypeBadge';
 
 interface ListRowProps {
   list?: SpeciesList;
@@ -65,25 +66,17 @@ export function ListRow({ list, isUser }: ListRowProps) {
                 </>
               )}
               { list?.isAuthoritative && (
-                <>
-                  <Space w={3} />
-                  <FontAwesomeIcon icon={faStar} fontSize={16} color='grey'/>
-                  <Text size='sm' fw='400'><FormattedMessage id="list.isAuthoritative" defaultMessage="Authoritative"/></Text>
-                </>
+                <><Space w={3} /><ListTypeBadge listTypeValue='isAuthoritative'/></>
               )}
               { list?.isSDS && (
-                <>
-                  <Space w={3} />
-                  <FontAwesomeIcon icon={faShieldHalved} fontSize={16} color='grey'/>
-                  <Text size='sm' fw='400'><FormattedMessage id="list.isSDS" defaultMessage="Sensitive"/></Text>
-                </>
+                <><Space w={3} /><ListTypeBadge listTypeValue='isSDS'/></>
               )}
               { list?.isBIE && (
-                <>
-                  <Space w={3} />
-                  <AlaIcon color='grey' width="22px" height="18px"/>
-                  <Text size='sm' fw='400' ml={-1}><FormattedMessage id="list.isBIE" defaultMessage="Species page"/></Text>
-                </>
+                <><Space w={3} /><ListTypeBadge listTypeValue='isBIE'/></>
+              )}
+              { list?.region && list.region.trim() !== '' && (
+                // Not currently used as GraphQL is not reuturning this field
+                <><Space w={3} /><ListTypeBadge listTypeValue='hasRegion'/></>
               )}
             </Group>
           </Skeleton>

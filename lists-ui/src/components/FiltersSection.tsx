@@ -28,6 +28,7 @@ import { VariableSizeList as List } from 'react-window';
 
 import classes from './FiltersSection.module.css';
 import { Facet, KV } from '#/api';
+import { ListTypeBadge } from './ListTypeBadge';
 
 interface FiltersDrawerProps {
   facets: Facet[];
@@ -91,7 +92,6 @@ const CountItem = memo(
 // Helper function to render the entire Checkbox with its label
 const renderCheckbox = (
   key: string,
-  labelContent: React.ReactNode,
   countItem: { value: string; count: number } | undefined,
   isChecked: boolean,
   isBooleanFacet: boolean,
@@ -115,7 +115,8 @@ const renderCheckbox = (
       label={
         // The label structure remains the same
         <Paper className={classes.checkboxPaper}>
-          {labelContent}
+          <ListTypeBadge listTypeValue={key} iconSide="right"/>
+          {/* <FormattedMessage id={key} defaultMessage={key} /> */}
           <Chip
             size="xs"
             checked={isChecked}
@@ -217,7 +218,6 @@ export const FacetComponent = memo(
             const isChecked = isValueActive(booleanItem?.value);
             return renderCheckbox(
               facet.key, // Key for the single boolean checkbox
-              <FormattedMessage id={facet.key} />, // Label is the facet name
               booleanItem,
               isChecked,
               isBooleanFacet,
@@ -231,7 +231,6 @@ export const FacetComponent = memo(
               const isChecked = isValueActive(item.value);
               return renderCheckbox(
                 item.value, // Key is the item value
-                <FormattedMessage id={item.value} defaultMessage={item.value} />, // Label is the item value
                 item,
                 isChecked,
                 isBooleanFacet,

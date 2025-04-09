@@ -23,7 +23,7 @@
 }
 
 .checkboxRoot {
-  margin: 2px 0px;
+  margin: 4px 0px 4px 0px;
 }
 .checkboxLabel { 
   font-size: 10px;
@@ -43,13 +43,14 @@
 }
 
 .checkboxPaper {
-  font-size: var(--mantine-font-size-sm);
-  width: 100%;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: left;
+  text-align: left;
+  width: 100%;
   /* padding: 0px 4px 0px 4px; */
   border-radius: 0;
+  font-size: var(--mantine-font-size-sm);
 }
 
 .facetPaper {
