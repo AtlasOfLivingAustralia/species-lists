@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActionIcon,
   Box,
   Button,
   Center,
@@ -10,6 +11,7 @@ import {
   Grid,
   Group,
   Pagination,
+  Paper,
   SegmentedControl,
   Select,
   Stack,
@@ -19,7 +21,7 @@ import {
 } from '@mantine/core';
 import { useGQLQuery, queries, SpeciesListPage, KV, Facet } from '#/api';
 import { useDebouncedValue, useDocumentTitle } from '@mantine/hooks';
-import { FormattedNumber, useIntl } from 'react-intl';
+import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 import {
   parseAsBoolean,
   parseAsInteger,
@@ -29,8 +31,8 @@ import {
 
 // Icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { IconAdjustmentsHorizontal } from '@tabler/icons-react';
-import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { IconAdjustmentsHorizontal, IconBackspaceFilled } from '@tabler/icons-react';
+import { faClose, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
 
 // Project components
@@ -41,6 +43,7 @@ import { ListRow } from './components/ListRow';
 import { getErrorMessage, parseAsFilters } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
 import { FiltersDrawer } from '#/components/FiltersSection';
+import { faTrashAlt } from '@fortawesome/free-regular-svg-icons';
 
 interface HomeQuery {
   lists: SpeciesListPage;
@@ -101,8 +104,8 @@ function Home() {
   const [refresh, setRefresh] = useState<boolean>(false);
 
   // Filters display state
-  const [filtersDisplay, setFiltersDisplay] = useState<boolean>(true); 
-  const toggleFilters = () => setFiltersDisplay((o) => !o);
+  const [hidefilters, setHideFilters] = useQueryState<boolean>('hideFilters', parseAsBoolean.withDefault(false)); 
+  const toggleFilters = () => setHideFilters((o) => !o);
 
   const ala = useALA();
   const { data, error, update } = useGQLQuery<HomeQuery>(
@@ -224,7 +227,10 @@ function Home() {
               fw="normal"
               onClick={toggleFilters}
             >
-              {filtersDisplay ? 'Hide Filters' : 'Show Filters'}
+              { hidefilters 
+              ? <FormattedMessage id='filters.hide' defaultMessage='Show Filters' /> 
+              : <FormattedMessage id='filters.show' defaultMessage='Hide Filters' /> 
+            }
             </Button>
             <TextInput
               style={{ flexGrow: 1 }}
@@ -253,16 +259,10 @@ function Home() {
                 />
               </>
             )}
-            {/* <FiltersDrawer
-              facets={data?.facets || []}
-              active={filters || []}
-              onSelect={handleFilterClick}
-              onReset={() => {setFilters([]); setPage(0);}}
-            /> */}
             <Select
               w={235}
               value={`${sort}_${dir}`}
-              label='Sort by'
+              label={<FormattedMessage id='sort.label' defaultMessage='Sort by' />}
               withCheckIcon={true}
               data={sortOptions}
               styles={{
@@ -281,7 +281,7 @@ function Home() {
                 setPage(0);
               }}
               disabled={!data || hasError}
-              aria-label='Select field to sort results'
+              aria-label={intl.formatMessage({ id: 'sort.field.ariaLabel', defaultMessage: 'Select field to sort results' })} 
             />
             <Select
               w={110}
@@ -292,13 +292,13 @@ function Home() {
                 value,
               }))}
               disabled={!data || hasError}
-              aria-label='Select number of results'
+              aria-label={intl.formatMessage({ id: 'page.size.ariaLabel', defaultMessage: 'Select number of results' })} 
             />
           </Group>
         </Grid.Col>
-        {filtersDisplay && (
+        {!hidefilters && (
           <Grid.Col span={2}>
-            <Collapse in={filtersDisplay}>
+            <Collapse in={!hidefilters}>
                 {/* Filters appear here */}
                 <FiltersDrawer
                   facets={data?.facets || []}
@@ -309,37 +309,93 @@ function Home() {
             </Collapse>
           </Grid.Col>
         )}
-        <Grid.Col span={filtersDisplay ? 10 : 12}>
+        <Grid.Col span={hidefilters ? 12 : 10}>
           <Grid.Col span={12}>
-            {totalElements === 0 && <Message title='No lists found' />}
+            {totalElements === 0 && 
+              <Message 
+                title={intl.formatMessage({ id: 'error.noListsFound.title', defaultMessage: 'No lists found' })} 
+                subtitle={intl.formatMessage({ id: 'error.noListsFound.subTitle', defaultMessage: 'Try removing a filter or searching with a different query' })} 
+              />
+            }
             {error && (
               <Message
-                title='An error occured'
+                title={intl.formatMessage({ id: 'error.error.title', defaultMessage: 'An error occurred' })} 
                 subtitle={getErrorMessage(error)}
                 icon={<StopIcon size={18} />}
-                action='Retry'
+                action={intl.formatMessage({ id: 'error.action.label', defaultMessage: 'Retry' })} 
                 onAction={handleRetry}
               />
             )}
             {!error && (
-              <Table striped={false} withRowBorders>
-                <Table.Tbody>
-                  {content
-                    ? content.map((list) => <ListRow key={list.id} list={list} />)
-                    : Array.from(Array(size).keys()).map((key) => (
-                        <ListRow key={key} />
-                      ))}
-                </Table.Tbody>
-              </Table>
+              <>
+                { hidefilters && filters && filters.length > 0 && (
+                  <Paper ml={10} mb={5} style={{ display: 'inline-flex', alignItems: 'center', fontSize: 'var(--mantine-font-size-sm)' }}>
+                    <FormattedMessage id='filters.active' defaultMessage='Selected filters' />:{' '}
+                    {filters.map((filter) => (
+                      <Paper 
+                        key={filter.key} 
+                        fs='sm' 
+                        radius='sm' 
+                        bd='1px solid var(--mantine-color-default-border)' 
+                        style={{ display: 'inline-flex', alignItems: 'center', marginRight: 10, marginLeft: 5, padding: '2px 6px' }}
+                      >
+                        <FormattedMessage id={filter.key} defaultMessage={filter.key}/>
+                        { filter.value && filter.value !== 'true' && filter.value !== 'false' && (
+                          <>
+                            :{' '}
+                            <FormattedMessage id={filter.value} defaultMessage={filter.value}/>
+                          </>
+                        )}
+                        <ActionIcon
+                          radius='sm'
+                          opacity={0.8}
+                          size='xs'
+                          onClick={() => handleFilterClick(filter)}
+                          style={{ marginLeft: 5 }}
+                        >
+                          <FontAwesomeIcon icon={faClose} fontSize={14} />
+                        </ActionIcon>
+                      </Paper>
+                    ))}
+                    <Paper 
+                      fs='sm' 
+                      radius='sm' 
+                      bg={'var(--mantine-color-default-border)'}
+                      bd='1px solid var(--mantine-color-default-border)' 
+                      style={{ display: 'inline-flex', alignItems: 'center', marginRight: 10, padding: '2px 6px', maxHeight: 28, cursor: 'pointer' }}
+                      onClick={() => {
+                        setFilters([]);
+                        setPage(0);
+                      }}
+                    >
+                      <FormattedMessage id='filters.reset' defaultMessage='Clear all filters' />
+                      <IconBackspaceFilled size={24} color='var(--mantine-primary-color-filled)' style={{ marginLeft: 5 }}/>
+                    </Paper>
+                  </Paper>
+                  )}
+                { totalElements && totalElements > 0 && (
+                  <Box ml={10} mb={5}>
+                    <Text size='sm'>
+                      <FormattedMessage id='results.showing' defaultMessage='Showing' /> {' '}
+                      {(realPage - 1) * size + 1}-
+                      {Math.min((realPage - 1) * size + size, totalElements || 0)} of {' '}
+                      <FormattedNumber value={totalElements || 0} /> {' '}
+                      <FormattedMessage id='results.records' defaultMessage='records' />
+                    </Text>
+                  </Box>
+                )}
+                <Table striped={false} withRowBorders style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
+                  <Table.Tbody>
+                    {content
+                      ? content.map((list) => <ListRow key={list.id} list={list} />)
+                      : Array.from(Array(size).keys()).map((key) => (
+                          <ListRow key={key} />
+                        ))}
+                  </Table.Tbody>
+                </Table>
+              </>
             )}
             <Stack align="center" justify="center" gap="xs" w="100%" py="xl">
-              <Box>
-                <Text opacity={0.8} size='sm'>
-                  {(realPage - 1) * size + 1}-
-                  {Math.min((realPage - 1) * size + size, totalElements || 0)} of{' '}
-                  <FormattedNumber value={totalElements || 0} /> records
-                </Text>
-              </Box>
               <Pagination
                 disabled={(totalPages || 0) < 1 || hasError}
                 value={realPage}

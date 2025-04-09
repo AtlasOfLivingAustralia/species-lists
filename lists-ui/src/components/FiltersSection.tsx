@@ -272,52 +272,22 @@ export const FiltersDrawer = memo(
 
     return (
       <>
-        {/* <Drawer.Root
-          offset={16}
-          radius='lg'
-          size='md'
-          opened={opened}
-          onClose={close}
-          position='left'
-          scrollAreaComponent={ScrollArea.Autosize}
-          aria-label='Filters dialog'
-          role='dialog'
-        >
-          <Drawer.Overlay />
-          <Drawer.Content
-            style={{ overflowX: 'hidden' }}
-            aria-label='Filters dialog'
-          >
-            <Drawer.Header>
-              <Flex justify='space-between' align='center' w='100%'>
-                <Title order={4}>Filters</Title>
-                <Drawer.CloseButton
-                  radius='lg'
-                  mx={0}
-                  aria-label='Close filters'
-                />
-              </Flex>
-            </Drawer.Header>
-            <Drawer.Body p={0}> */}
-              <Title order={5}>Filters</Title>
-              <Stack gap={4} mt="xs" mb="md" pb={4} style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}>
-                {facets
-                  .filter((facet) => facet.counts.length > 0)
-                  .sort((a, b) => b.counts.length - a.counts.length)
-                  .map((facet) => (
-                    <FacetComponent
-                      key={facet.key}
-                      facet={facet}
-                      isExpanded={expanded.includes(facet.key)}
-                      handleFacetToggle={handleFacetToggle}
-                      active={active}
-                      onSelect={onSelect}
-                    />
-                  ))}
-              </Stack>
-            {/* </Drawer.Body>
-          </Drawer.Content>
-        </Drawer.Root> */}
+        <Text size='md' fw='bold'><FormattedMessage id='filters.title' defaultMessage='Filters' /></Text>
+        <Stack gap={4} mt="xs" mb="md" pb={4} style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}>
+          {facets
+            .filter((facet) => facet.counts.length > 0)
+            .sort((a, b) => b.counts.length - a.counts.length)
+            .map((facet) => (
+              <FacetComponent
+                key={facet.key}
+                facet={facet}
+                isExpanded={expanded.includes(facet.key)}
+                handleFacetToggle={handleFacetToggle}
+                active={active}
+                onSelect={onSelect}
+              />
+            ))}
+        </Stack>
         <Flex align='center' gap={14} display="noneX">
           <ActionIcon.Group>
             <ActionIcon

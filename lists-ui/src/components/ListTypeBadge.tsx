@@ -1,11 +1,11 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Box, Space, Text } from "@mantine/core";
+import { Box, Text } from "@mantine/core";
 import { FormattedMessage } from "react-intl";
 import { faShieldHalved } from '@fortawesome/free-solid-svg-icons';
 import { faMap, faStar } from '@fortawesome/free-regular-svg-icons';
 import AlaIcon from '#/static/ala-logo-grey.svg?react';
 
-const listTypeValues: { [key: string]: string | JSX.Element } = {
+const listTypeValues: { [key: string]: JSX.Element } = {
   "isAuthoritative": <FontAwesomeIcon icon={faStar} fontSize={16} color='grey'/>,
   "isSDS": <FontAwesomeIcon icon={faShieldHalved} fontSize={16} color='grey'/>,
   "isBIE": <AlaIcon color='grey' width="22px" height="18px"/>,
