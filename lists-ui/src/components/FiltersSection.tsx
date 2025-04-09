@@ -1,4 +1,4 @@
-import { CSSProperties, memo, useCallback, useEffect, useState } from 'react';
+import { CSSProperties, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useDisclosure } from '@mantine/hooks';
 import {
   Drawer,
@@ -88,6 +88,52 @@ const CountItem = memo(
   }
 );
 
+// Helper function to render the entire Checkbox with its label
+const renderCheckbox = (
+  key: string,
+  labelContent: React.ReactNode,
+  countItem: { value: string; count: number } | undefined,
+  isChecked: boolean,
+  isBooleanFacet: boolean,
+  onChange: () => void // Accept the specific onChange handler
+) => {
+  if (!countItem) return null; // Handle case where countItem might be undefined
+
+  return (
+    <Checkbox
+      key={key} // Use the provided key
+      size='xs'
+      classNames={{
+        root: !isBooleanFacet ? classes.checkboxRoot : undefined,
+        body: classes.checkboxBody,
+        inner: classes.checkboxInner,
+        labelWrapper: classes.checkboxLabelWrapper,
+        label: classes.checkboxLabel,
+      }}
+      onChange={onChange} // Use the provided onChange handler
+      checked={isChecked}
+      label={
+        // The label structure remains the same
+        <Paper className={classes.checkboxPaper}>
+          {labelContent}
+          <Chip
+            size="xs"
+            checked={isChecked}
+            styles={{
+              root: { pointerEvents: 'none' },
+              label: { paddingLeft: 8, paddingRight: 8 },
+              iconWrapper: { display: 'none', width: 0 },
+            }}
+          >
+            <FormattedNumber value={countItem.count} />
+          </Chip>
+        </Paper>
+      }
+    />
+  );
+};
+
+
 export const FacetComponent = memo(
   ({
     facet,
@@ -106,132 +152,95 @@ export const FacetComponent = memo(
       handleFacetToggle(facet.key);
     }, [handleFacetToggle, facet.key]);
 
-    // Calculate item counts & sizes for
-    const itemCount = facet.counts.length;
-    facet.counts.sort((a: { value: string }, b: { value: string }) => a.value.localeCompare(b.value))
-    // const itemSize = 38;
-    // const height = Math.min(itemCount * itemSize, 300);
-    // const height = itemCount * itemSize + 0;
+    // Create a sorted copy of counts
+    const sortedCounts = useMemo(() =>
+      [...facet.counts].sort((a, b) => a.value.localeCompare(b.value)),
+      [facet.counts]
+    );
+
+    const itemCount = sortedCounts.length;
+
+    // Determine if it's a boolean facet
+    const isBooleanFacet = itemCount <= 2 &&
+        (sortedCounts[0]?.value === 'true' || sortedCounts[0]?.value === 'false');
+
+    // Helper to check if a value is active
+    const isValueActive = useCallback((value: string | undefined) => {
+      if (value === undefined) return false;
+      return Boolean(active.find(
+        (activeItem) => activeItem.key === facet.key && activeItem.value === value
+      ));
+    }, [active, facet.key]);
+
+    // Specific onChange handler for boolean facet
+    const handleBooleanChange = useCallback(() => {
+      const booleanItem = sortedCounts[1]; // Assumes second item is the one to toggle
+      if (booleanItem) {
+        onSelect({ key: facet.key, value: booleanItem.value });
+      }
+    }, [onSelect, facet.key, sortedCounts]);
+
+    // Specific onChange handler factory for non-boolean items
+    const handleItemChange = useCallback((itemValue: string) => () => {
+        onSelect({ key: facet.key, value: itemValue });
+    }, [onSelect, facet.key]);
 
     return (
-      <>
-        { itemCount > 2 || (facet.counts[0].value !== 'true' && facet.counts[0].value !== 'false') ? (
-          // Non-boolean facets
-          <Paper 
-            className={classes.facetPaper}
-            fs="sm" 
-            radius={0} 
-          >
+      <Paper
+        className={classes.facetPaper}
+        fs="sm"
+        radius={0}
+      >
+        {/* Render header only for non-boolean facets */}
+        {!isBooleanFacet && (
+          <Group justify='space-between'>
             <Text size='md' fw='bold' opacity={0.8} mb={4}>
               <FormattedMessage id={facet.key} defaultMessage={facet.key} />
             </Text>
-            { facet.counts.map((item, _index) => (
-              <Checkbox
-                key={item.value}
-                size='xs'
-                classNames={{
-                  body: classes.checkboxBody,
-                  inner: classes.checkboxInner,
-                  labelWrapper: classes.checkboxLabelWrapper,
-                  label: classes.checkboxLabel,
-                }}
-                style={{ marginBottom: 4 }}
-                onChange={(_event) =>
-                  onSelect({
-                    key: facet.key,
-                    value: item.value
-                  })
-                }
-                checked={
-                  Boolean(
-                    active.find(
-                      (activeItem) =>
-                      activeItem.key === facet.key &&
-                      activeItem.value === item.value
-                    )
-                  )
-                }
-                label={
-                  <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <FormattedMessage id={item.value} defaultMessage={item.value} />
-                    <Chip
-                      size="xs"
-                      checked={Boolean(
-                        active.find(
-                          (activeItem) =>
-                            activeItem.key === facet.key &&
-                            activeItem.value === item.value
-                        )
-                      )}
-                      styles={{
-                        root: { pointerEvents: 'none' },
-                        label: { paddingLeft: 8, paddingRight: 8 },
-                        iconWrapper: { display: 'none', width: 0 },
-                      }}
-                    >
-                      <FormattedNumber value={item.count} />
-                    </Chip>
-                  </div>
-                }
-              />
-            ))}
-          </Paper>
-        ) : (
-          // Boolean facets - assumes 2 values in facet.counts array
-          <Paper 
-            className={classes.facetPaper}
-            fs="sm" 
-            radius={0} 
-          >
-            <Checkbox
-              size='xs'
-              classNames={{
-                body: classes.checkboxBody,
-                inner: classes.checkboxInner,
-                labelWrapper: classes.checkboxLabelWrapper,
-                label: classes.checkboxLabel,
-              }}
-              onChange={(_event) =>
-                onSelect({
-                  key: facet.key,
-                  value: facet.counts[1].value
-                })
-              }
-              checked={
-                Boolean(
-                  active.find(
-                    (activeItem) =>
-                    activeItem.key === facet.key &&
-                    activeItem.value === facet.counts[1]?.value 
-                  )
-                )
-              }
-              label={
-                <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <FormattedMessage id={facet.key} />
-                  <Chip
-                    size="xs"
-                    checked={Boolean(
-                      active.find(
-                        (activeItem) =>
-                          activeItem.key === facet.key &&
-                          activeItem.value === facet.counts[1]?.value 
-                      )
-                    )}
-                    styles={{
-                      root: { pointerEvents: 'none' },
-                      label: { paddingLeft: 8, paddingRight: 8 },
-                      iconWrapper: { display: 'none', width: 0 },
-                    }}
-                  >
-                    <FormattedNumber value={facet.counts[1]?.count } />
-                  </Chip>
-                </div>
-              }
-            />
-          </Paper>
+            <ActionIcon
+              variant='subtle'
+              color='dark'
+              size='sm'
+              onClick={handleToggle}
+              aria-label={`Toggle filters for ${facet.key}`}
+            >
+              <FontAwesomeIcon icon={isExpanded ? faMinus : faPlus} />
+            </ActionIcon>
+          </Group>
         )}
-      </>
+
+        {/* Render checkboxes using the helper */}
+        {isBooleanFacet ? (
+          // --- Boolean Facet Rendering ---
+          (() => {
+            const booleanItem = sortedCounts[1];
+            const isChecked = isValueActive(booleanItem?.value);
+            return renderCheckbox(
+              facet.key, // Key for the single boolean checkbox
+              <FormattedMessage id={facet.key} />, // Label is the facet name
+              booleanItem,
+              isChecked,
+              isBooleanFacet,
+              handleBooleanChange // Pass the specific handler
+            );
+          })()
+        ) : (
+          // --- Non-boolean Facet Rendering ---
+          <Collapse in={isExpanded} >
+            {sortedCounts.map((item) => {
+              const isChecked = isValueActive(item.value);
+              return renderCheckbox(
+                item.value, // Key is the item value
+                <FormattedMessage id={item.value} defaultMessage={item.value} />, // Label is the item value
+                item,
+                isChecked,
+                isBooleanFacet,
+                handleItemChange(item.value) // Pass the specific handler for this item
+              );
+            })}
+          </Collapse>
+        )}
+      </Paper>
     );
   }
 );
