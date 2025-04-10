@@ -247,8 +247,8 @@ export const FacetComponent = memo(
 );
 
 export const FiltersSection = memo(
-  ({ facets, active, onSelect, onReset }: FiltersDrawerProps) => {
-    const [_opened, { open, close }] = useDisclosure(true);
+  ({ facets, active, onSelect }: FiltersDrawerProps) => {
+    // const [_opened, { open, close }] = useDisclosure(true);
     const [expanded, setExpanded] = useState<string[]>([]);
     // Callback function for facet toggling
     const handleFacetToggle = useCallback((key: string) => {

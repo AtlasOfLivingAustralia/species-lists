@@ -6,6 +6,7 @@ import {
   Box,
   Button,
   Center,
+  Collapse,
   Container,
   Flex,
   Grid,
@@ -38,6 +39,7 @@ import {
 import { FormattedMessage, FormattedNumber } from 'react-intl';
 import { Outlet, useLocation, useParams } from 'react-router';
 import {
+  parseAsBoolean,
   parseAsInteger,
   parseAsString,
   parseAsStringEnum,
@@ -71,6 +73,7 @@ import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { Dates } from './components/Dates';
 import PageLoader from '#/components/PageLoader';
 import { getAccessToken } from '#/helpers/utils/getAccessToken';
+import { IconAdjustmentsHorizontal } from '@tabler/icons-react';
 
 interface ListLoaderData {
   meta: SpeciesList;
@@ -112,7 +115,7 @@ export function List() {
   );
   const [size, setSize] = useQueryState<number>(
     'size',
-    parseAsInteger.withDefault(10)
+    parseAsInteger.withDefault(20)
   );
   const [filters, setFilters] = useQueryState<KV[]>('filters', parseAsFilters);
   const [sort, setSort] = useQueryState<string>(
@@ -125,6 +128,11 @@ export function List() {
       SortDirection.ASC
     )
   );
+
+  // Filters display state
+  const [hidefilters, setHideFilters] = useQueryState<boolean>('hideFilters', parseAsBoolean.withDefault(false)); 
+  const toggleFilters = () => setHideFilters((o) => !o);
+
 
   // Internal state (not driven by search params)
   const [facets, setFacets] = useState<Facet[]>([]);
@@ -421,7 +429,7 @@ export function List() {
       />
       <Container fluid>
         <Grid>
-          <Grid.Col span={12} pb='md'>
+          <Grid.Col span={12} pb='sm'>
             <Flex direction='row' justify='space-between' gap={16}>
               <Stack gap='xs'>
                 <Title order={4}>{meta?.title}</Title>
@@ -458,29 +466,39 @@ export function List() {
                 />
               )}
             </Flex>
+            <Button
+              radius='md'
+              leftSection={<FontAwesomeIcon icon={faPlus} />}
+              variant='light'
+              onClick={handleAddClick}
+            >
+              Add species
+            </Button>
           </Grid.Col>
-          <Grid.Col span={12}>
-            <IngestProgress
-              ingesting={rematching}
-              id={id || ''}
-              disableNavigation={true}
-              onProgress={(progress) => {
-                if (
-                  progress.elasticTotal === progress.rowCount &&
-                  lastProgress
-                ) {
-                  setRematching(false);
-                  setRefresh(!refresh);
-                  setLastProgress(false);
-                } else if (
-                  progress.elasticTotal < progress.rowCount &&
-                  !lastProgress
-                ) {
-                  setLastProgress(true);
-                }
-              }}
-            />
-          </Grid.Col>
+          { rematching && (
+            <Grid.Col span={12}>
+              <IngestProgress
+                ingesting={rematching}
+                id={id || ''}
+                disableNavigation={true}
+                onProgress={(progress) => {
+                  if (
+                    progress.elasticTotal === progress.rowCount &&
+                    lastProgress
+                  ) {
+                    setRematching(false);
+                    setRefresh(!refresh);
+                    setLastProgress(false);
+                  } else if (
+                    progress.elasticTotal < progress.rowCount &&
+                    !lastProgress
+                  ) {
+                    setLastProgress(true);
+                  }
+                }}
+              />
+            </Grid.Col>
+          )}
           {isReingest ? (
             <Grid.Col span={12}>
               <Outlet />
@@ -490,20 +508,25 @@ export function List() {
               <Grid.Col span={12}>
                 <Group justify='space-between'>
                   <Group>
-                    <Button
-                      radius='md'
-                      leftSection={<FontAwesomeIcon icon={faPlus} />}
-                      variant='light'
-                      onClick={handleAddClick}
+                    <Button 
+                      size= 'sm' 
+                      leftSection={<IconAdjustmentsHorizontal size={14} />}
+                      variant='default'
+                      radius="md"
+                      fw="normal"
+                      onClick={toggleFilters}
                     >
-                      Add species
+                      { hidefilters 
+                      ? <FormattedMessage id='filters.hide' defaultMessage='Show Filters' /> 
+                      : <FormattedMessage id='filters.show' defaultMessage='Hide Filters' /> 
+                    }
                     </Button>
                     <Select
                       disabled={hasError}
                       w={110}
                       value={size?.toString()}
                       onChange={handleSizeChange}
-                      data={['10', '20', '40'].map((value) => ({
+                      data={['10', '20', '50', '100'].map((value) => ({
                         label: `${value} items`,
                         value,
                       }))}
@@ -519,7 +542,7 @@ export function List() {
                       w={200}
                     />
                   </Group>
-                  <Group>
+                  {/* <Group>
                     <FiltersSection
                       active={toKV(Object.fromEntries((filters || []).map(({ key, value }) => [key, value])))}
                       facets={facets}
@@ -534,10 +557,23 @@ export function List() {
                       )}{' '}
                       of <FormattedNumber value={totalElements} /> records
                     </Text>
-                  </Group>
+                  </Group> */}
                 </Group>
               </Grid.Col>
-              <Grid.Col span={12}>
+              {/* Filters appear here */}
+              {!hidefilters && (
+                <Grid.Col span={2} mt={18}>
+                  <Collapse in={!hidefilters}>
+                      <FiltersSection
+                        facets={facets || []}
+                        active={filters || []}
+                        onSelect={handleFilterClick}
+                        onReset={() => {setFilters([]); setPage(0);}}
+                      />
+                  </Collapse>
+                </Grid.Col>
+              )}
+              <Grid.Col span={hidefilters ? 12 : 10}>
                 <Box style={{ overflowX: 'auto' }}>
                   {error ? (
                     <Message
@@ -630,21 +666,21 @@ export function List() {
                       </Table.Tbody>
                     </Table>
                   )}
+                  <Center mt='xl'>
+                    <Pagination
+                      disabled={(totalPages || 0) < 1 || hasError}
+                      value={realPage}
+                      onChange={(value) => setPage(value - 1)}
+                      total={totalPages || 9}
+                      radius='md'
+                      getControlProps={(control) => ({
+                        'aria-label': `${control} page`,
+                      })}
+                    />
+                  </Center>
                 </Box>
               </Grid.Col>
               <Grid.Col span={12} py='xl'>
-                <Center>
-                  <Pagination
-                    disabled={(totalPages || 0) < 1 || hasError}
-                    value={realPage}
-                    onChange={(value) => setPage(value - 1)}
-                    total={totalPages || 9}
-                    radius='md'
-                    getControlProps={(control) => ({
-                      'aria-label': `${control} page`,
-                    })}
-                  />
-                </Center>
               </Grid.Col>
             </>
           )}
