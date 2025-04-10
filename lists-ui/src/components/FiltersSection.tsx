@@ -18,6 +18,7 @@ import {
 } from '@mantine/core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
+  faClose,
   faFilter,
   faMinus,
   faPlus,
@@ -29,6 +30,7 @@ import { VariableSizeList as List } from 'react-window';
 import classes from './FiltersSection.module.css';
 import { Facet, KV } from '#/api';
 import { ListTypeBadge } from './ListTypeBadge';
+import { IconBackspaceFilled } from '@tabler/icons-react';
 
 interface FiltersDrawerProps {
   facets: Facet[];
@@ -244,7 +246,7 @@ export const FacetComponent = memo(
   }
 );
 
-export const FiltersDrawer = memo(
+export const FiltersSection = memo(
   ({ facets, active, onSelect, onReset }: FiltersDrawerProps) => {
     const [_opened, { open, close }] = useDisclosure(true);
     const [expanded, setExpanded] = useState<string[]>([]);
@@ -272,7 +274,9 @@ export const FiltersDrawer = memo(
 
     return (
       <>
-        <Text size='md' fw='bold'><FormattedMessage id='filters.title' defaultMessage='Filters' /></Text>
+        <Text size='lg' fw='bold' opacity={0.85}>
+          <FormattedMessage id='filters.title' defaultMessage='Refine results' />
+        </Text>
         <Stack gap={4} mt="xs" mb="md" pb={4} style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}>
           {facets
             .filter((facet) => facet.counts.length > 0)
@@ -329,3 +333,58 @@ export const FiltersDrawer = memo(
     );
   }
 );
+
+export const ActiveFilters = memo((
+  {
+    active,
+    handleFilterClick,
+    resetFilters,
+  }: {
+    active: KV[];
+    handleFilterClick: (item: KV) => void;
+    resetFilters: () => void;
+}) => {
+  
+  return (
+    <>
+      <FormattedMessage id='filters.active' defaultMessage='selected filters' />:{' '}
+      {active.map((filter) => (
+        <Paper 
+          key={filter.key} 
+          fs='sm' 
+          radius='sm' 
+          bd='1px solid var(--mantine-color-default-border)' 
+          style={{ display: 'inline-flex', alignItems: 'center', marginRight: 6, marginLeft: 5, padding: '2px 6px', height: 28 }}
+        >
+          <FormattedMessage id={filter.key} defaultMessage={filter.key}/>
+          { filter.value && filter.value !== 'true' && filter.value !== 'false' && (
+            <>
+              :{' '}
+              <FormattedMessage id={filter.value} defaultMessage={filter.value}/>
+            </>
+          )}
+          <ActionIcon
+            radius='sm'
+            opacity={0.8}
+            size='xs'
+            onClick={() => handleFilterClick(filter)}
+            style={{ marginLeft: 5 }}
+          >
+            <FontAwesomeIcon icon={faClose} fontSize={14} />
+          </ActionIcon>
+        </Paper>
+      ))}
+      <Paper 
+        fs='sm' 
+        radius='sm' 
+        bg={'var(--mantine-color-default-border)'}
+        bd='1px solid var(--mantine-color-default-border)' 
+        style={{ display: 'inline-flex', alignItems: 'center', marginLeft: 6, marginRight: 10, padding: '2px 6px', maxHeight: 28, cursor: 'pointer' }}
+        onClick={resetFilters}
+      >
+        <FormattedMessage id='filters.reset' defaultMessage='Clear all filters' />
+        <IconBackspaceFilled size={24} color='var(--mantine-primary-color-filled)' style={{ marginLeft: 5 }}/>
+      </Paper>
+    </>
+  )
+})

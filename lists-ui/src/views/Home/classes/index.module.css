@@ -1,0 +1,6 @@
+.resultsSummary {
+  display: inline-block;
+  font-weight: 500;
+  font-size: var(--mantine-font-size-sm);
+  padding-bottom: 4px;;
+}

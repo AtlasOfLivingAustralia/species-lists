@@ -57,3 +57,9 @@
   padding: 5px 2px 2px 0px;
   border-top: 1px solid var(--mantine-color-default-border);
 }
+
+.resultsSummary {
+  font-weight: 500;
+  font-size: var(--mantine-font-size-sm);
+  padding-bottom: 4px;;
+}

@@ -31,8 +31,8 @@ import {
 
 // Icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { IconAdjustmentsHorizontal, IconBackspaceFilled } from '@tabler/icons-react';
-import { faClose, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { IconAdjustmentsHorizontal } from '@tabler/icons-react';
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
 
 // Project components
@@ -42,8 +42,10 @@ import { ListRow } from './components/ListRow';
 // Helpers
 import { getErrorMessage, parseAsFilters } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
-import { FiltersDrawer } from '#/components/FiltersSection';
-import { faTrashAlt } from '@fortawesome/free-regular-svg-icons';
+import { ActiveFilters, FiltersSection } from '#/components/FiltersSection';
+
+// Styles
+import classes from './classes/index.module.css';
 
 interface HomeQuery {
   lists: SpeciesListPage;
@@ -168,7 +170,7 @@ function Home() {
 
   const handleFilterClick = useCallback(
     (filter: KV) => {
-      console.log('Filter clicked:', filter);
+      // console.log('Filter clicked:', filter);
       if (
         (filters || []).find(
           ({ key, value }) => filter.key === key && filter.value === value
@@ -186,6 +188,13 @@ function Home() {
       }
     },
     [filters]
+  );
+
+  const resetFilters = useCallback(
+    () => {
+      setPage(0); // Reset 'page' when filters are reset
+      setFilters([]);
+    },[filters]
   );
 
   const labels = useMemo(
@@ -297,10 +306,10 @@ function Home() {
           </Group>
         </Grid.Col>
         {!hidefilters && (
-          <Grid.Col span={2}>
+          <Grid.Col span={2} mt={15}>
             <Collapse in={!hidefilters}>
                 {/* Filters appear here */}
-                <FiltersDrawer
+                <FiltersSection
                   facets={data?.facets || []}
                   active={filters || []}
                   onSelect={handleFilterClick}
@@ -328,62 +337,32 @@ function Home() {
             )}
             {!error && (
               <>
-                { hidefilters && filters && filters.length > 0 && (
-                  <Paper ml={10} mb={5} style={{ display: 'inline-flex', alignItems: 'center', fontSize: 'var(--mantine-font-size-sm)' }}>
-                    <FormattedMessage id='filters.active' defaultMessage='Selected filters' />:{' '}
-                    {filters.map((filter) => (
-                      <Paper 
-                        key={filter.key} 
-                        fs='sm' 
-                        radius='sm' 
-                        bd='1px solid var(--mantine-color-default-border)' 
-                        style={{ display: 'inline-flex', alignItems: 'center', marginRight: 10, marginLeft: 5, padding: '2px 6px' }}
-                      >
-                        <FormattedMessage id={filter.key} defaultMessage={filter.key}/>
-                        { filter.value && filter.value !== 'true' && filter.value !== 'false' && (
-                          <>
-                            :{' '}
-                            <FormattedMessage id={filter.value} defaultMessage={filter.value}/>
-                          </>
-                        )}
-                        <ActionIcon
-                          radius='sm'
-                          opacity={0.8}
-                          size='xs'
-                          onClick={() => handleFilterClick(filter)}
-                          style={{ marginLeft: 5 }}
-                        >
-                          <FontAwesomeIcon icon={faClose} fontSize={14} />
-                        </ActionIcon>
-                      </Paper>
-                    ))}
-                    <Paper 
-                      fs='sm' 
-                      radius='sm' 
-                      bg={'var(--mantine-color-default-border)'}
-                      bd='1px solid var(--mantine-color-default-border)' 
-                      style={{ display: 'inline-flex', alignItems: 'center', marginRight: 10, padding: '2px 6px', maxHeight: 28, cursor: 'pointer' }}
-                      onClick={() => {
-                        setFilters([]);
-                        setPage(0);
-                      }}
-                    >
-                      <FormattedMessage id='filters.reset' defaultMessage='Clear all filters' />
-                      <IconBackspaceFilled size={24} color='var(--mantine-primary-color-filled)' style={{ marginLeft: 5 }}/>
-                    </Paper>
-                  </Paper>
-                  )}
-                { totalElements && totalElements > 0 && (
-                  <Box ml={10} mb={5}>
-                    <Text size='sm'>
+                <Box ml={10} mb={0} mt={5}>
+                  { totalElements && totalElements > 0 && (
+                    <Text size='sm' mb={6} mt={4} className={classes.resultsSummary} component='span'>
                       <FormattedMessage id='results.showing' defaultMessage='Showing' /> {' '}
                       {(realPage - 1) * size + 1}-
                       {Math.min((realPage - 1) * size + size, totalElements || 0)} of {' '}
                       <FormattedNumber value={totalElements || 0} /> {' '}
                       <FormattedMessage id='results.records' defaultMessage='records' />
                     </Text>
-                  </Box>
-                )}
+                  )}
+                  { filters && filters.length > 0 && (
+                    <Paper 
+                      ml={4} 
+                      // mb={5} 
+                      style={{ display: 'inline-flex', alignItems: 'center', fontSize: 'var(--mantine-font-size-sm)' }}
+                      className={classes.resultsSummary}
+                    >
+                      –{' '}
+                      <ActiveFilters
+                        active={filters}
+                        handleFilterClick={handleFilterClick}
+                        resetFilters={resetFilters}
+                      />
+                    </Paper>
+                  )}
+                </Box>
                 <Table striped={false} withRowBorders style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
                   <Table.Tbody>
                     {content

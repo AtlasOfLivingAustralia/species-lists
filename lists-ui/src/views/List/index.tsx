@@ -64,7 +64,7 @@ import { useALA } from '#/helpers/context/useALA';
 import { Flags } from './components/Flags';
 import { Actions } from './components/Actions';
 import { Summary } from './components/Summary';
-import { FiltersDrawer } from '#/components/FiltersSection';
+import { FiltersSection } from '#/components/FiltersSection';
 import { ThSortable } from './components/Table/ThSortable';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
@@ -520,7 +520,7 @@ export function List() {
                     />
                   </Group>
                   <Group>
-                    <FiltersDrawer
+                    <FiltersSection
                       active={toKV(Object.fromEntries((filters || []).map(({ key, value }) => [key, value])))}
                       facets={facets}
                       onSelect={handleFilterClick}
