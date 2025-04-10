@@ -12,6 +12,7 @@ import {
   Group,
   Pagination,
   Paper,
+  rem,
   SegmentedControl,
   Select,
   Space,
@@ -32,8 +33,8 @@ import {
 
 // Icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { IconAdjustmentsHorizontal } from '@tabler/icons-react';
-import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { IconAdjustmentsHorizontal, IconSearch } from '@tabler/icons-react';
+import { faEye, faEyeSlash, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
 
 // Project components
@@ -205,7 +206,7 @@ function Home() {
         label: (
           <Center style={{ gap: 10 }}>
             <FontAwesomeIcon icon={faEye} fontSize={14} />
-            <span>Public</span>
+            <span><FormattedMessage id='public.label' defaultMessage='Public' /></span>
           </Center>
         ),
       },
@@ -214,7 +215,7 @@ function Home() {
         label: (
           <Center style={{ gap: 10 }}>
             <FontAwesomeIcon icon={faEyeSlash} fontSize={14} />
-            <span>Private</span>
+            <span><FormattedMessage id='private.label' defaultMessage='Private' /></span>
           </Center>
         ),
       },
@@ -250,10 +251,25 @@ function Home() {
                 setPage(0); // Reset 'page' when search is changed
                 setSearch(event.currentTarget.value);
               }}
-              placeholder='Search list by name or taxa'
+              placeholder={intl.formatMessage({ id: 'search.input.placeholder', defaultMessage: 'Search lists by name or taxa' })}
               w={200}
+              leftSection={<IconSearch style={{ width: rem(18), height: rem(18) }} stroke={1.5} />}
+              rightSection={
+                <ActionIcon
+                  radius='sm'
+                  variant="transparent"
+                  size='xs'
+                  title={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
+                  aria-label={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
+                  disabled={search.length === 0}
+                  onClick={() => setSearch('')}
+                  style={{ marginLeft: 5, marginRight: 10 }}
+                >
+                <FontAwesomeIcon icon={faXmark} fontSize={20} />
+                </ActionIcon>
+              }
             />
-            {ala.isAuthenticated && false && (
+            {ala.isAuthenticated &&  (
               <>
                 <SegmentedControl
                   disabled={!data || hasError}
@@ -263,7 +279,7 @@ function Home() {
                   data={labels}
                 />
                 <Checkbox
-                  label='My Lists'
+                  label={<FormattedMessage id='myLists.label' defaultMessage='My Lists' />}
                   checked={isUser}
                   onChange={(e) => setIsUser(e.currentTarget.checked)}
                 />

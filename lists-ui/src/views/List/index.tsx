@@ -14,6 +14,7 @@ import {
   Group,
   Pagination,
   Paper,
+  rem,
   Select,
   Space,
   Stack,
@@ -52,7 +53,7 @@ import { set } from 'date-fns';
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { IconAdjustmentsHorizontal } from '@tabler/icons-react';
+import { IconAdjustmentsHorizontal, IconSearch } from '@tabler/icons-react';
 
 import tableClasses from './classes/Table.module.css';
 
@@ -522,12 +523,12 @@ export function List() {
               <Grid.Col span={12}>
                 <Group >
                   <Button 
-                  size= 'sm' 
-                  leftSection={<IconAdjustmentsHorizontal size={14} />}
-                  variant='default'
-                  radius="md"
-                  fw="normal"
-                  onClick={toggleFilters}
+                    size= 'sm' 
+                    leftSection={<IconAdjustmentsHorizontal size={14} />}
+                    variant='default'
+                    radius="md"
+                    fw="normal"
+                    onClick={toggleFilters}
                   >
                   { hidefilters 
                   ? <FormattedMessage id='filters.hide' defaultMessage='Show Filters' /> 
@@ -540,10 +541,12 @@ export function List() {
                     value={search}
                     onChange={(event) => {
                       setSearch(event.currentTarget.value);
+                      setPage(0);
                     }}
                     placeholder={intl.formatMessage({ id: 'search.input.placeholder', defaultMessage: 'Search within list' })}
                     aria-label={intl.formatMessage({ id: 'search.input.label', defaultMessage: 'Search within list' })}
                     w={200}
+                    leftSection={<IconSearch style={{ width: rem(18), height: rem(18) }} stroke={1.5} />}
                     rightSection={
                       <ActionIcon
                         radius='sm'
@@ -568,7 +571,7 @@ export function List() {
                       label: `${value} items`,
                       value,
                     }))}
-                    aria-label='Select number of results'
+                    aria-label={intl.formatMessage({ id: 'list.page.size.label', defaultMessage: 'Select number of results' })}
                   />
                 </Group>
               </Grid.Col>
@@ -595,7 +598,7 @@ export function List() {
                       <FormattedNumber value={totalElements || 0} /> {' '}
                       <FormattedMessage id='results.records' defaultMessage='records' />
                       { filters && filters.length > 0 && (
-                        <><Space w={5} />–<Space  w={2} /></>
+                        <><Space w={5} />–<Space w={2} /></>
                       )}
                     </Text>
                   </>

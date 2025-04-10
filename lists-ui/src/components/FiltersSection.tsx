@@ -127,12 +127,13 @@ export const FacetComponent = memo(
     }, [onSelect, facet.key]);
 
     return (
-      <Paper
-        className={classes.facetPaper}
-        fs="sm"
-        radius={0}
-        style={{ maxHeight: 400, overflowY: 'auto' }}
-      >
+      (facet.counts.length > 1 || active.some((activeItem) => activeItem.key === facet.key)) && (
+        <Paper
+          className={classes.facetPaper}
+          fs="sm"
+          radius={0}
+          style={{ maxHeight: 400, overflowY: 'auto' }}
+        >
         {/* Render header only for non-boolean facets */}
         {!isBooleanFacet && (
           <Group justify='space-between'>
@@ -181,17 +182,22 @@ export const FacetComponent = memo(
           </Collapse>
         )}
       </Paper>
+    ) 
     );
   }
 );
 
 export const FiltersSection = memo(
   ({ facets, active, onSelect }: FiltersDrawerProps) => {
-    // const [_opened, { open, close }] = useDisclosure(true);
     const [expanded, setExpanded] = useState<string[]>([]);
+    const emptyFacets = useMemo(
+      () => facets.filter((facet) => facet.counts.length <= 1), // we ignore facets with a single count value, as they are not useful
+      [facets]
+    );
+    const hasEmptyFacets = emptyFacets.length === facets.length;
+
     // Callback function for facet toggling
     const handleFacetToggle = useCallback((key: string) => {
-      
       setExpanded((prevExpanded) =>
         prevExpanded.includes(key)
           ? prevExpanded.filter((item) => item !== key)
@@ -203,7 +209,6 @@ export const FiltersSection = memo(
       // Set initial expanded facets
       // Expand the first facet by default
       if (facets.length > 0) {
-        console.log('facets', facets, expanded);
         setExpanded((prevExpanded) =>
           prevExpanded.length === 0
             ? facets
@@ -220,7 +225,12 @@ export const FiltersSection = memo(
         <Text size='lg' fw='bold' opacity={0.85}>
           <FormattedMessage id='filters.title' defaultMessage='Refine results' />
         </Text>
-        <Stack gap={4} mt="xs" mb="md" pb={4} style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}>
+        <Stack gap={4} mt="xs" mb="md" pb={4}>
+          { hasEmptyFacets && (
+            <Text size='sm' color='dimmed'>
+              <FormattedMessage id='filters.empty' defaultMessage='No filters available' />
+            </Text>
+          )}
           {facets
             .filter((facet) => facet.counts.length > 0)
             .sort((a, b) => b.counts.length - a.counts.length)
