@@ -56,7 +56,6 @@ const renderCheckbox = (
         // The label structure remains the same
         <Paper className={classes.checkboxPaper}>
           <ListTypeBadge listTypeValue={key} iconSide="right"/>
-          {/* <FormattedMessage id={key} defaultMessage={key} /> */}
           <Chip
             size="xs"
             checked={isChecked}
@@ -100,6 +99,8 @@ export const FacetComponent = memo(
     );
 
     const itemCount = sortedCounts.length;
+
+    const intl = useIntl();
 
     // Determine if it's a boolean facet
     const isBooleanFacet = itemCount <= 2 &&
@@ -145,7 +146,8 @@ export const FacetComponent = memo(
               color='dark'
               size='sm'
               onClick={handleToggle}
-              aria-label={`Toggle filters for ${facet.key}`}
+              title={`${intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Toggle filters for' })} ${intl.formatMessage({ id: facet.key, defaultMessage: facet.key })}`}
+              aria-label={`${intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Toggle filters for' })} ${intl.formatMessage({ id: facet.key, defaultMessage: facet.key })}`}
             >
               <FontAwesomeIcon icon={isExpanded ? faMinus : faPlus} />
             </ActionIcon>
@@ -213,7 +215,7 @@ export const FiltersSection = memo(
           prevExpanded.length === 0
             ? facets
           .filter((facet) => facet.counts.length > 2) // Only expand facets with more than 2 counts (e.g., not boolean facets)
-          .slice(0, 1)
+          .slice(0, 1) // Expand only the first one
           .map((facet) => facet.key)
             : prevExpanded
         );
@@ -260,7 +262,8 @@ export const ActiveFilters = memo((
     handleFilterClick: (item: KV) => void;
     resetFilters: () => void;
 }) => {
-  
+  const intl = useIntl();
+
   return (
     <>
       <FormattedMessage id='filters.active' defaultMessage='selected filters' />:{' '}
@@ -283,6 +286,8 @@ export const ActiveFilters = memo((
             radius='sm'
             opacity={0.8}
             size='xs'
+            title={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key, defaultMessage: filter.key })}`}
+            aria-label={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key, defaultMessage: filter.key })}`}
             onClick={() => handleFilterClick(filter)}
             style={{ marginLeft: 5 }}
           >
@@ -297,8 +302,8 @@ export const ActiveFilters = memo((
         bd='1px solid var(--mantine-color-default-border)' 
         style={{ display: 'inline-flex', alignItems: 'center', marginLeft: 6, marginRight: 10, padding: '2px 6px', maxHeight: 28, cursor: 'pointer' }}
         onClick={resetFilters}
-        title='Clear all filters'
-        aria-label='Clear all filters'
+        title={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
+        aria-label={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
       >
         <FormattedMessage id='filters.reset' defaultMessage='Clear all filters' />
         <IconBackspaceFilled size={24} color='var(--mantine-primary-color-filled)' style={{ marginLeft: 5 }}/>
