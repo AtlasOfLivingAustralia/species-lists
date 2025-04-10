@@ -49,7 +49,6 @@ import {
   parseAsStringEnum,
   useQueryState,
 } from 'nuqs';
-import { set } from 'date-fns';
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
@@ -74,7 +73,7 @@ import { Summary } from './components/Summary';
 import { ActiveFilters, FiltersSection } from '#/components/FiltersSection';
 import { ThSortable } from './components/Table/ThSortable';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faClose, faPlus, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { Dates } from './components/Dates';
 import PageLoader from '#/components/PageLoader';
 import { getAccessToken } from '#/helpers/utils/getAccessToken';
