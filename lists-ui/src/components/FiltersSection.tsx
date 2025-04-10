@@ -1,31 +1,21 @@
-import { CSSProperties, memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { useDisclosure } from '@mantine/hooks';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Drawer,
-  ScrollArea,
-  Flex,
-  Title,
   Stack,
   Text,
   Group,
-  UnstyledButton,
   Paper,
   Chip,
   Collapse,
   ActionIcon,
-  Box,
   Checkbox,
 } from '@mantine/core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faClose,
-  faFilter,
   faMinus,
   faPlus,
-  faXmark,
 } from '@fortawesome/free-solid-svg-icons';
 import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
-import { VariableSizeList as List } from 'react-window';
 
 import classes from './FiltersSection.module.css';
 import { Facet, KV } from '#/api';
@@ -38,58 +28,6 @@ interface FiltersDrawerProps {
   onSelect: (item: KV) => void;
   onReset: () => void;
 }
-
-const CountItem = memo(
-  ({
-    style,
-    value,
-    count,
-    facetKey,
-    isChecked,
-    onSelect,
-  }: {
-    style: CSSProperties;
-    value: string;
-    count: number;
-    facetKey: string;
-    isChecked: boolean;
-    onSelect: (item: KV) => void;
-  }) => {
-    // Click callback
-    const handleClick = useCallback(() => {
-      onSelect({ key: facetKey, value });
-    }, [onSelect, facetKey, value]);
-
-    return (
-      <Box>
-        <UnstyledButton
-          className={classes.filter}
-          onClick={handleClick}
-          w='100%'
-        >
-          <Group justify='space-between'>
-            <Text size='sm'>
-              <FormattedMessage
-                id={value}
-                defaultMessage={value}
-              />
-            </Text>
-            <Chip
-              checked={isChecked}
-              size='xs'
-              styles={{
-                root: { pointerEvents: 'none' },
-                label: { paddingLeft: 8, paddingRight: 8 },
-              }}
-            >
-              <FormattedNumber value={count} />
-            </Chip>
-          </Group>
-        </UnstyledButton>
-      </Box>
-    );
-  }
-);
 
 // Helper function to render the entire Checkbox with its label
 const renderCheckbox = (
@@ -198,7 +136,7 @@ export const FacetComponent = memo(
         {/* Render header only for non-boolean facets */}
         {!isBooleanFacet && (
           <Group justify='space-between'>
-            <Text size='md' fw='bold' opacity={0.8} mb={4}>
+            <Text size='md' fw='bold' opacity={0.8} mb={4} mt={4}>
               <FormattedMessage id={facet.key} defaultMessage={facet.key} />
             </Text>
             <ActionIcon

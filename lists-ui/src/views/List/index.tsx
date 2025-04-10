@@ -445,7 +445,7 @@ export function List() {
         <Grid>
           <Grid.Col span={12} pb={6}>
             <Flex direction='row' justify='space-between' gap={16}>
-              <Stack gap='xs'>
+              <Stack gap='xs' mb={14}>
                 <Title order={4}>{meta?.title}</Title>
                 <Summary meta={meta!} mr={-42} />
                 {(meta?.tags || []).length > 0 && (
@@ -486,7 +486,7 @@ export function List() {
               variant='light'
               onClick={handleAddClick}
             >
-              Add species
+              <FormattedMessage id='add.species.label' defaultMessage='Add species' />
             </Button>
           </Grid.Col>
           { rematching && (
