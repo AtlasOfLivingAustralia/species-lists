@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
+  ActionIcon,
   Badge,
   Box,
   Button,
@@ -12,7 +13,9 @@ import {
   Grid,
   Group,
   Pagination,
+  Paper,
   Select,
+  Space,
   Stack,
   Table,
   Text,
@@ -36,7 +39,7 @@ import {
   KV,
   SpeciesListSubmit,
 } from '#/api';
-import { FormattedMessage, FormattedNumber } from 'react-intl';
+import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 import { Outlet, useLocation, useParams } from 'react-router';
 import {
   parseAsBoolean,
@@ -45,10 +48,11 @@ import {
   parseAsStringEnum,
   useQueryState,
 } from 'nuqs';
-
+import { set } from 'date-fns';
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
+import { IconAdjustmentsHorizontal } from '@tabler/icons-react';
 
 import tableClasses from './classes/Table.module.css';
 
@@ -66,14 +70,16 @@ import { useALA } from '#/helpers/context/useALA';
 import { Flags } from './components/Flags';
 import { Actions } from './components/Actions';
 import { Summary } from './components/Summary';
-import { FiltersSection } from '#/components/FiltersSection';
+import { ActiveFilters, FiltersSection } from '#/components/FiltersSection';
 import { ThSortable } from './components/Table/ThSortable';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faClose, faPlus, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { Dates } from './components/Dates';
 import PageLoader from '#/components/PageLoader';
 import { getAccessToken } from '#/helpers/utils/getAccessToken';
-import { IconAdjustmentsHorizontal } from '@tabler/icons-react';
+
+// Styles
+import classes from './classes/index.module.css';
 
 interface ListLoaderData {
   meta: SpeciesList;
@@ -145,6 +151,7 @@ export function List() {
   const location = useLocation();
   const mounted = useMounted();
   const ala = useALA();
+  const intl = useIntl();
 
   // Selection drawer
   const [opened, { open, close }] = useDisclosure();
@@ -158,6 +165,7 @@ export function List() {
           queries.QUERY_LISTS_GET,
           {
             speciesListID: id,
+            size,
           },
           token
         );
@@ -254,9 +262,15 @@ export function List() {
     [sort, dir]
   );
 
-  const handleSizeChange = (newSize: string | null) => {
-    const newSizeInt = parseInt(newSize || '10', 10);
+  const resetFilters = useCallback(
+    () => {
+      setPage(0); // Reset 'page' when filters are reset
+      setFilters([]);
+    },[filters]
+  );
 
+  const handleSizeChange = (newSize: string | null) => {
+    const newSizeInt = parseInt(newSize || '20');
     // Ensure we don't try to query beyond what exists
     if (realPage * newSizeInt > totalElements) {
       setPage(Math.floor(totalElements / newSizeInt));
@@ -268,7 +282,7 @@ export function List() {
   // Retry handler
   const handleRetry = useCallback(() => {
     setPage(0);
-    setSize(10);
+    setSize(20);
     setSearch('');
     setRefresh(!refresh);
   }, [refresh]);
@@ -429,7 +443,7 @@ export function List() {
       />
       <Container fluid>
         <Grid>
-          <Grid.Col span={12} pb='sm'>
+          <Grid.Col span={12} pb={6}>
             <Flex direction='row' justify='space-between' gap={16}>
               <Stack gap='xs'>
                 <Title order={4}>{meta?.title}</Title>
@@ -506,63 +520,61 @@ export function List() {
           ) : (
             <>
               <Grid.Col span={12}>
-                <Group justify='space-between'>
-                  <Group>
-                    <Button 
-                      size= 'sm' 
-                      leftSection={<IconAdjustmentsHorizontal size={14} />}
-                      variant='default'
-                      radius="md"
-                      fw="normal"
-                      onClick={toggleFilters}
-                    >
-                      { hidefilters 
-                      ? <FormattedMessage id='filters.hide' defaultMessage='Show Filters' /> 
-                      : <FormattedMessage id='filters.show' defaultMessage='Hide Filters' /> 
+                <Group >
+                  <Button 
+                  size= 'sm' 
+                  leftSection={<IconAdjustmentsHorizontal size={14} />}
+                  variant='default'
+                  radius="md"
+                  fw="normal"
+                  onClick={toggleFilters}
+                  >
+                  { hidefilters 
+                  ? <FormattedMessage id='filters.hide' defaultMessage='Show Filters' /> 
+                  : <FormattedMessage id='filters.show' defaultMessage='Hide Filters' /> 
+                  }
+                  </Button>
+                  <TextInput
+                    style={{ flexGrow: 1 }}
+                    disabled={hasError}
+                    value={search}
+                    onChange={(event) => {
+                      setSearch(event.currentTarget.value);
+                    }}
+                    placeholder={intl.formatMessage({ id: 'search.input.placeholder', defaultMessage: 'Search within list' })}
+                    aria-label={intl.formatMessage({ id: 'search.input.label', defaultMessage: 'Search within list' })}
+                    w={200}
+                    rightSection={
+                      <ActionIcon
+                        radius='sm'
+                        variant="transparent"
+                        size='xs'
+                        title={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
+                        aria-label={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
+                        disabled={search.length === 0}
+                        onClick={() => setSearch('')}
+                        style={{ marginLeft: 5, marginRight: 10 }}
+                      >
+                      <FontAwesomeIcon icon={faXmark} fontSize={20} />
+                      </ActionIcon>
                     }
-                    </Button>
-                    <Select
-                      disabled={hasError}
-                      w={110}
-                      value={size?.toString()}
-                      onChange={handleSizeChange}
-                      data={['10', '20', '50', '100'].map((value) => ({
-                        label: `${value} items`,
-                        value,
-                      }))}
-                      aria-label='Select number of results'
-                    />
-                    <TextInput
-                      disabled={hasError}
-                      defaultValue={searchDebounced}
-                      onChange={(event) => {
-                        setSearch(event.currentTarget.value);
-                      }}
-                      placeholder='Search within list'
-                      w={200}
-                    />
-                  </Group>
-                  {/* <Group>
-                    <FiltersSection
-                      active={toKV(Object.fromEntries((filters || []).map(({ key, value }) => [key, value])))}
-                      facets={facets}
-                      onSelect={handleFilterClick}
-                      onReset={() => setFilters([])}
-                    />
-                    <Text opacity={0.75} size='sm'>
-                      {(realPage - 1) * size + 1}-
-                      {Math.min(
-                        (realPage - 1) * size + size,
-                        totalElements || 0
-                      )}{' '}
-                      of <FormattedNumber value={totalElements} /> records
-                    </Text>
-                  </Group> */}
+                  />
+                  <Select
+                    disabled={hasError}
+                    w={140}
+                    value={size?.toString()}
+                    onChange={handleSizeChange}
+                    data={['10', '20', '50', '100'].map((value) => ({
+                      label: `${value} items`,
+                      value,
+                    }))}
+                    aria-label='Select number of results'
+                  />
                 </Group>
               </Grid.Col>
               {/* Filters appear here */}
               {!hidefilters && (
-                <Grid.Col span={2} mt={18}>
+                <Grid.Col span={2} mt={4}>
                   <Collapse in={!hidefilters}>
                       <FiltersSection
                         facets={facets || []}
@@ -574,6 +586,45 @@ export function List() {
                 </Grid.Col>
               )}
               <Grid.Col span={hidefilters ? 12 : 10}>
+                { (totalElements && totalElements > 0) ? (
+                  <>
+                    <Text size='sm' mb={6} mt={6} className={classes.resultsSummary} component='span'>
+                      <FormattedMessage id='results.showing' defaultMessage='Showing' /> {' '}
+                      {(realPage - 1) * size + 1}-
+                      {Math.min((realPage - 1) * size + size, totalElements || 0)} of {' '}
+                      <FormattedNumber value={totalElements || 0} /> {' '}
+                      <FormattedMessage id='results.records' defaultMessage='records' />
+                      { filters && filters.length > 0 && (
+                        <><Space w={5} />–<Space  w={2} /></>
+                      )}
+                    </Text>
+                  </>
+                ) : (
+                  <Text size='sm' mb={6} mt={4} className={classes.resultsSummary} component='span'>
+                    No records found 
+                    { search && search.length > 0 ? (
+                      <>{' '} for "{search}"{' '}</>
+                    ) : (
+                      <>{' '}</>
+                    )}
+                    { filters && filters.length > 0 && (
+                      <>with{' '}</>
+                    )}
+                  </Text>
+                )}
+                { filters && filters.length > 0 && (
+                  <Paper
+                    ml={4} 
+                    style={{ display: 'inline-flex', alignItems: 'center', fontSize: 'var(--mantine-font-size-sm)' }}
+                    className={classes.resultsSummary}
+                  >
+                    <ActiveFilters
+                      active={filters}
+                      handleFilterClick={handleFilterClick}
+                      resetFilters={resetFilters}
+                    />
+                  </Paper>
+                )}
                 <Box style={{ overflowX: 'auto' }}>
                   {error ? (
                     <Message

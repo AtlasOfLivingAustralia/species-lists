@@ -24,7 +24,7 @@ import {
   faPlus,
   faXmark,
 } from '@fortawesome/free-solid-svg-icons';
-import { FormattedMessage, FormattedNumber } from 'react-intl';
+import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 import { VariableSizeList as List } from 'react-window';
 
 import classes from './FiltersSection.module.css';
@@ -193,6 +193,7 @@ export const FacetComponent = memo(
         className={classes.facetPaper}
         fs="sm"
         radius={0}
+        style={{ maxHeight: 400, overflowY: 'auto' }}
       >
         {/* Render header only for non-boolean facets */}
         {!isBooleanFacet && (
@@ -262,11 +263,15 @@ export const FiltersSection = memo(
 
     useEffect(() => {
       // Set initial expanded facets
-      // Expand the first two facets by default
+      // Expand the first facet by default
       if (facets.length > 0) {
+        console.log('facets', facets, expanded);
         setExpanded((prevExpanded) =>
           prevExpanded.length === 0
-            ? facets.slice(0, 2).map((facet) => facet.key)
+            ? facets
+          .filter((facet) => facet.counts.length > 2) // Only expand facets with more than 2 counts (e.g., not boolean facets)
+          .slice(0, 1)
+          .map((facet) => facet.key)
             : prevExpanded
         );
       }
@@ -292,43 +297,6 @@ export const FiltersSection = memo(
               />
             ))}
         </Stack>
-        {/* <Flex align='center' gap={14} display="noneX">
-          <ActionIcon.Group>
-            <ActionIcon
-              display="none"
-              size={36}
-              radius='md'
-              variant='default'
-              onClick={open}
-              aria-label='Open filters menu'
-            >
-              <FontAwesomeIcon icon={faFilter} fontSize={14} />
-            </ActionIcon>
-            {active.length > 0 ? (
-              <ActionIcon
-                size={36}
-                radius='md'
-                variant='default'
-                onClick={onReset}
-                aria-label='Reset filets'
-              >
-                <FontAwesomeIcon icon={faXmark} fontSize={14} />
-              </ActionIcon>
-            ) : null}
-            <ActionIcon
-              variant='default'
-              radius='md'
-              w={70}
-              h={36}
-              style={{ pointerEvents: 'none' }}
-            >
-              <Text size='sm' opacity={0.75}>
-                {active.length > 0 ? active.length : 'No'} filte
-                {active.length === 1 ? 'r' : 'rs'}
-              </Text>
-            </ActionIcon>
-          </ActionIcon.Group>
-        </Flex> */}
       </>
     );
   }
@@ -381,6 +349,8 @@ export const ActiveFilters = memo((
         bd='1px solid var(--mantine-color-default-border)' 
         style={{ display: 'inline-flex', alignItems: 'center', marginLeft: 6, marginRight: 10, padding: '2px 6px', maxHeight: 28, cursor: 'pointer' }}
         onClick={resetFilters}
+        title='Clear all filters'
+        aria-label='Clear all filters'
       >
         <FormattedMessage id='filters.reset' defaultMessage='Clear all filters' />
         <IconBackspaceFilled size={24} color='var(--mantine-primary-color-filled)' style={{ marginLeft: 5 }}/>
