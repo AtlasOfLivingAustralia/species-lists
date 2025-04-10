@@ -486,6 +486,8 @@ export function List() {
               leftSection={<FontAwesomeIcon icon={faPlus} />}
               variant='light'
               onClick={handleAddClick}
+              title={intl.formatMessage({ id: 'add.species.title', defaultMessage: 'Add a new taxon entry' })}
+              aria-label={intl.formatMessage({ id: 'add.species.title', defaultMessage: 'Add a new taxon entry' })}
             >
               <FormattedMessage id='add.species.label' defaultMessage='Add species' />
             </Button>
@@ -529,10 +531,12 @@ export function List() {
                     radius="md"
                     fw="normal"
                     onClick={toggleFilters}
+                    aria-label={intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Show or hide filters section' })}
+                    title={intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Show or hide filters section' })}
                   >
                   { hidefilters 
-                  ? <FormattedMessage id='filters.hide' defaultMessage='Show Filters' /> 
-                  : <FormattedMessage id='filters.show' defaultMessage='Hide Filters' /> 
+                      ? <FormattedMessage id='filters.hide' defaultMessage='Show Filters' /> 
+                      : <FormattedMessage id='filters.show' defaultMessage='Hide Filters' /> 
                   }
                   </Button>
                   <TextInput
@@ -568,7 +572,7 @@ export function List() {
                     value={size?.toString()}
                     onChange={handleSizeChange}
                     data={['10', '20', '50', '100'].map((value) => ({
-                      label: `${value} items`,
+                      label: `${value} ${intl.formatMessage({ id: 'size.items', defaultMessage: 'items' })}`,
                       value,
                     }))}
                     aria-label={intl.formatMessage({ id: 'list.page.size.label', defaultMessage: 'Select number of results' })}
@@ -604,14 +608,14 @@ export function List() {
                   </>
                 ) : (
                   <Text size='sm' mb={6} mt={4} className={classes.resultsSummary} component='span'>
-                    No records found 
+                    <FormattedMessage id='results.noRecords' defaultMessage='No records found '/>
                     { search && search.length > 0 ? (
-                      <>{' '} for "{search}"{' '}</>
+                      <>{' '} <FormattedMessage id='for' defaultMessage='for'/> "{search}"{' '}</>
                     ) : (
                       <>{' '}</>
                     )}
                     { filters && filters.length > 0 && (
-                      <>with{' '}</>
+                      <><FormattedMessage id='with' defaultMessage='with'/>{' '}</>
                     )}
                   </Text>
                 )}
@@ -631,10 +635,10 @@ export function List() {
                 <Box style={{ overflowX: 'auto' }}>
                   {error ? (
                     <Message
-                      title='An error occured'
+                      title={intl.formatMessage({ id: 'list.page.error.title', defaultMessage: 'An error occured' })}
                       subtitle={getErrorMessage(error)}
                       icon={<StopIcon size={18} />}
-                      action='Retry'
+                      action={intl.formatMessage({ id: 'retry', defaultMessage: 'Retry' })}
                       onAction={handleRetry}
                     />
                   ) : totalElements === 0 ? (
@@ -653,10 +657,7 @@ export function List() {
                             dir={dir}
                             onSort={() => handleSortClick('scientificName')}
                           >
-                            <FormattedMessage
-                              id='suppliedName'
-                              defaultMessage='Supplied name'
-                            />
+                            <FormattedMessage id='suppliedName' defaultMessage='Supplied name' />
                           </ThSortable>
                           <ThSortable
                             active={sort === 'classification.scientificName'}
