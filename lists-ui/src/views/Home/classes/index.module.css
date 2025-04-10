@@ -1,5 +1,5 @@
 .resultsSummary {
-  display: inline-block;
+  display: inline-flex;
   font-weight: 500;
   font-size: var(--mantine-font-size-sm);
   padding-bottom: 4px;;

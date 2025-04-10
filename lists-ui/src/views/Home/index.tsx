@@ -14,6 +14,7 @@ import {
   Paper,
   SegmentedControl,
   Select,
+  Space,
   Stack,
   Table,
   Text,
@@ -320,12 +321,6 @@ function Home() {
         )}
         <Grid.Col span={hidefilters ? 12 : 10}>
           <Grid.Col span={12}>
-            {totalElements === 0 && 
-              <Message 
-                title={intl.formatMessage({ id: 'error.noListsFound.title', defaultMessage: 'No lists found' })} 
-                subtitle={intl.formatMessage({ id: 'error.noListsFound.subTitle', defaultMessage: 'Try removing a filter or searching with a different query' })} 
-              />
-            }
             {error && (
               <Message
                 title={intl.formatMessage({ id: 'error.error.title', defaultMessage: 'An error occurred' })} 
@@ -338,23 +333,38 @@ function Home() {
             {!error && (
               <>
                 <Box ml={10} mb={0} mt={5}>
-                  { totalElements && totalElements > 0 && (
+                  { (totalElements && totalElements > 0) ? (
+                    <>
+                      <Text size='sm' mb={6} mt={4} className={classes.resultsSummary} component='span'>
+                        <FormattedMessage id='results.showing' defaultMessage='Showing' /> {' '}
+                        {(realPage - 1) * size + 1}-
+                        {Math.min((realPage - 1) * size + size, totalElements || 0)} of {' '}
+                        <FormattedNumber value={totalElements || 0} /> {' '}
+                        <FormattedMessage id='results.records' defaultMessage='records' />
+                        { filters && filters.length > 0 && (
+                          <><Space w={5} />–<Space  w={2} /></>
+                        )}
+                      </Text>
+                    </>
+                  ) : (
                     <Text size='sm' mb={6} mt={4} className={classes.resultsSummary} component='span'>
-                      <FormattedMessage id='results.showing' defaultMessage='Showing' /> {' '}
-                      {(realPage - 1) * size + 1}-
-                      {Math.min((realPage - 1) * size + size, totalElements || 0)} of {' '}
-                      <FormattedNumber value={totalElements || 0} /> {' '}
-                      <FormattedMessage id='results.records' defaultMessage='records' />
+                      No records found 
+                      { search && search.length > 0 ? (
+                        <>{' '} for "{search}"{' '}</>
+                      ) : (
+                        <>{' '}</>
+                      )}
+                      { filters && filters.length > 0 && (
+                        <>with{' '}</>
+                      )}
                     </Text>
                   )}
                   { filters && filters.length > 0 && (
                     <Paper 
                       ml={4} 
-                      // mb={5} 
                       style={{ display: 'inline-flex', alignItems: 'center', fontSize: 'var(--mantine-font-size-sm)' }}
                       className={classes.resultsSummary}
                     >
-                      –{' '}
                       <ActiveFilters
                         active={filters}
                         handleFilterClick={handleFilterClick}
@@ -374,6 +384,12 @@ function Home() {
                 </Table>
               </>
             )}
+            {totalElements === 0 && 
+              <Message 
+                title={intl.formatMessage({ id: 'error.noListsFound.title', defaultMessage: 'No lists found' })} 
+                subtitle={intl.formatMessage({ id: 'error.noListsFound.subTitle', defaultMessage: 'Try removing a filter or searching with a different query' })} 
+              />
+            }
             <Stack align="center" justify="center" gap="xs" w="100%" py="xl">
               <Pagination
                 disabled={(totalPages || 0) < 1 || hasError}

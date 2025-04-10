@@ -292,7 +292,7 @@ export const FiltersSection = memo(
               />
             ))}
         </Stack>
-        <Flex align='center' gap={14} display="noneX">
+        {/* <Flex align='center' gap={14} display="noneX">
           <ActionIcon.Group>
             <ActionIcon
               display="none"
@@ -328,7 +328,7 @@ export const FiltersSection = memo(
               </Text>
             </ActionIcon>
           </ActionIcon.Group>
-        </Flex>
+        </Flex> */}
       </>
     );
   }
