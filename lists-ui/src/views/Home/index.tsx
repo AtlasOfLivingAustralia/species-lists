@@ -1,21 +1,28 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActionIcon,
+  Box,
+  Button,
   Center,
   Checkbox,
+  Collapse,
   Container,
   Grid,
   Group,
   Pagination,
+  Paper,
   SegmentedControl,
   Select,
+  Space,
+  Stack,
   Table,
   Text,
   TextInput,
 } from '@mantine/core';
 import { useGQLQuery, queries, SpeciesListPage, KV, Facet } from '#/api';
 import { useDebouncedValue, useDocumentTitle } from '@mantine/hooks';
-import { FormattedNumber, useIntl } from 'react-intl';
+import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 import {
   parseAsBoolean,
   parseAsInteger,
@@ -25,17 +32,20 @@ import {
 
 // Icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faEyeSlash, faXmark, faSliders, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
 
 // Project components
 import { Message } from '#/components/Message';
-import { FiltersDrawer } from '#/components/FiltersDrawer';
 import { ListRow } from './components/ListRow';
 
 // Helpers
 import { getErrorMessage, parseAsFilters } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
+import { ActiveFilters, FiltersSection } from '#/components/FiltersSection';
+
+// Styles
+import classes from './classes/index.module.css';
 
 interface HomeQuery {
   lists: SpeciesListPage;
@@ -94,6 +104,10 @@ function Home() {
 
   // Internal state (not driven by search params)
   const [refresh, setRefresh] = useState<boolean>(false);
+
+  // Filters display state
+  const [hidefilters, setHideFilters] = useQueryState<boolean>('hideFilters', parseAsBoolean.withDefault(false)); 
+  const toggleFilters = () => setHideFilters((o) => !o);
 
   const ala = useALA();
   const { data, error, update } = useGQLQuery<HomeQuery>(
@@ -156,6 +170,7 @@ function Home() {
 
   const handleFilterClick = useCallback(
     (filter: KV) => {
+      // console.log('Filter clicked:', filter);
       if (
         (filters || []).find(
           ({ key, value }) => filter.key === key && filter.value === value
@@ -175,6 +190,13 @@ function Home() {
     [filters]
   );
 
+  const resetFilters = useCallback(
+    () => {
+      setPage(0); // Reset 'page' when filters are reset
+      setFilters([]);
+    },[filters]
+  );
+
   const labels = useMemo(
     () => [
       {
@@ -182,7 +204,7 @@ function Home() {
         label: (
           <Center style={{ gap: 10 }}>
             <FontAwesomeIcon icon={faEye} fontSize={14} />
-            <span>Public</span>
+            <span><FormattedMessage id='public.label' defaultMessage='Public' /></span>
           </Center>
         ),
       },
@@ -191,7 +213,7 @@ function Home() {
         label: (
           <Center style={{ gap: 10 }}>
             <FontAwesomeIcon icon={faEyeSlash} fontSize={14} />
-            <span>Private</span>
+            <span><FormattedMessage id='private.label' defaultMessage='Private' /></span>
           </Center>
         ),
       },
@@ -206,17 +228,19 @@ function Home() {
       <Grid>
         <Grid.Col span={12}>
           <Group>
-            <Select
-              w={110}
-              value={size?.toString()}
-              onChange={(newSize) => setSize(parseInt(newSize || '10', 10))}
-              data={['10', '20', '50', '100'].map((value) => ({
-                label: `${value} items`,
-                value,
-              }))}
-              disabled={!data || hasError}
-              aria-label='Select number of results'
-            />
+            <Button 
+              size= 'sm' 
+              leftSection={<FontAwesomeIcon icon={faSliders} fontSize={14}/>}
+              variant='default'
+              radius="md"
+              fw="normal"
+              onClick={toggleFilters}
+            >
+              { hidefilters 
+              ? <FormattedMessage id='filters.hide' defaultMessage='Show Filters' /> 
+              : <FormattedMessage id='filters.show' defaultMessage='Hide Filters' /> 
+            }
+            </Button>
             <TextInput
               style={{ flexGrow: 1 }}
               disabled={!data || hasError}
@@ -225,10 +249,25 @@ function Home() {
                 setPage(0); // Reset 'page' when search is changed
                 setSearch(event.currentTarget.value);
               }}
-              placeholder='Search list by name or taxa'
+              placeholder={intl.formatMessage({ id: 'search.input.placeholder', defaultMessage: 'Search lists by name or taxa' })}
               w={200}
+              leftSection={<FontAwesomeIcon icon={faMagnifyingGlass} fontSize={16} stroke='2' />}
+              rightSection={
+                <ActionIcon
+                  radius='sm'
+                  variant="transparent"
+                  size='xs'
+                  title={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
+                  aria-label={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
+                  disabled={search.length === 0}
+                  onClick={() => setSearch('')}
+                  style={{ marginLeft: 5, marginRight: 10 }}
+                >
+                <FontAwesomeIcon icon={faXmark} fontSize={20} />
+                </ActionIcon>
+              }
             />
-            {ala.isAuthenticated && (
+            {ala.isAuthenticated &&  (
               <>
                 <SegmentedControl
                   disabled={!data || hasError}
@@ -238,32 +277,21 @@ function Home() {
                   data={labels}
                 />
                 <Checkbox
-                  label='My Lists'
+                  label={<FormattedMessage id='myLists.label' defaultMessage='My Lists' />}
                   checked={isUser}
                   onChange={(e) => setIsUser(e.currentTarget.checked)}
                 />
               </>
             )}
-            <FiltersDrawer
-              facets={data?.facets || []}
-              active={filters || []}
-              onSelect={handleFilterClick}
-              onReset={() => {setFilters([]); setPage(0);}}
-            />
             <Select
               w={235}
               value={`${sort}_${dir}`}
-              label='Sort by'
+              label={<FormattedMessage id='sort.label' defaultMessage='Sort by' />}
               withCheckIcon={true}
               data={sortOptions}
-              styles={{
-                root: {
-                  display: 'flex',
-                  alignItems: 'center',
-                },
-                label: {
-                  marginRight: 10,
-                },
+              classNames={{
+                root: classes.sortSelectRoot,
+                label: classes.sortSelectLabel,
               }}
               onChange={(value: string | null) => {
                 const [sort, dir] = (value || 'title_asc').split('_');
@@ -272,51 +300,117 @@ function Home() {
                 setPage(0);
               }}
               disabled={!data || hasError}
-              aria-label='Select field to sort results'
+              aria-label={intl.formatMessage({ id: 'sort.field.ariaLabel', defaultMessage: 'Select field to sort results' })} 
             />
-            <Text opacity={0.75} size='sm'>
-              {(realPage - 1) * size + 1}-
-              {Math.min((realPage - 1) * size + size, totalElements || 0)} of{' '}
-              <FormattedNumber value={totalElements || 0} /> records
-            </Text>
+            <Select
+              w={110}
+              value={size?.toString()}
+              onChange={(newSize) => setSize(parseInt(newSize || '10', 10))}
+              data={['10', '20', '50', '100'].map((value) => ({
+                label: `${value} items`,
+                value,
+              }))}
+              disabled={!data || hasError}
+              aria-label={intl.formatMessage({ id: 'page.size.ariaLabel', defaultMessage: 'Select number of results' })} 
+            />
           </Group>
         </Grid.Col>
-        <Grid.Col span={12}>
-          {totalElements === 0 && <Message title='No lists found' />}
-          {error && (
-            <Message
-              title='An error occured'
-              subtitle={getErrorMessage(error)}
-              icon={<StopIcon size={18} />}
-              action='Retry'
-              onAction={handleRetry}
-            />
-          )}
-          {!error && (
-            <Table striped={false} withRowBorders>
-              <Table.Tbody>
-                {content
-                  ? content.map((list) => <ListRow key={list.id} list={list} />)
-                  : Array.from(Array(size).keys()).map((key) => (
-                      <ListRow key={key} />
-                    ))}
-              </Table.Tbody>
-            </Table>
-          )}
-        </Grid.Col>
-        <Grid.Col span={12} py='xl'>
-          <Center>
-            <Pagination
-              disabled={(totalPages || 0) < 1 || hasError}
-              value={realPage}
-              onChange={(value) => setPage(value - 1)}
-              total={totalPages || 9}
-              radius='md'
-              getControlProps={(control) => ({
-                'aria-label': `${control} page`,
-              })}
-            />
-          </Center>
+        {!hidefilters && (
+          <Grid.Col span={2} mt={15}>
+            <Collapse in={!hidefilters}>
+                {/* Filters appear here */}
+                <FiltersSection
+                  facets={data?.facets || []}
+                  active={filters || []}
+                  onSelect={handleFilterClick}
+                  onReset={() => {setFilters([]); setPage(0);}}
+                />
+            </Collapse>
+          </Grid.Col>
+        )}
+        <Grid.Col span={hidefilters ? 12 : 10}>
+          <Grid.Col span={12}>
+            {error && (
+              <Message
+                title={intl.formatMessage({ id: 'error.error.title', defaultMessage: 'An error occurred' })} 
+                subtitle={getErrorMessage(error)}
+                icon={<StopIcon size={18} />}
+                action={intl.formatMessage({ id: 'error.action.label', defaultMessage: 'Retry' })} 
+                onAction={handleRetry}
+              />
+            )}
+            {!error && (
+              <>
+                <Box ml={10} mb={0} mt={5}>
+                  { (totalElements && totalElements > 0) ? (
+                    <>
+                      <Text size='sm' mb={6} mt={4} className={classes.resultsSummary} component='span'>
+                        <FormattedMessage id='results.showing' defaultMessage='Showing' /> {' '}
+                        {(realPage - 1) * size + 1}-
+                        {Math.min((realPage - 1) * size + size, totalElements || 0)} of {' '}
+                        <FormattedNumber value={totalElements || 0} /> {' '}
+                        <FormattedMessage id='results.records' defaultMessage='records' />
+                        { filters && filters.length > 0 && (
+                          <><Space w={5} />–<Space  w={2} /></>
+                        )}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text size='sm' mb={6} mt={4} className={classes.resultsSummary} component='span'>
+                      <FormattedMessage id='results.noRecords' defaultMessage='No records found' />
+                      { search && search.length > 0 ? (
+                        <>{' '} <FormattedMessage id='results.for' defaultMessage='for' /> "{search}"{' '}</>
+                      ) : (
+                        <>{' '}</>
+                      )}
+                      { filters && filters.length > 0 && (
+                        <>with{' '}</>
+                      )}
+                    </Text>
+                  )}
+                  { filters && filters.length > 0 && (
+                    <Paper 
+                      ml={4} 
+                      className={classes.resultsSummary}
+                    >
+                      <ActiveFilters
+                        active={filters}
+                        handleFilterClick={handleFilterClick}
+                        resetFilters={resetFilters}
+                      />
+                    </Paper>
+                  )}
+                </Box>
+                <Table striped={false} withRowBorders className= {classes.resultsTable}>
+                  <Table.Tbody>
+                    {content
+                      ? content.map((list) => <ListRow key={list.id} list={list} />)
+                      : Array.from(Array(size).keys()).map((key) => (
+                          <ListRow key={key} />
+                        ))}
+                  </Table.Tbody>
+                </Table>
+              </>
+            )}
+            {totalElements === 0 && 
+              <Message 
+                title={intl.formatMessage({ id: 'error.noListsFound.title', defaultMessage: 'No lists found' })} 
+                subtitle={intl.formatMessage({ id: 'error.noListsFound.subTitle', defaultMessage: 'Try removing a filter or searching with a different query' })} 
+              />
+            }
+            <Stack align="center" justify="center" gap="xs" w="100%" py="xl">
+              <Pagination
+                disabled={(totalPages || 0) < 1 || hasError}
+                value={realPage}
+                onChange={(value) => setPage(value - 1)}
+                total={totalPages || 9}
+                radius='md'
+                getControlProps={(control) => ({
+                  'aria-label': `${control} page`,
+                })}
+              />
+            </Stack>
+          </Grid.Col>
         </Grid.Col>
       </Grid>
     </Container>

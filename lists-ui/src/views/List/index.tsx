@@ -2,16 +2,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
+  ActionIcon,
   Badge,
   Box,
   Button,
   Center,
+  Collapse,
   Container,
   Flex,
   Grid,
   Group,
   Pagination,
+  Paper,
   Select,
+  Space,
   Stack,
   Table,
   Text,
@@ -35,18 +39,20 @@ import {
   KV,
   SpeciesListSubmit,
 } from '#/api';
-import { FormattedMessage, FormattedNumber } from 'react-intl';
+import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 import { Outlet, useLocation, useParams } from 'react-router';
 import {
+  parseAsBoolean,
   parseAsInteger,
   parseAsString,
   parseAsStringEnum,
   useQueryState,
 } from 'nuqs';
 
-
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMagnifyingGlass, faPlus, faSliders, faXmark } from '@fortawesome/free-solid-svg-icons';
 
 import tableClasses from './classes/Table.module.css';
 
@@ -64,13 +70,14 @@ import { useALA } from '#/helpers/context/useALA';
 import { Flags } from './components/Flags';
 import { Actions } from './components/Actions';
 import { Summary } from './components/Summary';
-import { FiltersDrawer } from '#/components/FiltersDrawer';
+import { ActiveFilters, FiltersSection } from '#/components/FiltersSection';
 import { ThSortable } from './components/Table/ThSortable';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { Dates } from './components/Dates';
 import PageLoader from '#/components/PageLoader';
 import { getAccessToken } from '#/helpers/utils/getAccessToken';
+
+// Styles
+import classes from './classes/index.module.css';
 
 interface ListLoaderData {
   meta: SpeciesList;
@@ -84,9 +91,6 @@ enum SortDirection {
 }
 
 const classificationFields = ['family', 'kingdom', 'vernacularName'];
-
-const toKV = (data: { [key: string]: string }) =>
-  Object.entries(data).map(([key, value]) => ({ key, value }));
 
 export function List() {
   const { id } = useParams();
@@ -112,7 +116,7 @@ export function List() {
   );
   const [size, setSize] = useQueryState<number>(
     'size',
-    parseAsInteger.withDefault(10)
+    parseAsInteger.withDefault(20)
   );
   const [filters, setFilters] = useQueryState<KV[]>('filters', parseAsFilters);
   const [sort, setSort] = useQueryState<string>(
@@ -126,6 +130,11 @@ export function List() {
     )
   );
 
+  // Filters display state
+  const [hidefilters, setHideFilters] = useQueryState<boolean>('hideFilters', parseAsBoolean.withDefault(false)); 
+  const toggleFilters = () => setHideFilters((o) => !o);
+
+
   // Internal state (not driven by search params)
   const [facets, setFacets] = useState<Facet[]>([]);
   const [error, setError] = useState<Error | null>(null);
@@ -137,6 +146,7 @@ export function List() {
   const location = useLocation();
   const mounted = useMounted();
   const ala = useALA();
+  const intl = useIntl();
 
   // Selection drawer
   const [opened, { open, close }] = useDisclosure();
@@ -150,6 +160,7 @@ export function List() {
           queries.QUERY_LISTS_GET,
           {
             speciesListID: id,
+            size,
           },
           token
         );
@@ -246,9 +257,15 @@ export function List() {
     [sort, dir]
   );
 
-  const handleSizeChange = (newSize: string | null) => {
-    const newSizeInt = parseInt(newSize || '10', 10);
+  const resetFilters = useCallback(
+    () => {
+      setPage(0); // Reset 'page' when filters are reset
+      setFilters([]);
+    },[filters]
+  );
 
+  const handleSizeChange = (newSize: string | null) => {
+    const newSizeInt = parseInt(newSize || '20');
     // Ensure we don't try to query beyond what exists
     if (realPage * newSizeInt > totalElements) {
       setPage(Math.floor(totalElements / newSizeInt));
@@ -260,7 +277,7 @@ export function List() {
   // Retry handler
   const handleRetry = useCallback(() => {
     setPage(0);
-    setSize(10);
+    setSize(20);
     setSearch('');
     setRefresh(!refresh);
   }, [refresh]);
@@ -403,7 +420,7 @@ export function List() {
   }
 
   if (error) {
-    return <Message title="An error occurred" subtitle={getErrorMessage(error)} />;
+    return <Message title={intl.formatMessage({ id: 'list.error.title', defaultMessage: 'An error occurred' })}  subtitle={getErrorMessage(error)} />;
   }
 
   const hasError = Boolean(error);
@@ -421,9 +438,9 @@ export function List() {
       />
       <Container fluid>
         <Grid>
-          <Grid.Col span={12} pb='md'>
+          <Grid.Col span={12} pb={6}>
             <Flex direction='row' justify='space-between' gap={16}>
-              <Stack gap='xs'>
+              <Stack gap='xs' mb={14}>
                 <Title order={4}>{meta?.title}</Title>
                 <Summary meta={meta!} mr={-42} />
                 {(meta?.tags || []).length > 0 && (
@@ -458,29 +475,41 @@ export function List() {
                 />
               )}
             </Flex>
+            <Button
+              radius='md'
+              leftSection={<FontAwesomeIcon icon={faPlus} />}
+              variant='light'
+              onClick={handleAddClick}
+              title={intl.formatMessage({ id: 'add.species.title', defaultMessage: 'Add a new taxon entry' })}
+              aria-label={intl.formatMessage({ id: 'add.species.title', defaultMessage: 'Add a new taxon entry' })}
+            >
+              <FormattedMessage id='add.species.label' defaultMessage='Add species' />
+            </Button>
           </Grid.Col>
-          <Grid.Col span={12}>
-            <IngestProgress
-              ingesting={rematching}
-              id={id || ''}
-              disableNavigation={true}
-              onProgress={(progress) => {
-                if (
-                  progress.elasticTotal === progress.rowCount &&
-                  lastProgress
-                ) {
-                  setRematching(false);
-                  setRefresh(!refresh);
-                  setLastProgress(false);
-                } else if (
-                  progress.elasticTotal < progress.rowCount &&
-                  !lastProgress
-                ) {
-                  setLastProgress(true);
-                }
-              }}
-            />
-          </Grid.Col>
+          { rematching && (
+            <Grid.Col span={12}>
+              <IngestProgress
+                ingesting={rematching}
+                id={id || ''}
+                disableNavigation={true}
+                onProgress={(progress) => {
+                  if (
+                    progress.elasticTotal === progress.rowCount &&
+                    lastProgress
+                  ) {
+                    setRematching(false);
+                    setRefresh(!refresh);
+                    setLastProgress(false);
+                  } else if (
+                    progress.elasticTotal < progress.rowCount &&
+                    !lastProgress
+                  ) {
+                    setLastProgress(true);
+                  }
+                }}
+              />
+            </Grid.Col>
+          )}
           {isReingest ? (
             <Grid.Col span={12}>
               <Outlet />
@@ -488,63 +517,121 @@ export function List() {
           ) : (
             <>
               <Grid.Col span={12}>
-                <Group justify='space-between'>
-                  <Group>
-                    <Button
-                      radius='md'
-                      leftSection={<FontAwesomeIcon icon={faPlus} />}
-                      variant='light'
-                      onClick={handleAddClick}
-                    >
-                      Add species
-                    </Button>
-                    <Select
-                      disabled={hasError}
-                      w={110}
-                      value={size?.toString()}
-                      onChange={handleSizeChange}
-                      data={['10', '20', '40'].map((value) => ({
-                        label: `${value} items`,
-                        value,
-                      }))}
-                      aria-label='Select number of results'
-                    />
-                    <TextInput
-                      disabled={hasError}
-                      defaultValue={searchDebounced}
-                      onChange={(event) => {
-                        setSearch(event.currentTarget.value);
-                      }}
-                      placeholder='Search within list'
-                      w={200}
-                    />
-                  </Group>
-                  <Group>
-                    <FiltersDrawer
-                      active={toKV(Object.fromEntries((filters || []).map(({ key, value }) => [key, value])))}
-                      facets={facets}
-                      onSelect={handleFilterClick}
-                      onReset={() => setFilters([])}
-                    />
-                    <Text opacity={0.75} size='sm'>
-                      {(realPage - 1) * size + 1}-
-                      {Math.min(
-                        (realPage - 1) * size + size,
-                        totalElements || 0
-                      )}{' '}
-                      of <FormattedNumber value={totalElements} /> records
-                    </Text>
-                  </Group>
+                <Group >
+                  <Button 
+                    size= 'sm' 
+                    leftSection={<FontAwesomeIcon icon={faSliders} fontSize={14}/>}
+                    variant='default'
+                    radius='md'
+                    fw='normal'
+                    onClick={toggleFilters}
+                    aria-label={intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Show or hide filters section' })}
+                    title={intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Show or hide filters section' })}
+                  >
+                  { hidefilters 
+                      ? <FormattedMessage id='filters.hide' defaultMessage='Show Filters' /> 
+                      : <FormattedMessage id='filters.show' defaultMessage='Hide Filters' /> 
+                  }
+                  </Button>
+                  <TextInput
+                    style={{ flexGrow: 1 }}
+                    disabled={hasError}
+                    value={search}
+                    onChange={(event) => {
+                      setSearch(event.currentTarget.value);
+                      setPage(0);
+                    }}
+                    placeholder={intl.formatMessage({ id: 'search.input.placeholder', defaultMessage: 'Search within list' })}
+                    aria-label={intl.formatMessage({ id: 'search.input.label', defaultMessage: 'Search within list' })}
+                    w={200}
+                    leftSection={<FontAwesomeIcon icon={faMagnifyingGlass} fontSize={16} stroke='2' />}
+                    rightSection={
+                      <ActionIcon
+                        radius='sm'
+                        variant='transparent'
+                        size='xs'
+                        title={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
+                        aria-label={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
+                        disabled={search.length === 0}
+                        onClick={() => setSearch('')}
+                        style={{ marginLeft: 5, marginRight: 10 }}
+                      >
+                      <FontAwesomeIcon icon={faXmark} fontSize={20} />
+                      </ActionIcon>
+                    }
+                  />
+                  <Select
+                    disabled={hasError}
+                    w={140}
+                    value={size?.toString()}
+                    onChange={handleSizeChange}
+                    data={['10', '20', '50', '100'].map((value) => ({
+                      label: `${value} ${intl.formatMessage({ id: 'size.items', defaultMessage: 'items' })}`,
+                      value,
+                    }))}
+                    aria-label={intl.formatMessage({ id: 'list.page.size.label', defaultMessage: 'Select number of results' })}
+                  />
                 </Group>
               </Grid.Col>
-              <Grid.Col span={12}>
+              {/* Filters appear here */}
+              {!hidefilters && (
+                <Grid.Col span={2} mt={4}>
+                  <Collapse in={!hidefilters}>
+                      <FiltersSection
+                        facets={facets || []}
+                        active={filters || []}
+                        onSelect={handleFilterClick}
+                        onReset={() => {setFilters([]); setPage(0);}}
+                      />
+                  </Collapse>
+                </Grid.Col>
+              )}
+              <Grid.Col span={hidefilters ? 12 : 10}>
+                { (totalElements && totalElements > 0) ? (
+                  <>
+                    <Text size='sm' mb={6} mt={6} className={classes.resultsSummary} component='span'>
+                      <FormattedMessage id='results.showing' defaultMessage='Showing' /> {' '}
+                      {(realPage - 1) * size + 1}-
+                      {Math.min((realPage - 1) * size + size, totalElements || 0)} of {' '}
+                      <FormattedNumber value={totalElements || 0} /> {' '}
+                      <FormattedMessage id='results.records' defaultMessage='records' />
+                      { filters && filters.length > 0 && (
+                        <><Space w={5} />–<Space w={2} /></>
+                      )}
+                    </Text>
+                  </>
+                ) : (
+                  <Text size='sm' mb={6} mt={4} className={classes.resultsSummary} component='span'>
+                    <FormattedMessage id='results.noRecords' defaultMessage='No records found '/>
+                    { search && search.length > 0 ? (
+                      <>{' '} <FormattedMessage id='for' defaultMessage='for'/> "{search}"{' '}</>
+                    ) : (
+                      <>{' '}</>
+                    )}
+                    { filters && filters.length > 0 && (
+                      <><FormattedMessage id='with' defaultMessage='with'/>{' '}</>
+                    )}
+                  </Text>
+                )}
+                { filters && filters.length > 0 && (
+                  <Paper
+                    ml={4} 
+                    className={classes.resultsSummary}
+                  >
+                    <ActiveFilters
+                      active={filters}
+                      handleFilterClick={handleFilterClick}
+                      resetFilters={resetFilters}
+                    />
+                  </Paper>
+                )}
                 <Box style={{ overflowX: 'auto' }}>
                   {error ? (
                     <Message
-                      title='An error occured'
+                      title={intl.formatMessage({ id: 'list.page.error.title', defaultMessage: 'An error occured' })}
                       subtitle={getErrorMessage(error)}
                       icon={<StopIcon size={18} />}
-                      action='Retry'
+                      action={intl.formatMessage({ id: 'retry', defaultMessage: 'Retry' })}
                       onAction={handleRetry}
                     />
                   ) : totalElements === 0 ? (
@@ -563,10 +650,7 @@ export function List() {
                             dir={dir}
                             onSort={() => handleSortClick('scientificName')}
                           >
-                            <FormattedMessage
-                              id='suppliedName'
-                              defaultMessage='Supplied name'
-                            />
+                            <FormattedMessage id='suppliedName' defaultMessage='Supplied name' />
                           </ThSortable>
                           <ThSortable
                             active={sort === 'classification.scientificName'}
@@ -630,21 +714,21 @@ export function List() {
                       </Table.Tbody>
                     </Table>
                   )}
+                  <Center mt='xl'>
+                    <Pagination
+                      disabled={(totalPages || 0) < 1 || hasError}
+                      value={realPage}
+                      onChange={(value) => setPage(value - 1)}
+                      total={totalPages || 9}
+                      radius='md'
+                      getControlProps={(control) => ({
+                        'aria-label': `${control} page`,
+                      })}
+                    />
+                  </Center>
                 </Box>
               </Grid.Col>
               <Grid.Col span={12} py='xl'>
-                <Center>
-                  <Pagination
-                    disabled={(totalPages || 0) < 1 || hasError}
-                    value={realPage}
-                    onChange={(value) => setPage(value - 1)}
-                    total={totalPages || 9}
-                    radius='md'
-                    getControlProps={(control) => ({
-                      'aria-label': `${control} page`,
-                    })}
-                  />
-                </Center>
               </Grid.Col>
             </>
           )}

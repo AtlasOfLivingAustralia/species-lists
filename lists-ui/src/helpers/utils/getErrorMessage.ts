@@ -1,5 +1,5 @@
 import { isRouteErrorResponse, ErrorResponse } from 'react-router';
-
+// TODO: add i18n support
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     if (error.message === 'Failed to fetch')
