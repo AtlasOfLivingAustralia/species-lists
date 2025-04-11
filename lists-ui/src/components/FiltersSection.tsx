@@ -59,10 +59,10 @@ const renderCheckbox = (
           <Chip
             size="xs"
             checked={isChecked}
-            styles={{
-              root: { pointerEvents: 'none' },
-              label: { paddingLeft: 8, paddingRight: 8 },
-              iconWrapper: { display: 'none', width: 0 },
+            classNames={{
+              root: classes.countsChipRoot,
+              label: classes.countsChipLabel,
+              iconWrapper: classes.countsChipIconWrapper,
             }}
           >
             <FormattedNumber value={countItem.count} />
@@ -273,7 +273,7 @@ export const ActiveFilters = memo((
           fs='sm' 
           radius='sm' 
           bd='1px solid var(--mantine-color-default-border)' 
-          style={{ display: 'inline-flex', alignItems: 'center', marginRight: 6, marginLeft: 5, padding: '2px 6px', height: 28 }}
+          className={classes.activeFiltersPaper}
         >
           <FormattedMessage id={filter.key} defaultMessage={filter.key}/>
           { filter.value && filter.value !== 'true' && filter.value !== 'false' && (
@@ -286,21 +286,19 @@ export const ActiveFilters = memo((
             radius='sm'
             opacity={0.8}
             size='xs'
+            ml='xs'
             title={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key, defaultMessage: filter.key })}`}
             aria-label={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key, defaultMessage: filter.key })}`}
             onClick={() => handleFilterClick(filter)}
-            style={{ marginLeft: 8 }}
           >
             <FontAwesomeIcon icon={faClose} fontSize={14} />
           </ActionIcon>
         </Paper>
       ))}
       <Paper 
-        fs='sm' 
-        radius='sm' 
-        bg={'var(--mantine-color-default-border)'}
-        bd='1px solid var(--mantine-color-default-border)' 
-        style={{ display: 'inline-flex', alignItems: 'center', marginLeft: 6, marginRight: 10, padding: '2px 6px', maxHeight: 28, cursor: 'pointer' }}
+        fs='sm'
+        radius='sm'
+        className={classes.activeFiltersRemoveAll}
         onClick={resetFilters}
         title={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
         aria-label={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}

@@ -14,7 +14,6 @@ import {
   Group,
   Pagination,
   Paper,
-  rem,
   Select,
   Space,
   Stack,
@@ -421,7 +420,7 @@ export function List() {
   }
 
   if (error) {
-    return <Message title="An error occurred" subtitle={getErrorMessage(error)} />;
+    return <Message title={intl.formatMessage({ id: 'list.error.title', defaultMessage: 'An error occurred' })}  subtitle={getErrorMessage(error)} />;
   }
 
   const hasError = Boolean(error);
@@ -523,8 +522,8 @@ export function List() {
                     size= 'sm' 
                     leftSection={<FontAwesomeIcon icon={faSliders} fontSize={14}/>}
                     variant='default'
-                    radius="md"
-                    fw="normal"
+                    radius='md'
+                    fw='normal'
                     onClick={toggleFilters}
                     aria-label={intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Show or hide filters section' })}
                     title={intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Show or hide filters section' })}
@@ -549,7 +548,7 @@ export function List() {
                     rightSection={
                       <ActionIcon
                         radius='sm'
-                        variant="transparent"
+                        variant='transparent'
                         size='xs'
                         title={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
                         aria-label={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
@@ -617,7 +616,6 @@ export function List() {
                 { filters && filters.length > 0 && (
                   <Paper
                     ml={4} 
-                    style={{ display: 'inline-flex', alignItems: 'center', fontSize: 'var(--mantine-font-size-sm)' }}
                     className={classes.resultsSummary}
                   >
                     <ActiveFilters

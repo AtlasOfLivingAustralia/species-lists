@@ -289,14 +289,9 @@ function Home() {
               label={<FormattedMessage id='sort.label' defaultMessage='Sort by' />}
               withCheckIcon={true}
               data={sortOptions}
-              styles={{
-                root: {
-                  display: 'flex',
-                  alignItems: 'center',
-                },
-                label: {
-                  marginRight: 10,
-                },
+              classNames={{
+                root: classes.sortSelectRoot,
+                label: classes.sortSelectLabel,
               }}
               onChange={(value: string | null) => {
                 const [sort, dir] = (value || 'title_asc').split('_');
@@ -362,9 +357,9 @@ function Home() {
                     </>
                   ) : (
                     <Text size='sm' mb={6} mt={4} className={classes.resultsSummary} component='span'>
-                      No records found 
+                      <FormattedMessage id='results.noRecords' defaultMessage='No records found' />
                       { search && search.length > 0 ? (
-                        <>{' '} for "{search}"{' '}</>
+                        <>{' '} <FormattedMessage id='results.for' defaultMessage='for' /> "{search}"{' '}</>
                       ) : (
                         <>{' '}</>
                       )}
@@ -376,7 +371,6 @@ function Home() {
                   { filters && filters.length > 0 && (
                     <Paper 
                       ml={4} 
-                      style={{ display: 'inline-flex', alignItems: 'center', fontSize: 'var(--mantine-font-size-sm)' }}
                       className={classes.resultsSummary}
                     >
                       <ActiveFilters
@@ -387,7 +381,7 @@ function Home() {
                     </Paper>
                   )}
                 </Box>
-                <Table striped={false} withRowBorders style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
+                <Table striped={false} withRowBorders className= {classes.resultsTable}>
                   <Table.Tbody>
                     {content
                       ? content.map((list) => <ListRow key={list.id} list={list} />)
