@@ -12,6 +12,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faClose,
+  faDeleteLeft,
   faMinus,
   faPlus,
 } from '@fortawesome/free-solid-svg-icons';
@@ -20,7 +21,6 @@ import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 import classes from './FiltersSection.module.css';
 import { Facet, KV } from '#/api';
 import { ListTypeBadge } from './ListTypeBadge';
-import { IconBackspaceFilled } from '@tabler/icons-react';
 
 interface FiltersDrawerProps {
   facets: Facet[];
@@ -289,7 +289,7 @@ export const ActiveFilters = memo((
             title={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key, defaultMessage: filter.key })}`}
             aria-label={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key, defaultMessage: filter.key })}`}
             onClick={() => handleFilterClick(filter)}
-            style={{ marginLeft: 5 }}
+            style={{ marginLeft: 8 }}
           >
             <FontAwesomeIcon icon={faClose} fontSize={14} />
           </ActionIcon>
@@ -306,7 +306,7 @@ export const ActiveFilters = memo((
         aria-label={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
       >
         <FormattedMessage id='filters.reset' defaultMessage='Clear all filters' />
-        <IconBackspaceFilled size={24} color='var(--mantine-primary-color-filled)' style={{ marginLeft: 5 }}/>
+        <FontAwesomeIcon icon={faDeleteLeft} fontSize={22} color='var(--mantine-primary-color-filled)' style={{ marginLeft: 8 }}/>
       </Paper>
     </>
   )

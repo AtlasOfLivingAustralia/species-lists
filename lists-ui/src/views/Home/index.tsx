@@ -12,7 +12,6 @@ import {
   Group,
   Pagination,
   Paper,
-  rem,
   SegmentedControl,
   Select,
   Space,
@@ -33,8 +32,7 @@ import {
 
 // Icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { IconAdjustmentsHorizontal, IconSearch } from '@tabler/icons-react';
-import { faEye, faEyeSlash, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faEyeSlash, faXmark, faSliders, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
 
 // Project components
@@ -232,7 +230,7 @@ function Home() {
           <Group>
             <Button 
               size= 'sm' 
-              leftSection={<IconAdjustmentsHorizontal size={14} />}
+              leftSection={<FontAwesomeIcon icon={faSliders} fontSize={14}/>}
               variant='default'
               radius="md"
               fw="normal"
@@ -253,7 +251,7 @@ function Home() {
               }}
               placeholder={intl.formatMessage({ id: 'search.input.placeholder', defaultMessage: 'Search lists by name or taxa' })}
               w={200}
-              leftSection={<IconSearch style={{ width: rem(18), height: rem(18) }} stroke={1.5} />}
+              leftSection={<FontAwesomeIcon icon={faMagnifyingGlass} fontSize={16} stroke='2' />}
               rightSection={
                 <ActionIcon
                   radius='sm'

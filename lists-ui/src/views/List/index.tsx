@@ -52,7 +52,8 @@ import {
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { IconAdjustmentsHorizontal, IconSearch } from '@tabler/icons-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMagnifyingGlass, faPlus, faSliders, faXmark } from '@fortawesome/free-solid-svg-icons';
 
 import tableClasses from './classes/Table.module.css';
 
@@ -72,8 +73,6 @@ import { Actions } from './components/Actions';
 import { Summary } from './components/Summary';
 import { ActiveFilters, FiltersSection } from '#/components/FiltersSection';
 import { ThSortable } from './components/Table/ThSortable';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { Dates } from './components/Dates';
 import PageLoader from '#/components/PageLoader';
 import { getAccessToken } from '#/helpers/utils/getAccessToken';
@@ -93,9 +92,6 @@ enum SortDirection {
 }
 
 const classificationFields = ['family', 'kingdom', 'vernacularName'];
-
-const toKV = (data: { [key: string]: string }) =>
-  Object.entries(data).map(([key, value]) => ({ key, value }));
 
 export function List() {
   const { id } = useParams();
@@ -525,7 +521,7 @@ export function List() {
                 <Group >
                   <Button 
                     size= 'sm' 
-                    leftSection={<IconAdjustmentsHorizontal size={14} />}
+                    leftSection={<FontAwesomeIcon icon={faSliders} fontSize={14}/>}
                     variant='default'
                     radius="md"
                     fw="normal"
@@ -549,7 +545,7 @@ export function List() {
                     placeholder={intl.formatMessage({ id: 'search.input.placeholder', defaultMessage: 'Search within list' })}
                     aria-label={intl.formatMessage({ id: 'search.input.label', defaultMessage: 'Search within list' })}
                     w={200}
-                    leftSection={<IconSearch style={{ width: rem(18), height: rem(18) }} stroke={1.5} />}
+                    leftSection={<FontAwesomeIcon icon={faMagnifyingGlass} fontSize={16} stroke='2' />}
                     rightSection={
                       <ActionIcon
                         radius='sm'
