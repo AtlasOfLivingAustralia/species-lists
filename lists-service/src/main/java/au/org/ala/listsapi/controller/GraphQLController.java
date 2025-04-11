@@ -347,7 +347,7 @@ public class GraphQLController {
     toUpdate.getFieldList().add(fieldName);
 
     if (StringUtils.isNotEmpty(fieldValue)) {
-      int batchSize = 10000;
+      int batchSize = MAX_LIST_ENTRIES;
       ObjectId lastId = null;
 
       boolean finished = false;
@@ -399,7 +399,7 @@ public class GraphQLController {
     toUpdate.getFieldList().remove(oldName);
     toUpdate.getFieldList().add(newName);
 
-    int batchSize = 10000;
+    int batchSize = MAX_LIST_ENTRIES;
     ObjectId lastId = null;
 
     boolean finished = false;
@@ -447,7 +447,7 @@ public class GraphQLController {
 
     toUpdate.getFieldList().remove(fieldName);
 
-    int batchSize = 10000;
+    int batchSize = MAX_LIST_ENTRIES;
     ObjectId lastId = null;
 
     boolean finished = false;
