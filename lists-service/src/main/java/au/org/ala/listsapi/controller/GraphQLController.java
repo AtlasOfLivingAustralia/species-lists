@@ -11,10 +11,7 @@ import au.org.ala.listsapi.service.ValidationService;
 import au.org.ala.ws.security.profile.AlaUserProfile;
 import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.SortOrder;
-import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
-import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
-import co.elastic.clients.elasticsearch._types.aggregations.LongTermsBucket;
-import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
+import co.elastic.clients.elasticsearch._types.aggregations.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.ErrorType;
@@ -199,7 +196,7 @@ public class GraphQLController {
         array.stream()
             .collect(
                 Collectors.toMap(
-                    bucket -> bucket.key().stringValue(), bucket -> bucket.docCount()));
+                    bucket -> bucket.key().stringValue(), MultiBucketBase::docCount));
 
     // lookup species list metadata
     Iterable<SpeciesList> speciesLists =
@@ -854,11 +851,6 @@ public class GraphQLController {
     facetFields.add("isSDS");
     facetFields.add("hasRegion");
     facetFields.add("tags");
-
-    //    for (String facetField : facetFields) {
-    //      builder.withAggregation(
-    //          facetField, Aggregation.of(a -> a.terms(ta -> ta.field(facetField).size(10))));
-    //    }
 
     // Define the name for the nested cardinality aggregation
     String distinctCountAggName = "distinct_species_list_count";
