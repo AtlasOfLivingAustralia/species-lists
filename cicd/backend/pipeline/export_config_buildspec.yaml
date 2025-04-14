@@ -36,6 +36,7 @@ env:
     - ELASTIC_HOST
     - ELASTIC_PORT
     - WS_SUB_DOMAIN
+    - EKS_NAMESPACE
 
 phases:
 
