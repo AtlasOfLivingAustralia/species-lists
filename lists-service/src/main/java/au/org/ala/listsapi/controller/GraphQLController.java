@@ -169,51 +169,8 @@ public class GraphQLController {
     builder.withQuery(
         q ->
             q.bool(
-                bq -> {
-                  if (filters != null && !filters.isEmpty()) {
-                    // Group filters by key
-                    Map<String, List<Filter>> filtersByKey = filters.stream()
-                        .collect(Collectors.groupingBy(Filter::getKey));
-
-                    // For each key, create a sub-bool query with OR logic
-                    filtersByKey.forEach((key, filtersForKey) -> {
-                      bq.must(keyQuery ->
-                          keyQuery.bool(keyBool -> {
-                            // If there's only one filter for this key, just add it directly
-                            if (filtersForKey.size() == 1) {
-                              Filter filter = filtersForKey.get(0);
-                              keyBool.must(m -> m.term(t -> t.field(filter.getKey()).value(filter.getValue())));
-                            } else {
-                              // If there are multiple filters with the same key, combine with OR
-                              filtersForKey.forEach(filter ->
-                                  keyBool.should(m -> m.term(t -> t.field(filter.getKey()).value(filter.getValue())))
-                              );
-                              // Ensure at least one of the should clauses matches
-                              keyBool.minimumShouldMatch("1");
-                            }
-                            return keyBool;
-                          })
-                      );
-                    });
-                  }
-
-                  // Add the remaining standard query components
-                  if (StringUtils.isNotEmpty(searchQuery)) {
-                    bq.must(m -> m.queryString(qs ->
-                        qs.query(ElasticUtils.cleanRawQuery(searchQuery))
-                    ));
-                  }
-
-                  if (finalUserId != null) {
-                    bq.must(m -> m.term(t -> t.field("owner").value(finalUserId)));
-                  }
-
-                  if (isPrivate != null) {
-                    bq.must(m -> m.term(t -> t.field("isPrivate").value(isPrivate)));
-                  }
-
-                  return bq;
-                }));
+                bq -> ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null,
+                   finalUserId, isPrivate, filters, bq)));
 
     builder.withAggregation(
         "types_count",
