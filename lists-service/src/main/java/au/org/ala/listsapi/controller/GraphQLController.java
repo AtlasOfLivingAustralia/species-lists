@@ -170,8 +170,48 @@ public class GraphQLController {
         q ->
             q.bool(
                 bq -> {
-                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null,
-                      finalUserId, isPrivate, filters, bq);
+                  if (filters != null && !filters.isEmpty()) {
+                    // Group filters by key
+                    Map<String, List<Filter>> filtersByKey = filters.stream()
+                        .collect(Collectors.groupingBy(Filter::getKey));
+
+                    // For each key, create a sub-bool query with OR logic
+                    filtersByKey.forEach((key, filtersForKey) -> {
+                      bq.must(keyQuery ->
+                          keyQuery.bool(keyBool -> {
+                            // If there's only one filter for this key, just add it directly
+                            if (filtersForKey.size() == 1) {
+                              Filter filter = filtersForKey.get(0);
+                              keyBool.must(m -> m.term(t -> t.field(filter.getKey()).value(filter.getValue())));
+                            } else {
+                              // If there are multiple filters with the same key, combine with OR
+                              filtersForKey.forEach(filter ->
+                                  keyBool.should(m -> m.term(t -> t.field(filter.getKey()).value(filter.getValue())))
+                              );
+                              // Ensure at least one of the should clauses matches
+                              keyBool.minimumShouldMatch("1");
+                            }
+                            return keyBool;
+                          })
+                      );
+                    });
+                  }
+
+                  // Add the remaining standard query components
+                  if (StringUtils.isNotEmpty(searchQuery)) {
+                    bq.must(m -> m.queryString(qs ->
+                        qs.query(ElasticUtils.cleanRawQuery(searchQuery))
+                    ));
+                  }
+
+                  if (finalUserId != null) {
+                    bq.must(m -> m.term(t -> t.field("owner").value(finalUserId)));
+                  }
+
+                  if (isPrivate != null) {
+                    bq.must(m -> m.term(t -> t.field("isPrivate").value(isPrivate)));
+                  }
+
                   return bq;
                 }));
 
@@ -232,6 +272,7 @@ public class GraphQLController {
 
     return new PageImpl<>(paginatedResult, PageRequest.of(page, size), noOfLists);
   }
+
 
   /**
    * Creates a comparator for sorting `SpeciesList` objects based on the given sort field and direction.
@@ -1013,19 +1054,45 @@ public class GraphQLController {
       facetFields = speciesList.getFacetList();
     }
 
-    // retrieve field list from species_list
+    // Create the NativeQueryBuilder
     NativeQueryBuilder builder = NativeQuery.builder();
+
+    // Build a query that only filters by speciesList ID and searchQuery
+    // (not applying the additional filters for aggregations)
     builder.withQuery(
         q ->
             q.bool(
                 bq -> {
-                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery),
-                      speciesList.getId(), null, null, filters, bq);
+                  // Build a query that only includes speciesListID and searchQuery constraints
+                  // but NOT the additional filters - this is used for aggregations
+                  if (speciesList.getId() != null) {
+                    bq.must(m -> m.term(t -> t.field(SPECIES_LIST_ID).value(speciesList.getId())));
+                  }
+
+                  if (StringUtils.isNotEmpty(searchQuery)) {
+                    bq.must(m -> m.queryString(qs ->
+                        qs.query(ElasticUtils.cleanRawQuery(searchQuery))
+                    ));
+                  }
+
                   return bq;
                 }));
 
+    // Now add a post filter that includes ALL constraints
+    // This will filter the results but not affect the aggregations
+    if (filters != null && !filters.isEmpty()) {
+      builder.withFilter(
+          q ->
+              q.bool(
+                  bq -> {
+                    ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery),
+                        speciesList.getId(), null, null, filters, bq);
+                    return bq;
+                  }));
+    }
+
+    // Add aggregations for the facet fields
     if (facetFields != null) {
-      // add filter to query
       for (String facetField : facetFields) {
         builder.withAggregation(
             facetField,
@@ -1034,6 +1101,7 @@ public class GraphQLController {
       }
     }
 
+    // Add classification fields
     List<String> classificationFields = new ArrayList<>();
     classificationFields.add("classification.family");
     classificationFields.add("classification.order");
@@ -1054,6 +1122,7 @@ public class GraphQLController {
 
     ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
 
+    // Process aggregations for facets
     List<Facet> facets = new ArrayList<>();
     if (facetFields != null) {
       facetFields.addAll(classificationFields);
@@ -1066,19 +1135,22 @@ public class GraphQLController {
                             elasticsearchAggregation.aggregation().getName()
                                 .equals(facetField))
                     .findFirst()
-                    .get();
-            List<StringTermsBucket> array =
-                agg1.aggregation().getAggregate().sterms().buckets().array();
-            Facet facet = new Facet();
-            facet.setCounts(new ArrayList<>());
-            facet.setKey(facetField);
-            array.forEach(
-                bucket -> {
-                  facet
-                      .getCounts()
-                      .add(new FacetCount(bucket.key().stringValue(), bucket.docCount()));
-                });
-            facets.add(facet);
+                    .orElse(null);
+
+            if (agg1 != null && agg1.aggregation().getAggregate().isSterms()) {
+              List<StringTermsBucket> array =
+                  agg1.aggregation().getAggregate().sterms().buckets().array();
+              Facet facet = new Facet();
+              facet.setCounts(new ArrayList<>());
+              facet.setKey(facetField);
+              array.forEach(
+                  bucket -> {
+                    facet
+                        .getCounts()
+                        .add(new FacetCount(bucket.key().stringValue(), bucket.docCount()));
+                  });
+              facets.add(facet);
+            }
           });
     }
 
