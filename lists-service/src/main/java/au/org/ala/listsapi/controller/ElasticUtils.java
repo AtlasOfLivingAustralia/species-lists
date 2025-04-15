@@ -162,36 +162,67 @@ public class ElasticUtils {
     }
 
     public static BoolQuery.Builder buildQuery(
-            String searchQuery,
-            String speciesListID,
-            String userId,
-            Boolean isPrivate,
-            List<Filter> filters,
-            BoolQuery.Builder bq) {
+        String searchQuery,
+        String speciesListID,
+        String userId,
+        Boolean isPrivate,
+        List<Filter> filters,
+        BoolQuery.Builder bq) {
 
-        bq.should(
-            m ->
-                m.matchPhrase(
-                    mq -> mq.field("all").query(searchQuery.toLowerCase() + "*").boost(2.0f)));
+        // Add common query logic
+        addCommonQueryLogic(searchQuery, userId, isPrivate, bq);
+
+        // Add speciesListID filter
+        if (speciesListID != null) {
+            bq.filter(f -> f.term(t -> t.field("speciesListID").value(speciesListID)));
+        }
+
+        // Add filters
+        addFilters(filters, bq);
+
+        return bq;
+    }
+
+    public static void buildQuery(
+        String searchQuery,
+        List<FieldValue> speciesListIDs,
+        String userId,
+        Boolean isPrivate,
+        List<Filter> filters,
+        BoolQuery.Builder bq) {
+
+        // Add common query logic
+        addCommonQueryLogic(searchQuery, userId, isPrivate, bq);
+
+        // Add speciesListIDs filter
+        if (speciesListIDs != null && !speciesListIDs.isEmpty()) {
+            bq.filter(f -> f.terms(t -> t.field("speciesListID").terms(ta -> ta.value(speciesListIDs))));
+        }
+
+        // Add filters
+        addFilters(filters, bq);
+    }
+
+    private static void addCommonQueryLogic(String searchQuery, String userId, Boolean isPrivate, BoolQuery.Builder bq) {
+        // Add search query logic
+        bq.should(m -> m.matchPhrase(mq -> mq.field("all").query(searchQuery.toLowerCase() + "*").boost(2.0f)));
 
         if (StringUtils.trimToNull(searchQuery) != null && searchQuery.length() > 1) {
             bq.minimumShouldMatch("1");
         }
 
+        // Add userId filter
         if (userId != null) {
-            // return all lists for this user
             bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
         }
+
+        // Add isPrivate filter
         if (isPrivate != null) {
-            // return all private lists
             bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
         }
-        if (speciesListID != null) {
-            // return this one list
-            bq.filter(f -> f.term(t -> t.field("speciesListID").value(speciesListID)));
-        }
+    }
 
-        // Treat multiple filters with the same "key" as OR filters, otherwise AND filters
+    private static void addFilters(List<Filter> filters, BoolQuery.Builder bq) {
         if (filters != null && !filters.isEmpty()) {
             // Group filters by key
             Map<String, List<Filter>> filtersByKey = filters.stream()
@@ -201,85 +232,21 @@ public class ElasticUtils {
             filtersByKey.forEach((key, filtersForKey) -> {
                 bq.must(keyQuery ->
                     keyQuery.bool(keyBool -> {
-                        // If there's only one filter for this key, just add it directly
                         if (filtersForKey.size() == 1) {
+                            // Single filter for this key
                             Filter filter = filtersForKey.get(0);
                             keyBool.must(m -> m.term(t -> t.field(filter.getKey()).value(filter.getValue())));
                         } else {
-                            // If there are multiple filters with the same key, combine with OR
+                            // Multiple filters with OR logic
                             filtersForKey.forEach(filter ->
                                 keyBool.should(m -> m.term(t -> t.field(filter.getKey()).value(filter.getValue())))
                             );
-                            // Ensure at least one of the should clauses matches
                             keyBool.minimumShouldMatch("1");
                         }
                         return keyBool;
                     })
                 );
             });
-        }
-
-        return bq;
-    }
-
-    public static void buildQuery(
-            String searchQuery,
-            List<FieldValue> speciesListIDs,
-            String userId,
-            Boolean isPrivate,
-            List<Filter> filters,
-            BoolQuery.Builder bq) {
-
-        bq.should(
-                m ->
-                        m.matchPhrase(
-                                mq -> mq.field("all").query(searchQuery.toLowerCase() + "*").boost(2.0f)));
-
-        if (StringUtils.trimToNull(searchQuery) != null && searchQuery.length() > 1) {
-            bq.minimumShouldMatch("1");
-        }
-
-        if (userId != null) {
-            // return all lists for this user
-            bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
-        }
-        if (isPrivate != null) {
-            // return all private lists
-            bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
-        }
-        if (speciesListIDs != null && !speciesListIDs.isEmpty()) {
-            // return this one list
-            bq.filter(f -> f.terms(t -> t.field("speciesListID")
-                    .terms(ta -> ta.value(speciesListIDs))));
-        }
-
-        if (filters != null) {
-            filters.forEach(filter -> addFilter(filter, bq));
-        }
-    }
-
-    public static String getPropertiesFacetField(String filter) {
-        if (CORE_FIELDS.contains(filter)) {
-            return filter + ".keyword";
-        }
-        if (filter.startsWith("classification.")) {
-            return filter + ".keyword";
-        }
-        return "properties." + filter + ".keyword";
-    }
-
-    public static void addFilter(Filter filter, BoolQuery.Builder bq) {
-        if (!CORE_BOOL_FIELDS.contains(filter.getKey())) {
-            bq.filter(
-                    f ->
-                            f.queryString(
-                                    qs ->
-                                            qs.defaultOperator(Operator.And)
-                                                    .fields(getPropertiesFacetField(filter.getKey()))
-                                                    .query(filter.getValue())));
-
-        } else {
-            bq.filter(f -> f.term(t -> t.field(filter.getKey()).value(filter.getValue())));
         }
     }
 
@@ -311,7 +278,7 @@ public class ElasticUtils {
                         .path("properties")
                         .scoreMode(ChildScoreMode.Avg)
                         .query(nq -> nq.bool(nb -> {
-                            nb.must(m1 -> m1.term(t -> t
+                            nb.should(m1 -> m1.term(t -> t
                                     .field("properties.key")
                                     .value(field)));
                             nb.must(m2 -> m2.match(mt -> mt
