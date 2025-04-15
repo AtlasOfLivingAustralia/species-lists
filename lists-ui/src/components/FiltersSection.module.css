@@ -12,8 +12,6 @@
 }
 
 .heading {
-  /* position: sticky; */
-  /* top: 64px; */
   padding-left: 16px;
   padding-right: 16px;
   padding-bottom: 10px;
@@ -27,7 +25,6 @@
   font-weight: bold;
   opacity: 0.8;
   padding: 4px 0px 4px 0px;
-  /* border-top: 1px solid var(--mantine-color-default-border); */
 }
 
 .countsChipRoot {
@@ -68,14 +65,12 @@
   align-items: left;
   text-align: left;
   width: 100%;
-  /* padding: 0px 4px 0px 4px; */
   border-radius: 0;
   font-size: var(--mantine-font-size-sm);
 }
 
 .facetPaper {
   padding: 5px 2px 2px 0px;
-  /* border-top: 1px solid var(--mantine-color-default-border); */
 }
 
 .resultsSummary {
