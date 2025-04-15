@@ -222,6 +222,20 @@ public class ElasticUtils {
         }
     }
 
+    public static String getPropertiesFacetField(String filter) {
+        if (CORE_BOOL_FIELDS.contains(filter)) {
+            return filter;
+        }
+        if (CORE_FIELDS.contains(filter)) {
+            return filter + ".keyword";
+        }
+        if (filter.startsWith("classification.")) {
+            return filter + ".keyword";
+        }
+        return "properties." + filter + ".keyword";
+    }
+
+
     private static void addFilters(List<Filter> filters, BoolQuery.Builder bq) {
         if (filters != null && !filters.isEmpty()) {
             // Group filters by key
@@ -235,11 +249,11 @@ public class ElasticUtils {
                         if (filtersForKey.size() == 1) {
                             // Single filter for this key
                             Filter filter = filtersForKey.get(0);
-                            keyBool.must(m -> m.term(t -> t.field(filter.getKey()).value(filter.getValue())));
+                            keyBool.must(m -> m.term(t -> t.field(getPropertiesFacetField(filter.getKey())).value(filter.getValue())));
                         } else {
                             // Multiple filters with OR logic
                             filtersForKey.forEach(filter ->
-                                keyBool.should(m -> m.term(t -> t.field(filter.getKey()).value(filter.getValue())))
+                                keyBool.should(m -> m.term(t -> t.field(getPropertiesFacetField(filter.getKey())).value(filter.getValue())))
                             );
                             keyBool.minimumShouldMatch("1");
                         }
