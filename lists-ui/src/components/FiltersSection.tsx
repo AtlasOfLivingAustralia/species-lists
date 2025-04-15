@@ -223,10 +223,10 @@ export const FiltersSection = memo(
           .sort((a, b) => {
             // Sort by the first occurrence of boolean facets
             if (BOOLEAN_FACETS.includes(a.key) && !BOOLEAN_FACETS.includes(b.key)) {
-              return 1; // a comes first
+              return 1; 
             }
             if (!BOOLEAN_FACETS.includes(a.key) && BOOLEAN_FACETS.includes(b.key)) {
-              return -1; // b comes first
+              return -1; 
             }
             // For other facets, sort by the key
             return a.key.localeCompare(b.key);      
