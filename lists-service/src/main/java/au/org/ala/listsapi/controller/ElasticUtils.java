@@ -170,9 +170,9 @@ public class ElasticUtils {
             BoolQuery.Builder bq) {
 
         bq.should(
-                m ->
-                        m.matchPhrase(
-                                mq -> mq.field("all").query(searchQuery.toLowerCase() + "*").boost(2.0f)));
+            m ->
+                m.matchPhrase(
+                    mq -> mq.field("all").query(searchQuery.toLowerCase() + "*").boost(2.0f)));
 
         if (StringUtils.trimToNull(searchQuery) != null && searchQuery.length() > 1) {
             bq.minimumShouldMatch("1");
@@ -191,13 +191,38 @@ public class ElasticUtils {
             bq.filter(f -> f.term(t -> t.field("speciesListID").value(speciesListID)));
         }
 
-        if (filters != null) {
-            filters.forEach(filter -> addFilter(filter, bq));
+        // Treat multiple filters with the same "key" as OR filters, otherwise AND filters
+        if (filters != null && !filters.isEmpty()) {
+            // Group filters by key
+            Map<String, List<Filter>> filtersByKey = filters.stream()
+                .collect(Collectors.groupingBy(Filter::getKey));
+
+            // For each key, create a sub-bool query with OR logic
+            filtersByKey.forEach((key, filtersForKey) -> {
+                bq.must(keyQuery ->
+                    keyQuery.bool(keyBool -> {
+                        // If there's only one filter for this key, just add it directly
+                        if (filtersForKey.size() == 1) {
+                            Filter filter = filtersForKey.get(0);
+                            keyBool.must(m -> m.term(t -> t.field(filter.getKey()).value(filter.getValue())));
+                        } else {
+                            // If there are multiple filters with the same key, combine with OR
+                            filtersForKey.forEach(filter ->
+                                keyBool.should(m -> m.term(t -> t.field(filter.getKey()).value(filter.getValue())))
+                            );
+                            // Ensure at least one of the should clauses matches
+                            keyBool.minimumShouldMatch("1");
+                        }
+                        return keyBool;
+                    })
+                );
+            });
         }
+
         return bq;
     }
 
-    public static BoolQuery.Builder buildQuery(
+    public static void buildQuery(
             String searchQuery,
             List<FieldValue> speciesListIDs,
             String userId,
@@ -231,7 +256,6 @@ public class ElasticUtils {
         if (filters != null) {
             filters.forEach(filter -> addFilter(filter, bq));
         }
-        return bq;
     }
 
     public static String getPropertiesFacetField(String filter) {

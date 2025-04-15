@@ -11,10 +11,7 @@ import au.org.ala.listsapi.service.ValidationService;
 import au.org.ala.ws.security.profile.AlaUserProfile;
 import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.SortOrder;
-import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
-import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
-import co.elastic.clients.elasticsearch._types.aggregations.LongTermsBucket;
-import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
+import co.elastic.clients.elasticsearch._types.aggregations.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.ErrorType;
@@ -169,11 +166,8 @@ public class GraphQLController {
     builder.withQuery(
         q ->
             q.bool(
-                bq -> {
-                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null,
-                      finalUserId, isPrivate, filters, bq);
-                  return bq;
-                }));
+                bq -> ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null,
+                   finalUserId, isPrivate, filters, bq)));
 
     builder.withAggregation(
         "types_count",
@@ -202,7 +196,7 @@ public class GraphQLController {
         array.stream()
             .collect(
                 Collectors.toMap(
-                    bucket -> bucket.key().stringValue(), bucket -> bucket.docCount()));
+                    bucket -> bucket.key().stringValue(), MultiBucketBase::docCount));
 
     // lookup species list metadata
     Iterable<SpeciesList> speciesLists =
@@ -232,6 +226,7 @@ public class GraphQLController {
 
     return new PageImpl<>(paginatedResult, PageRequest.of(page, size), noOfLists);
   }
+
 
   /**
    * Creates a comparator for sorting `SpeciesList` objects based on the given sort field and direction.
@@ -857,11 +852,6 @@ public class GraphQLController {
     facetFields.add("hasRegion");
     facetFields.add("tags");
 
-    //    for (String facetField : facetFields) {
-    //      builder.withAggregation(
-    //          facetField, Aggregation.of(a -> a.terms(ta -> ta.field(facetField).size(10))));
-    //    }
-
     // Define the name for the nested cardinality aggregation
     String distinctCountAggName = "distinct_species_list_count";
     // Ensure you use the .keyword field for exact matching and cardinality
@@ -1013,19 +1003,45 @@ public class GraphQLController {
       facetFields = speciesList.getFacetList();
     }
 
-    // retrieve field list from species_list
+    // Create the NativeQueryBuilder
     NativeQueryBuilder builder = NativeQuery.builder();
+
+    // Build a query that only filters by speciesList ID and searchQuery
+    // (not applying the additional filters for aggregations)
     builder.withQuery(
         q ->
             q.bool(
                 bq -> {
-                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery),
-                      speciesList.getId(), null, null, filters, bq);
+                  // Build a query that only includes speciesListID and searchQuery constraints
+                  // but NOT the additional filters - this is used for aggregations
+                  if (speciesList.getId() != null) {
+                    bq.must(m -> m.term(t -> t.field(SPECIES_LIST_ID).value(speciesList.getId())));
+                  }
+
+                  if (StringUtils.isNotEmpty(searchQuery)) {
+                    bq.must(m -> m.queryString(qs ->
+                        qs.query(ElasticUtils.cleanRawQuery(searchQuery))
+                    ));
+                  }
+
                   return bq;
                 }));
 
+    // Now add a post filter that includes ALL constraints
+    // This will filter the results but not affect the aggregations
+    if (filters != null && !filters.isEmpty()) {
+      builder.withFilter(
+          q ->
+              q.bool(
+                  bq -> {
+                    ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery),
+                        speciesList.getId(), null, null, filters, bq);
+                    return bq;
+                  }));
+    }
+
+    // Add aggregations for the facet fields
     if (facetFields != null) {
-      // add filter to query
       for (String facetField : facetFields) {
         builder.withAggregation(
             facetField,
@@ -1034,6 +1050,7 @@ public class GraphQLController {
       }
     }
 
+    // Add classification fields
     List<String> classificationFields = new ArrayList<>();
     classificationFields.add("classification.family");
     classificationFields.add("classification.order");
@@ -1054,6 +1071,7 @@ public class GraphQLController {
 
     ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
 
+    // Process aggregations for facets
     List<Facet> facets = new ArrayList<>();
     if (facetFields != null) {
       facetFields.addAll(classificationFields);
@@ -1066,19 +1084,22 @@ public class GraphQLController {
                             elasticsearchAggregation.aggregation().getName()
                                 .equals(facetField))
                     .findFirst()
-                    .get();
-            List<StringTermsBucket> array =
-                agg1.aggregation().getAggregate().sterms().buckets().array();
-            Facet facet = new Facet();
-            facet.setCounts(new ArrayList<>());
-            facet.setKey(facetField);
-            array.forEach(
-                bucket -> {
-                  facet
-                      .getCounts()
-                      .add(new FacetCount(bucket.key().stringValue(), bucket.docCount()));
-                });
-            facets.add(facet);
+                    .orElse(null);
+
+            if (agg1 != null && agg1.aggregation().getAggregate().isSterms()) {
+              List<StringTermsBucket> array =
+                  agg1.aggregation().getAggregate().sterms().buckets().array();
+              Facet facet = new Facet();
+              facet.setCounts(new ArrayList<>());
+              facet.setKey(facetField);
+              array.forEach(
+                  bucket -> {
+                    facet
+                        .getCounts()
+                        .add(new FacetCount(bucket.key().stringValue(), bucket.docCount()));
+                  });
+              facets.add(facet);
+            }
           });
     }
 
