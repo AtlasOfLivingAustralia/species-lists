@@ -22,6 +22,14 @@
   border-bottom: 1px solid var(--mantine-color-default-border);
 }
 
+.facetHeader {
+  font-size: var(--mantine-font-size-sm);
+  font-weight: bold;
+  opacity: 0.8;
+  padding: 4px 0px 4px 0px;
+  /* border-top: 1px solid var(--mantine-color-default-border); */
+}
+
 .countsChipRoot {
   pointer-events: none;
 }
@@ -67,7 +75,7 @@
 
 .facetPaper {
   padding: 5px 2px 2px 0px;
-  border-top: 1px solid var(--mantine-color-default-border);
+  /* border-top: 1px solid var(--mantine-color-default-border); */
 }
 
 .resultsSummary {

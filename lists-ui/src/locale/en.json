@@ -61,6 +61,9 @@
   "date.lastUpdated": "Updated",
   "date.created": "Created",
 
+  "filters.nonBoolean.tooltip":"A list can only have one value for this filter. Selecting mulitple options will result in values being OR'ed together",
+  "filters.boolean.tooltip":"A list can have multiple flags. Selecting mulitple options will result in values being AND'ed together",
+
   "wkt": "Geographic coordinates (Well Known Text format)",
   "wkt.help": "Well Known Text (WKT) is a text markup language for representing vector geometry objects on a map. For example, a point in WKT looks like this: POINT (30 10).",
 

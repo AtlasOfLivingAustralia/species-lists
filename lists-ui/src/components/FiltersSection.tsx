@@ -8,11 +8,14 @@ import {
   Collapse,
   ActionIcon,
   Checkbox,
+  Tooltip,
+  ThemeIcon,
 } from '@mantine/core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faClose,
   faDeleteLeft,
+  faInfoCircle,
   faMinus,
   faPlus,
 } from '@fortawesome/free-solid-svg-icons';
@@ -28,6 +31,8 @@ interface FiltersDrawerProps {
   onSelect: (item: KV) => void;
   onReset: () => void;
 }
+
+const BOOLEAN_FACETS = ['isAuthoritative', 'isSDS', 'isBIE', 'hasRegion'];
 
 // Helper function to render the entire Checkbox with its label
 const renderCheckbox = (
@@ -73,6 +78,15 @@ const renderCheckbox = (
   );
 };
 
+function InfoTooltip({ tooltipText }: { tooltipText: string }) {
+  return (
+    <Tooltip label={tooltipText} withArrow position="top">
+      <ThemeIcon size="sm" variant="transparent" color="main" opacity={0.8} style={{ cursor: 'pointer' }}>
+        <FontAwesomeIcon icon={faInfoCircle} size="sm" />
+      </ThemeIcon>
+    </Tooltip>
+  );
+}
 
 export const FacetComponent = memo(
   ({
@@ -81,12 +95,14 @@ export const FacetComponent = memo(
     handleFacetToggle,
     active,
     onSelect,
+    isShowFlagLabel,
   }: {
     facet: Facet;
     isExpanded: boolean;
     handleFacetToggle: (key: string) => void;
     active: KV[];
     onSelect: (item: KV) => void;
+    isShowFlagLabel: boolean;
   }) => {
     const handleToggle = useCallback(() => {
       handleFacetToggle(facet.key);
@@ -130,16 +146,17 @@ export const FacetComponent = memo(
     return (
       (facet.counts.length > 1 || active.some((activeItem) => activeItem.key === facet.key)) && (
         <Paper
-          className={classes.facetPaper}
+          className={!isBooleanFacet ? classes.facetPaper : undefined}
           fs="sm"
           radius={0}
           style={{ maxHeight: 400, overflowY: 'auto' }}
-        >
+        > 
         {/* Render header only for non-boolean facets */}
         {!isBooleanFacet && (
-          <Group justify='space-between'>
-            <Text size='md' fw='bold' opacity={0.8} mb={4} mt={4}>
-              <FormattedMessage id={facet.key} defaultMessage={facet.key} />
+          <Group justify='space-between' style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
+            <Text size='md' className={classes.facetHeader}>
+              <FormattedMessage id={facet.key} defaultMessage={facet.key} />{' '}
+              <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.nonBoolean.tooltip', defaultMessage: '' })} />
             </Text>
             <ActionIcon
               variant='subtle'
@@ -153,7 +170,12 @@ export const FacetComponent = memo(
             </ActionIcon>
           </Group>
         )}
-
+        { isBooleanFacet && isShowFlagLabel && (
+            <Text size='md' className={classes.facetHeader} style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
+              <FormattedMessage id='facet.flag.label' defaultMessage='List flags' />{' '}
+              <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.boolean.tooltip', defaultMessage: '' })} />
+            </Text>
+        )}
         {/* Render checkboxes using the helper */}
         {isBooleanFacet ? (
           // --- Boolean Facet Rendering ---
@@ -192,6 +214,32 @@ export const FacetComponent = memo(
 export const FiltersSection = memo(
   ({ facets, active, onSelect }: FiltersDrawerProps) => {
     const [expanded, setExpanded] = useState<string[]>([]);
+
+    // Sort facets to ensure boolean facets are at the bottom
+    const sortedFacets = useMemo(
+      () =>
+        facets
+          .filter((facet) => facet.counts.length > 0) // Filter out empty facets
+          .sort((a, b) => {
+            // Sort by the first occurrence of boolean facets
+            if (BOOLEAN_FACETS.includes(a.key) && !BOOLEAN_FACETS.includes(b.key)) {
+              return 1; // a comes first
+            }
+            if (!BOOLEAN_FACETS.includes(a.key) && BOOLEAN_FACETS.includes(b.key)) {
+              return -1; // b comes first
+            }
+            // For other facets, sort by the key
+            return a.key.localeCompare(b.key);      
+          }
+          ),
+      [facets]
+    );
+    
+    // Store the first indices of boolean facets
+    const firstBooleanIndex = sortedFacets.findIndex(
+      (item) => BOOLEAN_FACETS.includes(item.key) && item.counts.length > 0
+    );
+
     const emptyFacets = useMemo(
       () => facets.filter((facet) => facet.counts.length <= 1), // we ignore facets with a single count value, as they are not useful
       [facets]
@@ -233,10 +281,9 @@ export const FiltersSection = memo(
               <FormattedMessage id='filters.empty' defaultMessage='No filters available' />
             </Text>
           )}
-          {facets
-            .filter((facet) => facet.counts.length > 0)
-            .sort((a, b) => b.counts.length - a.counts.length)
-            .map((facet) => (
+          { sortedFacets.map((facet, index) => {
+            const isFirst = index === firstBooleanIndex;
+            return (
               <FacetComponent
                 key={facet.key}
                 facet={facet}
@@ -244,8 +291,10 @@ export const FiltersSection = memo(
                 handleFacetToggle={handleFacetToggle}
                 active={active}
                 onSelect={onSelect}
+                isShowFlagLabel={isFirst}
               />
-            ))}
+            );
+          })}
         </Stack>
       </>
     );
