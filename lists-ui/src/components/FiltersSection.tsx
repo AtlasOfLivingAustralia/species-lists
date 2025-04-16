@@ -88,6 +88,14 @@ function InfoTooltip({ tooltipText }: { tooltipText: string }) {
   );
 }
 
+// Function to remove the 'properties.' prefix from the key
+const removeFilterPrefix = (key: string) => {
+  if (key.startsWith('properties.')) {
+    return key.replace('properties.', '');
+  }
+  return key;
+}
+
 export const FacetComponent = memo(
   ({
     facet,
@@ -155,9 +163,7 @@ export const FacetComponent = memo(
         {!isBooleanFacet && (
           <Group justify='space-between' style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
             <Text size='md' className={classes.facetHeader}>
-              <FormattedMessage
-              id={facet.key.startsWith('properties.') ? facet.key.replace('properties.', '') : facet.key}
-              defaultMessage={facet.key.startsWith('properties.') ? facet.key.replace('properties.', '') : facet.key}
+              <FormattedMessage id={facet.key} defaultMessage={removeFilterPrefix(facet.key)}
               />{' '}
               <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.nonBoolean.tooltip', defaultMessage: '' })} />
             </Text>
@@ -330,7 +336,7 @@ export const ActiveFilters = memo((
           className={classes.activeFiltersPaper}
         >
           <Text component='div' fs='xs' className={classes.activeFiltersText}>
-            <FormattedMessage id={filter.key} defaultMessage={filter.key.startsWith('properties.') ? filter.key.replace('properties.', '') : filter.key}/>
+            <FormattedMessage id={filter.key} defaultMessage={removeFilterPrefix(filter.key)}/>
             { filter.value && filter.value !== 'true' && filter.value !== 'false' && (
               <>
                 :{' '}
@@ -344,8 +350,8 @@ export const ActiveFilters = memo((
             size='xs'
             ml='xs'
             mt={1}
-            title={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key, defaultMessage: filter.key })}`}
-            aria-label={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key, defaultMessage: filter.key })}`}
+            title={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key, defaultMessage: removeFilterPrefix(filter.key) })}`}
+            aria-label={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key, defaultMessage: removeFilterPrefix(filter.key) })}`}
             onClick={() => handleFilterClick(filter)}
           >
             <FontAwesomeIcon icon={faClose} fontSize={14} />
