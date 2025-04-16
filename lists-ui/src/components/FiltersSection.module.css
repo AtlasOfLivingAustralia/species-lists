@@ -81,11 +81,20 @@
 
 .activeFiltersPaper {
   display: inline-flex;
-  align-items: center;
   margin-right: 6px;
   margin-left: 5px;
-  padding: 2px 6px;
+  padding: 3px 6px 2px 6px;
   height: 28px;
+}
+
+.activeFiltersText {
+  max-height: 28px;
+  max-width: 220px;
+  font-size: var(--mantine-font-size-sm);
+  align-items: flex-start;
+  white-space: nowrap;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
 }
 
 .activeFiltersRemoveAll {

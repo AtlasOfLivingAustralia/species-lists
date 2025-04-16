@@ -10,6 +10,7 @@ import {
   Checkbox,
   Tooltip,
   ThemeIcon,
+  Box,
 } from '@mantine/core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -155,7 +156,10 @@ export const FacetComponent = memo(
         {!isBooleanFacet && (
           <Group justify='space-between' style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
             <Text size='md' className={classes.facetHeader}>
-              <FormattedMessage id={facet.key} defaultMessage={facet.key} />{' '}
+              <FormattedMessage
+              id={facet.key.startsWith('properties.') ? facet.key.replace('properties.', '') : facet.key}
+              defaultMessage={facet.key.startsWith('properties.') ? facet.key.replace('properties.', '') : facet.key}
+              />{' '}
               <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.nonBoolean.tooltip', defaultMessage: '' })} />
             </Text>
             <ActionIcon
@@ -315,7 +319,9 @@ export const ActiveFilters = memo((
 
   return (
     <>
-      <FormattedMessage id='filters.active' defaultMessage='selected filters' />:{' '}
+      <Text component='span' fs='xs' className={classes.activeFiltersText}>
+        <FormattedMessage id='filters.active' defaultMessage='selected filters' />:{' '}
+      </Text>
       {active.map((filter) => (
         <Paper 
           key={filter.key} 
@@ -324,18 +330,21 @@ export const ActiveFilters = memo((
           bd='1px solid var(--mantine-color-default-border)' 
           className={classes.activeFiltersPaper}
         >
-          <FormattedMessage id={filter.key} defaultMessage={filter.key}/>
-          { filter.value && filter.value !== 'true' && filter.value !== 'false' && (
-            <>
-              :{' '}
-              <FormattedMessage id={filter.value} defaultMessage={filter.value}/>
-            </>
-          )}
+          <Text component='div' fs='xs' className={classes.activeFiltersText}>
+            <FormattedMessage id={filter.key} defaultMessage={filter.key.startsWith('properties.') ? filter.key.replace('properties.', '') : filter.key}/>
+            { filter.value && filter.value !== 'true' && filter.value !== 'false' && (
+              <>
+                :{' '}
+                <FormattedMessage id={filter.value} defaultMessage={filter.value}/>
+              </>
+            )}
+          </Text>
           <ActionIcon
             radius='sm'
             opacity={0.8}
             size='xs'
             ml='xs'
+            mt={1}
             title={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key, defaultMessage: filter.key })}`}
             aria-label={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key, defaultMessage: filter.key })}`}
             onClick={() => handleFilterClick(filter)}
@@ -352,7 +361,9 @@ export const ActiveFilters = memo((
         title={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
         aria-label={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
       >
-        <FormattedMessage id='filters.reset' defaultMessage='Clear all filters' />
+        <Text component='div' fs='xs' className={classes.activeFiltersText}>
+          <FormattedMessage id='filters.reset' defaultMessage='Clear all filters' />
+        </Text>
         <FontAwesomeIcon icon={faDeleteLeft} fontSize={22} color='var(--mantine-primary-color-filled)' style={{ marginLeft: 8 }}/>
       </Paper>
     </>
