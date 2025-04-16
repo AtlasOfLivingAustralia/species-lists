@@ -244,22 +244,59 @@ public class ElasticUtils {
 
             // For each key, create a sub-bool query with OR logic
             filtersByKey.forEach((key, filtersForKey) -> {
-                bq.must(keyQuery ->
-                    keyQuery.bool(keyBool -> {
-                        if (filtersForKey.size() == 1) {
-                            // Single filter for this key
-                            Filter filter = filtersForKey.get(0);
-                            keyBool.must(m -> m.term(t -> t.field(getPropertiesFacetField(filter.getKey())).value(filter.getValue())));
-                        } else {
-                            // Multiple filters with OR logic
-                            filtersForKey.forEach(filter ->
-                                keyBool.should(m -> m.term(t -> t.field(getPropertiesFacetField(filter.getKey())).value(filter.getValue())))
-                            );
-                            keyBool.minimumShouldMatch("1");
-                        }
-                        return keyBool;
-                    })
-                );
+                // For handling properties filters specifically
+                if (key.startsWith("properties.")) {
+                    String propertyField = key.substring("properties.".length());
+                    Filter filter = filtersForKey.get(0);
+                    List<String> values = filtersForKey.stream().map(Filter::getValue).toList();
+                    // Add nested query for properties
+                    bq.must(m -> m.nested(n -> n
+                        .path("properties")
+                        .query(nq -> nq
+                            .bool(nbq -> nbq
+                                .must(nm -> nm.term(t -> t.field("properties.key.keyword").value(propertyField)))
+                                .must(nm -> nm.term(t -> t.field("properties.value.keyword").value(filter.getValue())))
+                            )
+                        )
+                        .query(q -> q.bool(propBq -> {
+                            // First match the property key
+                            propBq.must(pm -> pm.term(pt -> pt.field("properties.key.keyword").value(propertyField)));
+
+                            // Then match any of the values (OR)
+                            if (values.size() == 1) {
+                                propBq.must(pm -> pm.term(pt -> pt.field("properties.value.keyword").value(filter.getValue())));
+                            } else {
+                                propBq.must(pm -> pm.bool(valuesBq -> {
+                                    for (String value : values) {
+                                        valuesBq.should(s -> s.term(t -> t.field("properties.value.keyword").value(value)));
+                                    }
+                                    return valuesBq;
+                                }));
+                            }
+                            return propBq;
+                        }))
+                    ));
+                }
+                // Handle other filters as normal
+                else {
+                    // Existing filter handling code
+                    bq.must(keyQuery ->
+                        keyQuery.bool(keyBool -> {
+                            if (filtersForKey.size() == 1) {
+                                // Single filter for this key
+                                Filter filter = filtersForKey.get(0);
+                                keyBool.must(m -> m.term(t -> t.field(getPropertiesFacetField(filter.getKey())).value(filter.getValue())));
+                            } else {
+                                // Multiple filters with OR logic
+                                filtersForKey.forEach(filter ->
+                                    keyBool.should(m -> m.term(t -> t.field(getPropertiesFacetField(filter.getKey())).value(filter.getValue())))
+                                );
+                                keyBool.minimumShouldMatch("1");
+                            }
+                            return keyBool;
+                        })
+                    );
+                }
             });
         }
     }

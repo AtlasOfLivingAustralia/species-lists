@@ -1065,6 +1065,13 @@ public class GraphQLController {
           Aggregation.of(a -> a.terms(ta -> ta.field(classificationField + ".keyword").size(500))));
     }
 
+    // Add properties.key aggregation for property facets
+    builder.withAggregation(
+        "properties_keys",
+        Aggregation.of(a -> a.nested(na -> na.path("properties"))
+            .aggregations("key_counts", sa -> sa.terms(ta -> ta.field("properties.key.keyword").size(100))))
+    );
+
     Query aggQuery = builder.build();
     SearchHits<SpeciesListIndex> results =
         elasticsearchOperations.search(aggQuery, SpeciesListIndex.class);
@@ -1101,6 +1108,97 @@ public class GraphQLController {
               facets.add(facet);
             }
           });
+    }
+
+    // First identify all keys from the properties_keys aggregation
+    List<String> propertyKeys = new ArrayList<>();
+    ElasticsearchAggregation propertiesAgg = agg.aggregations().stream()
+        .filter(elasticsearchAggregation ->
+            elasticsearchAggregation.aggregation().getName().equals("properties_keys"))
+        .findFirst()
+        .orElse(null);
+
+    if (propertiesAgg != null) {
+      Aggregate nestedAgg = propertiesAgg.aggregation().getAggregate();
+      if (nestedAgg.isNested()) {
+        Aggregate keyCountsAgg = nestedAgg.nested().aggregations().get("key_counts");
+        if (keyCountsAgg != null && keyCountsAgg.isSterms()) {
+          List<StringTermsBucket> keyBuckets = keyCountsAgg.sterms().buckets().array();
+          keyBuckets.forEach(bucket -> {
+            propertyKeys.add(bucket.key().stringValue());
+          });
+        }
+      }
+    }
+
+    // For each property key, create a new facet with key.value pairs
+    for (String propertyKey : propertyKeys) {
+      // Create an aggregation for this specific key
+      NativeQueryBuilder keyValueBuilder = NativeQuery.builder();
+
+      // Copy the main query constraints
+      keyValueBuilder.withQuery(
+          q -> q.bool(bq -> {
+            if (speciesList.getId() != null) {
+              bq.must(m -> m.term(t -> t.field(SPECIES_LIST_ID).value(speciesList.getId())));
+            }
+            if (StringUtils.isNotEmpty(searchQuery)) {
+              bq.must(m -> m.queryString(qs -> qs.query(ElasticUtils.cleanRawQuery(searchQuery))));
+            }
+            return bq;
+          })
+      );
+
+      // Add nested aggregation for this specific property key's values
+      keyValueBuilder.withAggregation(
+          propertyKey + "_values",
+          Aggregation.of(a -> a.nested(na -> na.path("properties"))
+              .aggregations("filtered_values", sa -> sa.filter(f -> f.term(t -> t.field("properties.key.keyword").value(propertyKey)))
+                  .aggregations("value_counts", va -> va.terms(ta -> ta.field("properties.value.keyword").size(100)))
+              )
+          )
+      );
+
+      // Execute the query for this key
+      Query keyValueQuery = keyValueBuilder.build();
+      SearchHits<SpeciesListIndex> keyValueResults = elasticsearchOperations.search(keyValueQuery, SpeciesListIndex.class);
+
+      ElasticsearchAggregations keyValueAggs = (ElasticsearchAggregations) keyValueResults.getAggregations();
+      if (keyValueAggs != null) {
+        ElasticsearchAggregation keyValueAgg = keyValueAggs.aggregations().stream()
+            .filter(a -> a.aggregation().getName().equals(propertyKey + "_values"))
+            .findFirst()
+            .orElse(null);
+
+        if (keyValueAgg != null) {
+          Aggregate nestedKeyValueAgg = keyValueAgg.aggregation().getAggregate();
+          if (nestedKeyValueAgg.isNested()) {
+            Aggregate filteredValuesAgg = nestedKeyValueAgg.nested().aggregations().get("filtered_values");
+            if (filteredValuesAgg != null && filteredValuesAgg.isFilter()) {
+              Aggregate valueCountsAgg = filteredValuesAgg.filter().aggregations().get("value_counts");
+              if (valueCountsAgg != null && valueCountsAgg.isSterms()) {
+                List<StringTermsBucket> valueBuckets = valueCountsAgg.sterms().buckets().array();
+                if (!valueBuckets.isEmpty()) {
+                  Facet propertyValueFacet = new Facet();
+                  propertyValueFacet.setKey("properties." + propertyKey);
+                  propertyValueFacet.setCounts(new ArrayList<>());
+
+                  valueBuckets.forEach(bucket -> {
+                    propertyValueFacet.getCounts().add(
+                        new FacetCount(
+                            bucket.key().stringValue(),
+                            bucket.docCount()
+                        )
+                    );
+                  });
+
+                  facets.add(propertyValueFacet);
+                }
+              }
+            }
+          }
+        }
+      }
     }
 
     return facets;

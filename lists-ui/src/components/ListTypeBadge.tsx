@@ -24,7 +24,7 @@ export function ListTypeBadge({listTypeValue, iconSide = 'left'} : {listTypeValu
         pl={listIcon && iconSide === 'left' ? 6 : 0} 
         component="span"
       >
-        <FormattedMessage id={listTypeValue} defaultMessage={listTypeValue}/>
+        <FormattedMessage id={listTypeValue || 'filter.key.missing'} defaultMessage={listTypeValue}/>
       </Text>
       {iconSide === 'right' && (
         <Box style={{ display: 'flex', alignItems: 'center', paddingLeft: 8  }}>
