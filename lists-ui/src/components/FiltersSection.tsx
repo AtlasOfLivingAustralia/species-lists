@@ -237,7 +237,7 @@ export const FiltersSection = memo(
     
     // Store the first indices of boolean facets
     const firstBooleanIndex = sortedFacets.findIndex(
-      (item) => BOOLEAN_FACETS.includes(item.key) && item.counts.length > 0
+      (item) => BOOLEAN_FACETS.includes(item.key) && item.counts.length === 2 // must have counts for both true and false "counts"
     );
 
     const emptyFacets = useMemo(
