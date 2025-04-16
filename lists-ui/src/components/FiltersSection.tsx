@@ -10,7 +10,6 @@ import {
   Checkbox,
   Tooltip,
   ThemeIcon,
-  Box,
 } from '@mantine/core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
