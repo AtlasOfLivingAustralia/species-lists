@@ -162,8 +162,8 @@ export const FacetComponent = memo(
         {/* Render header only for non-boolean facets */}
         {!isBooleanFacet && (
           <Group justify='space-between' style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
-            <Text size='md' className={classes.facetHeader}>
-              <FormattedMessage id={facet.key} defaultMessage={removeFilterPrefix(facet.key)}
+            <Text size='md' className={classes.facetHeader} component='span'>
+              <FormattedMessage id={facet.key || 'filter.key.missing'} defaultMessage={removeFilterPrefix(facet.key)}
               />{' '}
               <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.nonBoolean.tooltip', defaultMessage: '' })} />
             </Text>
@@ -172,8 +172,8 @@ export const FacetComponent = memo(
               color='dark'
               size='sm'
               onClick={handleToggle}
-              title={`${intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Toggle filters for' })} ${intl.formatMessage({ id: facet.key, defaultMessage: facet.key })}`}
-              aria-label={`${intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Toggle filters for' })} ${intl.formatMessage({ id: facet.key, defaultMessage: facet.key })}`}
+              title={`${intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Toggle filters for' })} ${intl.formatMessage({ id: facet.key || 'filter.key.missing', defaultMessage: facet.key })}`}
+              aria-label={`${intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Toggle filters for' })} ${intl.formatMessage({ id: facet.key || 'filter.key.missing', defaultMessage: facet.key })}`}
             >
               <FontAwesomeIcon icon={isExpanded ? faMinus : faPlus} />
             </ActionIcon>
@@ -336,11 +336,11 @@ export const ActiveFilters = memo((
           className={classes.activeFiltersPaper}
         >
           <Text component='div' fs='xs' className={classes.activeFiltersText}>
-            <FormattedMessage id={filter.key} defaultMessage={removeFilterPrefix(filter.key)}/>
+            <FormattedMessage id={filter.key || 'filter.key.missing'} defaultMessage={removeFilterPrefix(filter.key)}/>
             { filter.value && filter.value !== 'true' && filter.value !== 'false' && (
               <>
                 :{' '}
-                <FormattedMessage id={filter.value} defaultMessage={filter.value}/>
+                <FormattedMessage id={filter.value || 'filter.value.missing'} defaultMessage={filter.value}/>
               </>
             )}
           </Text>
@@ -350,8 +350,8 @@ export const ActiveFilters = memo((
             size='xs'
             ml='xs'
             mt={1}
-            title={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key, defaultMessage: removeFilterPrefix(filter.key) })}`}
-            aria-label={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key, defaultMessage: removeFilterPrefix(filter.key) })}`}
+            title={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key || 'filter.key.missing', defaultMessage: removeFilterPrefix(filter.key) })}`}
+            aria-label={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key || 'filter.key.missing', defaultMessage: removeFilterPrefix(filter.key) })}`}
             onClick={() => handleFilterClick(filter)}
           >
             <FontAwesomeIcon icon={faClose} fontSize={14} />
