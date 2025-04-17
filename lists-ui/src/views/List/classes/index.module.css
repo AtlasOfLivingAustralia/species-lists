@@ -5,3 +5,41 @@
   font-size: var(--mantine-font-size-sm);
   padding-bottom: 4px;
 }
+
+.title {
+  font-weight: 600;
+  margin-bottom: 0px;
+  margin-top: 0px;
+  color: var(--mantine-color-text);
+}
+
+.speciesHeader {
+  padding: 10px 20px 15px 20px;
+  z-index: 0;
+  background-repeat: no-repeat;
+  background-position: right -10px top -20px;
+
+  @mixin light {
+      background-color: var(--mantine-color-concrete-0);
+      background-image: url('/logo/logo-back-light.svg');
+  }
+
+  @mixin dark {
+      background-color: var(--mantine-color-charcoal-9);
+      background-image: url('/logo/logo-back-dark.svg');
+  }
+}
+
+.listTitlePrefix {
+  @mixin light {
+      color: var(--mantine-color-gray-7) !important;
+  }
+  @mixin dark {
+      color: var(--mantine-color-gray-5) !important;
+  }
+}
+
+.listTitleSeparator {
+  vertical-align: middle !important;
+  padding: 0 5px;
+}

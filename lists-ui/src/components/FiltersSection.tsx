@@ -10,6 +10,7 @@ import {
   Checkbox,
   Tooltip,
   ThemeIcon,
+  Button,
 } from '@mantine/core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -18,6 +19,7 @@ import {
   faInfoCircle,
   faMinus,
   faPlus,
+  faSliders,
 } from '@fortawesome/free-solid-svg-icons';
 import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 
@@ -60,7 +62,7 @@ const renderCheckbox = (
       label={
         // The label structure remains the same
         <Paper className={classes.checkboxPaper}>
-          <ListTypeBadge listTypeValue={key} iconSide="right"/>
+          <ListTypeBadge listTypeValue={key} iconSide='right' />
           <Chip
             size="xs"
             checked={isChecked}
@@ -69,6 +71,7 @@ const renderCheckbox = (
               label: classes.countsChipLabel,
               iconWrapper: classes.countsChipIconWrapper,
             }}
+            style={{ marginLeft: 'auto' }}
           >
             <FormattedNumber value={countItem.count} />
           </Chip>
@@ -80,7 +83,7 @@ const renderCheckbox = (
 
 function InfoTooltip({ tooltipText }: { tooltipText: string }) {
   return (
-    <Tooltip label={tooltipText} withArrow position="top">
+    <Tooltip label={tooltipText} withArrow position="top" component="span">
       <ThemeIcon size="sm" variant="transparent" color="main" opacity={0.8} style={{ cursor: 'pointer' }}>
         <FontAwesomeIcon icon={faInfoCircle} size="sm" />
       </ThemeIcon>
@@ -161,7 +164,7 @@ export const FacetComponent = memo(
         > 
         {/* Render header only for non-boolean facets */}
         {!isBooleanFacet && (
-          <Group justify='space-between' style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
+          <Group justify='space-between' className={classes.facetGroup}>
             <Text size='md' className={classes.facetHeader} component='span'>
               <FormattedMessage id={facet.key || 'filter.key.missing'} defaultMessage={removeFilterPrefix(facet.key)}
               />{' '}
@@ -201,7 +204,7 @@ export const FacetComponent = memo(
           })()
         ) : (
           // --- Non-boolean Facet Rendering ---
-          <Collapse in={isExpanded} >
+          <Collapse in={isExpanded} className={classes.collapse}>
             {sortedCounts.map((item) => {
               const isChecked = isValueActive(item.value);
               return renderCheckbox(
@@ -281,10 +284,10 @@ export const FiltersSection = memo(
 
     return (
       <>
-        <Text size='lg' fw='bold' opacity={0.85}>
+        <Text size='md' fw='bold' opacity={0.85}>
           <FormattedMessage id='filters.title' defaultMessage='Refine results' />
         </Text>
-        <Stack gap={4} mt="xs" mb="md" pb={4}>
+        <Stack gap={4} mt={3} mb="md" pb={4}>
           { hasEmptyFacets && (
             <Text size='sm' color='dimmed'>
               <FormattedMessage id='filters.empty' defaultMessage='No filters available' />
@@ -321,6 +324,9 @@ export const ActiveFilters = memo((
     resetFilters: () => void;
 }) => {
   const intl = useIntl();
+  const sanitizeText = (key: string) => {
+    return key.replace(/<[^>]*>/g, '');
+  };
 
   return (
     <>
@@ -336,11 +342,11 @@ export const ActiveFilters = memo((
           className={classes.activeFiltersPaper}
         >
           <Text component='div' fs='xs' className={classes.activeFiltersText}>
-            <FormattedMessage id={filter.key || 'filter.key.missing'} defaultMessage={removeFilterPrefix(filter.key)}/>
+            <FormattedMessage id={sanitizeText(filter.key) || 'filter.key.missing'} defaultMessage={removeFilterPrefix(filter.key)}/>
             { filter.value && filter.value !== 'true' && filter.value !== 'false' && (
               <>
                 :{' '}
-                <FormattedMessage id={filter.value || 'filter.value.missing'} defaultMessage={filter.value}/>
+                <FormattedMessage id={sanitizeText(filter.value) || 'filter.value.missing'} defaultMessage={sanitizeText(filter.value)}/>
               </>
             )}
           </Text>
@@ -374,3 +380,23 @@ export const ActiveFilters = memo((
     </>
   )
 })
+
+export default function ToggleFiltersButton({ toggleFilters, hidefilters }: { toggleFilters: () => void; hidefilters: boolean }) {
+  return (
+    <Button
+      size= 'sm' 
+      leftSection={<FontAwesomeIcon icon={faSliders} fontSize={14}/>}
+      variant='default'
+      classNames={{root: classes.filtersDisplayButton}}
+      radius="md"
+      fw="normal"
+      ml="auto"
+      onClick={toggleFilters}
+    >
+      { hidefilters 
+      ? <FormattedMessage id='filters.hide' defaultMessage='Show Filters' /> 
+      : <FormattedMessage id='filters.show' defaultMessage='Hide Filters' /> 
+    }
+    </Button>
+  );
+}

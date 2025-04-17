@@ -19,6 +19,10 @@
   "classification.scientificName": "Scientific name",
   "classification.vernacularName": "Vernacular name",
   "classification.speciesSubgroup": "Species groups",
+  "classification.taxonConceptID": "Taxon concept ID",
+  "classification.taxonID": "Taxon ID",
+  "classification.rank": "Taxon rank",
+  "classification.rankID": "Taxon rank ID",
 
   "isAuthoritative": "Authoritative",
   "listType": "List type",
@@ -30,6 +34,8 @@
   "false": "no",
   "taxon": "taxon",
   "taxa": "taxa",
+  "lists.title": "Species Lists",
+  "lists.subtitle": "Discover, create and manage taxonomic lists with custom attributes like traits, geographic extent, conservation status, sensitivity, invasiveness, etc.",
 
   "lastUpdated_desc": "Date (latest)",
   "lastUpdated_asc": "Date (oldest)",
@@ -62,9 +68,9 @@
   "date.created": "Created",
 
   "facet.flag.label": "List flags",
-  "filters.nonBoolean.tooltip":"A list can only have one value for this filter. Selecting mulitple options will result in values being OR'ed together",
-  "filters.boolean.tooltip":"A list can have multiple flags. Selecting mulitple options will result in values being AND'ed together",
-  "filter.key.missing": "Unknown filter",
+  "filters.nonBoolean.tooltip":"An entry can only have one value for this filter. Selecting mulitple options will result in values being OR'ed together",
+  "filters.boolean.tooltip":"An entry can have multiple flags. Selecting mulitple options will result in values being AND'ed together",
+  "filter.key.missing": "[No value provided]",
   "filters.toggle.label": "Toggle filters",
   "filters.title": "Refine results",
   "filters.empty": "No filters available",

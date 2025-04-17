@@ -20,7 +20,6 @@ import { Outlet, useNavigation } from 'react-router';
 // Authentication
 import { useAuth } from 'react-oidc-context';
 import handleSignout from '../../helpers/auth/handleSignout';
-import { Breadcrumbs } from './components/Breadcrumbs';
 import { ExternalBanner } from '#/components/ExternalBanner';
 
 function Dashboard() {
@@ -60,7 +59,6 @@ function Dashboard() {
         onSearchClick={() => (window.location.href = 'https://bie.ala.org.au')}
       />
       <Divider />
-      <Breadcrumbs />
       <Outlet />
       <Divider mt='xl' />
       <Footer />

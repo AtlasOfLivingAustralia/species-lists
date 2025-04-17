@@ -20,11 +20,20 @@
   border-bottom: 1px solid var(--mantine-color-default-border);
 }
 
+.facetGroup {
+  border-top: 1px solid var(--mantine-color-default-border);
+}
+
 .facetHeader {
   font-size: var(--mantine-font-size-sm);
   font-weight: bold;
   opacity: 0.8;
   padding: 4px 0px 4px 0px;
+}
+
+.collapse {
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .countsChipRoot {
@@ -62,7 +71,7 @@
 .checkboxPaper {
   display: flex;
   justify-content: space-between;
-  align-items: left;
+  align-items: center;
   text-align: left;
   width: 100%;
   border-radius: 0;

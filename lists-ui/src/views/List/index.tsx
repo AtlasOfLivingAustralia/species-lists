@@ -9,6 +9,7 @@ import {
   Center,
   Collapse,
   Container,
+  em,
   Flex,
   Grid,
   Group,
@@ -26,6 +27,7 @@ import {
   useDebouncedValue,
   useDisclosure,
   useDocumentTitle,
+  useMediaQuery,
   useMounted,
 } from '@mantine/hooks';
 
@@ -52,7 +54,7 @@ import {
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMagnifyingGlass, faPlus, faSliders, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faAngleRight, faMagnifyingGlass, faPlus, faSliders, faXmark } from '@fortawesome/free-solid-svg-icons';
 
 import tableClasses from './classes/Table.module.css';
 
@@ -70,7 +72,7 @@ import { useALA } from '#/helpers/context/useALA';
 import { Flags } from './components/Flags';
 import { Actions } from './components/Actions';
 import { Summary } from './components/Summary';
-import { ActiveFilters, FiltersSection } from '#/components/FiltersSection';
+import ToggleFiltersButton, { ActiveFilters, FiltersSection } from '#/components/FiltersSection';
 import { ThSortable } from './components/Table/ThSortable';
 import { Dates } from './components/Dates';
 import PageLoader from '#/components/PageLoader';
@@ -78,6 +80,7 @@ import { getAccessToken } from '#/helpers/utils/getAccessToken';
 
 // Styles
 import classes from './classes/index.module.css';
+import { Breadcrumbs } from '../Dashboard/components/Breadcrumbs';
 
 interface ListLoaderData {
   meta: SpeciesList;
@@ -100,7 +103,8 @@ export function List() {
   const [list, setList] = useState<FilteredSpeciesList | null>(null);
   const [meta, setMeta] = useState<SpeciesList | null>(null);
 
-  useDocumentTitle(`ALA Lists | ${meta?.title || 'Loading...'}`);
+  useDocumentTitle(meta?.title || 'Loading...');
+  const isMobile = useMediaQuery(`(max-width: ${em(750)})`) || false;
 
   // Search
   const [search, setSearch] = useQueryState<string>(
@@ -256,6 +260,15 @@ export function List() {
     },
     [sort, dir]
   );
+
+  useEffect(() => {
+    // Hide filters for mobile devices
+    if (isMobile) {
+      setHideFilters(true);
+    } else {
+      setHideFilters(false);
+    }
+  }, [isMobile]);
 
   const resetFilters = useCallback(
     () => {
@@ -436,12 +449,27 @@ export function List() {
         onEdited={handleItemEdited}
         onDeleted={handleItemDeleted}
       />
+      <Container fluid className={classes.speciesHeader}>
+        <Grid>
+          <Grid.Col span={12}>
+            <Breadcrumbs listTitle={meta?.title} />
+          </Grid.Col>
+          <Grid.Col span={12}>
+            <Title order={4} classNames={{root: classes.title}}>
+              <Text classNames={{root: classes.listTitlePrefix}} span inherit>
+                <FormattedMessage id='list.title.prefix' defaultMessage='List details' />{' '}
+                <FontAwesomeIcon icon={faAngleRight} size="xs" className={classes.listTitleSeparator} />{' '}
+              </Text>
+              {meta?.title}
+            </Title>
+          </Grid.Col>
+        </Grid>
+      </Container>
       <Container fluid>
         <Grid>
-          <Grid.Col span={12} pb={6}>
+          <Grid.Col span={12} pb={6} mt='lg'>
             <Flex direction='row' justify='space-between' gap={16}>
               <Stack gap='xs' mb={14}>
-                <Title order={4}>{meta?.title}</Title>
                 <Summary meta={meta!} mr={-42} />
                 {(meta?.tags || []).length > 0 && (
                   <Group mt={4} gap={4}>
@@ -517,22 +545,10 @@ export function List() {
           ) : (
             <>
               <Grid.Col span={12}>
-                <Group >
-                  <Button 
-                    size= 'sm' 
-                    leftSection={<FontAwesomeIcon icon={faSliders} fontSize={14}/>}
-                    variant='default'
-                    radius='md'
-                    fw='normal'
-                    onClick={toggleFilters}
-                    aria-label={intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Show or hide filters section' })}
-                    title={intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Show or hide filters section' })}
-                  >
-                  { hidefilters 
-                      ? <FormattedMessage id='filters.hide' defaultMessage='Show Filters' /> 
-                      : <FormattedMessage id='filters.show' defaultMessage='Hide Filters' /> 
-                  }
-                  </Button>
+                <Group>
+                  { !isMobile && (
+                    <ToggleFiltersButton toggleFilters={toggleFilters} hidefilters={hidefilters} />
+                  )}
                   <TextInput
                     style={{ flexGrow: 1 }}
                     disabled={hasError}
@@ -571,11 +587,14 @@ export function List() {
                     }))}
                     aria-label={intl.formatMessage({ id: 'list.page.size.label', defaultMessage: 'Select number of results' })}
                   />
+                  { isMobile && (
+                    <ToggleFiltersButton toggleFilters={toggleFilters} hidefilters={hidefilters} />
+                  )}
                 </Group>
               </Grid.Col>
               {/* Filters appear here */}
               {!hidefilters && (
-                <Grid.Col span={2} mt={4}>
+                <Grid.Col span={{ base: 12, sm: 4, md: 3, lg: 2 }} mt={5}>
                   <Collapse in={!hidefilters}>
                       <FiltersSection
                         facets={facets || []}
@@ -586,7 +605,7 @@ export function List() {
                   </Collapse>
                 </Grid.Col>
               )}
-              <Grid.Col span={hidefilters ? 12 : 10}>
+              <Grid.Col span={{ base: 12, sm: hidefilters ? 12 : 8, md: hidefilters ? 12 : 9, lg: hidefilters ? 12 : 10 }}>
                 { (totalElements && totalElements > 0) ? (
                   <>
                     <Text size='sm' mb={6} mt={6} className={classes.resultsSummary} component='span'>
