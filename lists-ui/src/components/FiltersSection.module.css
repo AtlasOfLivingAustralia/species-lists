@@ -102,7 +102,7 @@
   font-size: var(--mantine-font-size-sm);
   align-items: flex-start;
   white-space: nowrap;
-  overflow-x: hidden;
+  overflow: hidden;
   text-overflow: ellipsis;
 }
 

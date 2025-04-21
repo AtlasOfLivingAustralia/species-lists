@@ -160,7 +160,6 @@ export const FacetComponent = memo(
           className={!isBooleanFacet ? classes.facetPaper : undefined}
           fs="sm"
           radius={0}
-          style={{ maxHeight: 400, overflowY: 'auto' }}
         > 
         {/* Render header only for non-boolean facets */}
         {!isBooleanFacet && (
@@ -313,6 +312,16 @@ export const FiltersSection = memo(
   }
 );
 
+/**
+ * ActiveFilters component that displays the currently selected filters
+ * and allows users to remove them, or reset all filters.
+ * 
+ * @param {Object} props - The component props
+ * @param {KV[]} props.active - The currently active filters.
+ * @param {Function} props.handleFilterClick - Function to handle filter removal.
+ * @param {Function} props.resetFilters - Function to reset all filters.
+ * @returns {JSX.Element} The rendered component.
+ */
 export const ActiveFilters = memo((
   {
     active,
@@ -381,7 +390,15 @@ export const ActiveFilters = memo((
   )
 })
 
-export default function ToggleFiltersButton({ toggleFilters, hidefilters }: { toggleFilters: () => void; hidefilters: boolean }) {
+/**
+ * ToggleFiltersButton component that displays a button to toggle the visibility of filters.
+ * 
+ * @param {Function} props.toggleFilters - Callback to handle filter toggle action.
+ * @param {boolean} props.hidefilters - Boolean indicating whether filters are hidden or not.
+ * @returns {JSX.Element} The rendered component.
+ */
+export default function ToggleFiltersButton({ toggleFilters, hidefilters }
+    : { toggleFilters: () => void; hidefilters: boolean }) {
   return (
     <Button
       size= 'sm' 
