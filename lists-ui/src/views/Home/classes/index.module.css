@@ -5,11 +5,6 @@
   color: var(--mantine-color-text);
 }
 
-.subTitle {
-  font-weight: 600;
-  color: var(--mantine-color-text);
-}
-
 .subtitle {
   font-weight: 500 !important;
   font-size: var(--mantine-font-size-md) !important;

@@ -1,19 +1,14 @@
-import { SpeciesList } from '#/api';
 import {
   Anchor,
   Breadcrumbs as Base,
   Text,
   Group,
 } from '@mantine/core';
-import { Link, useLocation, useRouteLoaderData } from 'react-router';
+import { Link, useLocation } from 'react-router';
 
 import classes from './Breadcrumbs.module.css';
 import { ChevronRightIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { ActionButtons } from '#/components/ActionButtons';
-
-// interface ListLoaderData {
-//   meta: SpeciesList;
-// }
 
 const capitalize = (input?: string) =>
   `${(input || '').charAt(0).toUpperCase()}${(input || '').slice(1)}`;
@@ -32,7 +27,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
 
     // Determine the text for the last breadcrumb item
   let lastItemText: string | null = null;
-  if (isListPage) {
+  if (listTitle || isListPage) {
     if (listTitle) {
       lastItemText = listTitle; // Use title from state if available
     } else if (!isNestedAction) {
