@@ -29,7 +29,7 @@
   font-size: var(--mantine-font-size-sm);
   font-weight: bold;
   opacity: 0.8;
-  padding: 4px 0px 4px 0px;
+  padding-top: 4px;
 }
 
 .collapse {

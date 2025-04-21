@@ -182,7 +182,7 @@ export const FacetComponent = memo(
           </Group>
         )}
         { isBooleanFacet && isShowFlagLabel && (
-            <Text size='md' span className={classes.facetHeader} style={{ width: '100%', borderTop: '1px solid var(--mantine-color-default-border)' }}>
+            <Text size='md' span className={classes.facetHeader} style={{ width: '100%', paddingBottom: '4px', borderTop: '1px solid var(--mantine-color-default-border)' }}>
               <FormattedMessage id='facet.flag.label' defaultMessage='List flags' />{' '}
               <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.boolean.tooltip', defaultMessage: '' })} />
             </Text>
@@ -286,7 +286,7 @@ export const FiltersSection = memo(
         <Text size='md' fw='bold' opacity={0.85}>
           <FormattedMessage id='filters.title' defaultMessage='Refine results' />
         </Text>
-        <Stack gap={4} mt={3} mb="md" pb={4}>
+        <Stack gap={2} mt={3} mb="md" pb={4}>
           { hasEmptyFacets && (
             <Text size='sm' color='dimmed'>
               <FormattedMessage id='filters.empty' defaultMessage='No filters available' />
