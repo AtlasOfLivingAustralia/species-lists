@@ -164,7 +164,7 @@ export const FacetComponent = memo(
         {/* Render header only for non-boolean facets */}
         {!isBooleanFacet && (
           <Group justify='space-between' className={classes.facetGroup}>
-            <Text size='md' className={classes.facetHeader} component='span'>
+            <Text size='md' className={classes.facetHeader} span>
               <FormattedMessage id={facet.key || 'filter.key.missing'} defaultMessage={removeFilterPrefix(facet.key)}
               />{' '}
               <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.nonBoolean.tooltip', defaultMessage: '' })} />
@@ -182,7 +182,7 @@ export const FacetComponent = memo(
           </Group>
         )}
         { isBooleanFacet && isShowFlagLabel && (
-            <Text size='md' className={classes.facetHeader} style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
+            <Text size='md' span className={classes.facetHeader} style={{ width: '100%', borderTop: '1px solid var(--mantine-color-default-border)' }}>
               <FormattedMessage id='facet.flag.label' defaultMessage='List flags' />{' '}
               <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.boolean.tooltip', defaultMessage: '' })} />
             </Text>

@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActionIcon,
   Box,
-  Button,
   Center,
   Checkbox,
   Collapse,
@@ -35,7 +34,7 @@ import {
 
 // Icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEyeSlash, faXmark, faSliders, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faEyeSlash, faXmark, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
 
 // Project components
