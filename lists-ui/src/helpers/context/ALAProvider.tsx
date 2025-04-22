@@ -8,6 +8,7 @@ import ALAContext from './ALAContext';
 import { SpeciesList } from '../../api';
 import rest from '#/api/rest';
 import classes from '../../Notifications.module.css';
+import { useIntl } from 'react-intl';
 
 const JWT_ROLES = import.meta.env.VITE_AUTH_JWT_ROLES;
 const JWT_USERID = import.meta.env.VITE_AUTH_JWT_USERID;
@@ -15,6 +16,7 @@ const JWT_ADMIN_ROLE = import.meta.env.VITE_AUTH_JWT_ADMIN_ROLE;
 
 export const ALAProvider = ({ children }: PropsWithChildren) => {
   const auth = useAuth();
+  const intl = useIntl();
 
   // Extract the user
   const userid = (auth.user?.profile[JWT_USERID] || '') as string;
@@ -28,8 +30,8 @@ export const ALAProvider = ({ children }: PropsWithChildren) => {
   const showAuthRequiredNotification = () => {
     notifications.show({
       id: 'auth-required',
-      title: 'Login Required',
-      message: 'You need to "Sign in" to access this page',
+      title: intl.formatMessage({ id: 'login.required.title', defaultMessage: 'Login required' }),
+      message: intl.formatMessage({ id: 'login.required.description', defaultMessage: 'You need to "Sign in" to access this page' }),
       withBorder: true,
       icon: <FontAwesomeIcon icon={faLock} fontSize={16}/>,
       autoClose: 10000,
