@@ -14,11 +14,24 @@ import { getAccessToken } from './helpers/utils/getAccessToken';
 
 // Admin API
 import adminApi from './api/rest/admin';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 const JWT_ROLES = import.meta.env.VITE_AUTH_JWT_ROLES;
 const JWT_ADMIN_ROLE = import.meta.env.VITE_AUTH_JWT_ADMIN_ROLE;
 
 const List = lazy(() => import('./views/List'));
+
+// Fix the import based on how your Upload component is exported
+const UploadPage = lazy(() => import('./views/Upload'));
+
+// Wrap the Upload component with ProtectedRoute and Suspense
+const ProtectedUpload = () => (
+  <ProtectedRoute>
+    <Suspense fallback={<div>Loading...</div>}>
+      <UploadPage />
+    </Suspense>
+  </ProtectedRoute>
+);
 
 const router = createBrowserRouter([
   {
@@ -53,7 +66,7 @@ const router = createBrowserRouter([
       },
       {
         path: '/upload',
-        lazy: () => import('./views/Upload'),
+        element: <ProtectedUpload />,
       },
       {
         path: '/admin',

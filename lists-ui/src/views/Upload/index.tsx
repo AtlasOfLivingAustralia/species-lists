@@ -32,7 +32,6 @@ import { getErrorMessage } from '#/helpers';
 import { ListMeta } from '#/components/ListMeta';
 import { notifications } from '@mantine/notifications';
 import { useALA } from '#/helpers/context/useALA';
-import { Navigate } from 'react-router';
 import { IngestProgress } from '#/components/IngestProgress';
 import { Breadcrumbs } from '../Dashboard/components/Breadcrumbs';
 
@@ -40,7 +39,7 @@ import classes from './index.module.css';
 
 const ACCEPTED_TYPES: string[] = ['text/csv', 'application/zip'];
 
-export function Component() {
+export default function Component() {
   useDocumentTitle('ALA Lists | Upload');
 
   const [uploading, setUploading] = useState<boolean>(false);
@@ -97,9 +96,6 @@ export function Component() {
     setResult(null);
     setIngestId(null);
   }, []);
-
-  // Redirect to the home screen if not authenticated
-  if (!ala.isAuthenticated) return <Navigate to='/' />;
 
   let idle: { title: ReactNode; content: ReactNode; icon: ReactNode } = {
     title: 'Drag list here, or click to select',

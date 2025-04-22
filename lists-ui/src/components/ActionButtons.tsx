@@ -8,8 +8,6 @@ import { FormattedMessage } from 'react-intl';
 export function ActionButtons() {
   const ala = useALA();
 
-  if (!ala.isAuthenticated) return null;
-
   return (
     <Group gap='xs'>
       <Button
