@@ -17,7 +17,7 @@ export function ActionButtons() {
         to='/upload'
         leftSection={<FontAwesomeIcon icon={faUpload} />}
       >
-        <FormattedMessage id='upload' defaultMessage='Upload List'/>
+        <FormattedMessage id='upload.button.label' defaultMessage='Upload List'/>
       </Button>
       {ala.isAdmin && (
         <Button
