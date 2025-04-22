@@ -44,7 +44,7 @@ import { ListRow } from './components/ListRow';
 // Helpers
 import { getErrorMessage, parseAsFilters } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
-import ToggleFiltersButton, { ActiveFilters, FiltersSection } from '#/components/FiltersSection';
+import { ToggleFiltersButton, ActiveFilters, FiltersSection } from '#/components/FiltersSection';
 
 // Styles
 import classes from './classes/index.module.css';

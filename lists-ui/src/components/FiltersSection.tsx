@@ -397,7 +397,7 @@ export const ActiveFilters = memo((
  * @param {boolean} props.hidefilters - Boolean indicating whether filters are hidden or not.
  * @returns {JSX.Element} The rendered component.
  */
-export default function ToggleFiltersButton({ toggleFilters, hidefilters }
+export function ToggleFiltersButton({ toggleFilters, hidefilters }
     : { toggleFilters: () => void; hidefilters: boolean }) {
   return (
     <Button
