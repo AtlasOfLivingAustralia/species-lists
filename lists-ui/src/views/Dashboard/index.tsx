@@ -56,12 +56,14 @@ function Dashboard() {
             auth.signinRedirect();
           }
         }}
-        onSearchClick={() => (window.location.href = 'https://bie.ala.org.au')}
+        onSearchClick={() => (window.location.href = 'https://bie.ala.org.au')
+        }
+        fullWidth={true}
       />
       <Divider />
       <Outlet />
       <Divider mt='xl' />
-      <Footer />
+      <Footer fullWidth={true} />
       <IndigenousAcknowledgement />
     </>
   );
