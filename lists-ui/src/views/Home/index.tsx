@@ -154,11 +154,7 @@ function Home() {
 
   useEffect(() => {
     // Hide filters for mobile devices
-    if (isMobile) {
-      setHideFilters(true);
-    } else {
-      setHideFilters(false);
-    }
+    setHideFilters(isMobile);
   }, [isMobile]);
   
 

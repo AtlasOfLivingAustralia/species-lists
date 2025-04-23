@@ -56,7 +56,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
             <Text size='sm'>Species lists</Text>
           )}
           {/* Link to the specific list (if applicable and not the last item) */}
-          {isListPage && isNestedAction && listTitle && (
+          { isNestedAction && (
             <Anchor component={Link} to={`/list/${parts[1]}`} className={classes.link} size='sm' truncate="end">
               {listTitle}
             </Anchor>

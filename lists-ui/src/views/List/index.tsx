@@ -1,6 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useRef, useState } from 'react';
-
 import {
   ActionIcon,
   Badge,
@@ -30,7 +29,6 @@ import {
   useMediaQuery,
   useMounted,
 } from '@mantine/hooks';
-
 import {
   FilteredSpeciesList,
   SpeciesList,
@@ -54,7 +52,7 @@ import {
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faAngleRight, faMagnifyingGlass, faPlus, faSliders, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faAngleRight, faMagnifyingGlass, faPlus, faXmark } from '@fortawesome/free-solid-svg-icons';
 
 import tableClasses from './classes/Table.module.css';
 
@@ -72,7 +70,7 @@ import { useALA } from '#/helpers/context/useALA';
 import { Flags } from './components/Flags';
 import { Actions } from './components/Actions';
 import { Summary } from './components/Summary';
-import ToggleFiltersButton, { ActiveFilters, FiltersSection } from '#/components/FiltersSection';
+import { ToggleFiltersButton, ActiveFilters, FiltersSection } from '#/components/FiltersSection';
 import { ThSortable } from './components/Table/ThSortable';
 import { Dates } from './components/Dates';
 import PageLoader from '#/components/PageLoader';
@@ -263,11 +261,7 @@ export function List() {
 
   useEffect(() => {
     // Hide filters for mobile devices
-    if (isMobile) {
-      setHideFilters(true);
-    } else {
-      setHideFilters(false);
-    }
+    setHideFilters(isMobile);
   }, [isMobile]);
 
   const resetFilters = useCallback(

@@ -4,6 +4,7 @@ import { FormattedMessage } from "react-intl";
 import { faShieldHalved } from '@fortawesome/free-solid-svg-icons';
 import { faMap, faStar } from '@fortawesome/free-regular-svg-icons';
 import AlaIcon from '#/static/ala-logo-grey.svg?react';
+import sanitiseText from "#/helpers/utils/sanitiseText";
 
 const listTypeValues: Record<string, React.ReactNode> = {
   "isAuthoritative": <FontAwesomeIcon icon={faStar} fontSize={16} color='grey'/>,
@@ -14,8 +15,8 @@ const listTypeValues: Record<string, React.ReactNode> = {
 
 export function ListTypeBadge({listTypeValue, iconSide = 'left'} : {listTypeValue: string, iconSide?: 'left' | 'right'}) {
   const listIcon = listTypeValues[listTypeValue] || null;
-  // sanitize the listTypeValue to prevent XSS attacks
-  const sanitizedListTypeValue = listTypeValue.replace(/<[^>]*>/g, '');
+  // sanitise the listTypeValue to prevent XSS attacks
+  const sanitisedListTypeValue = sanitiseText(listTypeValue);
 
   return (
     <Box style={{ display: 'flex', alignItems: 'center', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100%' }}>
@@ -26,7 +27,7 @@ export function ListTypeBadge({listTypeValue, iconSide = 'left'} : {listTypeValu
         pl={listIcon && iconSide === 'left' ? 6 : 0} 
         component='span'
       >
-        <FormattedMessage id={sanitizedListTypeValue || 'filter.key.missing'} defaultMessage={sanitizedListTypeValue}/>
+        <FormattedMessage id={sanitisedListTypeValue || 'filter.key.missing'} defaultMessage={sanitisedListTypeValue}/>
       </Text>
       {iconSide === 'right' && (
         <Box style={{ display: 'flex', alignItems: 'center', paddingLeft: 6  }}>

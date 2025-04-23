@@ -23,9 +23,11 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 
-import classes from './FiltersSection.module.css';
-import { Facet, KV } from '#/api';
 import { ListTypeBadge } from './ListTypeBadge';
+import { Facet, KV } from '#/api';
+import sanitiseText from '#/helpers/utils/sanitiseText';
+
+import classes from './FiltersSection.module.css';
 
 interface FiltersDrawerProps {
   facets: Facet[];
@@ -182,7 +184,7 @@ export const FacetComponent = memo(
           </Group>
         )}
         { isBooleanFacet && isShowFlagLabel && (
-            <Text size='md' span className={classes.facetHeader} style={{ width: '100%', paddingBottom: '4px', borderTop: '1px solid var(--mantine-color-default-border)' }}>
+            <Text size='md' span className={classes.facetHeader + ' ' + classes.facetHeaderBoolean} >
               <FormattedMessage id='facet.flag.label' defaultMessage='List flags' />{' '}
               <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.boolean.tooltip', defaultMessage: '' })} />
             </Text>
@@ -333,9 +335,6 @@ export const ActiveFilters = memo((
     resetFilters: () => void;
 }) => {
   const intl = useIntl();
-  const sanitizeText = (key: string) => {
-    return key.replace(/<[^>]*>/g, '');
-  };
 
   return (
     <>
@@ -351,11 +350,11 @@ export const ActiveFilters = memo((
           className={classes.activeFiltersPaper}
         >
           <Text component='div' fs='xs' className={classes.activeFiltersText}>
-            <FormattedMessage id={sanitizeText(filter.key) || 'filter.key.missing'} defaultMessage={removeFilterPrefix(filter.key)}/>
+            <FormattedMessage id={sanitiseText(filter.key) || 'filter.key.missing'} defaultMessage={removeFilterPrefix(filter.key)}/>
             { filter.value && filter.value !== 'true' && filter.value !== 'false' && (
               <>
                 :{' '}
-                <FormattedMessage id={sanitizeText(filter.value) || 'filter.value.missing'} defaultMessage={sanitizeText(filter.value)}/>
+                <FormattedMessage id={sanitiseText(filter.value) || 'filter.value.missing'} defaultMessage={sanitiseText(filter.value)}/>
               </>
             )}
           </Text>
@@ -411,8 +410,8 @@ export function ToggleFiltersButton({ toggleFilters, hidefilters }
       onClick={toggleFilters}
     >
       { hidefilters 
-      ? <FormattedMessage id='filters.hide' defaultMessage='Show Filters' /> 
-      : <FormattedMessage id='filters.show' defaultMessage='Hide Filters' /> 
+        ? <FormattedMessage id='filters.show' defaultMessage='Show Filters' />  
+        : <FormattedMessage id='filters.hide' defaultMessage='Hide Filters' />
     }
     </Button>
   );
