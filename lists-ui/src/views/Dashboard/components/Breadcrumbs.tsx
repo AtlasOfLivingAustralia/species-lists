@@ -1,33 +1,44 @@
-import { SpeciesList } from '#/api';
 import {
   Anchor,
-  Container,
   Breadcrumbs as Base,
   Text,
   Group,
 } from '@mantine/core';
-import { Link, useLocation, useRouteLoaderData } from 'react-router';
+import { Link, useLocation } from 'react-router';
 
 import classes from './Breadcrumbs.module.css';
 import { ChevronRightIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { ActionButtons } from '#/components/ActionButtons';
 
-interface ListLoaderData {
-  meta: SpeciesList;
-}
-
 const capitalize = (input?: string) =>
   `${(input || '').charAt(0).toUpperCase()}${(input || '').slice(1)}`;
 
-export function Breadcrumbs() {
-  const { meta } = (useRouteLoaderData('list') as ListLoaderData) || {};
+interface BreadcrumbsProps {
+  listTitle: string | undefined;
+}
+
+export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
+  // const { meta } = (useRouteLoaderData('list') as ListLoaderData) || {};
   const { pathname } = useLocation();
 
   const parts = pathname.split('/').slice(1);
-  const isNested = parts.length > 1 || parts[0] !== '';
+  const isListPage = parts[0] === 'list' && parts.length > 1;
+  const isNestedAction = isListPage && parts.length > 2; // e.g., /list/123/edit
+
+    // Determine the text for the last breadcrumb item
+  let lastItemText: string | null = null;
+  if (listTitle || isListPage) {
+    if (listTitle) {
+      lastItemText = listTitle; // Use title from state if available
+    } else if (!isNestedAction) {
+      lastItemText = 'Loading list...'; // Placeholder while loading
+    } else {
+      lastItemText = capitalize(parts[parts.length -1]); // Use last path part for actions like 'edit'
+    }
+  }
 
   return (
-    <Container pt='lg' mb='xl' fluid>
+    <>
       <Group justify='space-between'>
         <Base
           className={classes.breadcrumbs}
@@ -37,21 +48,28 @@ export function Breadcrumbs() {
           <Anchor href='https://ala.org.au' className={classes.link} size='sm'>
             Home
           </Anchor>
-          {isNested ? (
+          {parts.length > 0 ?  (
             <Anchor component={Link} to='/' className={classes.link} size='sm'>
               Species lists
             </Anchor>
           ) : (
             <Text size='sm'>Species lists</Text>
           )}
-          {isNested && (
+          {/* Link to the specific list (if applicable and not the last item) */}
+          { isNestedAction && (
+            <Anchor component={Link} to={`/list/${parts[1]}`} className={classes.link} size='sm' truncate="end">
+              {listTitle}
+            </Anchor>
+          )}
+          {/* Display the final item */}
+          {lastItemText && (
             <Text size='sm' truncate='end'>
-              {meta ? meta.title : capitalize(parts.pop())}
+              {lastItemText}
             </Text>
           )}
         </Base>
         <ActionButtons />
       </Group>
-    </Container>
+    </>
   );
 }

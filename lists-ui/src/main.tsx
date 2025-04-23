@@ -41,6 +41,7 @@ function Main() {
             <ALAProvider>
               <Notifications
                 transitionDuration={400}
+                position="top-right"
                 classNames={notificationStyles}
               />
               <App />
