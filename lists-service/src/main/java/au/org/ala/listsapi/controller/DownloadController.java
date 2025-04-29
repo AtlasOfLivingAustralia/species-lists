@@ -69,7 +69,7 @@ public class DownloadController {
 
   @SecurityRequirement(name = "JWT")
   @Operation(summary = "Download a species list in CSV format", tags = "REST")
-  @GetMapping("/download/{speciesListID}")
+  @GetMapping("/v1/download/{speciesListID}")
   public ResponseEntity<Object> download(
       @PathVariable("speciesListID") String speciesListID,
       @AuthenticationPrincipal Principal principal,

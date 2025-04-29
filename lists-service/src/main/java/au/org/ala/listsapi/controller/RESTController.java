@@ -61,7 +61,7 @@ public class RESTController {
 
   @Operation(tags = "REST", summary = "Get species list metadata")
   @Tag(name = "REST", description = "REST Services for species lists lookups")
-  @GetMapping("/speciesList/{speciesListID}")
+  @GetMapping("/v1/speciesList/{speciesListID}")
   public ResponseEntity<SpeciesList> speciesList(
       @PathVariable("speciesListID") String speciesListID) {
     Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
@@ -75,7 +75,7 @@ public class RESTController {
   }
 
   @Operation(tags = "REST", summary = "Get a list of species lists matching the query")
-  @GetMapping("/speciesList")
+  @GetMapping("/v1/speciesList")
   public ResponseEntity<Object> speciesLists(
       RESTSpeciesListQuery speciesList,
       @RequestParam(name = "page", defaultValue = "1", required = false) int page,
@@ -142,7 +142,7 @@ public class RESTController {
   }
 
   @Operation(tags = "REST", summary = "Get a list of species lists that contain the specified taxon GUID")
-  @GetMapping("/speciesList/byGuid")
+  @GetMapping("/v1/speciesList/byGuid")
   public ResponseEntity<Object> speciesListsByGuid(
           @RequestParam(name = "guid") String guid,
           @RequestParam(name = "page", defaultValue = "1", required = false) int page,
@@ -221,7 +221,7 @@ public class RESTController {
   }
 
   @Operation(tags = "REST", summary = "Get species lists items for a list. List IDs can be a single value, or comma separated IDs.")
-  @GetMapping("/speciesListItems/{speciesListIDs}")
+  @GetMapping("/v1/speciesListItems/{speciesListIDs}")
   public ResponseEntity<Object> speciesListItems(
           @PathVariable("speciesListIDs") String speciesListIDs,
           @Nullable @RequestParam(name = "q") String searchQuery,
@@ -290,7 +290,7 @@ public class RESTController {
   }
 
   @Operation(tags = "REST", summary = "Get details of species list items i.e species for a list of guid(s)")
-  @GetMapping("/species")
+  @GetMapping("/v1/species")
   public ResponseEntity<Object> species(
           @RequestParam(name = "guids") String guids,
           @Nullable @RequestParam(name = "speciesListIDs") String speciesListIDs,
@@ -357,7 +357,7 @@ public class RESTController {
   }
 
   @Operation(tags = "REST", summary = "Get a SOLR query PID for a list")
-  @GetMapping("/speciesListQid/{speciesListID}")
+  @GetMapping("/v1/speciesListQid/{speciesListID}")
   public ResponseEntity<Object> speciesListPid(
           @PathVariable("speciesListID") String speciesListID) {
     try {
@@ -405,7 +405,7 @@ public class RESTController {
   }
 
   @Operation(tags = "REST", summary = "Get a list of keys from KVP common across a list multiple species lists")
-  @GetMapping("/listCommonKeys/{speciesListIDs}")
+  @GetMapping("/v1/listCommonKeys/{speciesListIDs}")
   public ResponseEntity<Object> listCommonKeys(
           @PathVariable("speciesListIDs") String speciesListIDs,
           @AuthenticationPrincipal Principal principal) {

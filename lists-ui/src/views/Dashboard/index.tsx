@@ -58,12 +58,13 @@ function Dashboard() {
         }}
         onSearchClick={() => (window.location.href = 'https://bie.ala.org.au')
         }
-        fullWidth={true}
+        fullWidth 
+        compact
       />
       <Divider />
       <Outlet />
       <Divider mt='xl' />
-      <Footer fullWidth={true} />
+      <Footer fullWidth />
       <IndigenousAcknowledgement />
     </>
   );
