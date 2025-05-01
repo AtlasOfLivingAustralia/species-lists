@@ -17,24 +17,28 @@ import java.util.HashMap;
  * Redirects legacy requests to the new API version paths.
  * Handles redirects from:
  * - "/ws/" to "/v1/"
+ * - "/upload", "/ingest", "/delete" to "/v2/upload", "/v2/ingest", "/v2/delete"
  * - Pre-versioned paths to their versioned equivalents
  */
 @Component
 public class WsToV1RedirectFilter extends OncePerRequestFilter {
 
-    private final String oldPrefix;
-    private final String newPrefix;
+    private final String wsPrefix;
+    private final String v1Prefix;
+    private final String v2Prefix;
     private final Map<String, String> preVersionPaths;
 
     public WsToV1RedirectFilter(
-            @Value("${api.old.prefix:/ws}") String oldPrefix,
-            @Value("${api.new.prefix:/v1}") String newPrefix,
+            @Value("${api.ws.prefix:/ws}") String wsPrefix,
+            @Value("${api.v1.prefix:/v1}") String v1Prefix,
+            @Value("${api.v2.prefix:/v2}") String v2Prefix,
             @Value("${api.preversion.upload:/upload}") String preversionUpload,
             @Value("${api.preversion.ingest:/ingest}") String preversionIngest,
             @Value("${api.preversion.delete:/delete}") String preversionDelete) {
 
-        this.oldPrefix = oldPrefix;
-        this.newPrefix = newPrefix;
+        this.wsPrefix = wsPrefix;
+        this.v1Prefix = v1Prefix;
+        this.v2Prefix = v2Prefix;
 
         // Create a map of preversion paths for cleaner code
         this.preVersionPaths = new HashMap<>();
@@ -51,8 +55,8 @@ public class WsToV1RedirectFilter extends OncePerRequestFilter {
         String requestUri = request.getRequestURI();
 
         // Handle old prefix redirect
-        if (requestUri.startsWith(oldPrefix)) {
-            redirect(response, requestUri.replaceFirst(oldPrefix, newPrefix));
+        if (requestUri.startsWith(wsPrefix)) {
+            redirect(response, requestUri.replaceFirst(wsPrefix, v1Prefix));
             return;
         }
 
@@ -60,7 +64,7 @@ public class WsToV1RedirectFilter extends OncePerRequestFilter {
         for (Map.Entry<String, String> entry : preVersionPaths.entrySet()) {
             String path = entry.getKey();
             if (requestUri.startsWith(path)) {
-                redirect(response, requestUri.replaceFirst(path, newPrefix + path));
+                redirect(response, requestUri.replaceFirst(path, v2Prefix + path));
                 return;
             }
         }
