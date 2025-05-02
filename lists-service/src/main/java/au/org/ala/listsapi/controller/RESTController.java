@@ -9,8 +9,6 @@ import au.org.ala.ws.security.profile.AlaUserProfile;
 import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOrder;
-import co.elastic.clients.elasticsearch._types.query_dsl.ChildScoreMode;
-import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import co.elastic.clients.elasticsearch.core.search.FieldCollapse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,7 +20,6 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.*;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
@@ -51,11 +48,11 @@ public class RESTController {
 
   @Autowired protected SpeciesListCustomRepository speciesListCustomRepository;
 
-  @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
-
   @Autowired protected BiocacheService biocacheService;
 
   @Autowired protected AuthUtils authUtils;
+
+  @Autowired protected MongoUtils mongoUtils;
 
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
 
@@ -289,7 +286,7 @@ public class RESTController {
     }
   }
 
-  @Operation(tags = "REST v2", summary = "Get details of species list items i.e species for a list of guid(s)")
+  @Operation(tags = "REST", summary = "Get details of species list items i.e species for a list of guid(s)")
   @GetMapping("/v2/species")
   public ResponseEntity<Object> species(
           @RequestParam(name = "guids") String guids,
@@ -298,58 +295,8 @@ public class RESTController {
           @Nullable @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
           @AuthenticationPrincipal Principal principal) {
     try {
-      AlaUserProfile profile = authUtils.getUserProfile(principal);
-      List<FieldValue> GUIDs = Arrays.stream(guids.split(",")).map(FieldValue::of).toList();
-      List<FieldValue> listIDs = speciesListIDs != null ?
-              Arrays.stream(speciesListIDs.split(",")).map(FieldValue::of).toList() : null;
-
-      if (page < 1 || (page * pageSize) > 10000) {
-        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
-      }
-
-      Pageable pageableRequest = PageRequest.of(page - 1, pageSize);
-      NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
-      builder.withQuery(
-              q ->
-                      q.bool(
-                              bq -> {
-                                bq.filter(f -> f.terms(t -> t.field("classification.taxonConceptID.keyword")
-                                        .terms(ta -> ta.value(GUIDs))));
-
-                                if (listIDs != null) {
-                                  bq.filter(f -> f.bool(b -> b
-                                          .should(s -> s.terms(t -> t.field("speciesListID.keyword").terms(ta -> ta.value(listIDs))))
-                                          .should(s -> s.terms(t -> t.field("dataResourceUid.keyword").terms(ta -> ta.value(listIDs))))
-                                  ));
-                                }
-
-                                // If the user is not an admin, only query their private lists, and all other public lists
-                                if (!authUtils.isAuthenticated(principal)) {
-                                  bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
-                                } else if (!authUtils.hasAdminRole(profile)) {
-                                  bq.filter(f -> f.bool(b -> b
-                                          .should(s -> s.bool(b2 -> b2
-                                                  .must(m -> m.term(t -> t.field("owner").value(profile.getUserId())))
-                                                  .must(m -> m.term(t -> t.field("isPrivate").value(true)))
-                                          ))
-                                          .should(s -> s.term(t -> t.field("isPrivate").value(false)))
-                                  ));
-                                }
-
-                                return bq;
-                              }));
-
-      Query query = builder.build();
-      query.setPageable(pageableRequest);
-      SearchHits<SpeciesListIndex> results =
-              elasticsearchOperations.search(
-                      query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
-
-      List<SpeciesListItem> speciesListItems =
-              ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
-
+      List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems(guids, speciesListIDs, page, pageSize, principal);
       return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
-
     } catch (Exception e) {
       logger.info(e.getMessage());
       return ResponseEntity.badRequest().body(e.getMessage());

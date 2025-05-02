@@ -15,26 +15,39 @@
 
 package au.org.ala.listsapi.util;
 
-import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.model.SpeciesListVersion1;
+import au.org.ala.listsapi.model.*;
+import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.UserdetailsService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
- * Transformer utility to convert a SpeciesList to a legacy SpeciesListVersion1 format.
- * This maintains backward compatibility with legacy applications.
+ * Transformer utility to convert a SpeciesList to a legacy SpeciesListVersion1 format
+ * or a SpeciesListItem to a legacy SpeciesListItemVersion1 format.
+ * This maintains backward compatibility with legacy applications via `/v1` endpoints.
  */
 @Component
 public class SpeciesListTransformer {
+    private static final Logger logger = LoggerFactory.getLogger(SpeciesListTransformer.class);
     private final UserdetailsService userdetailsService;
+    private final SpeciesListMongoRepository speciesListMongoRepository;
 
     @Autowired
-    public SpeciesListTransformer(UserdetailsService userdetailsService) {
+    public SpeciesListTransformer(UserdetailsService userdetailsService, SpeciesListMongoRepository speciesListMongoRepository) {
         this.userdetailsService = userdetailsService;
+        this.speciesListMongoRepository = speciesListMongoRepository;
     }
+
+    @Value("${legacy.lookup.users.enabled:false}")
+    private Boolean legacyLookupUsersEnabled;
 
     /**
      * Transforms a SpeciesList object to a SpeciesListVersion1 object.
@@ -50,7 +63,7 @@ public class SpeciesListTransformer {
         SpeciesListVersion1 version1 = new SpeciesListVersion1();
 
         // Map properties from SpeciesList to SpeciesListVersion1
-        version1.setId(speciesList.getId().toString());
+        version1.setId(speciesList.getId());
         version1.setDataResourceUid(speciesList.getDataResourceUid());
         version1.setDateCreated(speciesList.getDateCreated());
         version1.setIsAuthoritative(speciesList.getIsAuthoritative());
@@ -69,8 +82,9 @@ public class SpeciesListTransformer {
         version1.setDescription(speciesList.getDescription());
         version1.setListType(speciesList.getListType());
 
-        // Fetch user details using the userdetailsService
-        if (speciesList.getOwner() != null && !speciesList.getOwner().isEmpty()) {
+        // Fetch user details using the userdetailsService if enabled, and the owner is not an email address (e.g., a userID number)
+        if (legacyLookupUsersEnabled && speciesList.getOwner() != null && !speciesList.getOwner().isEmpty()
+                && !speciesList.getOwner().contains("@")) {
             Map userDetails = userdetailsService.fetchUserByEmail(speciesList.getOwner());
 
             if (userDetails != null && userDetails.get("email") != null) {
@@ -80,8 +94,48 @@ public class SpeciesListTransformer {
                 version1.setUsername(speciesList.getOwner());
                 version1.setFullName(speciesList.getOwnerName());
             }
+        } else {
+            version1.setUsername(speciesList.getOwner());
+            version1.setFullName(speciesList.getOwnerName());
         }
 
         return version1;
+    }
+
+    public SpeciesListItemVersion1 transformToVersion1(SpeciesListItem speciesListItem) {
+        if (speciesListItem == null) {
+            return null;
+        }
+
+        SpeciesListItemVersion1 listItemVersion1 = new SpeciesListItemVersion1();
+        String speciesListID = speciesListItem.getSpeciesListID();
+        // Map properties from SpeciesList to SpeciesListVersion1
+        listItemVersion1.setId(speciesListID);
+        listItemVersion1.setGuid(speciesListItem.getClassification().getTaxonConceptID());
+        listItemVersion1.setDataResourceUid(speciesListID); // fallback - attempt to set actual DataResourceUid further down
+
+        // Get list details via MongoDB
+        Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+
+        AbbrListVersion1 list = new AbbrListVersion1();
+
+        if (speciesList.isPresent()) {
+            SpeciesList speciesListV2 = speciesList.get();
+            list.setListName(speciesListV2.getTitle());
+            list.setUsername(speciesListV2.getOwner());
+            list.setSds(speciesListV2.getIsSDS());
+            list.setIsBIE(speciesListV2.getIsBIE());
+            listItemVersion1.setList(list);
+            listItemVersion1.setDataResourceUid(speciesListV2.getDataResourceUid() == null ? speciesListID : speciesListV2.getDataResourceUid());
+        } else {
+            logger.warn("SpeciesListItemVersion1 transformToVersion1() -> Species list not found for ID: " + speciesListID);
+        }
+
+        List<KvpValueVersion1> kvps = new ArrayList<>();
+        speciesListItem.getProperties()
+                .forEach(kvpValue -> kvps.add(new KvpValueVersion1(kvpValue.getKey(), kvpValue.getValue())));
+        listItemVersion1.setKvpValues(kvps);
+
+        return listItemVersion1;
     }
 }

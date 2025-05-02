@@ -16,6 +16,8 @@
 package au.org.ala.listsapi.service;
 
 import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesListItem;
+import au.org.ala.listsapi.model.SpeciesListItemVersion1;
 import au.org.ala.listsapi.model.SpeciesListVersion1;
 import au.org.ala.listsapi.util.SpeciesListTransformer;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +40,7 @@ public class SpeciesListLegacyService {
      * @param speciesList The modern SpeciesList object
      * @return The legacy SpeciesListVersion1 representation
      */
-    public SpeciesListVersion1 convertToVersion1(SpeciesList speciesList) {
+    public SpeciesListVersion1 convertListToVersion1(SpeciesList speciesList) {
         return speciesListTransformer.transformToVersion1(speciesList);
     }
 
@@ -48,8 +50,20 @@ public class SpeciesListLegacyService {
      * @param speciesLists List of modern SpeciesList objects
      * @return List of legacy SpeciesListVersion1 representations
      */
-    public List<SpeciesListVersion1> convertToVersion1(List<SpeciesList> speciesLists) {
+    public List<SpeciesListVersion1> convertListToVersion1(List<SpeciesList> speciesLists) {
         return speciesLists.stream()
+                .map(speciesListTransformer::transformToVersion1)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Converts a list of SpeciesListItem to the legacy SpeciesListItemVersion1 format.
+     *
+     * @param speciesListItems List of modern SpeciesListItem objects
+     * @return List of legacy SpeciesListItemVersion1 representations
+     */
+    public List<SpeciesListItemVersion1> convertListItemToVersion1(List<SpeciesListItem> speciesListItems) {
+        return speciesListItems.stream()
                 .map(speciesListTransformer::transformToVersion1)
                 .collect(Collectors.toList());
     }
