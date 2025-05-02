@@ -35,7 +35,7 @@
   "taxon": "taxon",
   "taxa": "taxa",
   "lists.title": "Species Lists",
-  "lists.subtitle": "Discover, create and manage taxonomic lists with custom attributes like traits, geographic extent, conservation status, sensitivity, invasiveness, etc.",
+  "lists.subtitle": "Discover, create and manage species lists with custom attributes like traits, geographic extent, conservation status, sensitivity, invasiveness, etc.",
   "list.title.prefix": "List details",
   "lastUpdated_desc": "Date (latest)",
   "lastUpdated_asc": "Date (oldest)",

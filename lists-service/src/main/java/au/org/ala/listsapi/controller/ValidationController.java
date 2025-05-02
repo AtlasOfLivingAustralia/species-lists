@@ -18,7 +18,7 @@ public class ValidationController {
 
   @Operation(tags = "Validation", summary = "Get all constraint lists")
   @Tag(name = "Validation", description = "Services for validating list parameters")
-  @GetMapping("/constraints")
+  @GetMapping("/v2/constraints")
   public ResponseEntity<Object> constraints() {
     try {
       return new ResponseEntity<>(
