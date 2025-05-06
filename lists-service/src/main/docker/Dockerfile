@@ -42,4 +42,4 @@ COPY --from=builder /app/target/lists-service-*-SNAPSHOT.jar /opt/atlas/$APP_ART
 USER $USER
 EXPOSE $SERVER_PORT
 
-CMD ["java", "-jar", "app.jar", "--spring.config.location=file:/data/lists-service/config/lists-service-config.properties"]
+CMD ["java", "-jar", "app.jar"]
