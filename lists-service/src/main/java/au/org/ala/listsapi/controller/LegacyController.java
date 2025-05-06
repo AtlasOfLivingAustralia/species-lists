@@ -53,8 +53,7 @@ public class LegacyController {
     @Autowired
     protected MongoUtils mongoUtils;
 
-    @Tag(name = "REST v1", description = "REST Services for species lists lookups")
-    @Operation(tags = "REST v1", summary = "Get species list metadata for a given species list ID")
+    @Operation(tags = "REST v1", summary = "Get species list metadata for a given species list ID", deprecated = true)
     @GetMapping("/v1/speciesList/{speciesListID}")
     public ResponseEntity<Object> speciesList(
             @PathVariable("speciesListID") String speciesListID) {
@@ -65,7 +64,7 @@ public class LegacyController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(tags = "REST v1", summary = "Get a list of species lists metadata by taxon ID")
+    @Operation(tags = "REST v1", summary = "Get a list of species lists metadata by taxon ID", deprecated = true)
     @GetMapping("/v1/species")
     public ResponseEntity<Object> speciesListByTaxonID(
             @RequestParam(name = "guids") String guids,

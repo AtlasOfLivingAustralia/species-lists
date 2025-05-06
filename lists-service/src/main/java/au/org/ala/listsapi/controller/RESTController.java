@@ -2,7 +2,6 @@ package au.org.ala.listsapi.controller;
 
 import au.org.ala.listsapi.model.*;
 import au.org.ala.listsapi.repo.SpeciesListCustomRepository;
-import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.BiocacheService;
 import au.org.ala.ws.security.profile.AlaUserProfile;
@@ -11,7 +10,10 @@ import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch.core.search.FieldCollapse;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 import java.security.Principal;
 import java.util.*;
@@ -29,6 +31,7 @@ import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -56,7 +59,6 @@ public class RESTController {
 
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
 
-  @Tag(name = "REST v2", description = "REST Services for species lists lookups")
   @Operation(tags = "REST v2", summary = "Get species list metadata")
   @GetMapping("/v2/speciesList/{speciesListID}")
   public ResponseEntity<SpeciesList> speciesList(
@@ -72,6 +74,16 @@ public class RESTController {
   }
 
   @Operation(tags = "REST v2", summary = "Get a list of species lists matching the query")
+  @ApiResponses({
+          @ApiResponse(
+                  responseCode = "200",
+                  description = "Species list found",
+                  content = @Content(
+                          mediaType = MediaType.APPLICATION_JSON_VALUE,
+                          schema = @Schema(implementation = SpeciesList.class)
+                  )
+          )
+  })
   @GetMapping("/v2/speciesList")
   public ResponseEntity<Object> speciesLists(
       RESTSpeciesListQuery speciesList,
@@ -139,6 +151,16 @@ public class RESTController {
   }
 
   @Operation(tags = "REST v2", summary = "Get a list of species lists that contain the specified taxon GUID")
+  @ApiResponses({
+          @ApiResponse(
+                  responseCode = "200",
+                  description = "Species list found",
+                  content = @Content(
+                          mediaType = MediaType.APPLICATION_JSON_VALUE,
+                          schema = @Schema(implementation = SpeciesList.class)
+                  )
+          )
+  })
   @GetMapping("/v2/speciesList/byGuid")
   public ResponseEntity<Object> speciesListsByGuid(
           @RequestParam(name = "guid") String guid,
@@ -218,6 +240,16 @@ public class RESTController {
   }
 
   @Operation(tags = "REST v2", summary = "Get species lists items for a list. List IDs can be a single value, or comma separated IDs.")
+  @ApiResponses({
+          @ApiResponse(
+                  responseCode = "200",
+                  description = "Species list item found",
+                  content = @Content(
+                          mediaType = MediaType.APPLICATION_JSON_VALUE,
+                          schema = @Schema(implementation = SpeciesListItem.class)
+                  )
+          )
+  })
   @GetMapping("/v2/speciesListItems/{speciesListIDs}")
   public ResponseEntity<Object> speciesListItems(
           @PathVariable("speciesListIDs") String speciesListIDs,
@@ -286,7 +318,17 @@ public class RESTController {
     }
   }
 
-  @Operation(tags = "REST", summary = "Get details of species list items i.e species for a list of guid(s)")
+  @Operation(tags = "REST v2", summary = "Get details of species list items i.e species for a list of guid(s)")
+  @ApiResponses({
+          @ApiResponse(
+                  responseCode = "200",
+                  description = "Species list items found",
+                  content = @Content(
+                          mediaType = MediaType.APPLICATION_JSON_VALUE,
+                          schema = @Schema(implementation = SpeciesListItem.class)
+                  )
+          )
+  })
   @GetMapping("/v2/species")
   public ResponseEntity<Object> species(
           @RequestParam(name = "guids") String guids,
@@ -304,6 +346,16 @@ public class RESTController {
   }
 
   @Operation(tags = "REST v2", summary = "Get a SOLR query PID for a list")
+  @ApiResponses({
+          @ApiResponse(
+                  responseCode = "200",
+                  description = "Species list found",
+                  content = @Content(
+                          mediaType = MediaType.APPLICATION_JSON_VALUE,
+                          schema = @Schema(implementation = SpeciesList.class)
+                  )
+          )
+  })
   @GetMapping("/v2/speciesListQid/{speciesListID}")
   public ResponseEntity<Object> speciesListPid(
           @PathVariable("speciesListID") String speciesListID) {
@@ -352,6 +404,16 @@ public class RESTController {
   }
 
   @Operation(tags = "REST v2", summary = "Get a list of keys from KVP common across a list multiple species lists")
+  @ApiResponses({
+          @ApiResponse(
+                  responseCode = "200",
+                  description = "Species list found",
+                  content = @Content(
+                          mediaType = MediaType.APPLICATION_JSON_VALUE,
+                          schema = @Schema(implementation = SpeciesList.class)
+                  )
+          )
+  })
   @GetMapping("/v2/listCommonKeys/{speciesListIDs}")
   public ResponseEntity<Object> listCommonKeys(
           @PathVariable("speciesListIDs") String speciesListIDs,

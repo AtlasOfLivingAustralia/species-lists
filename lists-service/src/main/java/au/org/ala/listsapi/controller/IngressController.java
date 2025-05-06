@@ -191,7 +191,6 @@ public class IngressController {
 
   @Hidden
   @SecurityRequirement(name = "JWT")
-  @Tag(name = "Ingress", description = "Services for ingesting species lists")
   @Operation(
       summary = "Reindex all species lists",
       description = "Reindex all species lists into the ElasticSearch index.",

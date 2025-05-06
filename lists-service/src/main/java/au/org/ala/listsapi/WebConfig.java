@@ -8,9 +8,6 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
-@PropertySource(
-    value = "file:///data/lists-service/config/lists-service-config.properties",
-    ignoreResourceNotFound = true)
 @EnableWebMvc
 public class WebConfig implements WebMvcConfigurer {
   /**
@@ -23,15 +20,6 @@ public class WebConfig implements WebMvcConfigurer {
   private String appUrl;
 
   /**
-   * An optional fallback URL of the application, used for CORS configuration.
-   * This is normally empty but can be set to a different URL for local
-   * development or testing purposes.
-   * For example, "http://localhost:5173" for local development.
-   */
-  @Value("${app.fallbackUrl:}")
-  private String fallbackAppUrl;
-
-  /**
    * CORS configuration for the application.
    * 
    * @param registry the CORS registry to configure
@@ -39,10 +27,6 @@ public class WebConfig implements WebMvcConfigurer {
   @Override
   public void addCorsMappings(CorsRegistry registry) {
     String allowedOrigins = appUrl;
-
-    if (!fallbackAppUrl.isEmpty()) {
-      allowedOrigins = appUrl + "," + fallbackAppUrl;
-    }
 
     registry.addMapping("/**").
         allowedOrigins(allowedOrigins).

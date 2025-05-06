@@ -17,7 +17,6 @@ public class ValidationController {
   @Autowired protected ValidationService validationService;
 
   @Operation(tags = "Validation", summary = "Get all constraint lists")
-  @Tag(name = "Validation", description = "Services for validating list parameters")
   @GetMapping("/v2/constraints")
   public ResponseEntity<Object> constraints() {
     try {

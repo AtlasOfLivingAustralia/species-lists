@@ -6,21 +6,24 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.mongodb.config.EnableMongoAuditing;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.web.servlet.LocaleResolver;
+import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
+
+import java.util.Locale;
 
 @SpringBootApplication
 @EnableAsync
 @EnableMongoAuditing
 @EnableScheduling
-@PropertySource(
-    value = "file:///data/lists-service/config/lists-service-config.properties",
-    ignoreResourceNotFound = true)
 public class ListsApiApplication {
 
   private static final Logger logger = LoggerFactory.getLogger(ListsApiApplication.class);
@@ -52,5 +55,13 @@ public class ListsApiApplication {
     threadPoolTaskExecutor.afterPropertiesSet();
     logger.info("ThreadPoolTaskExecutor set");
     return threadPoolTaskExecutor;
+  }
+
+  @Bean
+  public MessageSource messageSource() {
+    ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
+    messageSource.setBasename("messages");
+    messageSource.setDefaultEncoding("UTF-8");
+    return messageSource;
   }
 }
