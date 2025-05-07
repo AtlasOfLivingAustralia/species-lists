@@ -261,58 +261,13 @@ public class RESTController {
           @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
           @AuthenticationPrincipal Principal principal) {
     try {
-      List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
-      List<SpeciesList> foundLists = speciesListMongoRepository.findAllByDataResourceUidIsInOrIdIsIn(IDs, IDs);
-      HashSet<String> restrictedFields = new HashSet<>();
+      List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems(speciesListIDs, searchQuery, fields, page, pageSize, sort, dir, principal);
 
-      if (fields != null && !fields.isBlank()) {
-        restrictedFields.addAll(Arrays.stream(fields.split(",")).collect(Collectors.toSet()));
+      if (speciesListItems.isEmpty()) {
+          return ResponseEntity.notFound().build();
       }
 
-      // Ensure that some species lists were returned with the query
-      if (!foundLists.isEmpty()) {
-        List<FieldValue> validIDs = foundLists.stream()
-                .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal))
-                .map(list -> FieldValue.of(list.getId())).toList();
-
-        if (page < 1 || (page * pageSize) > 10000 || validIDs.isEmpty()) {
-          return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
-        }
-
-        ArrayList<Filter> tempFilters = new ArrayList<>();
-        Pageable pageableRequest = PageRequest.of(page - 1, pageSize);
-        NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
-        builder.withQuery(
-                q ->
-                        q.bool(
-                                bq -> {
-                                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), validIDs, null, null, tempFilters, bq);
-                                  ElasticUtils.restrictFields(searchQuery, restrictedFields, bq);
-
-                                  return bq;
-                                }));
-
-        builder.withSort(
-                s ->
-                        s.field(
-                                new FieldSort.Builder()
-                                        .field(emptyDefault(sort, "scientificName"))
-                                        .order(emptyDefault(dir, "asc").equals("asc") ? SortOrder.Asc : SortOrder.Desc)
-                                        .build()));
-
-        Query query = builder.build();
-        query.setPageable(pageableRequest);
-        SearchHits<SpeciesListIndex> results =
-                elasticsearchOperations.search(
-                        query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
-
-        List<SpeciesListItem> speciesListItems =
-                ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
-
-        return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
-      }
-
-      return ResponseEntity.status(404).body("Species list(s) not found");
+      return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
     } catch (Exception e) {
       return ResponseEntity.badRequest().body(e.getMessage());
     }

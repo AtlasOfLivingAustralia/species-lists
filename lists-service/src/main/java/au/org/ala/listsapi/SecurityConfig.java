@@ -12,6 +12,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.firewall.DefaultHttpFirewall;
+import org.springframework.security.web.firewall.HttpFirewall;
 
 @Configuration
 @EnableWebSecurity
@@ -28,8 +30,19 @@ public class SecurityConfig {
 
     http.addFilterBefore(alaWebServiceAuthFilter, BasicAuthenticationFilter.class);
     http.authorizeRequests()
-        .requestMatchers("/", "/graphql", "/ingest", "/graphiql", "/**")
-        .permitAll();
+            .requestMatchers("/", "/graphql", "/ingest", "/graphiql", "/v1/species/**", "/**")
+            .permitAll();
     return http.csrf(httpSecurityCsrfConfigurer -> httpSecurityCsrfConfigurer.disable()).build();
+  }
+
+  @Bean
+  public HttpFirewall allowEncodedSlashHttpFirewall() {
+    DefaultHttpFirewall firewall = new DefaultHttpFirewall();
+    firewall.setAllowUrlEncodedSlash(true);     // Allows %2F
+    // firewall.setAllowUrlEncodedPercent(true);  // Allows %25 (use with caution)
+    // firewall.setAllowSemicolon(true);          // Allows ; in path (often needed for matrix variables or if URLs naturally contain them)
+    // firewall.setAllowUrlEncodedPeriod(true);   // Allows %2E
+    // Add any other specific allowances you've identified as necessary
+    return firewall;
   }
 }

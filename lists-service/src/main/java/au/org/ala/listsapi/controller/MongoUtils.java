@@ -15,10 +15,15 @@
 
 package au.org.ala.listsapi.controller;
 
+import au.org.ala.listsapi.model.Filter;
+import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListIndex;
 import au.org.ala.listsapi.model.SpeciesListItem;
+import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.ws.security.profile.AlaUserProfile;
+import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import com.mongodb.bulk.BulkWriteResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -34,19 +39,25 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class MongoUtils {
     @Autowired private MongoTemplate mongoTemplate;
     @Autowired protected AuthUtils authUtils;
     @Autowired protected ElasticsearchOperations elasticsearchOperations;
+    @Autowired
+    private SpeciesListMongoRepository speciesListMongoRepository;
 
     public BulkWriteResult speciesListItemsBulkUpdate(List<SpeciesListItem> items, List<String> keys) {
         BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, SpeciesListItem.class);
@@ -120,5 +131,68 @@ public class MongoUtils {
                         query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
 
         return ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
+    }
+
+    public List<SpeciesListItem> fetchSpeciesListItems(
+            String speciesListIDs,
+            @Nullable String searchQuery,
+            @Nullable String fields,
+            @Nullable Integer page,
+            @Nullable Integer pageSize,
+            @Nullable String sort,
+            @Nullable String dir,
+            Principal principal) {
+        List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
+        List<SpeciesList> foundLists = speciesListMongoRepository.findAllByDataResourceUidIsInOrIdIsIn(IDs, IDs);
+        HashSet<String> restrictedFields = new HashSet<>();
+
+        if (fields != null && !fields.isBlank()) {
+            restrictedFields.addAll(Arrays.stream(fields.split(",")).collect(Collectors.toSet()));
+        }
+
+        if (!foundLists.isEmpty()) {
+            List<FieldValue> validIDs = foundLists.stream()
+                    .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal))
+                    .map(list -> FieldValue.of(list.getId())).toList();
+
+            if (page < 1 || (page * pageSize) > 10000 || validIDs.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            ArrayList<Filter> tempFilters = new ArrayList<>();
+            Pageable pageableRequest = PageRequest.of(page - 1, pageSize);
+            NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
+            builder.withQuery(
+                    q -> q.bool(
+                            bq -> {
+                                ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), validIDs, null, null, tempFilters, bq);
+                                ElasticUtils.restrictFields(searchQuery, restrictedFields, bq);
+                                return bq;
+                            }));
+
+            builder.withSort(
+                    s -> s.field(
+                            new FieldSort.Builder()
+                                    .field(emptyDefault(sort, "scientificName"))
+                                    .order(emptyDefault(dir, "asc").equals("asc") ? SortOrder.Asc : SortOrder.Desc)
+                                    .build()));
+
+            NativeQuery query = builder.build();
+            query.setPageable(pageableRequest);
+            SearchHits<SpeciesListIndex> results =
+                    elasticsearchOperations.search(
+                            query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
+
+            List<SpeciesListItem> speciesListItems =
+                    ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
+
+            return speciesListItems;
+        }
+
+        return new ArrayList<>();
+    }
+
+    private String emptyDefault(String value, String defaultValue) {
+        return value.isEmpty() ? defaultValue : value;
     }
 }

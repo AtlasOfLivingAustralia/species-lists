@@ -5,6 +5,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
+import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
@@ -64,4 +66,17 @@ public class ListsApiApplication {
     messageSource.setDefaultEncoding("UTF-8");
     return messageSource;
   }
+
+  @Bean
+  public WebServerFactoryCustomizer<TomcatServletWebServerFactory> tomcatCustomizer() {
+    return factory -> factory.addConnectorCustomizers(connector -> {
+      // To allow encoded slashes (%2F)
+      connector.setAllowTrace(true); // Example of another connector setting
+      connector.setProperty("encodedSolidusHandling", "passthrough"); // or "decode" depending on needs
+
+      // For encoded backslashes (%5C), if needed, though less common in URL paths
+      // connector.setProperty("ALLOW_BACKSLASH", "true"); // Be cautious with this
+    });
+  }
+
 }

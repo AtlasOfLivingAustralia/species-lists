@@ -110,7 +110,8 @@ public class SpeciesListTransformer {
         SpeciesListItemVersion1 listItemVersion1 = new SpeciesListItemVersion1();
         String speciesListID = speciesListItem.getSpeciesListID();
         // Map properties from SpeciesList to SpeciesListVersion1
-        listItemVersion1.setId(speciesListID);
+        listItemVersion1.setId(speciesListItem.getId().toString());
+        listItemVersion1.setSpeciesListID(speciesListID);
         listItemVersion1.setGuid(speciesListItem.getClassification().getTaxonConceptID());
         listItemVersion1.setDataResourceUid(speciesListID); // fallback - attempt to set actual DataResourceUid further down
 
