@@ -15,10 +15,7 @@
 
 package au.org.ala.listsapi.controller;
 
-import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.model.SpeciesListItem;
-import au.org.ala.listsapi.model.SpeciesListItemVersion1;
-import au.org.ala.listsapi.model.SpeciesListVersion1;
+import au.org.ala.listsapi.model.*;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.SpeciesListLegacyService;
 import io.micrometer.common.util.StringUtils;
@@ -47,6 +44,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @org.springframework.web.bind.annotation.RestController
@@ -132,53 +131,47 @@ public class LegacyController {
         }
     }
 
-//    @Operation(tags = "REST v1", summary = "Get a list of species lists metadata by taxon ID", deprecated = true)
-//    @ApiResponses({
-//            @ApiResponse(
-//                    responseCode = "200",
-//                    description = "Species list found",
-//                    content = @Content(
-//                            mediaType = MediaType.APPLICATION_JSON_VALUE,
-//                            schema = @Schema(implementation = SpeciesListItemVersion1.class)
-//                    )
-//            )
-//    })
-//    @GetMapping("/v1/species1/{guid:.+}")
-//    public ResponseEntity<Object> speciesListItemsForGuid(
-//            @Parameter(
-//                    name = "guid",
-//                    description = "Comma-separated list of GUIDs (Taxon IDs) to search for",
-//                    schema = @Schema(type = "string")
-//            )
-//            @PathVariable("guid") String guid,
-//            @Parameter(
-//                    name = "speciesListIDs",
-//                    description = "Optional list of species list IDs (comma-separated) to filter the results",
-//                    schema = @Schema(type = "string")
-//            )
-//            @Nullable @RequestParam(name = "speciesListIDs") String speciesListIDs,
-//            @Nullable @RequestParam(name = "page", defaultValue = "1") Integer page,
-//            @Nullable @RequestParam(name = "pageSize", defaultValue = "9999") Integer pageSize,
-//            @AuthenticationPrincipal Principal principal) {
-//        String decodedGuid = URLDecoder.decode(guid, StandardCharsets.UTF_8);
-//        logger.info("guid: {}", decodedGuid);
-//        try {
-//            List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems(decodedGuid, speciesListIDs, page, pageSize, principal);
-//
-//            if (speciesListItems.isEmpty()) {
-//                return ResponseEntity.notFound().build();
-//            }
-//
-//            List<SpeciesListItemVersion1> legacySpeciesListItems = legacyService.convertListItemToVersion1(speciesListItems);
-//
-//            return new ResponseEntity<>(legacySpeciesListItems, HttpStatus.OK);
-//        } catch (Exception e) {
-//            logger.info(e.getMessage());
-//            return ResponseEntity.badRequest().body(e.getMessage());
-//        }
-//    }
+    @Operation(tags = "REST v1", summary = "Get a list of keys from KVP common across a list multiple species lists", deprecated = true)
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Species list found",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = List.class)
+                    )
+            )
+    })
+    @GetMapping("/v1/listCommonKeys/{speciesListIDs}")
+    public ResponseEntity<Object> speciesListCommonKeys(
+            @Parameter(
+                    name = "speciesListIDs",
+                    description = "List of species list IDs (comma-separated)",
+                    schema = @Schema(type = "string")
+            )
+            @PathVariable("speciesListIDs") String speciesListIDs,
+            @AuthenticationPrincipal Principal principal) {
+        try {
+            List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems(speciesListIDs, null, null, 1, 9999, null, null, principal);
 
-    @Operation(tags = "REST v1", summary = "Get a list of species lists metadata by GUID/s", deprecated = true)
+            if (speciesListItems.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Extract distinct keys from the properties of all species list items
+            Set<String> distinctKeys = speciesListItems.stream()
+                    .flatMap(item -> item.getProperties().stream()) // Flatten the properties list from all items
+                    .map(KeyValue::getKey) // Extract the "key" from each KeyValue object
+                    .collect(Collectors.toSet()); // Collect distinct keys into a Set
+
+            return new ResponseEntity<>(distinctKeys, HttpStatus.OK);
+        } catch (Exception e) {
+            logger.error("Error calling fetchSpeciesListItems() - {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @Operation(tags = "REST v1", summary = "Get a list of species lists metadata by (taxon) GUID/s", deprecated = true)
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -215,7 +208,7 @@ public class LegacyController {
             guid = URLDecoder.decode(guid, StandardCharsets.UTF_8);
         }
 
-        logger.info("v1 guid: {}", guid);
+        logger.debug("v1 guid: {}", guid);
         try {
             List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems((StringUtils.isNotEmpty(guid) ? guid : guids), speciesListIDs, page, pageSize, principal);
 
@@ -227,7 +220,7 @@ public class LegacyController {
 
             return new ResponseEntity<>(legacySpeciesListItems, HttpStatus.OK);
         } catch (Exception e) {
-            logger.info(e.getMessage());
+            logger.info(e.getMessage(), e);
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }

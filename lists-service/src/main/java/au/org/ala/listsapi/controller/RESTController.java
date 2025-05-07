@@ -329,35 +329,6 @@ public class RESTController {
     }
   }
 
-  private static Set<String> findCommonKeys(List<SpeciesList> lists) {
-    // Handle edge cases
-    if (lists == null || lists.isEmpty()) {
-      return Collections.emptySet();
-    }
-
-    // If there is only one list, its contents are trivially the common elements
-    if (lists.size() == 1) {
-      return new HashSet<>(lists.get(0).getFieldList());
-    }
-
-    // Sort lists by size (smallest first) to optimize intersection performance
-    lists.sort(Comparator.comparingInt(l -> l.getFieldList().size()));
-
-    // Initialize 'common' with the first (smallest) list
-    Set<String> common = new HashSet<>(lists.get(0).getFieldList());
-
-    // Intersect with each subsequent list
-    for (int i = 1; i < lists.size(); i++) {
-      common.retainAll(lists.get(i).getFieldList());
-      // If at any point the set becomes empty, we can stop
-      if (common.isEmpty()) {
-        break;
-      }
-    }
-
-    return common;
-  }
-
   @Operation(tags = "REST v2", summary = "Get a list of keys from KVP common across a list multiple species lists")
   @ApiResponses({
           @ApiResponse(
@@ -386,7 +357,7 @@ public class RESTController {
           return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
         }
 
-        return new ResponseEntity<>(findCommonKeys(speciesLists), HttpStatus.OK);
+        return new ResponseEntity<>(mongoUtils.findCommonKeys(speciesLists), HttpStatus.OK);
       }
 
       return ResponseEntity.status(404).body("Species list(s) not found");
