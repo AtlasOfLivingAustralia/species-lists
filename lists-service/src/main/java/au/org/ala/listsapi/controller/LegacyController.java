@@ -42,10 +42,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @org.springframework.web.bind.annotation.RestController
@@ -61,6 +58,9 @@ public class LegacyController {
 
     @Autowired
     protected MongoUtils mongoUtils;
+
+    @Autowired
+    protected AuthUtils authUtils;
 
     @Operation(tags = "REST v1", summary = "Get species list metadata for a given species list ID", deprecated = true)
     @ApiResponses({
@@ -152,21 +152,23 @@ public class LegacyController {
             @PathVariable("speciesListIDs") String speciesListIDs,
             @AuthenticationPrincipal Principal principal) {
         try {
-            List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems(speciesListIDs, null, null, 1, 9999, null, null, principal);
+            List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
+            List<SpeciesList> speciesLists = speciesListMongoRepository.findAllByDataResourceUidIsInOrIdIsIn(IDs, IDs);
 
-            if (speciesListItems.isEmpty()) {
-                return ResponseEntity.notFound().build();
+            // Ensure that some species lists were returned with the query
+            if (!speciesLists.isEmpty()) {
+                List<SpeciesList> validLists = speciesLists.stream()
+                        .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal)).toList();
+
+                if (validLists.isEmpty()) {
+                    return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+                }
+
+                return new ResponseEntity<>(mongoUtils.findCommonKeys(speciesLists), HttpStatus.OK);
             }
 
-            // Extract distinct keys from the properties of all species list items
-            Set<String> distinctKeys = speciesListItems.stream()
-                    .flatMap(item -> item.getProperties().stream()) // Flatten the properties list from all items
-                    .map(KeyValue::getKey) // Extract the "key" from each KeyValue object
-                    .collect(Collectors.toSet()); // Collect distinct keys into a Set
-
-            return new ResponseEntity<>(distinctKeys, HttpStatus.OK);
+            return ResponseEntity.status(404).body("Species list(s) not found: " + speciesListIDs);
         } catch (Exception e) {
-            logger.error("Error calling fetchSpeciesListItems() - {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
