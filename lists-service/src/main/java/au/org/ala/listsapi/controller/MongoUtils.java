@@ -40,8 +40,6 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
@@ -49,14 +47,24 @@ import java.security.Principal;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Utility class for MongoDB operations related to species lists.
+ * Provides common methods used by the REST and Legacy controllers
+ */
 @Component
 public class MongoUtils {
     @Autowired private MongoTemplate mongoTemplate;
     @Autowired protected AuthUtils authUtils;
     @Autowired protected ElasticsearchOperations elasticsearchOperations;
-    @Autowired
-    private SpeciesListMongoRepository speciesListMongoRepository;
+    @Autowired private SpeciesListMongoRepository speciesListMongoRepository;
 
+    /**
+     * Performs a bulk update on a list of SpeciesListItem objects.
+     *
+     * @param items
+     * @param keys
+     * @return BulkWriteResult result of the operation
+     */
     public BulkWriteResult speciesListItemsBulkUpdate(List<SpeciesListItem> items, List<String> keys) {
         BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, SpeciesListItem.class);
         for (SpeciesListItem item : items) {
@@ -72,6 +80,12 @@ public class MongoUtils {
         return bulkOps.execute();
     }
 
+    /**
+     * Performs a bulk save on a list of SpeciesListItem objects.
+     *
+     * @param items
+     * @return BulkWriteResult result of the operation
+     */
     public BulkWriteResult speciesListItemsBulkSave(List<SpeciesListItem> items) {
         BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, SpeciesListItem.class);
         bulkOps.insert(items);
@@ -80,7 +94,24 @@ public class MongoUtils {
         return bulkOps.execute();
     }
 
-    public List<SpeciesListItem> fetchSpeciesListItems(String guids, @Nullable String speciesListIDs, int page, int pageSize, Principal principal) throws Exception {
+    /**
+     * Fetches species list items based on GUIDs and optional species list IDs.
+     * Supports pagination and filtering pof public/private lists based on user roles.
+     *
+     * @param guids
+     * @param speciesListIDs
+     * @param page
+     * @param pageSize
+     * @param principal
+     * @return List<SpeciesListItem> of species list items
+     */
+    public List<SpeciesListItem> fetchSpeciesListItems(
+            String guids,
+            @Nullable String speciesListIDs,
+            int page,
+            int pageSize,
+            Principal principal
+) {
         AlaUserProfile profile = authUtils.getUserProfile(principal);
         List<FieldValue> GUIDs = Arrays.stream(guids.split(",")).map(FieldValue::of).toList();
         List<FieldValue> listIDs = speciesListIDs != null ?
@@ -131,6 +162,21 @@ public class MongoUtils {
         return ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
     }
 
+    /**
+     * Fetches species list items based on species list IDs and optional search query
+     * that can be restricted to specific fields.
+     * Supports pagination and filtering of public/private lists based on user roles.
+     *
+     * @param speciesListIDs
+     * @param searchQuery
+     * @param fields
+     * @param page
+     * @param pageSize
+     * @param sort
+     * @param dir
+     * @param principal
+     * @return List<SpeciesListItem> of species list items
+     */
     public List<SpeciesListItem> fetchSpeciesListItems(
             String speciesListIDs,
             @Nullable String searchQuery,
@@ -194,6 +240,13 @@ public class MongoUtils {
         return StringUtils.isNotEmpty(value) ? value : defaultValue;
     }
 
+    /**
+     * Finds common keys across multiple SpeciesList objects.
+     * This method is useful for identifying shared attributes
+     *
+     * @param lists - List of SpeciesList objects
+     * @return Set<String> of common keys
+     */
     public static Set<String> findCommonKeys(List<SpeciesList> lists) {
         // Handle edge cases
         if (lists == null || lists.isEmpty()) {

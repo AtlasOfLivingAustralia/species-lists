@@ -15,10 +15,7 @@
 
 package au.org.ala.listsapi.service;
 
-import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.model.SpeciesListItem;
-import au.org.ala.listsapi.model.SpeciesListItemVersion1;
-import au.org.ala.listsapi.model.SpeciesListVersion1;
+import au.org.ala.listsapi.model.*;
 import au.org.ala.listsapi.util.SpeciesListTransformer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -65,6 +62,12 @@ public class SpeciesListLegacyService {
     public List<SpeciesListItemVersion1> convertListItemToVersion1(List<SpeciesListItem> speciesListItems) {
         return speciesListItems.stream()
                 .map(speciesListTransformer::transformToVersion1)
+                .collect(Collectors.toList());
+    }
+
+    public List<QueryListItemVersion1> convertQueryListItemToVersion1(List<SpeciesListItem> queryListItems) {
+        return queryListItems.stream()
+                .map(speciesListTransformer::transformToQueryListVersion1)
                 .collect(Collectors.toList());
     }
 }

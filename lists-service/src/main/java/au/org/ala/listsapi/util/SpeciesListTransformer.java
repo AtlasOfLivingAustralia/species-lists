@@ -139,4 +139,39 @@ public class SpeciesListTransformer {
 
         return listItemVersion1;
     }
+
+    public QueryListItemVersion1 transformToQueryListVersion1(SpeciesListItem speciesListItem) {
+        if (speciesListItem == null) {
+            return null;
+        }
+
+        QueryListItemVersion1 queryListItemV1 = new QueryListItemVersion1();
+        String speciesListID = speciesListItem.getSpeciesListID();
+
+        // Map properties from SpeciesList to SpeciesListVersion1
+        queryListItemV1.setId(speciesListItem.getId().toString());
+        queryListItemV1.setSpeciesListID(speciesListID);
+        queryListItemV1.setDataResourceUid(speciesListID); // fallback - attempt to set actual DataResourceUid via lookup, below
+        queryListItemV1.setLsid(speciesListItem.getClassification().getTaxonConceptID());
+        queryListItemV1.setScientificName(speciesListItem.getScientificName());
+        queryListItemV1.setCommonName(speciesListItem.getVernacularName() == null ? speciesListItem.getClassification().getVernacularName() : speciesListItem.getVernacularName());
+
+        // Get extra details via MongoDB lookup
+        Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+
+        List<KvpValueVersion1> kvps = new ArrayList<>();
+        speciesListItem.getProperties()
+                .forEach(kvpValue -> kvps.add(new KvpValueVersion1(kvpValue.getKey(), kvpValue.getValue())));
+        queryListItemV1.setKvpValues(kvps);
+
+        if (speciesList.isPresent()) {
+            SpeciesList speciesListV2 = speciesList.get();
+            queryListItemV1.setDataResourceUid(speciesListV2.getDataResourceUid() == null ? speciesListID : speciesListV2.getDataResourceUid());
+            queryListItemV1.setName(speciesListV2.getTitle());
+        } else {
+            logger.warn("QueryListItemVersion1 transformToQueryListVersion1() -> Species list not found for ID: " + speciesListID);
+        }
+
+        return queryListItemV1;
+    }
 }

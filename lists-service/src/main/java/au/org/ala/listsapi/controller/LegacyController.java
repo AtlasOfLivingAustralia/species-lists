@@ -18,6 +18,7 @@ package au.org.ala.listsapi.controller;
 import au.org.ala.listsapi.model.*;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.SpeciesListLegacyService;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.micrometer.common.util.StringUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -117,8 +118,9 @@ public class LegacyController {
             @AuthenticationPrincipal Principal principal) {
         try {
             // convert max and offset to page and pageSize
-            int page = ((offset != null? offset : 0) / (max != null ? max : 10)) + 1;
-            int pageSize = (max != null ? max : 10);
+            int[] pageAndSize = calculatePageAndSize(offset, max);
+            int page = pageAndSize[0];
+            int pageSize = pageAndSize[1];
             List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems(speciesListIDs, searchQuery, fields, page, pageSize, sort, dir, principal);
             if (speciesListItems.isEmpty()) {
                 return ResponseEntity.notFound().build();
@@ -210,12 +212,11 @@ public class LegacyController {
             guid = URLDecoder.decode(guid, StandardCharsets.UTF_8);
         }
 
-        logger.debug("v1 guid: {}", guid);
         try {
             List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems((StringUtils.isNotEmpty(guid) ? guid : guids), speciesListIDs, page, pageSize, principal);
 
             if (speciesListItems.isEmpty()) {
-                return ResponseEntity.notFound().build();
+                return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK); // empty list
             }
 
             List<SpeciesListItemVersion1> legacySpeciesListItems = legacyService.convertListItemToVersion1(speciesListItems);
@@ -225,5 +226,65 @@ public class LegacyController {
             logger.info(e.getMessage(), e);
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @Operation(
+            tags = "REST v1",
+            summary = "Get species list(s) item details",
+            description = "Get details of individual items i.e. species for specified species list(s) filter-able by specified fields",
+            deprecated = true)
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Species list items found for GUID/s",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = QueryListItemVersion1.class)
+                    )
+            )
+    })
+    @GetMapping("/v1/queryListItemOrKVP")
+    public ResponseEntity<Object> queryListItemOrKVP(
+            @RequestParam(name = "druid") String druid,
+            @Nullable @RequestParam(name = "q") String q,
+            @Nullable @RequestParam(name = "fields") String fields,
+            @Nullable @RequestParam(name = "includeKVP", defaultValue = "true") Boolean includeKVP,
+            @Nullable @RequestParam(name = "nonulls", defaultValue = "false") Boolean nonulls,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") Integer offset,
+            @Nullable @RequestParam(name = "max", defaultValue = "10") Integer max,
+            @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
+            @Nullable @RequestParam(name = "order", defaultValue="asc") String order,
+            @AuthenticationPrincipal Principal principal
+    ) {
+        try {
+            // convert max and offset to page and pageSize
+            int[] pageAndSize = calculatePageAndSize(offset, max);
+            int page = pageAndSize[0];
+            int pageSize = pageAndSize[1];
+            List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems(druid, q, fields, page, pageSize, sort, order, principal);
+
+            if (speciesListItems.isEmpty()) {
+                return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+            }
+
+            List<QueryListItemVersion1> legacySpeciesListItems = legacyService.convertQueryListItemToVersion1(speciesListItems);
+
+            return new ResponseEntity<>(legacySpeciesListItems, HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Calculate the page and size for pagination (legacy API)
+     *
+     * @param offset
+     * @param max
+     * @return
+     */
+    private static int[] calculatePageAndSize(@Nullable Integer offset, @Nullable Integer max) {
+        int page = ((offset != null ? offset : 0) / (max != null ? max : 10)) + 1;
+        int pageSize = (max != null ? max : 10);
+        return new int[]{page, pageSize};
     }
 }
