@@ -102,6 +102,12 @@ public class SpeciesListTransformer {
         return version1;
     }
 
+    /**
+     * Transforms a SpeciesListItem object to a SpeciesListItemVersion1 object
+     *
+     * @param speciesListItem The source SpeciesListItem object
+     * @return A new SpeciesListItemVersion1 object populated with values from the source
+     */
     public SpeciesListItemVersion1 transformToVersion1(SpeciesListItem speciesListItem) {
         if (speciesListItem == null) {
             return null;
@@ -140,6 +146,12 @@ public class SpeciesListTransformer {
         return listItemVersion1;
     }
 
+    /**
+     * Transforms a SpeciesListItem object to a QueryListItemVersion1 object
+     *
+     * @param speciesListItem The source SpeciesListItem object
+     * @return A new QueryListItemVersion1 object populated with values from the source
+     */
     public QueryListItemVersion1 transformToQueryListVersion1(SpeciesListItem speciesListItem) {
         if (speciesListItem == null) {
             return null;

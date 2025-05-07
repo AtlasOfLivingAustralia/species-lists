@@ -21,7 +21,6 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.List;
 
 /**

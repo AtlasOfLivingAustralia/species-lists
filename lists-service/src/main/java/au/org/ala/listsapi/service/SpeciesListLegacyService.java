@@ -65,6 +65,12 @@ public class SpeciesListLegacyService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Converts a single SpeciesListItem to the legacy SpeciesListItemVersion1 format.
+     *
+     * @param queryListItems The modern SpeciesListItem object
+     * @return The legacy SpeciesListItemVersion1 representation
+     */
     public List<QueryListItemVersion1> convertQueryListItemToVersion1(List<SpeciesListItem> queryListItems) {
         return queryListItems.stream()
                 .map(speciesListTransformer::transformToQueryListVersion1)

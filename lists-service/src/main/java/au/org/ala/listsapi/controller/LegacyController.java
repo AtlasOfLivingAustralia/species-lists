@@ -18,7 +18,6 @@ package au.org.ala.listsapi.controller;
 import au.org.ala.listsapi.model.*;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.SpeciesListLegacyService;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.micrometer.common.util.StringUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -35,18 +34,18 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.*;
 
+/**
+ * Controller for legacy API endpoints `(`/v1/**), that are deprecated.
+ */
 @CrossOrigin(origins = "*", maxAge = 3600)
-@org.springframework.web.bind.annotation.RestController
+@RestController
 public class LegacyController {
 
     private static final Logger logger = LoggerFactory.getLogger(LegacyController.class);
@@ -105,10 +104,10 @@ public class LegacyController {
             @PathVariable("druid") String speciesListIDs,
             @Parameter(
                     name = "includeKVP",
-                    description = "Whether to include KVP (key value pairs) values in the returned list item. Note this is now ignored and all KVP values are returned.",
+                    description = "Whether to include KVP (key value pairs) values in the returned list item. Note this is now ignored and  KVP values are always returned.",
                     schema = @Schema(type = "boolean", defaultValue = "true")
             )
-            @RequestParam(name = "includeKVP", defaultValue = "false") Boolean includeKVP,
+            @RequestParam(name = "includeKVP", defaultValue = "false") Boolean _includeKVP,
             @Nullable @RequestParam(name = "q") String searchQuery,
             @Nullable @RequestParam(name = "fields") String fields,
             @Nullable @RequestParam(name = "offset", defaultValue = "0") Integer offset,
@@ -122,9 +121,11 @@ public class LegacyController {
             int page = pageAndSize[0];
             int pageSize = pageAndSize[1];
             List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems(speciesListIDs, searchQuery, fields, page, pageSize, sort, dir, principal);
+
             if (speciesListItems.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
+
             List<SpeciesListItemVersion1> legacySpeciesListItems = legacyService.convertListItemToVersion1(speciesListItems);
 
             return new ResponseEntity<>(legacySpeciesListItems, HttpStatus.OK);
@@ -157,7 +158,6 @@ public class LegacyController {
             List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
             List<SpeciesList> speciesLists = speciesListMongoRepository.findAllByDataResourceUidIsInOrIdIsIn(IDs, IDs);
 
-            // Ensure that some species lists were returned with the query
             if (!speciesLists.isEmpty()) {
                 List<SpeciesList> validLists = speciesLists.stream()
                         .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal)).toList();
@@ -166,7 +166,7 @@ public class LegacyController {
                     return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
                 }
 
-                return new ResponseEntity<>(mongoUtils.findCommonKeys(speciesLists), HttpStatus.OK);
+                return new ResponseEntity<>(MongoUtils.findCommonKeys(speciesLists), HttpStatus.OK);
             }
 
             return ResponseEntity.status(404).body("Species list(s) not found: " + speciesListIDs);
@@ -208,12 +208,17 @@ public class LegacyController {
         String guid = (fullUrl.split("/v1/species/").length > 1) ? fullUrl.split("/v1/species/")[1] : "";
 
         if (guid != null && guid.contains("%3A%2F")) {
-            // Decode the URL-encoded GUID if its encoded
+            // Decode the URL-encoded GUID if it's encoded
             guid = URLDecoder.decode(guid, StandardCharsets.UTF_8);
         }
 
+        String inputGuids = (StringUtils.isNotBlank(guid) ? guid : (StringUtils.isNotBlank(guids) ? guids : ""));
+        // Catch possible null values from unboxed page and pageSize
+        int pageVal = Math.max((page != null ? page : 1), 1); // Ensure page is at least 1
+        int pageSizeVal = Math.max((pageSize != null ? pageSize : 9999), 1); // Ensure pageSize is at least 1
+
         try {
-            List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems((StringUtils.isNotEmpty(guid) ? guid : guids), speciesListIDs, page, pageSize, principal);
+            List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems(inputGuids, speciesListIDs, pageVal, pageSizeVal, principal);
 
             if (speciesListItems.isEmpty()) {
                 return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK); // empty list
@@ -278,9 +283,9 @@ public class LegacyController {
     /**
      * Calculate the page and size for pagination (legacy API)
      *
-     * @param offset
-     * @param max
-     * @return
+     * @param offset the offset to start from
+     * @param max the maximum number of items to return
+     * @return an array containing the page number and page size
      */
     private static int[] calculatePageAndSize(@Nullable Integer offset, @Nullable Integer max) {
         int page = ((offset != null ? offset : 0) / (max != null ? max : 10)) + 1;
