@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActionIcon,
   Box,
+  Button,
   Center,
   Checkbox,
   Collapse,
@@ -20,6 +21,7 @@ import {
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { useGQLQuery, queries, SpeciesListPage, KV, Facet } from '#/api';
@@ -34,7 +36,7 @@ import {
 
 // Icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEyeSlash, faXmark, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faEyeSlash, faXmark, faMagnifyingGlass, faCode } from '@fortawesome/free-solid-svg-icons';
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
 
 // Project components
@@ -49,6 +51,7 @@ import { ToggleFiltersButton, ActiveFilters, FiltersSection } from '#/components
 // Styles
 import classes from './classes/index.module.css';
 import { Breadcrumbs } from '../Dashboard/components/Breadcrumbs';
+import { Link } from 'react-router';
 
 interface HomeQuery {
   lists: SpeciesListPage;
@@ -245,10 +248,27 @@ function Home() {
               <FormattedMessage id='lists.title' defaultMessage='Species Lists' />
             </Title>
           </Grid.Col>
-          <Grid.Col span={12}>
+          <Grid.Col span={9}>
             <Title order={5} classNames={{ root: classes.subtitle }} >
               <FormattedMessage id='lists.subtitle' defaultMessage='A tool for finding species checklists' />
             </Title>
+          </Grid.Col>
+          <Grid.Col span={3} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Tooltip label={intl.formatMessage({ id: 'openapi.button.title' })} position='left' withArrow multiline w={200} opacity={0.8}>
+              <Button
+                variant='default'
+                radius='xl'
+                component={Link}
+                to={import.meta.env.VITE_API_BASEURL}
+                target='openapi'
+                rel='noopener noreferrer'
+                title={intl.formatMessage({ id: 'openapi.button.title' })}
+                aria-label={intl.formatMessage({ id: 'openapi.button.title' })}
+                leftSection={<FontAwesomeIcon icon={faCode} />}
+              >
+                <FormattedMessage id='openapi.button.label' defaultMessage='OpenAPI'/>
+              </Button>
+            </Tooltip>
           </Grid.Col>
         </Grid>
       </Container>
