@@ -5,19 +5,30 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.tags.Tag;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.i18n.LocaleContextHolder;
 
 /**
  * OpenAPI configuration for the Lists API.
  */
 @Configuration
-@PropertySource(
-        value = "file:///data/lists-service/config/lists-service-config.properties",
-        ignoreResourceNotFound = true)
 public class OpenApiConfig {
+    @Autowired
+    private MessageSource messageSource;
+
+    Locale locale = LocaleContextHolder.getLocale();
+
 
     @Value("${springdoc.api-info.version}")
     private String apiVersion;
@@ -27,20 +38,33 @@ public class OpenApiConfig {
 
     @Bean
     public OpenAPI customOpenAPI() {
+        // Sections of the API documentation
+        // are ordered by the order in which they are added to this list.
+        List<Tag> orderedTags = new ArrayList<>();
+        orderedTags.add(new Tag().name(messageSource.getMessage("openapi.tags.restv2.name", null, locale))
+                .description(messageSource.getMessage("openapi.tags.restv2.description", null, locale)));
+        orderedTags.add(new Tag().name(messageSource.getMessage("openapi.tags.ingress.name", null, locale))
+                .description(messageSource.getMessage("openapi.tags.ingress.description", null, locale)));
+        orderedTags.add(new Tag().name(messageSource.getMessage("openapi.tags.validation.name", null, locale))
+                .description(messageSource.getMessage("openapi.tags.validation.description", null, locale)));
+        orderedTags.add(new Tag().name(messageSource.getMessage("openapi.tags.restv1.name", null, locale))
+                .description(messageSource.getMessage("openapi.tags.restv1.description", null, locale)));
+
         return new OpenAPI()
                 .info(new Info()
-                        .title("Species Lists API")
-                        .description("REST services for interacting with the ALA <a href='" + appUrl + "'>Species lists</a> application")
+                        .title(messageSource.getMessage("openapi.info.title", new Object[]{appUrl}, locale))
+                        .description(messageSource.getMessage("openapi.info.description", null, locale))
                         .version(apiVersion)
                         .contact(new Contact()
-                                .name("ALA Support")
-                                .email("support@ala.org.au")
-                                .url("https://support.ala.org.au/support/solutions/6000137994"))
+                                .name(messageSource.getMessage("openapi.info.institution.name", null, locale))
+                                .email(messageSource.getMessage("openapi.info.institution.email", null, locale))
+                                .url(messageSource.getMessage("openapi.info.institution.url", null, locale)))
                         .license(new License()
-                                .name("Terms of use")
-                                .url("https://www.ala.org.au/terms-of-use/")))
+                                .name(messageSource.getMessage("openapi.info.institution.tou.title", null, locale))
+                                .url(messageSource.getMessage("openapi.info.institution.tou.url", null, locale))))
                 .externalDocs(new ExternalDocumentation()
-                        .description("ALA API documentation and resources")
-                        .url("https://docs.ala.org.au"));
+                        .description(messageSource.getMessage("openapi.info.docs.description", null, locale))
+                        .url(messageSource.getMessage("openapi.info.docs.url", null, locale)))
+                .tags(orderedTags);
     }
 }

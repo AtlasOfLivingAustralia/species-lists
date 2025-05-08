@@ -58,6 +58,7 @@
   "upload.title": "Upload",
   "upload.title.label": "Upload a list",
   "upload.button.label": "Upload list",
+  "upload.button.title": "Upload a list from a CSV file",
 
   "scientificName": "Scientific name",
   "scientificNameAuthority": "Scientific name authority",
@@ -88,6 +89,9 @@
   "filters.reset": "Clear all filters",
   "filters.hide": "Hide filters",
   "filters.show": "Show filters",
+
+  "openapi.button.label": "OpenAPI",
+  "openapi.button.title": "Open API documentation for Species Lists API REST services",
 
   "results.showing": "Showing",
   "results.records": "records",

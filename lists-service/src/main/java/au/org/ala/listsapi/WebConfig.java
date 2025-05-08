@@ -1,16 +1,16 @@
 package au.org.ala.listsapi;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.util.UrlPathHelper;
 
 @Configuration
-@PropertySource(
-    value = "file:///data/lists-service/config/lists-service-config.properties",
-    ignoreResourceNotFound = true)
 @EnableWebMvc
 public class WebConfig implements WebMvcConfigurer {
   /**
@@ -23,15 +23,6 @@ public class WebConfig implements WebMvcConfigurer {
   private String appUrl;
 
   /**
-   * An optional fallback URL of the application, used for CORS configuration.
-   * This is normally empty but can be set to a different URL for local
-   * development or testing purposes.
-   * For example, "http://localhost:5173" for local development.
-   */
-  @Value("${app.fallbackUrl:}")
-  private String fallbackAppUrl;
-
-  /**
    * CORS configuration for the application.
    * 
    * @param registry the CORS registry to configure
@@ -40,15 +31,38 @@ public class WebConfig implements WebMvcConfigurer {
   public void addCorsMappings(CorsRegistry registry) {
     String allowedOrigins = appUrl;
 
-    if (!fallbackAppUrl.isEmpty()) {
-      allowedOrigins = appUrl + "," + fallbackAppUrl;
-    }
-
     registry.addMapping("/**").
         allowedOrigins(allowedOrigins).
         allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS").
         allowedHeaders("*").
         allowCredentials(false).
         maxAge(3600);
+  }
+
+//  @Override
+//  public void configurePathMatch(PathMatchConfigurer configurer) {
+//    UrlPathHelper urlPathHelper = new UrlPathHelper();
+//    // Set this to false to prevent decoding of the path before matching.
+//    // This means your @PathVariable will receive the raw, encoded value.
+//    urlPathHelper.setUrlDecode(true);
+//    configurer.setUrlPathHelper(urlPathHelper);
+//  }
+
+  @Override
+  public void configurePathMatch(PathMatchConfigurer configurer) {
+    // Allow encoded slashes in URLs
+    configurer.setUrlPathHelper(new UrlPathHelper());
+  }
+
+  @Bean
+  public UrlPathHelper urlPathHelper() {
+    UrlPathHelper urlPathHelper = new UrlPathHelper();
+    // Don't decode URLs
+    urlPathHelper.setUrlDecode(false);
+    // Keep matrix variables
+    urlPathHelper.setRemoveSemicolonContent(false);
+    // Don't normalize paths with dots or double slashes
+    urlPathHelper.setAlwaysUseFullPath(true);
+    return urlPathHelper;
   }
 }

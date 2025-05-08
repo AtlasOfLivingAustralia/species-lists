@@ -1,28 +1,38 @@
+/*
+ * Copyright (C) 2025 Atlas of Living Australia
+ * All Rights Reserved.
+ *
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ */
+
 package au.org.ala.listsapi.controller;
 
 import au.org.ala.listsapi.model.*;
 import au.org.ala.listsapi.repo.SpeciesListCustomRepository;
-import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.BiocacheService;
 import au.org.ala.ws.security.profile.AlaUserProfile;
-import co.elastic.clients.elasticsearch._types.FieldSort;
-import co.elastic.clients.elasticsearch._types.FieldValue;
-import co.elastic.clients.elasticsearch._types.SortOrder;
-import co.elastic.clients.elasticsearch._types.query_dsl.ChildScoreMode;
-import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import co.elastic.clients.elasticsearch.core.search.FieldCollapse;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 import java.security.Principal;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.*;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
@@ -32,6 +42,7 @@ import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -51,15 +62,14 @@ public class RESTController {
 
   @Autowired protected SpeciesListCustomRepository speciesListCustomRepository;
 
-  @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
-
   @Autowired protected BiocacheService biocacheService;
 
   @Autowired protected AuthUtils authUtils;
 
+  @Autowired protected MongoUtils mongoUtils;
+
   @Autowired protected ElasticsearchOperations elasticsearchOperations;
 
-  @Tag(name = "REST v2", description = "REST Services for species lists lookups")
   @Operation(tags = "REST v2", summary = "Get species list metadata")
   @GetMapping("/v2/speciesList/{speciesListID}")
   public ResponseEntity<SpeciesList> speciesList(
@@ -75,6 +85,16 @@ public class RESTController {
   }
 
   @Operation(tags = "REST v2", summary = "Get a list of species lists matching the query")
+  @ApiResponses({
+          @ApiResponse(
+                  responseCode = "200",
+                  description = "Species list found",
+                  content = @Content(
+                          mediaType = MediaType.APPLICATION_JSON_VALUE,
+                          schema = @Schema(implementation = SpeciesList.class)
+                  )
+          )
+  })
   @GetMapping("/v2/speciesList")
   public ResponseEntity<Object> speciesLists(
       RESTSpeciesListQuery speciesList,
@@ -142,6 +162,16 @@ public class RESTController {
   }
 
   @Operation(tags = "REST v2", summary = "Get a list of species lists that contain the specified taxon GUID")
+  @ApiResponses({
+          @ApiResponse(
+                  responseCode = "200",
+                  description = "Species list found",
+                  content = @Content(
+                          mediaType = MediaType.APPLICATION_JSON_VALUE,
+                          schema = @Schema(implementation = SpeciesList.class)
+                  )
+          )
+  })
   @GetMapping("/v2/speciesList/byGuid")
   public ResponseEntity<Object> speciesListsByGuid(
           @RequestParam(name = "guid") String guid,
@@ -221,6 +251,16 @@ public class RESTController {
   }
 
   @Operation(tags = "REST v2", summary = "Get species lists items for a list. List IDs can be a single value, or comma separated IDs.")
+  @ApiResponses({
+          @ApiResponse(
+                  responseCode = "200",
+                  description = "Species list item found",
+                  content = @Content(
+                          mediaType = MediaType.APPLICATION_JSON_VALUE,
+                          schema = @Schema(implementation = SpeciesListItem.class)
+                  )
+          )
+  })
   @GetMapping("/v2/speciesListItems/{speciesListIDs}")
   public ResponseEntity<Object> speciesListItems(
           @PathVariable("speciesListIDs") String speciesListIDs,
@@ -232,64 +272,29 @@ public class RESTController {
           @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
           @AuthenticationPrincipal Principal principal) {
     try {
-      List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
-      List<SpeciesList> foundLists = speciesListMongoRepository.findAllByDataResourceUidIsInOrIdIsIn(IDs, IDs);
-      HashSet<String> restrictedFields = new HashSet<>();
+      List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems(speciesListIDs, searchQuery, fields, page, pageSize, sort, dir, principal);
 
-      if (fields != null && !fields.isBlank()) {
-        restrictedFields.addAll(Arrays.stream(fields.split(",")).collect(Collectors.toSet()));
+      if (speciesListItems.isEmpty()) {
+          return ResponseEntity.notFound().build();
       }
 
-      // Ensure that some species lists were returned with the query
-      if (!foundLists.isEmpty()) {
-        List<FieldValue> validIDs = foundLists.stream()
-                .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal))
-                .map(list -> FieldValue.of(list.getId())).toList();
-
-        if (page < 1 || (page * pageSize) > 10000 || validIDs.isEmpty()) {
-          return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
-        }
-
-        ArrayList<Filter> tempFilters = new ArrayList<>();
-        Pageable pageableRequest = PageRequest.of(page - 1, pageSize);
-        NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
-        builder.withQuery(
-                q ->
-                        q.bool(
-                                bq -> {
-                                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), validIDs, null, null, tempFilters, bq);
-                                  ElasticUtils.restrictFields(searchQuery, restrictedFields, bq);
-
-                                  return bq;
-                                }));
-
-        builder.withSort(
-                s ->
-                        s.field(
-                                new FieldSort.Builder()
-                                        .field(emptyDefault(sort, "scientificName"))
-                                        .order(emptyDefault(dir, "asc").equals("asc") ? SortOrder.Asc : SortOrder.Desc)
-                                        .build()));
-
-        Query query = builder.build();
-        query.setPageable(pageableRequest);
-        SearchHits<SpeciesListIndex> results =
-                elasticsearchOperations.search(
-                        query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
-
-        List<SpeciesListItem> speciesListItems =
-                ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
-
-        return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
-      }
-
-      return ResponseEntity.status(404).body("Species list(s) not found");
+      return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
     } catch (Exception e) {
       return ResponseEntity.badRequest().body(e.getMessage());
     }
   }
 
   @Operation(tags = "REST v2", summary = "Get details of species list items i.e species for a list of guid(s)")
+  @ApiResponses({
+          @ApiResponse(
+                  responseCode = "200",
+                  description = "Species list items found",
+                  content = @Content(
+                          mediaType = MediaType.APPLICATION_JSON_VALUE,
+                          schema = @Schema(implementation = SpeciesListItem.class)
+                  )
+          )
+  })
   @GetMapping("/v2/species")
   public ResponseEntity<Object> species(
           @RequestParam(name = "guids") String guids,
@@ -298,58 +303,8 @@ public class RESTController {
           @Nullable @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
           @AuthenticationPrincipal Principal principal) {
     try {
-      AlaUserProfile profile = authUtils.getUserProfile(principal);
-      List<FieldValue> GUIDs = Arrays.stream(guids.split(",")).map(FieldValue::of).toList();
-      List<FieldValue> listIDs = speciesListIDs != null ?
-              Arrays.stream(speciesListIDs.split(",")).map(FieldValue::of).toList() : null;
-
-      if (page < 1 || (page * pageSize) > 10000) {
-        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
-      }
-
-      Pageable pageableRequest = PageRequest.of(page - 1, pageSize);
-      NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
-      builder.withQuery(
-              q ->
-                      q.bool(
-                              bq -> {
-                                bq.filter(f -> f.terms(t -> t.field("classification.taxonConceptID.keyword")
-                                        .terms(ta -> ta.value(GUIDs))));
-
-                                if (listIDs != null) {
-                                  bq.filter(f -> f.bool(b -> b
-                                          .should(s -> s.terms(t -> t.field("speciesListID.keyword").terms(ta -> ta.value(listIDs))))
-                                          .should(s -> s.terms(t -> t.field("dataResourceUid.keyword").terms(ta -> ta.value(listIDs))))
-                                  ));
-                                }
-
-                                // If the user is not an admin, only query their private lists, and all other public lists
-                                if (!authUtils.isAuthenticated(principal)) {
-                                  bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
-                                } else if (!authUtils.hasAdminRole(profile)) {
-                                  bq.filter(f -> f.bool(b -> b
-                                          .should(s -> s.bool(b2 -> b2
-                                                  .must(m -> m.term(t -> t.field("owner").value(profile.getUserId())))
-                                                  .must(m -> m.term(t -> t.field("isPrivate").value(true)))
-                                          ))
-                                          .should(s -> s.term(t -> t.field("isPrivate").value(false)))
-                                  ));
-                                }
-
-                                return bq;
-                              }));
-
-      Query query = builder.build();
-      query.setPageable(pageableRequest);
-      SearchHits<SpeciesListIndex> results =
-              elasticsearchOperations.search(
-                      query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
-
-      List<SpeciesListItem> speciesListItems =
-              ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
-
+      List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems(guids, speciesListIDs, page, pageSize, principal);
       return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
-
     } catch (Exception e) {
       logger.info(e.getMessage());
       return ResponseEntity.badRequest().body(e.getMessage());
@@ -357,6 +312,16 @@ public class RESTController {
   }
 
   @Operation(tags = "REST v2", summary = "Get a SOLR query PID for a list")
+  @ApiResponses({
+          @ApiResponse(
+                  responseCode = "200",
+                  description = "Species list found",
+                  content = @Content(
+                          mediaType = MediaType.APPLICATION_JSON_VALUE,
+                          schema = @Schema(implementation = SpeciesList.class)
+                  )
+          )
+  })
   @GetMapping("/v2/speciesListQid/{speciesListID}")
   public ResponseEntity<Object> speciesListPid(
           @PathVariable("speciesListID") String speciesListID) {
@@ -375,36 +340,17 @@ public class RESTController {
     }
   }
 
-  private static Set<String> findCommonKeys(List<SpeciesList> lists) {
-    // Handle edge cases
-    if (lists == null || lists.isEmpty()) {
-      return Collections.emptySet();
-    }
-
-    // If there is only one list, its contents are trivially the common elements
-    if (lists.size() == 1) {
-      return new HashSet<>(lists.get(0).getFieldList());
-    }
-
-    // Sort lists by size (smallest first) to optimize intersection performance
-    lists.sort(Comparator.comparingInt(l -> l.getFieldList().size()));
-
-    // Initialize 'common' with the first (smallest) list
-    Set<String> common = new HashSet<>(lists.get(0).getFieldList());
-
-    // Intersect with each subsequent list
-    for (int i = 1; i < lists.size(); i++) {
-      common.retainAll(lists.get(i).getFieldList());
-      // If at any point the set becomes empty, we can stop
-      if (common.isEmpty()) {
-        break;
-      }
-    }
-
-    return common;
-  }
-
   @Operation(tags = "REST v2", summary = "Get a list of keys from KVP common across a list multiple species lists")
+  @ApiResponses({
+          @ApiResponse(
+                  responseCode = "200",
+                  description = "Species list found",
+                  content = @Content(
+                          mediaType = MediaType.APPLICATION_JSON_VALUE,
+                          schema = @Schema(implementation = SpeciesList.class)
+                  )
+          )
+  })
   @GetMapping("/v2/listCommonKeys/{speciesListIDs}")
   public ResponseEntity<Object> listCommonKeys(
           @PathVariable("speciesListIDs") String speciesListIDs,
@@ -422,7 +368,7 @@ public class RESTController {
           return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
         }
 
-        return new ResponseEntity<>(findCommonKeys(speciesLists), HttpStatus.OK);
+        return new ResponseEntity<>(mongoUtils.findCommonKeys(speciesLists), HttpStatus.OK);
       }
 
       return ResponseEntity.status(404).body("Species list(s) not found");

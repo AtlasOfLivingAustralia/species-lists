@@ -94,6 +94,16 @@ public class IngressController {
 
   @SecurityRequirement(name = "JWT")
   @Operation(tags = "Ingress", summary = "Delete a species list")
+  @ApiResponses({
+          @ApiResponse(
+                  responseCode = "200",
+                  description = "Species list deleted",
+                  content = @Content
+          ),
+          @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameter"),
+          @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+          @ApiResponse(responseCode = "404", description = "Not found - Species list ID was not found")
+  })
   @DeleteMapping("/v2/delete/{speciesListID}")
   public ResponseEntity<Object> delete(
       @PathVariable("speciesListID") String speciesListID,
@@ -191,7 +201,6 @@ public class IngressController {
 
   @Hidden
   @SecurityRequirement(name = "JWT")
-  @Tag(name = "Ingress", description = "Services for ingesting species lists")
   @Operation(
       summary = "Reindex all species lists",
       description = "Reindex all species lists into the ElasticSearch index.",
@@ -200,6 +209,7 @@ public class IngressController {
   public ResponseEntity<Object> reindex(@AuthenticationPrincipal Principal principal) {
     try {
       ResponseEntity<Object> errorResponse = checkAuthorized(principal);
+      if (errorResponse != null) return errorResponse;
       if (errorResponse != null) return errorResponse;
       // start async task
       return startAsyncTaskIfNotBusy("REINDEX", () -> taxonService.reindex());
