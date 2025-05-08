@@ -29,6 +29,7 @@ public class OpenApiConfig {
 
     Locale locale = LocaleContextHolder.getLocale();
 
+
     @Value("${springdoc.api-info.version}")
     private String apiVersion;
 
