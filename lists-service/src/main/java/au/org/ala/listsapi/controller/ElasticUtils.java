@@ -309,8 +309,11 @@ public class ElasticUtils {
     }
 
     /**
-     * This version ensures stricter matching for multi-word queries
-     * while maintaining only must clauses at the top level
+     * Filter results based on "query" being present in the provided fields param.
+     *
+     * @param searchQuery The search query string.
+     * @param restrictedFields The fields to restrict the search to.
+     * @param mainBq The main BoolQuery.Builder to which the restrictions will be added.
      */
     public static void restrictFields(String searchQuery, HashSet<String> restrictedFields, BoolQuery.Builder mainBq) {
         String search = cleanRawQuery(searchQuery);
@@ -319,30 +322,31 @@ public class ElasticUtils {
             return;
         }
 
-        // Create a new bool query to wrap the original logic
-        BoolQuery.Builder wrappingBq = new BoolQuery.Builder();
+        // Create a single outer bool query that will have should clauses for each field
+        // but will itself be a must clause at the top level
+        BoolQuery.Builder outerDisjunctionBq = new BoolQuery.Builder();
 
-        // Process each restricted field
+        // Process each restricted field as a separate should clause
         for (String field : restrictedFields) {
             if (TOP_LEVEL_SEARCHABLE_FIELDS.contains(field)) {
                 String actualFieldToSearch = field + ".search";
 
-                // For top-level fields, use match_phrase for exact phrase matching
-                wrappingBq.must(m ->
-                        m.matchPhrase(mp -> mp.field(actualFieldToSearch).query(search))
+                // Add this field as a should clause
+                outerDisjunctionBq.should(s ->
+                        s.matchPhrase(mp -> mp.field(actualFieldToSearch).query(search))
                 );
             } else {
-                // For nested properties, keep the should/must structure but use stricter matching
-                wrappingBq.must(s -> s.nested(n -> n
+                // For nested properties
+                outerDisjunctionBq.should(s -> s.nested(n -> n
                         .path("properties")
                         .scoreMode(ChildScoreMode.Avg)
                         .query(nq -> nq.bool(nb -> {
-                            // Keep this as should since that's what worked originally
-                            nb.must(m2 -> m2.term(t -> t
-                                    .field("properties.value.keyword")  // Note: needs .keyword suffix for exact matches
-                                    .value(search)));
+                            // Key must match
+                            nb.must(m1 -> m1.term(t -> t
+                                    .field("properties.key")
+                                    .value(field)));
 
-                            // Use match_phrase instead of match for exact phrase matching
+                            // Value must match exactly
                             nb.must(m2 -> m2.matchPhrase(mp -> mp
                                     .field("properties.value")
                                     .query(search)));
@@ -353,7 +357,10 @@ public class ElasticUtils {
             }
         }
 
-        // Wrap everything in a single must clause
-        mainBq.should(m -> m.bool(wrappingBq.build()));
+        // Set minimum_should_match to 1 to ensure at least one field must match
+        outerDisjunctionBq.minimumShouldMatch("1");
+
+        // Wrap the field disjunction in a must clause at the top level
+        mainBq.must(m -> m.bool(outerDisjunctionBq.build()));
     }
 }
