@@ -17,6 +17,7 @@ import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.ChildScoreMode;
 import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
+import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.*;
@@ -307,38 +308,52 @@ public class ElasticUtils {
         return "";
     }
 
-    public static void restrictFields(String searchQuery, HashSet<String> restrictedFields, BoolQuery.Builder bq) {
+    /**
+     * This version ensures stricter matching for multi-word queries
+     * while maintaining only must clauses at the top level
+     */
+    public static void restrictFields(String searchQuery, HashSet<String> restrictedFields, BoolQuery.Builder mainBq) {
         String search = cleanRawQuery(searchQuery);
 
+        if (restrictedFields == null || restrictedFields.isEmpty() || search.trim().isEmpty()) {
+            return;
+        }
+
+        // Create a new bool query to wrap the original logic
+        BoolQuery.Builder wrappingBq = new BoolQuery.Builder();
+
+        // Process each restricted field
         for (String field : restrictedFields) {
             if (TOP_LEVEL_SEARCHABLE_FIELDS.contains(field)) {
-                // E.g. if userField == "scientificName", the actual field to match is "scientificName.search"
                 String actualFieldToSearch = field + ".search";
 
-                bq.must(m ->
-                        m.match(mq -> mq.field(actualFieldToSearch).query(
-                                search
-                        ))
+                // For top-level fields, use match_phrase for exact phrase matching
+                wrappingBq.must(m ->
+                        m.matchPhrase(mp -> mp.field(actualFieldToSearch).query(search))
                 );
-
             } else {
-                // Otherwise, treat it as a nested property
-                // This means userField is actually the 'key' in properties.key
-                // and we do a match on properties.value for searchText
-                bq.must(s -> s.nested(n -> n
+                // For nested properties, keep the should/must structure but use stricter matching
+                wrappingBq.must(s -> s.nested(n -> n
                         .path("properties")
                         .scoreMode(ChildScoreMode.Avg)
                         .query(nq -> nq.bool(nb -> {
-                            nb.should(m1 -> m1.term(t -> t
-                                    .field("properties.key")
-                                    .value(field)));
-                            nb.must(m2 -> m2.match(mt -> mt
+                            // Keep this as should since that's what worked originally
+                            nb.must(m2 -> m2.term(t -> t
+                                    .field("properties.value.keyword")  // Note: needs .keyword suffix for exact matches
+                                    .value(search)));
+
+                            // Use match_phrase instead of match for exact phrase matching
+                            nb.must(m2 -> m2.matchPhrase(mp -> mp
                                     .field("properties.value")
                                     .query(search)));
+
                             return nb;
                         }))
                 ));
             }
         }
+
+        // Wrap everything in a single must clause
+        mainBq.should(m -> m.bool(wrappingBq.build()));
     }
 }
