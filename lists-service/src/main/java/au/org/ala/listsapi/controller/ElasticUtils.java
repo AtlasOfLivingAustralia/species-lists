@@ -17,6 +17,7 @@ import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.ChildScoreMode;
 import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
+import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.*;
@@ -307,38 +308,59 @@ public class ElasticUtils {
         return "";
     }
 
-    public static void restrictFields(String searchQuery, HashSet<String> restrictedFields, BoolQuery.Builder bq) {
+    /**
+     * Filter results based on "query" being present in the provided fields param.
+     *
+     * @param searchQuery The search query string.
+     * @param restrictedFields The fields to restrict the search to.
+     * @param mainBq The main BoolQuery.Builder to which the restrictions will be added.
+     */
+    public static void restrictFields(String searchQuery, HashSet<String> restrictedFields, BoolQuery.Builder mainBq) {
         String search = cleanRawQuery(searchQuery);
 
+        if (restrictedFields == null || restrictedFields.isEmpty() || search.trim().isEmpty()) {
+            return;
+        }
+
+        // Create a single outer bool query that will have should clauses for each field
+        // but will itself be a must clause at the top level
+        BoolQuery.Builder outerDisjunctionBq = new BoolQuery.Builder();
+
+        // Process each restricted field as a separate should clause
         for (String field : restrictedFields) {
             if (TOP_LEVEL_SEARCHABLE_FIELDS.contains(field)) {
-                // E.g. if userField == "scientificName", the actual field to match is "scientificName.search"
                 String actualFieldToSearch = field + ".search";
 
-                bq.must(m ->
-                        m.match(mq -> mq.field(actualFieldToSearch).query(
-                                search
-                        ))
+                // Add this field as a should clause
+                outerDisjunctionBq.should(s ->
+                        s.matchPhrase(mp -> mp.field(actualFieldToSearch).query(search))
                 );
-
             } else {
-                // Otherwise, treat it as a nested property
-                // This means userField is actually the 'key' in properties.key
-                // and we do a match on properties.value for searchText
-                bq.must(s -> s.nested(n -> n
+                // For nested properties
+                outerDisjunctionBq.should(s -> s.nested(n -> n
                         .path("properties")
                         .scoreMode(ChildScoreMode.Avg)
                         .query(nq -> nq.bool(nb -> {
-                            nb.should(m1 -> m1.term(t -> t
+                            // Key must match
+                            nb.must(m1 -> m1.term(t -> t
                                     .field("properties.key")
                                     .value(field)));
-                            nb.must(m2 -> m2.match(mt -> mt
+
+                            // Value must match exactly
+                            nb.must(m2 -> m2.matchPhrase(mp -> mp
                                     .field("properties.value")
                                     .query(search)));
+
                             return nb;
                         }))
                 ));
             }
         }
+
+        // Set minimum_should_match to 1 to ensure at least one field must match
+        outerDisjunctionBq.minimumShouldMatch("1");
+
+        // Wrap the field disjunction in a must clause at the top level
+        mainBq.must(m -> m.bool(outerDisjunctionBq.build()));
     }
 }

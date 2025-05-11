@@ -237,6 +237,14 @@ public class RESTController {
     }
   }
 
+  /**
+   * Convert the results to a legacy format
+   * Note: this is not 100% backwards compatible with the old API, see the
+   * @LegacyController
+   *
+   * @param results
+   * @return
+   */
   public Map<String, Object> getLegacyFormat(Page<SpeciesList> results) {
     Map<String, Object> legacyFormat = new HashMap<>();
     legacyFormat.put("listCount", results.getTotalElements());
@@ -244,10 +252,6 @@ public class RESTController {
     legacyFormat.put("max", results.getPageable().getPageSize());
     legacyFormat.put("lists", results.getContent());
     return legacyFormat;
-  }
-
-  private String emptyDefault(String value, String defaultValue) {
-    return value.isEmpty() ? defaultValue : value;
   }
 
   @Operation(tags = "REST v2", summary = "Get species lists items for a list. List IDs can be a single value, or comma separated IDs.")

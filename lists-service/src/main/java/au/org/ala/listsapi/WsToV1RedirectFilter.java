@@ -34,7 +34,8 @@ public class WsToV1RedirectFilter extends OncePerRequestFilter {
             @Value("${api.v2.prefix:/v2}") String v2Prefix,
             @Value("${api.preversion.upload:/upload}") String preversionUpload,
             @Value("${api.preversion.ingest:/ingest}") String preversionIngest,
-            @Value("${api.preversion.delete:/delete}") String preversionDelete) {
+            @Value("${api.preversion.delete:/delete}") String preversionDelete,
+            @Value("${api.preversion.constraints:/constraints}") String preversionConstraints) {
 
         this.wsPrefix = wsPrefix;
         this.v1Prefix = v1Prefix;
