@@ -48,7 +48,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
           <Anchor href='https://ala.org.au' className={classes.link} size='sm'>
             Home
           </Anchor>
-          {parts.length > 0 ?  (
+          {parts.length > 1 ?  (
             <Anchor component={Link} to='/' className={classes.link} size='sm'>
               Species lists
             </Anchor>

@@ -98,6 +98,13 @@
   "results.noRecords": "No records found",
   "results.for": "for",
 
+  "reingest.error.list.notFount": "List not found",
+  "reingest.error.list.notAuthorised": "You are not authorized to reingest this list",
+  "reingest.upload.list.desription": "Drag list here, or click to select a file",
+  "reingest.upload.list.acceptedFiles": "Accepted file types",
+  "reingest.error.message.title": "An error has occurred",
+  "reingest.error.message.tryAgain": "please try again with another file",
+
   "add.species.title": "Add a new taxon entry",
   "add.species.label": "Add species",
   "search.input.placeholder": "Search lists by name or taxa",

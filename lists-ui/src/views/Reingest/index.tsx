@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import '@mantine/dropzone/styles.css';
 
-import { ReactNode, useCallback, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Badge,
@@ -21,31 +21,62 @@ import {
   StopIcon,
   TickIcon,
 } from '@atlasoflivingaustralia/ala-mantine';
-
-import { FormattedMessage, FormattedNumber } from 'react-intl';
-import { SpeciesList, UploadResult } from '#/api';
-import { getErrorMessage } from '#/helpers';
+import { notifications } from '@mantine/notifications';
+import { Navigate, useParams } from 'react-router';
+import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 
 // Helpers & local components
-import { notifications } from '@mantine/notifications';
-import { useALA } from '#/helpers/context/useALA';
-import { Navigate, useRouteLoaderData } from 'react-router';
+import { performGQLQuery, queries, SpeciesList, UploadResult } from '#/api';
+import { getErrorMessage } from '#/helpers';
 import { IngestProgress } from '#/components/IngestProgress';
+import { useALA } from '#/helpers/context/useALA';
+import { getAccessToken } from '#/helpers/utils/getAccessToken';
 import classes from './index.module.css';
 
 const ACCEPTED_TYPES: string[] = ['text/csv', 'application/zip'];
 
 export function Component() {
-  useDocumentTitle('ALA Lists | Re-upload');
 
+  const { id } = useParams();
   const [uploading, setUploading] = useState<boolean>(false);
   const [ingesting, setIngesting] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | Error | null>(null);
   const [originalName, setOriginalName] = useState<string | null>(null);
   const [result, setResult] = useState<UploadResult | null>(null);
+  const [meta, setMeta] = useState<SpeciesList | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const { meta } = useRouteLoaderData('list') as { meta: SpeciesList };
+  useDocumentTitle(meta?.title + ' reingest' || 'Loading...');
   const ala = useALA();
+  const intl = useIntl();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = getAccessToken();
+        const result = await performGQLQuery(
+          queries.QUERY_LISTS_GET,
+          {
+            speciesListID: id,
+            // size,
+          },
+          token
+        );
+
+        if (result.meta === null || result.list === null) {
+          throw new Error(intl.formatMessage({ id: 'reingest.error.list.notFount', defaultMessage: 'List not found' }));
+        }
+
+        setMeta(result.meta);
+      } catch (err) {
+        setError(err as Error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id]);
 
   // Callback handler for upload
   const handleUpload = useCallback(async (files: FileWithPath[]) => {
@@ -67,7 +98,7 @@ export function Component() {
   const handleIngest = useCallback(async () => {
     setIngesting(true);
     try {
-      await ala.rest.lists.reingest(meta.id, result?.localFile || '');
+      await ala.rest.lists.reingest(meta?.id || '', result?.localFile || '');
     } catch (error) {
       console.error(error);
       notifications.show({
@@ -83,15 +114,17 @@ export function Component() {
     setResult(null);
   }, []);
 
-  // Redirect to the home screen if not authenticated
-  if (!ala.isAuthorisedForList(meta)) return <Navigate to='/' />;
+  // Redirect to the home screen if not authenticated 
+  // TODO: use <ProtectedRoute> similar to Upload view so user gets a proper error message
+  // and not just a redirect to home
+  if (!loading && (!meta || !ala.isAuthorisedForList(meta))) return <Navigate to='/' />;
 
   let idle: { title: ReactNode; content: ReactNode; icon: ReactNode } = {
-    title: 'Drag list here, or click to select',
+    title: intl.formatMessage({ id: 'reingest.upload.list.desription', defaultMessage: 'Drag list here, or click to select' }),
     content: (
       <>
         <Text size='sm' c='dimmed' inline>
-          Accepted files
+          <FormattedMessage id='reingest.upload.list.acceptedFiles' defaultMessage='Accepted files'/>
         </Text>
         <Badge>CSV</Badge>
         <Badge>ZIP</Badge>
@@ -102,22 +135,22 @@ export function Component() {
 
   if (error) {
     idle = {
-      title: 'An error has occurred',
+      title: intl.formatMessage({ id: 'reingest.error.message.title', defaultMessage: 'An error has occurred' }),
       content: (
         <Text size='sm' c='dimmed'>
-          {error}, please try again with another file
+          {getErrorMessage(error)}, <FormattedMessage id='reingest.error.message.tryAgain' defaultMessage='please try again with another file'/>
         </Text>
       ),
       icon: <CautionIcon size={40} />,
     };
   } else if (result) {
     idle = {
-      title: `Uploaded ${originalName}`,
+      title: `${intl.formatMessage({ id: 'reingest.success.message.prefix', defaultMessage: 'Uploaded' })} ${originalName}`,
       content: (
         <>
           <Badge> {<FormattedNumber value={result.rowCount} />} rows</Badge>
           <Text lineClamp={2} size='sm' c='dimmed'>
-            <b>Additional Fields: </b>{' '}
+            <b><FormattedMessage id='reingest.additional.files' defaultMessage='Additional Fields'/>:</b>{' '}
             {result.fieldList.length > 0 ? result.fieldList.join(', ') : 'N/A'}
           </Text>
         </>
@@ -185,7 +218,7 @@ export function Component() {
               color='dark'
               onClick={() => setResult(null)}
             >
-              Try again
+              <FormattedMessage id='reingest.upload.tryAgain' defaultMessage='Try again'/>
             </Button>
           </div>
         </Alert>
@@ -195,20 +228,22 @@ export function Component() {
           <Group justify='space-between'>
             <Stack gap={4}>
               <Text size='lg' fw='bold'>
-                Upload complete
+                <FormattedMessage id='reingest.upload.complete' defaultMessage='Upload complete'/>
               </Text>
               <Text size='sm' c='dimmed'>
-                New list for <b>{meta.title}</b> uploaded
+                <FormattedMessage id='reingest.new.list.for' defaultMessage='New list for'/>{' '}
+                <b>{meta?.title ?? <FormattedMessage id='reingest.unknown' defaultMessage='Unknown'/>}</b> {' '}
+                <FormattedMessage id='reingest.uploaded' defaultMessage='uploaded'/>
               </Text>
             </Stack>
             <Group>
-              <Button onClick={handleIngest}>Confirm re-ingestion</Button>
-              <Button onClick={handleReset}>Cancel</Button>
+              <Button onClick={handleIngest}><FormattedMessage id='reingest.confirm.reingestion' defaultMessage='Confirm re-ingestion'/></Button>
+              <Button onClick={handleReset}><FormattedMessage id='reingest.cacel.reingestion' defaultMessage='Cancel'/></Button>
             </Group>
           </Group>
         </Paper>
       )}
-      <IngestProgress id={meta.id} ingesting={ingesting} />
+      <IngestProgress id={id ?? null} ingesting={ingesting} />
     </Stack>
   );
 }

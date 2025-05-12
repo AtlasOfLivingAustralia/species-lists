@@ -144,6 +144,7 @@ export function List() {
   const [editing, setEditing] = useState<boolean>(false);
   const [rematching, setRematching] = useState<boolean>(false);
   const [lastProgress, setLastProgress] = useState<boolean>(false);
+  const [pageTitle, setPageTitle] = useState<string | null>(null);
 
   const location = useLocation();
   const mounted = useMounted();
@@ -153,7 +154,9 @@ export function List() {
   // Selection drawer
   const [opened, { open, close }] = useDisclosure();
   const [selected, setSelected] = useState<SpeciesListItem | null>(null);
-  
+  // If we're on the reingest page
+  const isReingest = location.pathname.endsWith('reingest');
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -174,6 +177,7 @@ export function List() {
         setData(result);
         setList(result.list);
         setMeta(result.meta);
+        setPageTitle(!isReingest ? result.meta.title : 'Reingest list');
         setFacets(result.facets);
       } catch (err) {
         setError(err as Error);
@@ -185,12 +189,13 @@ export function List() {
     fetchData();
   }, [id]);
 
+  useEffect(() => {
+    setPageTitle(pageTitle + ' - Reingest list');
+  }, [isReingest]);
+
   // Destructure results & calculate the real page offset
   const { totalElements, totalPages } = list || { totalElements: 0, totalPages: 0 };
   const realPage = page + 1;
-
-  // If we're on the reingest page
-  const isReingest = location.pathname.endsWith('reingest');
 
   // Request abort controller
   const controller = useRef<AbortController | null>(null);
@@ -446,7 +451,7 @@ export function List() {
       <Container fluid className={classes.speciesHeader}>
         <Grid>
           <Grid.Col span={12}>
-            <Breadcrumbs listTitle={meta?.title} />
+            <Breadcrumbs listTitle={pageTitle} />
           </Grid.Col>
           <Grid.Col span={12}>
             <Title order={4} classNames={{root: classes.title}}>
@@ -497,7 +502,7 @@ export function List() {
                 />
               )}
             </Flex>
-            <Button
+            {!isReingest && (<Button
               radius='md'
               leftSection={<FontAwesomeIcon icon={faPlus} />}
               variant='light'
@@ -507,6 +512,7 @@ export function List() {
             >
               <FormattedMessage id='add.species.label' defaultMessage='Add species' />
             </Button>
+            )}
           </Grid.Col>
           { rematching && (
             <Grid.Col span={12}>
