@@ -18,22 +18,122 @@ interface BreadcrumbsProps {
 }
 
 export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
-  // const { meta } = (useRouteLoaderData('list') as ListLoaderData) || {};
   const { pathname } = useLocation();
+  const parts = pathname.split('/').slice(1).filter(part => part !== '');
+  
+  // Check if we're on a list page or one of its subpages
+  const isList = parts[0] === 'list' && parts.length > 1;
+  
+  // Create breadcrumb items array
+  const items = [];
+  
+  // Home link (always present)
+  items.push(
+    <Anchor href={import.meta.env.VITE_ALA_HOME_PAGE} className={classes.link} size='sm' key="home">
+      Home
+    </Anchor>
+  );
+  
+  // Species lists link (or text if we're on the main species lists page)
+  if (parts.length > 0) {
+    items.push(
+      <Anchor component={Link} to='/' className={classes.link} size='sm' key="species-lists">
+        Species lists
+      </Anchor>
+    );
+  } else {
+    items.push(<Text size='sm' key="species-lists">Species lists</Text>);
+  }
 
-  const parts = pathname.split('/').slice(1);
-  const isListPage = parts[0] === 'list' && parts.length > 1;
-  const isNestedAction = isListPage && parts.length > 2; // e.g., /list/123/edit
-
-    // Determine the text for the last breadcrumb item
-  let lastItemText: string | null = null;
-  if (listTitle || isListPage) {
+  // Handle standalone pages like '/upload'
+  if (parts.length === 1 && parts[0] !== 'list') {
+    items.push(
+      <Text size='sm' truncate='end' key="page">
+        {capitalize(parts[0])}
+      </Text>
+    );
+  }
+  
+  // Handle list pages and subpages
+  else if (isList) {
+    // Add the list title if available
     if (listTitle) {
-      lastItemText = listTitle; // Use title from state if available
-    } else if (!isNestedAction) {
-      lastItemText = 'Loading list...'; // Placeholder while loading
+      // If we're on a subpage of the list (like "reingest"), make the list title a link
+      if (parts.length > 2) {
+        items.push(
+          <Anchor 
+            component={Link} 
+            to={`/list/${parts[1]}`} 
+            className={classes.link} 
+            size='sm'
+            key="list-title"
+          >
+            {listTitle}
+          </Anchor>
+        );
+        
+        // Add any additional path segments as the final text item
+        for (let i = 2; i < parts.length; i++) {
+          if (i === parts.length - 1) {
+            items.push(
+              <Text size='sm' truncate='end' key={`part-${i}`}>
+                {capitalize(parts[i])}
+              </Text>
+            );
+          } else {
+            // For any intermediate segments (unlikely but handling just in case)
+            const linkPath = `/list/${parts[1]}/${parts.slice(2, i + 1).join('/')}`;
+            items.push(
+              <Anchor 
+                component={Link} 
+                to={linkPath} 
+                className={classes.link} 
+                size='sm'
+                key={`part-${i}`}
+              >
+                {capitalize(parts[i])}
+              </Anchor>
+            );
+          }
+        }
+      } else {
+        // Just the list page itself
+        items.push(
+          <Text size='sm' truncate='end' key="list-title">
+            {listTitle}
+          </Text>
+        );
+      }
     } else {
-      lastItemText = capitalize(parts[parts.length -1]); // Use last path part for actions like 'edit'
+      // No list title available, use path parts as fallback
+      if (parts.length > 2) {
+        // For URLs like /list/{id}/reingest without a title, show ID as link
+        items.push(
+          <Anchor 
+            component={Link} 
+            to={`/list/${parts[1]}`} 
+            className={classes.link} 
+            size='sm'
+            key="list-id"
+          >
+            {parts[1]}
+          </Anchor>
+        );
+        
+        // Show the action (like "reingest") as text
+        items.push(
+          <Text size='sm' truncate='end' key="action">
+            {capitalize(parts[parts.length - 1])}
+          </Text>
+        );
+      } else {
+        // Just showing the ID as text
+        items.push(
+          <Text size='sm' truncate='end' key="list-id">
+            {parts[1]}
+          </Text>
+        );
+      }
     }
   }
 
@@ -45,28 +145,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
           separator={<ChevronRightIcon size={12} />}
           separatorMargin={5}
         >
-          <Anchor href='https://ala.org.au' className={classes.link} size='sm'>
-            Home
-          </Anchor>
-          {parts.length > 1 ?  (
-            <Anchor component={Link} to='/' className={classes.link} size='sm'>
-              Species lists
-            </Anchor>
-          ) : (
-            <Text size='sm'>Species lists</Text>
-          )}
-          {/* Link to the specific list (if applicable and not the last item) */}
-          { isNestedAction && (
-            <Anchor component={Link} to={`/list/${parts[1]}`} className={classes.link} size='sm' truncate="end">
-              {listTitle}
-            </Anchor>
-          )}
-          {/* Display the final item */}
-          {lastItemText && (
-            <Text size='sm' truncate='end'>
-              {lastItemText}
-            </Text>
-          )}
+          {items}
         </Base>
         <ActionButtons />
       </Group>

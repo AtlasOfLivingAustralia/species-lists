@@ -177,7 +177,7 @@ export function List() {
         setData(result);
         setList(result.list);
         setMeta(result.meta);
-        setPageTitle(!isReingest ? result.meta.title : 'Reingest list');
+        setPageTitle(result.meta.title);
         setFacets(result.facets);
       } catch (err) {
         setError(err as Error);
@@ -188,10 +188,6 @@ export function List() {
 
     fetchData();
   }, [id]);
-
-  useEffect(() => {
-    setPageTitle(pageTitle + ' - Reingest list');
-  }, [isReingest]);
 
   // Destructure results & calculate the real page offset
   const { totalElements, totalPages } = list || { totalElements: 0, totalPages: 0 };
