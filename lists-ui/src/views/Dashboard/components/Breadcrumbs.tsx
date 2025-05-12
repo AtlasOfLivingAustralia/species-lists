@@ -37,7 +37,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
   // Home link (always present)
   items.push({
     label: 'Home',
-    href: import.meta.env.VITE_ALA_HOME_PAGE, // Assuming this is an external link
+    href: import.meta.env.VITE_ALA_HOME_PAGE, 
   });
 
   // Species lists link (or text if on the species lists index)
