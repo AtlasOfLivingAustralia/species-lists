@@ -49,7 +49,7 @@ public class AuthUtils {
 
     if (profile == null)
       return false;
- 
+
     return (profile.getRoles() != null && hasAdminRole(profile));
   }
 
@@ -60,8 +60,10 @@ public class AuthUtils {
     // 3) ROLE_USER and an editor of the list
     AlaUserProfile profile = getUserProfile(principal);
 
-    return (list.getOwner() != null && list.getOwner().equals(profile.getUserId()))
-        || (list.getEditors() != null && list.getEditors().contains(profile.getUserId()))
-        || isAuthorized(principal);
+    return profile != null && (
+      (list.getOwner() != null && list.getOwner().equals(profile.getUserId()))
+      || (list.getEditors() != null && list.getEditors().contains(profile.getUserId()))
+      || isAuthorized(principal)
+    );
   }
 }
