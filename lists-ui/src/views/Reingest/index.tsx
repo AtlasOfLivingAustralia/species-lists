@@ -22,7 +22,7 @@ import {
   TickIcon,
 } from '@atlasoflivingaustralia/ala-mantine';
 import { notifications } from '@mantine/notifications';
-import { Navigate, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 
 // Helpers & local components
@@ -35,7 +35,7 @@ import classes from './index.module.css';
 
 const ACCEPTED_TYPES: string[] = ['text/csv', 'application/zip'];
 
-export function Component() {
+export default function Reingest() {
 
   const { id } = useParams();
   const [uploading, setUploading] = useState<boolean>(false);
@@ -44,7 +44,7 @@ export function Component() {
   const [originalName, setOriginalName] = useState<string | null>(null);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [meta, setMeta] = useState<SpeciesList | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   useDocumentTitle(meta?.title + ' reingest' || 'Loading...');
   const ala = useALA();
@@ -58,7 +58,6 @@ export function Component() {
           queries.QUERY_LISTS_GET,
           {
             speciesListID: id,
-            // size,
           },
           token
         );
@@ -100,7 +99,7 @@ export function Component() {
     try {
       await ala.rest.lists.reingest(meta?.id || '', result?.localFile || '');
     } catch (error) {
-      console.error(error);
+      // console.error(error);
       notifications.show({
         message: getErrorMessage(error),
         position: 'bottom-left',
@@ -113,11 +112,6 @@ export function Component() {
     setError(null);
     setResult(null);
   }, []);
-
-  // Redirect to the home screen if not authenticated 
-  // TODO: use <ProtectedRoute> similar to Upload view so user gets a proper error message
-  // and not just a redirect to home
-  if (!loading && (!meta || !ala.isAuthorisedForList(meta))) return <Navigate to='/' />;
 
   let idle: { title: ReactNode; content: ReactNode; icon: ReactNode } = {
     title: intl.formatMessage({ id: 'reingest.upload.list.desription', defaultMessage: 'Drag list here, or click to select' }),
@@ -247,5 +241,3 @@ export function Component() {
     </Stack>
   );
 }
-
-Object.assign(Component, { displayName: 'Reingest' });

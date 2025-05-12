@@ -447,7 +447,7 @@ export function List() {
       <Container fluid className={classes.speciesHeader}>
         <Grid>
           <Grid.Col span={12}>
-            <Breadcrumbs listTitle={pageTitle} />
+            <Breadcrumbs listTitle={pageTitle ?? undefined} />
           </Grid.Col>
           <Grid.Col span={12}>
             <Title order={4} classNames={{root: classes.title}}>

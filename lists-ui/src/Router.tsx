@@ -21,12 +21,22 @@ const JWT_ADMIN_ROLE = import.meta.env.VITE_AUTH_JWT_ADMIN_ROLE;
 
 const List = lazy(() => import('./views/List'));
 const UploadPage = lazy(() => import('./views/Upload'));
+const ReingestPage = lazy(() => import('./views/Reingest'));
 
 // Wrap the Upload component with ProtectedRoute and Suspense
 const ProtectedUpload = () => (
   <ProtectedRoute>
     <Suspense fallback={<div>Loading...</div>}>
       <UploadPage />
+    </Suspense>
+  </ProtectedRoute>
+);
+
+// Create a protected and suspended wrapper for the Reingest page
+const ProtectedReingest = () => (
+  <ProtectedRoute>
+    <Suspense fallback={<PageLoader />}> {/* Use PageLoader for better consistency */}
+      <ReingestPage />
     </Suspense>
   </ProtectedRoute>
 );
@@ -53,7 +63,9 @@ const router = createBrowserRouter([
         children: [
           {
             path: 'reingest',
-            lazy: () => import('./views/Reingest'),
+            // Use the ProtectedReingest wrapper for this route
+            element: <ProtectedReingest />,
+            errorElement: <PageError />, // Add error element here as well
           },
         ],
       },
@@ -79,7 +91,6 @@ const router = createBrowserRouter([
           const parsed = jwtDecode(token) as any;
           if (!parsed[JWT_ROLES] || !parsed[JWT_ROLES].includes(JWT_ADMIN_ROLE))
             return redirect('/');
-
           try {
             const admin = adminApi(token);
             return await admin.migrateProgress();
