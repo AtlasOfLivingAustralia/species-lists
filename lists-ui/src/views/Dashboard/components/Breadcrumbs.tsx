@@ -4,38 +4,137 @@ import {
   Text,
   Group,
 } from '@mantine/core';
-import { Link, useLocation } from 'react-router';
+import { Link, useLocation } from 'react-router'; 
+import { ChevronRightIcon } from '@atlasoflivingaustralia/ala-mantine';
 
 import classes from './Breadcrumbs.module.css';
-import { ChevronRightIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { ActionButtons } from '#/components/ActionButtons';
 
+// Helper function to capitalize the first letter of a string
 const capitalize = (input?: string) =>
-  `${(input || '').charAt(0).toUpperCase()}${(input || '').slice(1)}`;
+  input ? input.charAt(0).toUpperCase() + input.slice(1) : '';
 
 interface BreadcrumbsProps {
   listTitle: string | undefined;
 }
 
 export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
-  // const { meta } = (useRouteLoaderData('list') as ListLoaderData) || {};
   const { pathname } = useLocation();
 
-  const parts = pathname.split('/').slice(1);
-  const isListPage = parts[0] === 'list' && parts.length > 1;
-  const isNestedAction = isListPage && parts.length > 2; // e.g., /list/123/edit
+  // Split pathname into parts, remove empty strings, and remove the leading empty string from the initial '/'
+  const pathParts = pathname.split('/').filter(part => part !== '');
 
-    // Determine the text for the last breadcrumb item
-  let lastItemText: string | null = null;
-  if (listTitle || isListPage) {
-    if (listTitle) {
-      lastItemText = listTitle; // Use title from state if available
-    } else if (!isNestedAction) {
-      lastItemText = 'Loading list...'; // Placeholder while loading
-    } else {
-      lastItemText = capitalize(parts[parts.length -1]); // Use last path part for actions like 'edit'
-    }
+  // Define the structure for breadcrumb items
+  interface BreadcrumbItem {
+    label: string;
+    href?: string; // Use href for external links or simple anchors
+    to?: string; // Use to for react-router Link
+    isText?: boolean; // Flag to indicate if it should be a Text component
   }
+
+  const items: BreadcrumbItem[] = [];
+
+  // Home link (always present)
+  items.push({
+    label: 'Home',
+    href: import.meta.env.VITE_ALA_HOME_PAGE, 
+  });
+
+  // Species lists link (or text if on the species lists index)
+  items.push({
+    label: 'Species lists',
+    to: '/',
+    isText: pathParts.length === 0 || (pathParts[0] === 'list' && pathParts.length === 1), // Text if on the species lists index or '/list'
+  });
+
+  // Handle other path parts dynamically
+  // Build up the path incrementally for linking
+  let currentPath = '';
+  pathParts.forEach((part, index) => {
+    currentPath += `/${part}`;
+
+    // Skip the first part if it's 'list' as it's handled by the 'Species lists' item
+    if (index === 0 && part === 'list') {
+      // If it's just '/list', the 'Species lists' item is text, so no further breadcrumb needed for '/list' itself.
+      // If it's a list details page or subpage, the list title/ID will be added next.
+      return;
+    }
+
+    const isLast = index === pathParts.length - 1;
+
+    // Handle list title specifically when on a list details page or subpage
+    if (pathParts[0] === 'list' && index === 1) { // This is the list ID part
+      if (listTitle) {
+        items.push({
+          label: listTitle,
+          to: isLast ? undefined : currentPath, // Link unless it's the last item
+          isText: isLast, // Text if it's the last item (the list details page itself)
+        });
+      } else {
+        // Fallback to using the list ID if no title is provided
+        items.push({
+          label: part,
+          to: isLast ? undefined : currentPath, // Link unless it's the last item
+          isText: isLast, // Text if it's the last item
+        });
+      }
+    } else {
+      // Handle all other parts
+      items.push({
+        label: capitalize(part),
+        to: isLast ? undefined : currentPath, // Link unless it's the last item
+        isText: isLast, // Text if it's the last item
+      });
+    }
+  });
+
+
+  // Render the breadcrumb items
+  const breadcrumbElements = items.map((item, index) => {
+    // Skip rendering the 'Species lists' link if we are on the root '/'
+    if (item.to === '/' && pathParts.length === 0) {
+      return <Text size='sm' key={index}>Species lists</Text>;
+    }
+
+    // If the first path part is 'list' and this item is the 'Species lists' link and there are more parts,
+    // render it as a link. Otherwise, if it's the '/list' page itself (pathParts.length === 1 && pathParts[0] === 'list'), render as text.
+    if (item.to === '/' && pathParts[0] === 'list' && pathParts.length > 1) {
+      return (
+        <Anchor component={Link} to={item.to} className={classes.link} size='sm' key={index}>
+          {item.label}
+        </Anchor>
+      );
+    }
+    if (item.isText) {
+      return (
+        <Text size='sm' truncate='end' key={index}>
+          {item.label}
+        </Text>
+      );
+    } else if (item.href) {
+      return (
+        <Anchor href={item.href} className={classes.link} size='sm' key={index}>
+          {item.label}
+        </Anchor>
+      );
+    } else if (item.to) {
+      // Prevent linking the 'Species lists' item if it's the last/current item displayed
+      if (item.to === '/' && pathParts.length === 0) {
+        return (
+          <Text size='sm' key={index}>
+            {item.label}
+          </Text>
+        )
+      }
+      return (
+        <Anchor component={Link} to={item.to} className={classes.link} size='sm' key={index}>
+          {item.label}
+        </Anchor>
+      );
+    }
+    return null; // Should not happen
+  });
+
 
   return (
     <>
@@ -45,28 +144,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
           separator={<ChevronRightIcon size={12} />}
           separatorMargin={5}
         >
-          <Anchor href='https://ala.org.au' className={classes.link} size='sm'>
-            Home
-          </Anchor>
-          {parts.length > 0 ?  (
-            <Anchor component={Link} to='/' className={classes.link} size='sm'>
-              Species lists
-            </Anchor>
-          ) : (
-            <Text size='sm'>Species lists</Text>
-          )}
-          {/* Link to the specific list (if applicable and not the last item) */}
-          { isNestedAction && (
-            <Anchor component={Link} to={`/list/${parts[1]}`} className={classes.link} size='sm' truncate="end">
-              {listTitle}
-            </Anchor>
-          )}
-          {/* Display the final item */}
-          {lastItemText && (
-            <Text size='sm' truncate='end'>
-              {lastItemText}
-            </Text>
-          )}
+          {breadcrumbElements}
         </Base>
         <ActionButtons />
       </Group>

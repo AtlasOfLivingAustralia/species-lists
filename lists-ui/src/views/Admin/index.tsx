@@ -408,7 +408,7 @@ export function Component() {
                 <ActionCard
                   disabled={Boolean(migrationProgress) || migrationDisabled}
                   title='Delete index'
-                  description='Clear all data from the Elasticsearch index'
+                  description='Clear all data from the Elasticsearch index (requires reboot after running)'
                   icon={faTrash}
                   onClick={() => handleClick('wipe-index', 'Index Deletion')}
                 />
@@ -417,7 +417,7 @@ export function Component() {
                 <ActionCard
                   disabled={Boolean(migrationProgress) || migrationDisabled}
                   title='Delete docs'
-                  description='Clear all data from the Elasticsearch index'
+                  description='Clear all data from the MongoDB collections (requires reimport)'
                   icon={faTrash}
                   onClick={() => handleClick('wipe-docs', 'Document Deletion')}
                 />
