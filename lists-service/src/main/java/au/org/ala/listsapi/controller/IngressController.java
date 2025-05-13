@@ -164,7 +164,7 @@ public class IngressController {
       tags = "Ingress",
       description = "Rematch the taxonomy for all species lists. This is a long running process.",
       summary = "Rematch the taxonomy for all species lists")
-  @GetMapping("/v2/admin/rematch")
+  @GetMapping("/admin/rematch")
   public ResponseEntity<Object> rematch(@AuthenticationPrincipal Principal principal) {
     try {
       ResponseEntity<Object> errorResponse = checkAuthorized(principal);
