@@ -59,6 +59,9 @@
   "upload.title.label": "Upload a list",
   "upload.button.label": "Upload list",
   "upload.button.title": "Upload a list from a CSV file",
+  "upload.help.title": "a species list in {csv} format",
+  "upload.help.description": "A species list should consist of a list of scientific names (or taxon IDs) and may include other optional associated properties. The input file should consist of a header row and one or more rows of data. The first column in the list MUST contain either: scientific names and have a header value of \"scientificName\" OR taxon IDs and have a header value of \"taxonID\" or \"taxonConceptID\". Where possible, other header values should be provided as {dwc}. A species list can be uploaded either as a CSV file, or as a zip compressed CSV file.",
+
 
   "scientificName": "Scientific name",
   "scientificNameAuthority": "Scientific name authority",
