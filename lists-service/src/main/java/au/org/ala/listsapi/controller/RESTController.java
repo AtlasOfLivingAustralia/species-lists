@@ -191,13 +191,16 @@ public class RESTController {
                 q ->
                         q.bool(
                                 bq -> {
-                                  // classification.taxonConceptID.keyword == taxonValue
+                                  // Require at least one of these conditions to match using minimumShouldMatch
+                                  bq.minimumShouldMatch("1");
+                                  
+                                  // classification.taxonConceptID.keyword == guid
                                   bq.should(s -> s.term(t -> t
                                           .field("classification.taxonConceptID.keyword")
                                           .value(guid)
                                   ));
 
-                                  // taxonID.keyword == taxonValue
+                                  // taxonID.keyword == guid
                                   bq.should(s -> s.term(t -> t
                                           .field("taxonID.keyword")
                                           .value(guid)
@@ -229,9 +232,14 @@ public class RESTController {
         List<SpeciesListItem> speciesListItems =
                 ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
 
-      List<SpeciesList> speciesLists = speciesListMongoRepository.findAllById(speciesListItems.stream().map(SpeciesListItem::getSpeciesListID).toList());
+        // If no results matching the guid were found, return an empty list
+        if (results.getTotalHits() == 0) {
+            return new ResponseEntity<>(getLegacyFormatModel(new ArrayList<>(), 0, page, pageSize), HttpStatus.OK);
+        }
 
-      return new ResponseEntity<>(getLegacyFormatModel(speciesLists, results.getTotalHits(), page, pageSize), HttpStatus.OK);
+        List<SpeciesList> speciesLists = speciesListMongoRepository.findAllById(speciesListItems.stream().map(SpeciesListItem::getSpeciesListID).toList());
+
+        return new ResponseEntity<>(getLegacyFormatModel(speciesLists, results.getTotalHits(), page, pageSize), HttpStatus.OK);
     } catch (Exception e) {
       return ResponseEntity.badRequest().body(e.getMessage());
     }
