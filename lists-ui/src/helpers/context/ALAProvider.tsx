@@ -1,10 +1,14 @@
 import { PropsWithChildren } from 'react';
 import { useAuth } from 'react-oidc-context';
-import { SpeciesList } from '../../api';
+import { notifications } from '@mantine/notifications';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faLock } from '@fortawesome/free-solid-svg-icons';
 
-// Import the context
 import ALAContext from './ALAContext';
+import { SpeciesList } from '../../api';
 import rest from '#/api/rest';
+import classes from '../../Notifications.module.css';
+import { useIntl } from 'react-intl';
 
 const JWT_ROLES = import.meta.env.VITE_AUTH_JWT_ROLES;
 const JWT_USERID = import.meta.env.VITE_AUTH_JWT_USERID;
@@ -12,6 +16,7 @@ const JWT_ADMIN_ROLE = import.meta.env.VITE_AUTH_JWT_ADMIN_ROLE;
 
 export const ALAProvider = ({ children }: PropsWithChildren) => {
   const auth = useAuth();
+  const intl = useIntl();
 
   // Extract the user
   const userid = (auth.user?.profile[JWT_USERID] || '') as string;
@@ -21,6 +26,23 @@ export const ALAProvider = ({ children }: PropsWithChildren) => {
   const isAuthorisedForList = (list: SpeciesList) =>
     auth.isAuthenticated && (isAdmin || list.owner === userid);
 
+  // Centralized notification function
+  const showAuthRequiredNotification = () => {
+    notifications.show({
+      id: 'auth-required',
+      title: intl.formatMessage({ id: 'login.required.title', defaultMessage: 'Login required' }),
+      message: intl.formatMessage({ id: 'login.required.description', defaultMessage: 'You need to "Sign in" to access this page' }),
+      withBorder: true,
+      icon: <FontAwesomeIcon icon={faLock} fontSize={16}/>,
+      autoClose: 10000,
+      classNames: {
+        root: classes.notification,
+        title: classes.title,
+        description: classes.description,
+      },
+    });
+  };
+
   return (
     <ALAContext.Provider
       value={{
@@ -28,6 +50,7 @@ export const ALAProvider = ({ children }: PropsWithChildren) => {
         token: auth.isAuthenticated ? auth.user?.access_token : undefined,
         userid,
         roles,
+        showAuthRequiredNotification,
         rest: rest(auth.user?.access_token || '', isAdmin),
         isAdmin,
         isAuthenticated: auth.isAuthenticated,

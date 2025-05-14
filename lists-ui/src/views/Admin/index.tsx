@@ -1,3 +1,6 @@
+import { useCallback, useEffect, useState } from 'react';
+import { Navigate, useLoaderData, useNavigate } from 'react-router';
+import { FormattedMessage, useIntl } from 'react-intl';
 import {
   Alert,
   Badge,
@@ -28,22 +31,23 @@ import {
   faUser,
   faWarning,
 } from '@fortawesome/free-solid-svg-icons';
-import { Navigate, useLoaderData, useNavigate } from 'react-router';
 
 // Local components
 import { ActionCard } from './components/ActionCard';
 import { FetchInfo } from './components/FetchInfo';
+import { Breadcrumbs } from '../Dashboard/components/Breadcrumbs';
 import { IngestProgress } from '#/components/IngestProgress';
 import { getErrorMessage } from '#/helpers';
+import { MigrateProgress } from '#/api';
 import { useALA } from '#/helpers/context/useALA';
-import { useCallback, useEffect, useState } from 'react';
 
 // Very important warning image
 import warningImage from '#/static/warning.gif';
-import { MigrateProgress } from '#/api';
+import classes from './index.module.css';
 
 export function Component() {
   useDocumentTitle('ALA Lists | Admin');
+  const intl = useIntl();
 
   // State hooks
   const migrationLoader = useLoaderData();
@@ -236,188 +240,202 @@ export function Component() {
   );
 
   return (
-    <Container fluid>
-      <Stack gap='xl'>
+    <>
+      <Container fluid className={classes.speciesHeader}>
         <Grid>
           <Grid.Col span={12}>
-            <Title order={4}>Migration</Title>
+            <Breadcrumbs listTitle={intl.formatMessage({ id: 'admin.title', defaultMessage: 'Admin' })}/>
           </Grid.Col>
           <Grid.Col span={12}>
-            <Stack>
-              {migrationProgress && (
-                <Paper p='md' radius='lg' withBorder>
-                  <Stack>
-                    <Flex justify='space-between'>
-                      <Text>
-                        {migrationProgress.currentSpeciesList ? (
-                          <>
-                            <b>Migrating: </b>{' '}
-                            {migrationProgress.currentSpeciesList.title}
-                          </>
-                        ) : (
-                          'Starting migration'
-                        )}
-                      </Text>
-                      <Badge miw={80} ml='xs'>
-                        {migrationProgress.completed}/{migrationProgress.total}
-                      </Badge>
-                    </Flex>
-                    <Progress
-                      value={
-                        (migrationProgress.completed /
-                          migrationProgress.total) *
-                        100
-                      }
-                    />
-                  </Stack>
-                </Paper>
-              )}
-              <IngestProgress
-                id={migrationProgress?.currentSpeciesList?.id || null}
-                ingesting={Boolean(migrationProgress)}
-                disableNavigation
-              />
-            </Stack>
-          </Grid.Col>
-          <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
-            <ActionCard
-              disabled={Boolean(migrationProgress) || migrationDisabled}
-              title='All'
-              description={
-                <>
-                  Migrate <b>all</b> lists from the legacy lists tool
-                </>
-              }
-              icon={faRightLeft}
-              onClick={() => handleClick('migrate-all', 'All Migration')}
-            />
-          </Grid.Col>
-          {['56599'].includes(ala.userid) && (
-            <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
-              <ActionCard
-                disabled={Boolean(migrationProgress) || migrationDisabled}
-                title='Custom'
-                description={
-                  <>
-                    Migrate lists from the legacy lists tool{' '}
-                    <b>using a custom query</b>
-                  </>
-                }
-                icon={faCode}
-                onClick={() =>
-                  handleClick('migrate-custom', 'Custom Migration')
-                }
-              />
-            </Grid.Col>
-          )}
-          <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
-            <ActionCard
-              disabled={Boolean(migrationProgress) || migrationDisabled}
-              title='Userdetails'
-              description={
-                <>Migrate user data from userdetails for legacy lists</>
-              }
-              icon={faUser}
-              onClick={() =>
-                handleClick('migrate-userdetails', 'Userdetails Migration')
-              }
-            />
+            <Title order={3} classNames={{ root: classes.title }} >
+              <FormattedMessage id='admin.title.label' defaultMessage='Admin Functions' />
+            </Title>
           </Grid.Col>
         </Grid>
-        <Grid>
-          <Grid.Col span={12}>
-            <Stack>
-              <Title order={4}>Tools</Title>
-              <Text c='dimmed'>
-                Please use the following tools <b>with caution</b> and{' '}
-                <b>verify</b> that these really need to be run first.
-              </Text>
-            </Stack>
-          </Grid.Col>
-          <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
-            <ActionCard
-              disabled={Boolean(migrationProgress) || migrationDisabled}
-              title='Rematch'
-              description='Rematch the taxonomy for all lists'
-              icon={faIdCard}
-              onClick={() => handleClick('rematch', 'Rematching')}
-            />
-          </Grid.Col>
-          <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
-            <ActionCard
-              disabled={Boolean(migrationProgress) || migrationDisabled}
-              title='Reindex'
-              description='Regenerate the elastic search index for all lists'
-              icon={faArrowsRotate}
-              onClick={() => handleClick('reindex', 'Reindexing')}
-            />
-          </Grid.Col>
-          <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
-            <ActionCard
-              title='Mongo indexes'
-              description='View indexed fields for MongoDB collections'
-              icon={faSearch}
-              onClick={() => {
-                modals.open({
-                  size: 'xl',
-                  title: (
-                    <Text fw='bold' size='lg'>
-                      Mongo Indexes
-                    </Text>
-                  ),
-                  children: <FetchInfo fetcher={ala.rest.admin?.indexes} />,
-                });
-              }}
-            />
-          </Grid.Col>
-        </Grid>
-        {['testing', 'development'].includes(import.meta.env.MODE) && (
+      </Container>
+      <Container fluid>
+        <Stack gap='xl' mt='lg'>
           <Grid>
             <Grid.Col span={12}>
+              <Title order={4}>Migration</Title>
+            </Grid.Col>
+            <Grid.Col span={12}>
               <Stack>
-                <Title order={4}>Danger Zone</Title>
-                <Alert
-                  icon={<FontAwesomeIcon icon={faWarning} color='white' />}
-                  title='Danger Zone'
-                  variant='filled'
-                  radius='md'
-                >
-                  Extremely massive danger zone here.{' '}
-                  <b>Run these ONLY in development/testing environments.</b>
-                </Alert>
+                {migrationProgress && (
+                  <Paper p='md' radius='lg' withBorder>
+                    <Stack>
+                      <Flex justify='space-between'>
+                        <Text>
+                          {migrationProgress.currentSpeciesList ? (
+                            <>
+                              <b>Migrating: </b>{' '}
+                              {migrationProgress.currentSpeciesList.title}
+                            </>
+                          ) : (
+                            'Starting migration'
+                          )}
+                        </Text>
+                        <Badge miw={80} ml='xs'>
+                          {migrationProgress.completed}/{migrationProgress.total}
+                        </Badge>
+                      </Flex>
+                      <Progress
+                        value={
+                          (migrationProgress.completed /
+                            migrationProgress.total) *
+                          100
+                        }
+                      />
+                    </Stack>
+                  </Paper>
+                )}
+                <IngestProgress
+                  id={migrationProgress?.currentSpeciesList?.id || null}
+                  ingesting={Boolean(migrationProgress)}
+                  disableNavigation
+                />
               </Stack>
             </Grid.Col>
             <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
               <ActionCard
                 disabled={Boolean(migrationProgress) || migrationDisabled}
-                title='Delete index'
-                description='Clear all data from the Elasticsearch index'
-                icon={faTrash}
-                onClick={() => handleClick('wipe-index', 'Index Deletion')}
+                title='All'
+                description={
+                  <>
+                    Migrate <b>all</b> lists from the legacy lists tool
+                  </>
+                }
+                icon={faRightLeft}
+                onClick={() => handleClick('migrate-all', 'All Migration')}
               />
             </Grid.Col>
+            {['56599'].includes(ala.userid) && (
+              <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
+                <ActionCard
+                  disabled={Boolean(migrationProgress) || migrationDisabled}
+                  title='Custom'
+                  description={
+                    <>
+                      Migrate lists from the legacy lists tool{' '}
+                      <b>using a custom query</b>
+                    </>
+                  }
+                  icon={faCode}
+                  onClick={() =>
+                    handleClick('migrate-custom', 'Custom Migration')
+                  }
+                />
+              </Grid.Col>
+            )}
             <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
               <ActionCard
                 disabled={Boolean(migrationProgress) || migrationDisabled}
-                title='Delete docs'
-                description='Clear all data from the Elasticsearch index'
-                icon={faTrash}
-                onClick={() => handleClick('wipe-docs', 'Document Deletion')}
-              />
-            </Grid.Col>
-            <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
-              <ActionCard
-                disabled={Boolean(migrationProgress) || migrationDisabled}
-                title='Reboot'
-                description='Reboot the lists application'
-                icon={faRefresh}
-                onClick={() => handleClick('reboot', 'Reboot')}
+                title='Userdetails'
+                description={
+                  <>Migrate user data from userdetails for legacy lists</>
+                }
+                icon={faUser}
+                onClick={() =>
+                  handleClick('migrate-userdetails', 'Userdetails Migration')
+                }
               />
             </Grid.Col>
           </Grid>
-        )}
-      </Stack>
-    </Container>
+          <Grid>
+            <Grid.Col span={12}>
+              <Stack>
+                <Title order={4}>Tools</Title>
+                <Text c='dimmed'>
+                  Please use the following tools <b>with caution</b> and{' '}
+                  <b>verify</b> that these really need to be run first.
+                </Text>
+              </Stack>
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
+              <ActionCard
+                disabled={Boolean(migrationProgress) || migrationDisabled}
+                title='Rematch'
+                description='Rematch the taxonomy for all lists'
+                icon={faIdCard}
+                onClick={() => handleClick('rematch', 'Rematching')}
+              />
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
+              <ActionCard
+                disabled={Boolean(migrationProgress) || migrationDisabled}
+                title='Reindex'
+                description='Regenerate the elastic search index for all lists'
+                icon={faArrowsRotate}
+                onClick={() => handleClick('reindex', 'Reindexing')}
+              />
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
+              <ActionCard
+                title='Mongo indexes'
+                description='View indexed fields for MongoDB collections'
+                icon={faSearch}
+                onClick={() => {
+                  modals.open({
+                    size: 'xl',
+                    title: (
+                      <Text fw='bold' size='lg'>
+                        Mongo Indexes
+                      </Text>
+                    ),
+                    children: <FetchInfo fetcher={ala.rest.admin?.indexes} />,
+                  });
+                }}
+              />
+            </Grid.Col>
+          </Grid>
+          {['testing', 'development'].includes(import.meta.env.MODE) && (
+            <Grid>
+              <Grid.Col span={12}>
+                <Stack>
+                  <Title order={4}>Danger Zone</Title>
+                  <Alert
+                    icon={<FontAwesomeIcon icon={faWarning} color='white' />}
+                    title='Danger Zone'
+                    variant='filled'
+                    radius='md'
+                  >
+                    Extremely massive danger zone here.{' '}
+                    <b>Run these ONLY in development/testing environments.</b>
+                  </Alert>
+                </Stack>
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
+                <ActionCard
+                  disabled={Boolean(migrationProgress) || migrationDisabled}
+                  title='Delete index'
+                  description='Clear all data from the Elasticsearch index (requires reboot after running)'
+                  icon={faTrash}
+                  onClick={() => handleClick('wipe-index', 'Index Deletion')}
+                />
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
+                <ActionCard
+                  disabled={Boolean(migrationProgress) || migrationDisabled}
+                  title='Delete docs'
+                  description='Clear all data from the MongoDB collections (requires reimport)'
+                  icon={faTrash}
+                  onClick={() => handleClick('wipe-docs', 'Document Deletion')}
+                />
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
+                <ActionCard
+                  disabled={Boolean(migrationProgress) || migrationDisabled}
+                  title='Reboot'
+                  description='Reboot the lists application'
+                  icon={faRefresh}
+                  onClick={() => handleClick('reboot', 'Reboot')}
+                />
+              </Grid.Col>
+            </Grid>
+          )}
+        </Stack>
+      </Container>
+    </>
   );
 }
 

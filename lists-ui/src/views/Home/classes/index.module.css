@@ -1,0 +1,58 @@
+.title {
+  font-weight: 600;
+  margin-bottom: 0px;
+  margin-top: 0px;
+  color: var(--mantine-color-text);
+}
+
+.subtitle {
+  font-weight: 500 !important;
+  font-size: var(--mantine-font-size-md) !important;
+  color: var(--mantine-color-text);
+}
+
+.resultsSummary {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 500;
+  font-size: var(--mantine-font-size-sm);
+  padding-bottom: 4px;
+}
+
+.sortSelectRoot {
+  display: flex;
+  align-items: center;
+}
+
+.sortSelectLabel {
+  margin-right: 10px;
+  white-space: nowrap;
+}
+
+.myListsLabel {
+  padding-left: 8px;
+  font-weight: 500;
+  /* font-size: var(--mantine-font-size-sm); */
+}
+
+.resultsTable {
+  border-top: 1px solid var(--mantine-color-default-border);
+}
+
+.speciesHeader {
+  padding: 10px 20px 15px 20px;
+  z-index: 0;
+  background-repeat: no-repeat;
+  background-position: right -10px top -20px;
+
+  @mixin light {
+      background-color: var(--mantine-color-concrete-0);
+      background-image: url('/logo/logo-back-light.svg');
+  }
+
+  @mixin dark {
+      background-color: var(--mantine-color-charcoal-9);
+      background-image: url('/logo/logo-back-dark.svg');
+  }
+
+}

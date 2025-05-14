@@ -1,0 +1,127 @@
+.filter {
+  padding: 6px;
+
+  &:hover {
+    @mixin light {
+      background-color: var(--mantine-color-grey-1);
+    }
+    @mixin dark {
+      background-color: var(--mantine-color-dark-5);
+    }
+  }
+}
+
+.heading {
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-bottom: 10px;
+  border-radius: 0; 
+  z-index: 100;
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
+.facetGroup {
+  border-top: 1px solid var(--mantine-color-default-border);
+}
+
+.facetHeader {
+  display: inline-block;
+  font-size: var(--mantine-font-size-sm);
+  font-weight: bold;
+  opacity: 0.8;
+  padding-top: 4px;
+}
+
+.facetHeaderBoolean {
+  border-top: 1px solid var(--mantine-color-default-border);
+  width: 100%;
+  padding-top: 4px;
+  margin-bottom: 4px;
+}
+
+.collapse {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.countsChipRoot {
+  pointer-events: none;
+}
+.countsChipLabel {
+  padding: 0px 8px 0px 8px;
+}
+.countsChipIconWrapper {
+  margin-right: 0px;
+  display: none;
+  width: 0
+}
+
+.checkboxRoot {
+  margin: 4px 0px 4px 0px;
+}
+.checkboxLabel { 
+  font-size: 10px;
+  width: 100%;
+  max-width: 100%;
+  flex-grow: 1;
+  display: flex;
+}
+.checkboxInner {
+  margin-top: 3px;
+}
+.checkboxLabelWrapper {
+  width: 100%;
+}
+.checkboxBody {
+  width: 100%;
+}
+
+.checkboxPaper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  width: 100%;
+  border-radius: 0;
+  font-size: var(--mantine-font-size-sm);
+}
+
+.facetPaper {
+  padding: 5px 2px 2px 0px;
+}
+
+.resultsSummary {
+  font-weight: 500;
+  font-size: var(--mantine-font-size-sm);
+  padding-bottom: 4px;;
+}
+
+.activeFiltersPaper {
+  display: inline-flex;
+  margin-right: 6px;
+  margin-left: 5px;
+  padding: 3px 6px 2px 6px;
+  height: 28px;
+}
+
+.activeFiltersText {
+  max-height: 28px;
+  max-width: 220px;
+  font-size: var(--mantine-font-size-sm);
+  align-items: flex-start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activeFiltersRemoveAll {
+  display: inline-flex;
+  background-color: var(--mantine-color-default-border);
+  align-items: center;
+  margin-left: 6px;
+  margin-right: 10px;
+  padding: 2px 6px;
+  border: 1px solid var(--mantine-color-default-border);
+  max-height: 28px;
+  cursor: pointer;
+}

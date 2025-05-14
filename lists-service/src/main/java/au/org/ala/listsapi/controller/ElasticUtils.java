@@ -17,6 +17,7 @@ import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.ChildScoreMode;
 import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
+import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.*;
@@ -162,79 +163,70 @@ public class ElasticUtils {
     }
 
     public static BoolQuery.Builder buildQuery(
-            String searchQuery,
-            String speciesListID,
-            String userId,
-            Boolean isPrivate,
-            List<Filter> filters,
-            BoolQuery.Builder bq) {
+        String searchQuery,
+        String speciesListID,
+        String userId,
+        Boolean isPrivate,
+        List<Filter> filters,
+        BoolQuery.Builder bq) {
 
-        bq.should(
-                m ->
-                        m.matchPhrase(
-                                mq -> mq.field("all").query(searchQuery.toLowerCase() + "*").boost(2.0f)));
+        // Add common query logic
+        addCommonQueryLogic(searchQuery, userId, isPrivate, bq);
 
-        if (StringUtils.trimToNull(searchQuery) != null && searchQuery.length() > 1) {
-            bq.minimumShouldMatch("1");
-        }
-
-        if (userId != null) {
-            // return all lists for this user
-            bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
-        }
-        if (isPrivate != null) {
-            // return all private lists
-            bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
-        }
+        // Add speciesListID filter
         if (speciesListID != null) {
-            // return this one list
             bq.filter(f -> f.term(t -> t.field("speciesListID").value(speciesListID)));
         }
 
-        if (filters != null) {
-            filters.forEach(filter -> addFilter(filter, bq));
-        }
+        // Add filters
+        addFilters(filters, bq);
+
         return bq;
     }
 
-    public static BoolQuery.Builder buildQuery(
-            String searchQuery,
-            List<FieldValue> speciesListIDs,
-            String userId,
-            Boolean isPrivate,
-            List<Filter> filters,
-            BoolQuery.Builder bq) {
+    public static void buildQuery(
+        String searchQuery,
+        List<FieldValue> speciesListIDs,
+        String userId,
+        Boolean isPrivate,
+        List<Filter> filters,
+        BoolQuery.Builder bq) {
 
-        bq.should(
-                m ->
-                        m.matchPhrase(
-                                mq -> mq.field("all").query(searchQuery.toLowerCase() + "*").boost(2.0f)));
+        // Add common query logic
+        addCommonQueryLogic(searchQuery, userId, isPrivate, bq);
+
+        // Add speciesListIDs filter
+        if (speciesListIDs != null && !speciesListIDs.isEmpty()) {
+            bq.filter(f -> f.terms(t -> t.field("speciesListID").terms(ta -> ta.value(speciesListIDs))));
+        }
+
+        // Add filters
+        addFilters(filters, bq);
+    }
+
+    private static void addCommonQueryLogic(String searchQuery, String userId, Boolean isPrivate, BoolQuery.Builder bq) {
+        // Add search query logic
+        bq.should(m -> m.matchPhrase(mq -> mq.field("all").query(searchQuery.toLowerCase() + "*").boost(2.0f)));
 
         if (StringUtils.trimToNull(searchQuery) != null && searchQuery.length() > 1) {
             bq.minimumShouldMatch("1");
         }
 
+        // Add userId filter
         if (userId != null) {
-            // return all lists for this user
             bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
         }
+
+        // Add isPrivate filter
         if (isPrivate != null) {
-            // return all private lists
             bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
         }
-        if (speciesListIDs != null && !speciesListIDs.isEmpty()) {
-            // return this one list
-            bq.filter(f -> f.terms(t -> t.field("speciesListID")
-                    .terms(ta -> ta.value(speciesListIDs))));
-        }
-
-        if (filters != null) {
-            filters.forEach(filter -> addFilter(filter, bq));
-        }
-        return bq;
     }
 
     public static String getPropertiesFacetField(String filter) {
+        if (CORE_BOOL_FIELDS.contains(filter)) {
+            return filter;
+        }
         if (CORE_FIELDS.contains(filter)) {
             return filter + ".keyword";
         }
@@ -244,18 +236,69 @@ public class ElasticUtils {
         return "properties." + filter + ".keyword";
     }
 
-    public static void addFilter(Filter filter, BoolQuery.Builder bq) {
-        if (!CORE_BOOL_FIELDS.contains(filter.getKey())) {
-            bq.filter(
-                    f ->
-                            f.queryString(
-                                    qs ->
-                                            qs.defaultOperator(Operator.And)
-                                                    .fields(getPropertiesFacetField(filter.getKey()))
-                                                    .query(filter.getValue())));
 
-        } else {
-            bq.filter(f -> f.term(t -> t.field(filter.getKey()).value(filter.getValue())));
+    private static void addFilters(List<Filter> filters, BoolQuery.Builder bq) {
+        if (filters != null && !filters.isEmpty()) {
+            // Group filters by key
+            Map<String, List<Filter>> filtersByKey = filters.stream()
+                .collect(Collectors.groupingBy(Filter::getKey));
+
+            // For each key, create a sub-bool query with OR logic
+            filtersByKey.forEach((key, filtersForKey) -> {
+                // For handling properties filters specifically
+                if (key.startsWith("properties.")) {
+                    String propertyField = key.substring("properties.".length());
+                    Filter filter = filtersForKey.get(0);
+                    List<String> values = filtersForKey.stream().map(Filter::getValue).toList();
+                    // Add nested query for properties
+                    bq.must(m -> m.nested(n -> n
+                        .path("properties")
+                        .query(nq -> nq
+                            .bool(nbq -> nbq
+                                .must(nm -> nm.term(t -> t.field("properties.key.keyword").value(propertyField)))
+                                .must(nm -> nm.term(t -> t.field("properties.value.keyword").value(filter.getValue())))
+                            )
+                        )
+                        .query(q -> q.bool(propBq -> {
+                            // First match the property key
+                            propBq.must(pm -> pm.term(pt -> pt.field("properties.key.keyword").value(propertyField)));
+
+                            // Then match any of the values (OR)
+                            if (values.size() == 1) {
+                                propBq.must(pm -> pm.term(pt -> pt.field("properties.value.keyword").value(filter.getValue())));
+                            } else {
+                                propBq.must(pm -> pm.bool(valuesBq -> {
+                                    for (String value : values) {
+                                        valuesBq.should(s -> s.term(t -> t.field("properties.value.keyword").value(value)));
+                                    }
+                                    return valuesBq;
+                                }));
+                            }
+                            return propBq;
+                        }))
+                    ));
+                }
+                // Handle other filters as normal
+                else {
+                    // Existing filter handling code
+                    bq.must(keyQuery ->
+                        keyQuery.bool(keyBool -> {
+                            if (filtersForKey.size() == 1) {
+                                // Single filter for this key
+                                Filter filter = filtersForKey.get(0);
+                                keyBool.must(m -> m.term(t -> t.field(getPropertiesFacetField(filter.getKey())).value(filter.getValue())));
+                            } else {
+                                // Multiple filters with OR logic
+                                filtersForKey.forEach(filter ->
+                                    keyBool.should(m -> m.term(t -> t.field(getPropertiesFacetField(filter.getKey())).value(filter.getValue())))
+                                );
+                                keyBool.minimumShouldMatch("1");
+                            }
+                            return keyBool;
+                        })
+                    );
+                }
+            });
         }
     }
 
@@ -265,38 +308,59 @@ public class ElasticUtils {
         return "";
     }
 
-    public static void restrictFields(String searchQuery, HashSet<String> restrictedFields, BoolQuery.Builder bq) {
+    /**
+     * Filter results based on "query" being present in the provided fields param.
+     *
+     * @param searchQuery The search query string.
+     * @param restrictedFields The fields to restrict the search to.
+     * @param mainBq The main BoolQuery.Builder to which the restrictions will be added.
+     */
+    public static void restrictFields(String searchQuery, HashSet<String> restrictedFields, BoolQuery.Builder mainBq) {
         String search = cleanRawQuery(searchQuery);
 
+        if (restrictedFields == null || restrictedFields.isEmpty() || search.trim().isEmpty()) {
+            return;
+        }
+
+        // Create a single outer bool query that will have should clauses for each field
+        // but will itself be a must clause at the top level
+        BoolQuery.Builder outerDisjunctionBq = new BoolQuery.Builder();
+
+        // Process each restricted field as a separate should clause
         for (String field : restrictedFields) {
             if (TOP_LEVEL_SEARCHABLE_FIELDS.contains(field)) {
-                // E.g. if userField == "scientificName", the actual field to match is "scientificName.search"
                 String actualFieldToSearch = field + ".search";
 
-                bq.must(m ->
-                        m.match(mq -> mq.field(actualFieldToSearch).query(
-                                search
-                        ))
+                // Add this field as a should clause
+                outerDisjunctionBq.should(s ->
+                        s.matchPhrase(mp -> mp.field(actualFieldToSearch).query(search))
                 );
-
             } else {
-                // Otherwise, treat it as a nested property
-                // This means userField is actually the 'key' in properties.key
-                // and we do a match on properties.value for searchText
-                bq.must(s -> s.nested(n -> n
+                // For nested properties
+                outerDisjunctionBq.should(s -> s.nested(n -> n
                         .path("properties")
                         .scoreMode(ChildScoreMode.Avg)
                         .query(nq -> nq.bool(nb -> {
+                            // Key must match
                             nb.must(m1 -> m1.term(t -> t
                                     .field("properties.key")
                                     .value(field)));
-                            nb.must(m2 -> m2.match(mt -> mt
+
+                            // Value must match exactly
+                            nb.must(m2 -> m2.matchPhrase(mp -> mp
                                     .field("properties.value")
                                     .query(search)));
+
                             return nb;
                         }))
                 ));
             }
         }
+
+        // Set minimum_should_match to 1 to ensure at least one field must match
+        outerDisjunctionBq.minimumShouldMatch("1");
+
+        // Wrap the field disjunction in a must clause at the top level
+        mainBq.must(m -> m.bool(outerDisjunctionBq.build()));
     }
 }

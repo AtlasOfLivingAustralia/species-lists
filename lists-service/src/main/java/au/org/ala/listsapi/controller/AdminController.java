@@ -19,7 +19,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
-import java.util.concurrent.CompletableFuture;
 
 /** Admin REST API */
 @CrossOrigin(origins = "*", maxAge = 3600)
@@ -28,7 +27,7 @@ import java.util.concurrent.CompletableFuture;
     type = SecuritySchemeType.HTTP,
     scheme = "bearer",
     bearerFormat = "JWT")
-@org.springframework.web.bind.annotation.RestController
+@RestController
 public class AdminController {
   private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
 

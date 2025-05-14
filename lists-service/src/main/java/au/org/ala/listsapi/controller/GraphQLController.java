@@ -6,24 +6,18 @@ import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.MetadataService;
-import au.org.ala.listsapi.service.ValidationService;
 import au.org.ala.listsapi.service.TaxonService;
+import au.org.ala.listsapi.service.ValidationService;
 import au.org.ala.ws.security.profile.AlaUserProfile;
 import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.SortOrder;
-import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
-import co.elastic.clients.elasticsearch._types.aggregations.LongTermsBucket;
-import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
+import co.elastic.clients.elasticsearch._types.aggregations.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import graphql.*;
+import graphql.ErrorType;
+import graphql.GraphQLError;
 import graphql.schema.DataFetchingEnvironment;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.net.URL;
-import java.security.Principal;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.types.ObjectId;
 import org.jetbrains.annotations.NotNull;
@@ -54,13 +48,24 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
-/** GraphQL API for lists */
+import java.net.URL;
+import java.security.Principal;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * GraphQL API for lists
+ */
 @Controller
 @CrossOrigin(origins = "*", maxAge = 3600)
 @Tag(name = "GraphQL", description = "GraphQL Services for species lists lookups")
 public class GraphQLController {
 
   private static final Logger logger = LoggerFactory.getLogger(GraphQLController.class);
+
+  @Value("${elastic.maximumDocuments}")
+  public static final int MAX_LIST_ENTRIES = 10000;
 
   @Value("${image.url}")
   private String imageTemplateUrl;
@@ -91,17 +96,27 @@ public class GraphQLController {
           "tags");
 
   public static final String SPECIES_LIST_ID = "speciesListID";
-  @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
-  @Autowired protected ReleaseMongoRepository releaseMongoRepository;
-  @Autowired protected ElasticsearchOperations elasticsearchOperations;
-  @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
-  @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
-  @Autowired protected MongoUtils mongoUtils;
+  @Autowired
+  protected SpeciesListMongoRepository speciesListMongoRepository;
+  @Autowired
+  protected ReleaseMongoRepository releaseMongoRepository;
+  @Autowired
+  protected ElasticsearchOperations elasticsearchOperations;
+  @Autowired
+  protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
+  @Autowired
+  protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
+  @Autowired
+  protected MongoUtils mongoUtils;
 
-  @Autowired protected TaxonService taxonService;
-  @Autowired protected ValidationService validationService;
-  @Autowired protected AuthUtils authUtils;
-  @Autowired protected MetadataService metadataService;
+  @Autowired
+  protected TaxonService taxonService;
+  @Autowired
+  protected ValidationService validationService;
+  @Autowired
+  protected AuthUtils authUtils;
+  @Autowired
+  protected MetadataService metadataService;
 
   static Date parsedDate(String date) {
     try {
@@ -151,10 +166,8 @@ public class GraphQLController {
     builder.withQuery(
         q ->
             q.bool(
-                bq -> {
-                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null, finalUserId, isPrivate, filters, bq);
-                  return bq;
-                }));
+                bq -> ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null,
+                   finalUserId, isPrivate, filters, bq)));
 
     builder.withAggregation(
         "types_count",
@@ -163,7 +176,7 @@ public class GraphQLController {
     // aggregation on species list ID
     builder.withAggregation(
         SPECIES_LIST_ID,
-        Aggregation.of(a -> a.terms(ta -> ta.field(SPECIES_LIST_ID + ".keyword").size(10000))));
+        Aggregation.of(a -> a.terms(ta -> ta.field(SPECIES_LIST_ID + ".keyword").size(MAX_LIST_ENTRIES))));
 
     Query aggQuery = builder.build();
 
@@ -172,8 +185,9 @@ public class GraphQLController {
 
     ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
 
+    assert agg != null;
     ElasticsearchAggregation cardinality = agg.aggregations().get(0);
-    Long noOfLists = cardinality.aggregation().getAggregate().cardinality().value();
+    long noOfLists = cardinality.aggregation().getAggregate().cardinality().value();
 
     ElasticsearchAggregation agg1 = agg.aggregations().get(1);
     List<StringTermsBucket> array = agg1.aggregation().getAggregate().sterms().buckets().array();
@@ -182,7 +196,7 @@ public class GraphQLController {
         array.stream()
             .collect(
                 Collectors.toMap(
-                    bucket -> bucket.key().stringValue(), bucket -> bucket.docCount()));
+                    bucket -> bucket.key().stringValue(), MultiBucketBase::docCount));
 
     // lookup species list metadata
     Iterable<SpeciesList> speciesLists =
@@ -192,7 +206,7 @@ public class GraphQLController {
     for (SpeciesList speciesList : speciesLists) {
       speciesList.setRowCount(speciesListIDs.get(speciesList.getId()).intValue());
     }
-    
+
     List<SpeciesList> result = new ArrayList<>();
     speciesLists.forEach(result::add);
 
@@ -200,27 +214,26 @@ public class GraphQLController {
     if (StringUtils.isNotEmpty(sort) && StringUtils.isNotEmpty(dir)) {
       result.sort(getSpeciesListComparator(sort, dir));
     } else {
-      // Default sort to date(newest first) if no params are passed in.
+      // Default sort to title if no params are passed in.
       result.sort(getSpeciesListComparator("title", "asc"));
     }
 
     // Apply pagination after sorting.
     List<SpeciesList> paginatedResult = result.stream()
-            .skip((long) page * size)
-            .limit(size)
-            .collect(Collectors.toList());
-            
+        .skip((long) page * size)
+        .limit(size)
+        .collect(Collectors.toList());
+
     return new PageImpl<>(paginatedResult, PageRequest.of(page, size), noOfLists);
   }
 
+
   /**
-   * Creates a comparator for sorting `SpeciesList` objects based on the given sort field and
-   * direction.
+   * Creates a comparator for sorting `SpeciesList` objects based on the given sort field and direction.
    *
    * @param sort The field to sort by.
    * @param dir  The direction of the sort ("asc" or "desc").
-   * @return A `Comparator<SpeciesList>` that can be used to sort a list of `SpeciesList`
-   *     objects.
+   * @return A `Comparator<SpeciesList>` that can be used to sort a list of `SpeciesList` objects.
    */
   private Comparator<SpeciesList> getSpeciesListComparator(String sort, String dir) {
     Comparator<SpeciesList> comparator;
@@ -233,9 +246,12 @@ public class GraphQLController {
       case "listType":
         // listType contains null values, so we need to handle nulls separately so they always appear at the end
         // noting that order is reversed when descending
-        comparator = ascending 
-            ? Comparator.comparing(SpeciesList::getListType, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
-            : Comparator.comparing(SpeciesList::getListType, Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER));
+        comparator = ascending
+            ?
+            Comparator.comparing(SpeciesList::getListType, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
+            :
+            Comparator.comparing(SpeciesList::getListType,
+                Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER));
         break;
       case "rowCount":
         comparator = Comparator.comparing(SpeciesList::getRowCount, Integer::compareTo);
@@ -248,21 +264,21 @@ public class GraphQLController {
 
     // Apply null handling based on direction
     if (!ascending) {
-        comparator = comparator.reversed();
+      comparator = comparator.reversed();
     }
 
     return comparator;
   }
 
   @GraphQlExceptionHandler
-  public GraphQLError handle(@NonNull Throwable ex, @NonNull DataFetchingEnvironment environment){
+  public GraphQLError handle(@NonNull Throwable ex, @NonNull DataFetchingEnvironment environment) {
     return GraphQLError
-            .newError()
-            .errorType(ErrorType.ValidationError)
-            .message(ex.getMessage())
-            .path(environment.getExecutionStepInfo().getPath())
-            .location(environment.getField().getSourceLocation())
-            .build();
+        .newError()
+        .errorType(ErrorType.ValidationError)
+        .message(ex.getMessage())
+        .path(environment.getExecutionStepInfo().getPath())
+        .location(environment.getField().getSourceLocation())
+        .build();
   }
 
   @QueryMapping
@@ -275,7 +291,8 @@ public class GraphQLController {
   @QueryMapping
   public SpeciesList getSpeciesListMetadata(
       @Argument String speciesListID, @AuthenticationPrincipal Principal principal) {
-    Optional<SpeciesList> speciesListOptional = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+    Optional<SpeciesList> speciesListOptional =
+        speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
     if (speciesListOptional.isPresent()) {
       SpeciesList speciesList = speciesListOptional.get();
 
@@ -325,13 +342,14 @@ public class GraphQLController {
     toUpdate.getFieldList().add(fieldName);
 
     if (StringUtils.isNotEmpty(fieldValue)) {
-      int batchSize = 10000;
+      int batchSize = MAX_LIST_ENTRIES;
       ObjectId lastId = null;
 
       boolean finished = false;
       while (!finished) {
         List<SpeciesListItem> items =
-            speciesListItemMongoRepository.findNextBatch(toUpdate.getId(), lastId, PageRequest.of(0, batchSize));
+            speciesListItemMongoRepository.findNextBatch(toUpdate.getId(), lastId,
+                PageRequest.of(0, batchSize));
 
         for (SpeciesListItem item : items) {
           item.getProperties().add(new KeyValue(fieldName, fieldValue));
@@ -376,17 +394,18 @@ public class GraphQLController {
     toUpdate.getFieldList().remove(oldName);
     toUpdate.getFieldList().add(newName);
 
-    int batchSize = 10000;
+    int batchSize = MAX_LIST_ENTRIES;
     ObjectId lastId = null;
 
     boolean finished = false;
     while (!finished) {
-      List<SpeciesListItem> items = speciesListItemMongoRepository.findNextBatch(toUpdate.getId(), lastId, PageRequest.of(0, batchSize));
+      List<SpeciesListItem> items = speciesListItemMongoRepository.findNextBatch(toUpdate.getId(), lastId,
+          PageRequest.of(0, batchSize));
 
       for (SpeciesListItem item : items) {
         Optional<KeyValue> kv =
             item.getProperties().stream().filter(k -> k.getKey().equals(oldName)).findFirst();
-          kv.ifPresent(keyValue -> keyValue.setKey(newName));
+        kv.ifPresent(keyValue -> keyValue.setKey(newName));
       }
 
       if (!items.isEmpty()) {
@@ -423,17 +442,18 @@ public class GraphQLController {
 
     toUpdate.getFieldList().remove(fieldName);
 
-    int batchSize = 10000;
+    int batchSize = MAX_LIST_ENTRIES;
     ObjectId lastId = null;
 
     boolean finished = false;
     while (!finished) {
-      List<SpeciesListItem> items = speciesListItemMongoRepository.findNextBatch(toUpdate.getId(), lastId, PageRequest.of(0, batchSize));
+      List<SpeciesListItem> items = speciesListItemMongoRepository.findNextBatch(toUpdate.getId(), lastId,
+          PageRequest.of(0, batchSize));
 
       for (SpeciesListItem item : items) {
         Optional<KeyValue> kv =
             item.getProperties().stream().filter(k -> k.getKey().equals(fieldName)).findFirst();
-          kv.ifPresent(keyValue -> item.getProperties().remove(keyValue));
+        kv.ifPresent(keyValue -> item.getProperties().remove(keyValue));
       }
 
       if (!items.isEmpty()) {
@@ -551,8 +571,8 @@ public class GraphQLController {
             speciesList.getOwner(),
             speciesList.getEditors(),
             speciesList.getTags(),
-            speciesList.getDateCreated() != null ? speciesList.getDateCreated().toString(): null,
-            speciesList.getLastUpdated() != null ? speciesList.getLastUpdated().toString(): null,
+            speciesList.getDateCreated() != null ? speciesList.getDateCreated().toString() : null,
+            speciesList.getLastUpdated() != null ? speciesList.getLastUpdated().toString() : null,
             speciesList.getLastUpdatedBy()
         );
 
@@ -673,10 +693,11 @@ public class GraphQLController {
 
       // check that the supplied list type, region and license is valid
       if (
-              !validationService.isValueValid(ConstraintType.listType, listType) ||
+          !validationService.isValueValid(ConstraintType.listType, listType) ||
               !validationService.isValueValid(ConstraintType.licence, licence)
       ) {
-        throw new Exception("Updated list contains invalid properties for a controlled value (list type, license)");
+        throw new Exception(
+            "Updated list contains invalid properties for a controlled value (list type, license)");
       }
 
       if (title != null && !title.equalsIgnoreCase(toUpdate.getTitle())
@@ -769,7 +790,8 @@ public class GraphQLController {
         q ->
             q.bool(
                 bq -> {
-                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), ID, null, null, filters, bq);
+                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), ID, null, null,
+                      filters, bq);
                   return bq;
                 }));
 
@@ -795,7 +817,8 @@ public class GraphQLController {
 
   @NotNull
   private static String cleanRawQuery(String searchQuery) {
-    if (searchQuery != null) return searchQuery.trim().replace("\"", "\\\"");
+    if (searchQuery != null)
+      return searchQuery.trim().replace("\"", "\\\"");
     return "";
   }
 
@@ -815,7 +838,8 @@ public class GraphQLController {
           q ->
               q.bool(
                   bq -> {
-                    ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String)null, userId, isPrivate, filters, bq);
+                    ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null,
+                        userId, isPrivate, filters, bq);
                     return bq;
                   }));
     }
@@ -828,9 +852,46 @@ public class GraphQLController {
     facetFields.add("hasRegion");
     facetFields.add("tags");
 
+    // Define the name for the nested cardinality aggregation
+    String distinctCountAggName = "distinct_species_list_count";
+    // Ensure you use the .keyword field for exact matching and cardinality
+    String speciesListIdKeywordField = SPECIES_LIST_ID + ".keyword";
+
+    // Define which of the facet fields are boolean
+    Set<String> booleanFacetFields = Set.of("isAuthoritative", "isBIE", "isSDS", "hasRegion");
+
     for (String facetField : facetFields) {
+      // Determine the correct field for the terms aggregation
+      String esTermsField;
+      if (booleanFacetFields.contains(facetField)) {
+        // Use the base field name for boolean types
+        esTermsField = facetField;
+      } else if (facetField.equals("tags")) {
+        // Tags is often multi-value keyword, use .keyword if mapped that way
+        esTermsField = facetField + ".keyword"; // Assuming tags is keyword
+      } else {
+        // Use the helper for others (assuming it correctly adds .keyword where needed)
+        // Or explicitly handle listType.keyword etc.
+        esTermsField = getPropertiesFacetField(facetField); // Make sure this handles listType correctly
+      }
+
       builder.withAggregation(
-          facetField, Aggregation.of(a -> a.terms(ta -> ta.field(facetField).size(10))));
+          facetField, // Name of the outer terms aggregation
+          Aggregation.of(a -> a // 'a' is the Aggregation.Builder
+              .terms(ta -> ta // Configure the terms aggregation
+                  .field(esTermsField) // Use the correctly determined field name
+                  .size(50) // Set your desired size
+              )
+              .aggregations( // Add sub-aggregations to the parent builder 'a'
+                  distinctCountAggName, // Name for the nested aggregation
+                  sa -> sa // 'sa' is the Aggregation.Builder for the sub-aggregation
+                      .cardinality(ca -> ca // Configure the cardinality aggregation
+                              .field(speciesListIdKeywordField)
+                          // Cardinality still on speciesListID
+                      )
+              )
+          )
+      );
     }
 
     Query aggQuery = builder.build();
@@ -856,11 +917,23 @@ public class GraphQLController {
             Facet facet = new Facet();
             facet.setCounts(new ArrayList<>());
             facet.setKey(facetField);
+
             array.forEach(
                 bucket -> {
-                  facet
-                      .getCounts()
-                      .add(new FacetCount(bucket.key().stringValue(), bucket.docCount()));
+                  // Get the nested cardinality aggregation result by its name
+                  Aggregate distinctCountAggResult = bucket.aggregations().get(distinctCountAggName);
+
+                  // Extract the distinct count value
+                  long distinctListCount = distinctCountAggResult.cardinality().value();
+
+                  // Create the FacetCount with the distinct count
+                  facet.getCounts().add(
+                      new FacetCount(
+                          bucket.key().stringValue(),
+                          // Or bucket.keyAsString() for LongTermsBucket
+                          distinctListCount // Use the distinct count here
+                      )
+                  );
                 });
             facets.add(facet);
           } else if (agg1.aggregation().getAggregate().isLterms()) {
@@ -868,14 +941,33 @@ public class GraphQLController {
                 agg1.aggregation().getAggregate().lterms().buckets().array();
             Facet facet = new Facet();
             facet.setCounts(new ArrayList<>());
-            facet.setKey(facetField);
+            facet.setKey(facetField); // Keep the original facet field name (e.g., "isAuthoritative")
             array.forEach(
                 bucket -> {
-                  facet.getCounts().add(new FacetCount(bucket.keyAsString(), bucket.docCount()));
+                  // Get the nested cardinality aggregation result by its name
+                  Aggregate distinctCountAggResult = bucket.aggregations().get(distinctCountAggName);
+
+                  // Extract the distinct count value
+                  long distinctListCount = distinctCountAggResult.cardinality().value();
+
+                  // Convert the long key (0 or 1) to a boolean string ("false" or "true")
+                  long keyAsLong = bucket.key();
+                  String keyAsString = (keyAsLong == 1) ? "true" : "false";
+
+                  // Create the FacetCount with the distinct count and the "true"/"false" key
+                  facet.getCounts().add(
+                      new FacetCount(
+                          keyAsString, // Use the converted "true" or "false" string
+                          distinctListCount // Use the distinct count here
+                      )
+                  );
                 });
-            facets.add(facet);
+            // Add the facet only if it has counts (optional but good practice)
+            if (!facet.getCounts().isEmpty()) {
+              facets.add(facet);
+            }
           }
-        });
+        }); // End of facetFields.forEach
 
     return facets;
   }
@@ -890,7 +982,8 @@ public class GraphQLController {
       @Argument Integer size,
       @AuthenticationPrincipal Principal principal) {
 
-    Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+    Optional<SpeciesList> optionalSpeciesList =
+        speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
     if (optionalSpeciesList.isEmpty()) {
       return null;
     }
@@ -910,18 +1003,45 @@ public class GraphQLController {
       facetFields = speciesList.getFacetList();
     }
 
-    // retrieve field list from species_list
+    // Create the NativeQueryBuilder
     NativeQueryBuilder builder = NativeQuery.builder();
+
+    // Build a query that only filters by speciesList ID and searchQuery
+    // (not applying the additional filters for aggregations)
     builder.withQuery(
         q ->
             q.bool(
                 bq -> {
-                  ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), speciesList.getId(), null, null, filters, bq);
+                  // Build a query that only includes speciesListID and searchQuery constraints
+                  // but NOT the additional filters - this is used for aggregations
+                  if (speciesList.getId() != null) {
+                    bq.must(m -> m.term(t -> t.field(SPECIES_LIST_ID).value(speciesList.getId())));
+                  }
+
+                  if (StringUtils.isNotEmpty(searchQuery)) {
+                    bq.must(m -> m.queryString(qs ->
+                        qs.query(ElasticUtils.cleanRawQuery(searchQuery))
+                    ));
+                  }
+
                   return bq;
                 }));
 
+    // Now add a post filter that includes ALL constraints
+    // This will filter the results but not affect the aggregations
+    if (filters != null && !filters.isEmpty()) {
+      builder.withFilter(
+          q ->
+              q.bool(
+                  bq -> {
+                    ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery),
+                        speciesList.getId(), null, null, filters, bq);
+                    return bq;
+                  }));
+    }
+
+    // Add aggregations for the facet fields
     if (facetFields != null) {
-      // add filter to query
       for (String facetField : facetFields) {
         builder.withAggregation(
             facetField,
@@ -930,6 +1050,7 @@ public class GraphQLController {
       }
     }
 
+    // Add classification fields
     List<String> classificationFields = new ArrayList<>();
     classificationFields.add("classification.family");
     classificationFields.add("classification.order");
@@ -937,6 +1058,8 @@ public class GraphQLController {
     classificationFields.add("classification.phylum");
     classificationFields.add("classification.kingdom");
     classificationFields.add("classification.speciesSubgroup");
+    classificationFields.add("classification.rank");
+    classificationFields.add("classification.vernacularName");
 
     for (String classificationField : classificationFields) {
       builder.withAggregation(
@@ -944,12 +1067,20 @@ public class GraphQLController {
           Aggregation.of(a -> a.terms(ta -> ta.field(classificationField + ".keyword").size(500))));
     }
 
+    // Add properties.key aggregation for property facets
+    builder.withAggregation(
+        "properties_keys",
+        Aggregation.of(a -> a.nested(na -> na.path("properties"))
+            .aggregations("key_counts", sa -> sa.terms(ta -> ta.field("properties.key.keyword").size(100))))
+    );
+
     Query aggQuery = builder.build();
     SearchHits<SpeciesListIndex> results =
         elasticsearchOperations.search(aggQuery, SpeciesListIndex.class);
 
     ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
 
+    // Process aggregations for facets
     List<Facet> facets = new ArrayList<>();
     if (facetFields != null) {
       facetFields.addAll(classificationFields);
@@ -959,22 +1090,117 @@ public class GraphQLController {
                 agg.aggregations().stream()
                     .filter(
                         elasticsearchAggregation ->
-                            elasticsearchAggregation.aggregation().getName().equals(facetField))
+                            elasticsearchAggregation.aggregation().getName()
+                                .equals(facetField))
                     .findFirst()
-                    .get();
-            List<StringTermsBucket> array =
-                agg1.aggregation().getAggregate().sterms().buckets().array();
-            Facet facet = new Facet();
-            facet.setCounts(new ArrayList<>());
-            facet.setKey(facetField);
-            array.forEach(
-                bucket -> {
-                  facet
-                      .getCounts()
-                      .add(new FacetCount(bucket.key().stringValue(), bucket.docCount()));
-                });
-            facets.add(facet);
+                    .orElse(null);
+
+            if (agg1 != null && agg1.aggregation().getAggregate().isSterms()) {
+              List<StringTermsBucket> array =
+                  agg1.aggregation().getAggregate().sterms().buckets().array();
+              Facet facet = new Facet();
+              facet.setCounts(new ArrayList<>());
+              facet.setKey(facetField);
+              array.forEach(
+                  bucket -> {
+                    facet
+                        .getCounts()
+                        .add(new FacetCount(bucket.key().stringValue(), bucket.docCount()));
+                  });
+              facets.add(facet);
+            }
           });
+    }
+
+    // First identify all keys from the properties_keys aggregation
+    List<String> propertyKeys = new ArrayList<>();
+    ElasticsearchAggregation propertiesAgg = agg.aggregations().stream()
+        .filter(elasticsearchAggregation ->
+            elasticsearchAggregation.aggregation().getName().equals("properties_keys"))
+        .findFirst()
+        .orElse(null);
+
+    if (propertiesAgg != null) {
+      Aggregate nestedAgg = propertiesAgg.aggregation().getAggregate();
+      if (nestedAgg.isNested()) {
+        Aggregate keyCountsAgg = nestedAgg.nested().aggregations().get("key_counts");
+        if (keyCountsAgg != null && keyCountsAgg.isSterms()) {
+          List<StringTermsBucket> keyBuckets = keyCountsAgg.sterms().buckets().array();
+          keyBuckets.forEach(bucket -> {
+            propertyKeys.add(bucket.key().stringValue());
+          });
+        }
+      }
+    }
+
+    // For each property key, create a new facet with key.value pairs
+    for (String propertyKey : propertyKeys) {
+      // Create an aggregation for this specific key
+      NativeQueryBuilder keyValueBuilder = NativeQuery.builder();
+
+      // Copy the main query constraints
+      keyValueBuilder.withQuery(
+          q -> q.bool(bq -> {
+            if (speciesList.getId() != null) {
+              bq.must(m -> m.term(t -> t.field(SPECIES_LIST_ID).value(speciesList.getId())));
+            }
+            if (StringUtils.isNotEmpty(searchQuery)) {
+              bq.must(m -> m.queryString(qs -> qs.query(ElasticUtils.cleanRawQuery(searchQuery))));
+            }
+            return bq;
+          })
+      );
+
+      // Add nested aggregation for this specific property key's values
+      keyValueBuilder.withAggregation(
+          propertyKey + "_values",
+          Aggregation.of(a -> a.nested(na -> na.path("properties"))
+              .aggregations("filtered_values", sa -> sa.filter(f -> f.term(t -> t.field("properties.key.keyword").value(propertyKey)))
+                  .aggregations("value_counts", va -> va.terms(ta -> ta.field("properties.value.keyword").size(100)))
+              )
+          )
+      );
+
+      // Execute the query for this key
+      Query keyValueQuery = keyValueBuilder.build();
+      SearchHits<SpeciesListIndex> keyValueResults = elasticsearchOperations.search(keyValueQuery, SpeciesListIndex.class);
+
+      ElasticsearchAggregations keyValueAggs = (ElasticsearchAggregations) keyValueResults.getAggregations();
+      if (keyValueAggs != null) {
+        ElasticsearchAggregation keyValueAgg = keyValueAggs.aggregations().stream()
+            .filter(a -> a.aggregation().getName().equals(propertyKey + "_values"))
+            .findFirst()
+            .orElse(null);
+
+        if (keyValueAgg != null) {
+          Aggregate nestedKeyValueAgg = keyValueAgg.aggregation().getAggregate();
+          if (nestedKeyValueAgg.isNested()) {
+            Aggregate filteredValuesAgg = nestedKeyValueAgg.nested().aggregations().get("filtered_values");
+            if (filteredValuesAgg != null && filteredValuesAgg.isFilter()) {
+              Aggregate valueCountsAgg = filteredValuesAgg.filter().aggregations().get("value_counts");
+              if (valueCountsAgg != null && valueCountsAgg.isSterms()) {
+                List<StringTermsBucket> valueBuckets = valueCountsAgg.sterms().buckets().array();
+                if (!valueBuckets.isEmpty()) {
+                  Facet propertyValueFacet = new Facet();
+                  propertyValueFacet.setKey("properties." + propertyKey);
+                  propertyValueFacet.setCounts(new ArrayList<>());
+
+                  valueBuckets.forEach(bucket -> {
+                    propertyValueFacet.getCounts().add(
+                        new FacetCount(
+                            bucket.key().stringValue(),
+                            bucket.docCount()
+                        )
+                    );
+                  });
+
+                  facets.add(propertyValueFacet);
+                }
+              }
+            }
+          }
+        }
+      }
     }
 
     return facets;

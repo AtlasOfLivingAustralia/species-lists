@@ -6,6 +6,7 @@ import { Group, Switch, Table, Textarea, Title } from '@mantine/core';
 import classes from './Display.module.css';
 import displayClasses from './TextArea.module.css';
 import { FormattedMessage } from 'react-intl';
+import { getStyleForTaxon } from '#/helpers/utils/formatName';
 
 interface SpeciesItemDisplayProps {
   item: SpeciesListItem;
@@ -56,7 +57,19 @@ export function Display({ item, meta }: SpeciesItemDisplayProps) {
               <Table.Td>
                 <FormattedMessage id={`classification.${field}`} />
               </Table.Td>
-              <Table.Td pl={23}>
+              <Table.Td
+                fs={ 
+                    ['scientificName', 'genus'].includes(field)
+                      ? getStyleForTaxon(
+                          item.classification?.rank,
+                          item.classification?.rankID,
+                          'italic'
+                        )
+                      : undefined
+  
+                  }
+                pl={23}
+              >
                 {(item.classification as any)?.[field]}
               </Table.Td>
               <Table.Td style={expandedStyle}>

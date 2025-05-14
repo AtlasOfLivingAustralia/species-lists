@@ -78,7 +78,7 @@ public class IngressController {
 
 //  @SecurityRequirement(name = "JWT")
 //  @Operation(tags = "Ingress", summary = "Release a version of a species list")
-//  @GetMapping("/release/{speciesListID}")
+//  @GetMapping("/v2/release/{speciesListID}")
 //  public ResponseEntity<Object> release(
 //      @PathVariable("speciesListID") String speciesListID,
 //      @AuthenticationPrincipal Principal principal) {
@@ -94,7 +94,17 @@ public class IngressController {
 
   @SecurityRequirement(name = "JWT")
   @Operation(tags = "Ingress", summary = "Delete a species list")
-  @DeleteMapping("/delete/{speciesListID}")
+  @ApiResponses({
+          @ApiResponse(
+                  responseCode = "200",
+                  description = "Species list deleted",
+                  content = @Content
+          ),
+          @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameter"),
+          @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+          @ApiResponse(responseCode = "404", description = "Not found - Species list ID was not found")
+  })
+  @DeleteMapping("/v2/delete/{speciesListID}")
   public ResponseEntity<Object> delete(
       @PathVariable("speciesListID") String speciesListID,
       @AuthenticationPrincipal Principal principal) {
@@ -117,7 +127,7 @@ public class IngressController {
       tags = "Ingress",
       description = "Rematch the taxonomy for a species list. This is a long running process.",
       summary = "Rematch the taxonomy for a species list")
-  @GetMapping("/rematch/{speciesListID}")
+  @GetMapping("/v2/rematch/{speciesListID}")
   public ResponseEntity<Object> rematch(
       @PathVariable("speciesListID") String speciesListID,
       @AuthenticationPrincipal Principal principal) {
@@ -191,7 +201,6 @@ public class IngressController {
 
   @Hidden
   @SecurityRequirement(name = "JWT")
-  @Tag(name = "Ingress", description = "Services for ingesting species lists")
   @Operation(
       summary = "Reindex all species lists",
       description = "Reindex all species lists into the ElasticSearch index.",
@@ -200,6 +209,7 @@ public class IngressController {
   public ResponseEntity<Object> reindex(@AuthenticationPrincipal Principal principal) {
     try {
       ResponseEntity<Object> errorResponse = checkAuthorized(principal);
+      if (errorResponse != null) return errorResponse;
       if (errorResponse != null) return errorResponse;
       // start async task
       return startAsyncTaskIfNotBusy("REINDEX", () -> taxonService.reindex());
@@ -219,7 +229,7 @@ public class IngressController {
           "Upload a CSV species list. This is step 1 of a 2 step process. "
               + "The file is uploaded to a temporary area and then ingested. "
               + "The second step is to ingest the species list.")
-  @PostMapping(path = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PostMapping(path = "/v2/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   @ApiResponses(
       value = {
         @ApiResponse(
@@ -258,7 +268,7 @@ public class IngressController {
                           + "The file is uploaded to a temporary area and then ingested. "
                           + "\n\nThe first step is to upload the species list. The ID of the list being ingested will be returned, where you can then use `/ingest/{ID}/progress` to track ingestion progress."
                           + "\n\nThe ingested list is validated against the constraints returned from the `/constraints` endpoint, where each key is a list property that will be validated, and the value is all of the possible values for that key.")
-  @PostMapping("/ingest")
+  @PostMapping("/v2/ingest")
   @ApiResponses(
           value = {
                   @ApiResponse(
@@ -311,7 +321,7 @@ public class IngressController {
   @Operation(
           summary = "Gets the progress of a current ingestion job, and whether it has completed.",
           tags = "Ingress")
-  @GetMapping("/ingest/{speciesListID}/progress")
+  @GetMapping("/v2/ingest/{speciesListID}/progress")
   @ApiResponses(
           value = {
                   @ApiResponse(
@@ -348,7 +358,7 @@ public class IngressController {
               + "The file is uploaded to a temporary area and then ingested. "
               + "The first step is to upload the species list.",
       tags = "Ingress")
-  @PostMapping("/ingest/{speciesListID}")
+  @PostMapping("/v2/ingest/{speciesListID}")
   @ApiResponses(
       value = {
         @ApiResponse(

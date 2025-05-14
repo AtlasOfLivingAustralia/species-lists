@@ -1,3 +1,19 @@
 .notification {
   transition-timing-function: ease !important;
+  margin-top: 70px;
+}
+
+.title {
+  font-weight: 600;
+  font-size: var(--mantine-font-size-lg);
+  margin-bottom: 5px;
+  margin-top: 0px;
+  color: var(--mantine-color-text);
+}
+
+.description {
+  font-weight: 500;
+  font-size: var(--mantine-font-size-md);
+  color: var(--mantine-color-text);
+  opacity: 0.8;
 }

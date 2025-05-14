@@ -145,6 +145,8 @@ type Classification {
   familyID: String
   genus: String
   genusID: String
+  rank: String
+  rankID: Int
 }
 
 input Filter {

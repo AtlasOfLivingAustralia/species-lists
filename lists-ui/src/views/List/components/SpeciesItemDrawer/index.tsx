@@ -41,6 +41,7 @@ interface SpeciesItemDrawerProps {
   item: SpeciesListItem | null;
   opened: boolean;
   meta: SpeciesList;
+  setRefresh: (refresh: boolean) => void;
   onClose: () => void;
   onEdited: (item: SpeciesListItem) => void;
   onDeleted: (id: string) => void;
@@ -50,6 +51,7 @@ export function SpeciesItemDrawer({
   item,
   opened,
   meta,
+  setRefresh,
   onClose,
   onEdited,
   onDeleted,
@@ -85,6 +87,7 @@ export function SpeciesItemDrawer({
 
       if (newItem) onEdited(newItem);
       setEditing(false);
+      setRefresh(true);
     } catch (error) {
       notifications.show({
         message: getErrorMessage(error as Error),
@@ -113,6 +116,7 @@ export function SpeciesItemDrawer({
 
       if (newItem) onEdited(newItem);
       setEditing(false);
+      setRefresh(true);
     } catch (error) {
       notifications.show({
         message: getErrorMessage(error as Error),
@@ -139,6 +143,7 @@ export function SpeciesItemDrawer({
       );
 
       onDeleted(item.id);
+      setRefresh(true);
     } catch (error) {
       notifications.show({
         message: getErrorMessage(error as Error),

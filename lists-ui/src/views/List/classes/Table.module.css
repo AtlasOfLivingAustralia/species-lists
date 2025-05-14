@@ -1,5 +1,7 @@
 .table {
   table-layout: auto;
+  border-top: 1px solid var(--mantine-color-default-border);
+  border-bottom: 1px solid var(--mantine-color-default-border);
 }
 
 .tbody .tr {

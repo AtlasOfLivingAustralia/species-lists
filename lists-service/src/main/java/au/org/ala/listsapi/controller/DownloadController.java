@@ -5,9 +5,13 @@ import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
-import au.org.ala.ws.security.profile.AlaUserProfile;
 import com.opencsv.CSVWriter;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.OutputStream;
@@ -25,9 +29,7 @@ import org.bson.types.ObjectId;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -68,11 +70,37 @@ public class DownloadController {
   }
 
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Download a species list in CSV format", tags = "REST")
-  @GetMapping("/download/{speciesListID}")
+  @Operation(summary = "Download a species list in CSV format", tags = "REST v2")
+  @ApiResponses({
+          @ApiResponse(
+                  responseCode = "200",
+                  description = "CSV data (when zip=false or not specified)",
+                  content = @Content(
+                          mediaType = "application/octet-stream",
+                          schema = @Schema(implementation = String.class)
+                  )
+          ),
+          @ApiResponse(
+                  responseCode = "200",
+                  description = "Zipped CSV data (when zip=true)",
+                  content = @Content(
+                          mediaType = "application/octet-stream",
+                          schema = @Schema(implementation = byte[].class)
+                  )
+          ),
+          @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameter"),
+          @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+          @ApiResponse(responseCode = "404", description = "Not found - Species list ID was not found")
+  })
+  @GetMapping("/v2/download/{speciesListID}")
   public ResponseEntity<Object> download(
       @PathVariable("speciesListID") String speciesListID,
       @AuthenticationPrincipal Principal principal,
+      @Parameter(
+              name = "zip",
+              description = "Set to true to receive data in ZIP format, false for plain CSV",
+              schema = @Schema(type = "boolean", defaultValue = "false")
+      )
       @RequestParam(value = "zip", defaultValue = "false") Boolean zipped,
       HttpServletResponse response) {
     try {
@@ -80,7 +108,7 @@ public class DownloadController {
       Optional<SpeciesList> speciesListOptional =
           speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
       if (speciesListOptional.isEmpty()) {
-        return ResponseEntity.badRequest().body("Unrecognized ID while downloading dataset");
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Unrecognized ID while downloading dataset");
       }
 
       SpeciesList speciesList = speciesListOptional.get();
@@ -88,7 +116,7 @@ public class DownloadController {
         // if private, check user is logged in and authorised
         ResponseEntity<Object> errorResponse = checkAuthorizedToDownload(speciesList, principal);
         if (errorResponse != null) {
-          return errorResponse;
+          return errorResponse; // return 401 if not logged in or not authorized
         }
       }
 
@@ -212,12 +240,12 @@ public class DownloadController {
 
     // check user logged in
     if (!authUtils.isAuthenticated(principal)) {
-      return ResponseEntity.badRequest().body("User not logged in");
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not logged in");
     }
 
     // check authorised
     if (!authUtils.isAuthorized(speciesList, principal)) {
-      return ResponseEntity.badRequest().body("User not authorized");
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authorized");
     }
     return null;
   }
