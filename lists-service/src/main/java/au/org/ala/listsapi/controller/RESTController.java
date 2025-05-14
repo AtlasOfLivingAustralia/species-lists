@@ -91,7 +91,7 @@ public class RESTController {
                   description = "Species list found",
                   content = @Content(
                           mediaType = MediaType.APPLICATION_JSON_VALUE,
-                          schema = @Schema(implementation = SpeciesList.class)
+                          schema = @Schema(implementation = SpeciesListPage.class)
                   )
           )
   })
@@ -127,7 +127,7 @@ public class RESTController {
               publicLists.setIsPrivate("false");
 
               Page<SpeciesList> results = speciesListCustomRepository.findByMultipleExamples(privateLists.convertTo(), publicLists.convertTo(), paging);
-              return new ResponseEntity<>(getLegacyFormat(results), HttpStatus.OK);
+              return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
             } else { // Otherwise, only query public lists with that userid
               speciesList.setIsPrivate("false");
             }
@@ -142,7 +142,7 @@ public class RESTController {
 
       if (speciesList == null || speciesList.isEmpty()) {
         Page<SpeciesList> results = speciesListMongoRepository.findAll(paging);
-        return new ResponseEntity<>(getLegacyFormat(results), HttpStatus.OK);
+        return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
       }
 
       ExampleMatcher matcher =
@@ -154,7 +154,7 @@ public class RESTController {
       // Create an Example from the exampleProduct with the matcher
       Example<SpeciesList> example = Example.of(speciesList.convertTo(), matcher);
       Page<SpeciesList> results = speciesListMongoRepository.findAll(example, paging);
-      return new ResponseEntity<>(getLegacyFormat(results), HttpStatus.OK);
+      return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
       return ResponseEntity.badRequest().body(e.getMessage());
@@ -168,7 +168,7 @@ public class RESTController {
                   description = "Species list found",
                   content = @Content(
                           mediaType = MediaType.APPLICATION_JSON_VALUE,
-                          schema = @Schema(implementation = SpeciesList.class)
+                          schema = @Schema(implementation = SpeciesListPage.class)
                   )
           )
   })
@@ -191,13 +191,16 @@ public class RESTController {
                 q ->
                         q.bool(
                                 bq -> {
-                                  // classification.taxonConceptID.keyword == taxonValue
+                                  // Require at least one of these conditions to match using minimumShouldMatch
+                                  bq.minimumShouldMatch("1");
+                                  
+                                  // classification.taxonConceptID.keyword == guid
                                   bq.should(s -> s.term(t -> t
                                           .field("classification.taxonConceptID.keyword")
                                           .value(guid)
                                   ));
 
-                                  // taxonID.keyword == taxonValue
+                                  // taxonID.keyword == guid
                                   bq.should(s -> s.term(t -> t
                                           .field("taxonID.keyword")
                                           .value(guid)
@@ -229,9 +232,14 @@ public class RESTController {
         List<SpeciesListItem> speciesListItems =
                 ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
 
-      List<SpeciesList> speciesLists = speciesListMongoRepository.findAllById(speciesListItems.stream().map(SpeciesListItem::getSpeciesListID).toList());
+        // If no results matching the guid were found, return an empty list
+        if (results.getTotalHits() == 0) {
+            return new ResponseEntity<>(getLegacyFormatModel(new ArrayList<>(), 0, page, pageSize), HttpStatus.OK);
+        }
 
-      return new ResponseEntity<>(speciesLists, HttpStatus.OK);
+        List<SpeciesList> speciesLists = speciesListMongoRepository.findAllById(speciesListItems.stream().map(SpeciesListItem::getSpeciesListID).toList());
+
+        return new ResponseEntity<>(getLegacyFormatModel(speciesLists, results.getTotalHits(), page, pageSize), HttpStatus.OK);
     } catch (Exception e) {
       return ResponseEntity.badRequest().body(e.getMessage());
     }
@@ -240,17 +248,26 @@ public class RESTController {
   /**
    * Convert the results to a legacy format
    * Note: this is not 100% backwards compatible with the old API, see the
-   * @LegacyController
+   * @au.org.ala.listsapi.LegacyController
    *
    * @param results
    * @return
    */
-  public Map<String, Object> getLegacyFormat(Page<SpeciesList> results) {
-    Map<String, Object> legacyFormat = new HashMap<>();
-    legacyFormat.put("listCount", results.getTotalElements());
-    legacyFormat.put("offset", results.getPageable().getPageNumber());
-    legacyFormat.put("max", results.getPageable().getPageSize());
-    legacyFormat.put("lists", results.getContent());
+  public SpeciesListPage getLegacyFormatModel(Page<SpeciesList> results) {
+    SpeciesListPage legacyFormat = new SpeciesListPage();
+    legacyFormat.setListCount(results.getTotalElements());
+    legacyFormat.setOffset(results.getPageable().getPageNumber());
+    legacyFormat.setMax(results.getPageable().getPageSize());
+    legacyFormat.setLists(results.getContent());
+    return legacyFormat;
+  }
+
+  public SpeciesListPage getLegacyFormatModel(List<SpeciesList> results, long totalRecords, int max, int offset) {
+    SpeciesListPage legacyFormat = new SpeciesListPage();
+    legacyFormat.setListCount(totalRecords);
+    legacyFormat.setOffset(offset);
+    legacyFormat.setMax(max);
+    legacyFormat.setLists(results);
     return legacyFormat;
   }
 
