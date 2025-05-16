@@ -4,10 +4,13 @@ import '@mantine/dropzone/styles.css';
 import { ReactNode, useCallback, useState } from 'react';
 import {
   Alert,
+  Anchor,
   Badge,
   Button,
+  Code,
   Flex,
   Group,
+  Modal,
   Paper,
   Space,
   Stack,
@@ -28,6 +31,7 @@ import { useALA } from '#/helpers/context/useALA';
 
 // Import component styles
 import classes from './FileUploadDropzone.module.css';
+import { useDisclosure } from '@mantine/hooks';
 
 // Accepted file types
 const ACCEPTED_TYPES: string[] = ['text/csv', 'application/zip'];
@@ -59,6 +63,7 @@ export const FileUploadDropzone = ({
   const [error, setError] = useState<string | Error | null>(null);
   const [originalName, setOriginalName] = useState<string | null>(initialTitle || null);
   const [result, setResult] = useState<UploadResult | null>(null);
+  const [opened, { open, close }] = useDisclosure(false);
 
   const ala = useALA();
   const intl = useIntl();
@@ -152,16 +157,35 @@ export const FileUploadDropzone = ({
               )} {' '}
               <FormattedMessage
                 id='upload.help.title'
-                defaultMessage='a list of species to the Atlas of Living Australia. Accepted file types: {csv}, ZIP.'
-                values={{ csv: <a href="https://en.wikipedia.org/wiki/Comma-separated_values" target="_blank">comma-separated values (CSV)</a>}}
+                defaultMessage='a species list in comma-separated values (CSV) format'
               />
             </strong>
             <Space h="md" />
             <FormattedMessage
               id='upload.help.description'
-              defaultMessage='As a minimum a species list should consist of a list of scientific names and may include common names and other optional associated properties - as {dwc}'
-              values={{ dwc: <a href="https://dwc.tdwg.org/terms/" target="_blank">Darwin Core terms</a> }}
+              defaultMessage='List upload formatting mandatory requirements'
+              values={{ 
+                ul: chunks => <ul>{chunks}</ul>,
+                li: chunks => <li>{chunks}</li>,
+                csv: chunks => <Anchor href="https://en.wikipedia.org/wiki/Comma-separated_values#Specification" target="_blank">{chunks}</Anchor>,
+                code: chunks => <Code className={classes.code}>{chunks}</Code>,
+                dwc: chunks => <Anchor href="https://dwc.tdwg.org/terms/" target="_blank">{chunks}</Anchor> }}
             />
+            <Modal opened={opened} onClose={close} size="auto" title={<FormattedMessage id='upload.help.example.title' defaultMessage='Example CSV file' />}>
+              <Code block className={classes.codeBlock}>
+                <FormattedMessage
+                  id='upload.help.csv.content'
+                  defaultMessage='scienficificName, commonName, state, country, size, weight,'
+                  values={{ 
+                    br: <br />,
+                  }}
+                />
+              </Code>
+            </Modal>
+            <Button variant="default" onClick={open}>
+              <FormattedMessage id='upload.help.example.title' defaultMessage='Example CSV file' />
+            </Button>
+
           </Paper>
         </Group>
       )}
