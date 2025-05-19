@@ -27,9 +27,6 @@ public class ValidationService {
 
   public static final Logger log = LoggerFactory.getLogger(ValidationService.class);
 
-  // @Value("${constraints.file}")
-  // private String constraintsFile;
-
   @Value("${constraints.file}")
   private Resource constraintsFile;
 
@@ -52,10 +49,10 @@ public class ValidationService {
   @PostConstruct
   private void init() throws IOException {
     ObjectMapper objectMapper = new ObjectMapper();
-    
+
     
     try (InputStream inputStream = constraintsFile.getInputStream()) {
-      // 2. Use the InputStream directly with ObjectMapper
+      // Use the InputStream directly with ObjectMapper
       constraints = objectMapper.readValue(inputStream, new TypeReference<HashMap<String, List<ConstraintListItem>>>() {});
       System.out.println("Constraints loaded successfully: " + constraints.size() + " categories.");
 
@@ -64,6 +61,8 @@ public class ValidationService {
       throw new RuntimeException("Failed to read or parse constraints file from: " + constraintsFile.getDescription(), e);
     }
 
+    // TODO: Review whether this should be removed or not. No lists in the legacy lists app
+    // use coutries apart from Australia and New Zealand. So suggesting this be removed.
     if (userDetailsCountriesEnabled) {
       try {
         List<Location> userdetailsCountries = fetchJson(userDetailsUrl + "/ws/registration/countries.json", new TypeReference<>() {});
