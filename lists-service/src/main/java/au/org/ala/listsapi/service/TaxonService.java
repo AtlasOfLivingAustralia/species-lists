@@ -21,6 +21,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -175,12 +176,10 @@ public class TaxonService {
                     speciesListItem.getProperties(),
                     speciesListItem.getClassification(),
                     speciesList.getIsPrivate() != null ? speciesList.getIsPrivate() : false,
-                    speciesList.getIsAuthoritative() != null
-                            ? speciesList.getIsAuthoritative()
-                            : false,
+                    speciesList.getIsAuthoritative() != null ? speciesList.getIsAuthoritative() : false,
                     speciesList.getIsBIE() != null ? speciesList.getIsBIE() : false,
                     speciesList.getIsSDS() != null ? speciesList.getIsSDS() : false,
-                    speciesList.getRegion() != null || speciesList.getWkt() != null,
+                    StringUtils.isNotEmpty(speciesList.getRegion()) || StringUtils.isNotEmpty(speciesList.getWkt()),
                     speciesList.getOwner(),
                     speciesList.getEditors(),
                     speciesList.getTags() != null ? speciesList.getTags() : new ArrayList<>(),
@@ -219,10 +218,11 @@ public class TaxonService {
       if (!speciesListItems.isEmpty()) {
         List<IndexQuery> updateList = new ArrayList<>();
         for (SpeciesListItem item : speciesListItems) {
+          SpeciesListIndex indexItem = listItemToIndex(speciesList, item);
           updateList.add(
                   new IndexQueryBuilder()
                   .withId(item.getId().toString())
-                  .withObject(listItemToIndex(speciesList, item))
+                  .withObject(indexItem)
                   .build()
           );
         }
