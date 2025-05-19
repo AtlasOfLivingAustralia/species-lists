@@ -15,8 +15,18 @@
     { "value": "", "label": "None" },
     { "value": "OTH", "label": "Other" },
     { "value": "GLO", "label": "Global" },
+    { "value": "Australia", "label": "Australia" },
+    { "value": "New Zealand", "label": "New Zealand" },
     { "value": "AC", "label": "Ashmore and Cartier Islands" },
-    { "value": "CS", "label": "Coral Sea Islands" }
+    { "value": "CS", "label": "Coral Sea Islands" },
+    { "value": "ACT", "label": "Australian Capital Territory" },
+    { "value": "NSW", "label": "New South Wales" },
+    { "value": "NT", "label": "Northern Territory" },
+    { "value": "QLD", "label": "Queensland" },
+    { "value": "SA", "label": "South Australia" },
+    { "value": "TAS", "label": "Tasmania" },
+    { "value": "VIC", "label": "Victoria" },
+    { "value": "WA", "label": "Western Australia" }
   ],
   "licence": [
     { "value": "CC0", "label": "Creative Commons Zero" },

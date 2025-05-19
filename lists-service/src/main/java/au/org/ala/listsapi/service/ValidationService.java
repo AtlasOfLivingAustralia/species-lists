@@ -7,10 +7,12 @@ import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.ProxySelector;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -25,11 +27,17 @@ public class ValidationService {
 
   public static final Logger log = LoggerFactory.getLogger(ValidationService.class);
 
+  // @Value("${constraints.file}")
+  // private String constraintsFile;
+
   @Value("${constraints.file}")
-  private String constraintsFile;
+  private Resource constraintsFile;
 
   @Value("${userDetails.api.url}")
   private String userDetailsUrl;
+
+  @Value("${constraints.userdetails.countries.enabled:false}")
+  private boolean userDetailsCountriesEnabled;
 
   private Map<String, List<ConstraintListItem>> constraints = null;
 
@@ -44,26 +52,36 @@ public class ValidationService {
   @PostConstruct
   private void init() throws IOException {
     ObjectMapper objectMapper = new ObjectMapper();
-    File json = new File(constraintsFile);
+    
+    
+    try (InputStream inputStream = constraintsFile.getInputStream()) {
+      // 2. Use the InputStream directly with ObjectMapper
+      constraints = objectMapper.readValue(inputStream, new TypeReference<HashMap<String, List<ConstraintListItem>>>() {});
+      System.out.println("Constraints loaded successfully: " + constraints.size() + " categories.");
 
-    constraints = objectMapper.readValue(json, new TypeReference<HashMap<String, List<ConstraintListItem>>>() {});
+    } catch (IOException e) {
+      // Handle exceptions appropriately (e.g., logging, re-throwing a custom exception)
+      throw new RuntimeException("Failed to read or parse constraints file from: " + constraintsFile.getDescription(), e);
+    }
 
-    try {
-      List<Location> userdetailsCountries = fetchJson(userDetailsUrl + "/ws/registration/countries.json", new TypeReference<>() {});
-      List<ConstraintListItem> countries = getConstraintsByKey(ConstraintType.region);
+    if (userDetailsCountriesEnabled) {
+      try {
+        List<Location> userdetailsCountries = fetchJson(userDetailsUrl + "/ws/registration/countries.json", new TypeReference<>() {});
+        List<ConstraintListItem> countries = getConstraintsByKey(ConstraintType.region);
 
-      // Map the countries list into UI constraints
-      userdetailsCountries.forEach(e -> {
-        var constraint = new ConstraintListItem(e.getIsoCode(), e.getName());
+        // Map the countries list into UI constraints
+        userdetailsCountries.forEach(e -> {
+          var constraint = new ConstraintListItem(e.getIsoCode(), e.getName());
+          countries.add(constraint);
+        });
 
-        countries.add(constraint);
-      });
-
-      setConstraintsByKey(ConstraintType.region, countries);
-    } catch (Exception ex) {
-      log.error("Error loading country constraints from userdetails", ex);
+        setConstraintsByKey(ConstraintType.region, countries);
+      } catch (Exception ex) {
+        log.error("Error loading country constraints from userdetails", ex);
+      }
     }
   }
+
   private <T> T fetchJson(String uri, TypeReference<T> type) throws Exception {
     HttpRequest httpRequest =
             HttpRequest.newBuilder(new URI(uri))
