@@ -61,9 +61,10 @@
   "upload.button.title": "Upload a list from a CSV file",
   "upload.help.prefix": "Upload",
   "reingest.help.prefix": "Reingest",
-  "upload.help.title": "a species list in {csv} format",
-  "upload.help.description": "A species list should consist of a list of scientific names (or taxon IDs) and may include other optional associated properties. The input file should consist of a header row and one or more rows of data. The first column in the list MUST contain either: scientific names and have a header value of \"scientificName\" OR taxon IDs and have a header value of \"taxonID\" or \"taxonConceptID\". Where possible, other header values should be provided as {dwc}. A species list can be uploaded either as a CSV file, or as a zip compressed CSV file.",
-
+  "upload.help.title": "a species list in comma-separated values (CSV) format",
+  "upload.help.description": "CSV file format requirements:<ul><li>Upload file must contain text in UTF-8 encoding and follow the <csv>CSV RFC-4180 specification</csv></li><li>the first line must be a header row</li><li>the first column must be either \"scientific name\" (latin name) OR \"taxon ID\" (sourced from ALA's taxonomic backbone)</li><li>scientific names column should have a header value of <code>scientificName</code> OR if using taxon IDs, have a header value of <code>taxonID</code> or <code>taxonConceptID</code></li><li>optional properties can be provided in subsequent columns and should use header values from <dwc>Darwin Core terms</dwc>, where possible</li></ul>",
+  "upload.help.example.title": "Example CSV file",
+  "upload.help.csv.content": "scientificName,vernacularName,stateProvince,measurementType,measurementValue{br}Phascolarctos cinereus,Koala,Queensland,weight,8.5{br}Macropus rufus,Red Kangaroo,New South Wales,height,1.8{br}Eucalyptus regnans,Mountain Ash,Victoria,height,100{br}Ornithorhynchus anatinus,Platypus,Tasmania,length,0.5{br}Sarcophilus harrisii,Tasmanian Devil,Tasmania,weight,8.0{br}Acacia pycnantha,Golden Wattle,South Australia,height,8{br}Crocodylus porosus,Saltwater Crocodile,Northern Territory,length,5.2{br}Setonix brachyurus,Quokka,Western Australia,weight,3.5{br}Banksia integrifolia,Coast Banksia,Victoria,height,15{br}Dromaius novaehollandiae,Emu,Western Australia,speed,48",
 
   "scientificName": "Scientific name",
   "scientificNameAuthority": "Scientific name authority",
