@@ -201,7 +201,7 @@ export function ListMeta({
           <Autocomplete
             name='region'
             label="Region"
-            placeholder="Region"
+            placeholder="Choose or type a custom value"
             clearable
             data={constraints?.region || []}
             disabled={!loaded || loading}
