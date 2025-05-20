@@ -32,14 +32,11 @@ interface ListMetaProps {
   onSubmit: (list: SpeciesListSubmit) => void;
 }
 
-interface RegionOption {
-  value: string;
-  label: string;
-}
-
+// Custom validator for the `listType` and `licence` fields.
 const notEmpty = (value: string) =>
-  value.length < 2 ? 'Please select a value' : null;
+  value && value.length < 2 ? 'Please select a value' : null;
 
+// Custom validator for the `wkt` field.
 const validGeoJSON = (value: string) =>
   /-?(?:\.\d+|\d+(?:\.\d*)?)/.test(value) ? null : 'Please enter valid GeoJSON';
 
@@ -77,12 +74,12 @@ export function ListMeta({
   onReset,
   onSubmit,
 }: ListMetaProps) {
-  const [constraints, setConstraints] = useState<SpeciesListConstraints | null>(
-    null
-  );
+  // State to manage form constraints and region label
+  const [constraints, setConstraints] = useState<SpeciesListConstraints | null>(null);
+  const [regionLabel, setRegionLabel] = useState('');
+
   const loaded = Boolean(constraints);
   const mounted = useMounted();
-  const [regionLabel, setRegionLabel] = useState('')
 
   // Form hook
   const form = useForm({
@@ -94,45 +91,55 @@ export function ListMeta({
     },
   });
 
-  // Hook to retireve dynamic values
+  // Retrieve dynamic values (constraints for selects/autocomplete)
   useEffect(() => {
     async function fetchConstraints() {
       try {
-        // Retrieve specist list constraints
         setConstraints(await ala.rest.lists.constraints());
       } catch (error) {
-        console.error(error);
+        console.error("Error fetching constraints:", error);
       }
     }
 
     if (mounted) fetchConstraints();
   }, [mounted]);
 
-  // Find the region "label" for the initial "value" (if any)
+  // Effect to set the initial regionLabel based on the form's region value.
+  // This ensures that if `form.values.region` has a value (e.g., 'VIC'),
+  // the Autocomplete displays its corresponding label ('Victoria') on load.
   useEffect(() => {
     if (form.values.region) {
       const option = constraints?.region?.find(item => item.value === form.values.region);
+      
       if (option) {
+        // If an option with matching value is found in constraints, display its label.
         setRegionLabel(option.label);
+      } else {
+        // If form.values.region is a custom value not in the constraints list,
+        // display the value as is.
+        setRegionLabel(form.values.region);
       }
+    } else {
+      // If form.values.region is empty, ensure regionLabel is also empty.
+      setRegionLabel('');
     }
-  }, [form.values.region, constraints?.region]);
+  }, [form.values.region, constraints?.region]); 
 
-  const handleRegionChange = (selectedLabel: string) => {
-    setRegionLabel(selectedLabel);
-    const data = constraints?.region || []
-    // Find matching option by label
-    const selectedOption = data.find(item => item.label === selectedLabel);
-    
+  const handleRegionChange = (selectedValueOrTypedText: string) => {
+    const data = constraints?.region || [];
+    setRegionLabel(selectedValueOrTypedText);
+    const selectedOption = data.find(item => item.label === selectedValueOrTypedText);
+
     if (selectedOption) {
-      // Set the value in the form when it matches an option
+      // If a matching option was found (meaning the user selected from the dropdown),
+      // update the form's `region` field with the actual `value` (e.g., 'NSW').
       form.setFieldValue('region', selectedOption.value);
     } else {
-      // For user-entered values, use the text as both label and value
-      form.setFieldValue('region', selectedLabel);
+      // If no matching option was found (user typed a custom value or cleared the input),
+      // update the form's `region` field with the typed string.
+      form.setFieldValue('region', selectedValueOrTypedText);
     }
   };
-
 
   const handleSumbit = (values: typeof form.values) => {
     onSubmit(values);
@@ -201,12 +208,15 @@ export function ListMeta({
           <Autocomplete
             name='region'
             label="Region"
-            placeholder="Choose or type a custom value"
+            placeholder="Select OR type a custom value"
             clearable
-            data={constraints?.region || []}
+            radius='md'
+            data={constraints?.region || []} 
             disabled={!loaded || loading}
-            value={regionLabel}
-            {...form.getInputProps('region', { onChange: handleRegionChange })}
+            value={regionLabel} 
+            onChange={handleRegionChange} 
+            onBlur={form.getInputProps('region').onBlur}
+            error={form.errors.region}
           />
         </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
