@@ -167,7 +167,7 @@ public class GraphQLController {
         q ->
             q.bool(
                 bq -> ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null,
-                   finalUserId, isPrivate, filters, bq)));
+                    finalUserId, isPrivate, filters, bq)));
 
     builder.withAggregation(
         "types_count",
@@ -546,35 +546,35 @@ public class GraphQLController {
   private void reindex(SpeciesListItem speciesListItem, SpeciesList speciesList) {
     // write the data to Elasticsearch
     SpeciesListIndex speciesListIndex =
-        new SpeciesListIndex(
-            speciesListItem.getId().toString(),
-            speciesList.getDataResourceUid(),
-            speciesList.getTitle(),
-            speciesList.getListType(),
-            speciesListItem.getSpeciesListID(),
-            speciesListItem.getScientificName(),
-            speciesListItem.getVernacularName(),
-            speciesListItem.getTaxonID(),
-            speciesListItem.getKingdom(),
-            speciesListItem.getPhylum(),
-            speciesListItem.getClasss(),
-            speciesListItem.getOrder(),
-            speciesListItem.getFamily(),
-            speciesListItem.getGenus(),
-            speciesListItem.getProperties(),
-            speciesListItem.getClassification(),
-            speciesList.getIsPrivate() != null ? speciesList.getIsPrivate() : false,
-            speciesList.getIsAuthoritative() != null ? speciesList.getIsAuthoritative() : false,
-            speciesList.getIsBIE() != null ? speciesList.getIsBIE() : false,
-            speciesList.getIsSDS() != null ? speciesList.getIsSDS() : false,
-            speciesList.getRegion() != null || speciesList.getWkt() != null,
-            speciesList.getOwner(),
-            speciesList.getEditors(),
-            speciesList.getTags(),
-            speciesList.getDateCreated() != null ? speciesList.getDateCreated().toString() : null,
-            speciesList.getLastUpdated() != null ? speciesList.getLastUpdated().toString() : null,
-            speciesList.getLastUpdatedBy()
-        );
+      new SpeciesListIndex(
+        speciesListItem.getId().toString(),
+        speciesList.getDataResourceUid(),
+        speciesList.getTitle(),
+        speciesList.getListType(),
+        speciesListItem.getSpeciesListID(),
+        speciesListItem.getScientificName(),
+        speciesListItem.getVernacularName(),
+        speciesListItem.getTaxonID(),
+        speciesListItem.getKingdom(),
+        speciesListItem.getPhylum(),
+        speciesListItem.getClasss(),
+        speciesListItem.getOrder(),
+        speciesListItem.getFamily(),
+        speciesListItem.getGenus(),
+        speciesListItem.getProperties(),
+        speciesListItem.getClassification(),
+        speciesList.getIsPrivate() != null ? speciesList.getIsPrivate() : false,
+        speciesList.getIsAuthoritative() != null ? speciesList.getIsAuthoritative() : false,
+        speciesList.getIsBIE() != null ? speciesList.getIsBIE() : false,
+        speciesList.getIsSDS() != null ? speciesList.getIsSDS() : false,
+        StringUtils.isNotEmpty(speciesList.getRegion()) || StringUtils.isNotEmpty(speciesList.getWkt()),
+        speciesList.getOwner(),
+        speciesList.getEditors(),
+        speciesList.getTags(),
+        speciesList.getDateCreated() != null ? speciesList.getDateCreated().toString() : null,
+        speciesList.getLastUpdated() != null ? speciesList.getLastUpdated().toString() : null,
+        speciesList.getLastUpdatedBy()
+      );
 
     speciesListIndexElasticRepository.save(speciesListIndex);
   }
