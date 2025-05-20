@@ -2,6 +2,7 @@
 
 import {
   Anchor,
+  Autocomplete,
   Button,
   Divider,
   Grid,
@@ -29,6 +30,11 @@ interface ListMetaProps {
   initialTitle?: string;
   onReset?: () => void;
   onSubmit: (list: SpeciesListSubmit) => void;
+}
+
+interface RegionOption {
+  value: string;
+  label: string;
 }
 
 const notEmpty = (value: string) =>
@@ -76,6 +82,7 @@ export function ListMeta({
   );
   const loaded = Boolean(constraints);
   const mounted = useMounted();
+  const [regionLabel, setRegionLabel] = useState('')
 
   // Form hook
   const form = useForm({
@@ -100,6 +107,32 @@ export function ListMeta({
 
     if (mounted) fetchConstraints();
   }, [mounted]);
+
+  // Find the region "label" for the initial "value" (if any)
+  useEffect(() => {
+    if (form.values.region) {
+      const option = constraints?.region?.find(item => item.value === form.values.region);
+      if (option) {
+        setRegionLabel(option.label);
+      }
+    }
+  }, [form.values.region, constraints?.region]);
+
+  const handleRegionChange = (selectedLabel: string) => {
+    setRegionLabel(selectedLabel);
+    const data = constraints?.region || []
+    // Find matching option by label
+    const selectedOption = data.find(item => item.label === selectedLabel);
+    
+    if (selectedOption) {
+      // Set the value in the form when it matches an option
+      form.setFieldValue('region', selectedOption.value);
+    } else {
+      // For user-entered values, use the text as both label and value
+      form.setFieldValue('region', selectedLabel);
+    }
+  };
+
 
   const handleSumbit = (values: typeof form.values) => {
     onSubmit(values);
@@ -165,14 +198,15 @@ export function ListMeta({
           />
         </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-          <Select
+          <Autocomplete
             name='region'
-            label='Region'
+            label="Region"
+            placeholder="Region"
+            clearable
             data={constraints?.region || []}
-            placeholder='Region'
-            searchable
             disabled={!loaded || loading}
-            {...form.getInputProps('region')}
+            value={regionLabel}
+            {...form.getInputProps('region', { onChange: handleRegionChange })}
           />
         </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
