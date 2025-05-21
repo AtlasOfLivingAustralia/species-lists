@@ -54,6 +54,20 @@ public class SpeciesListItem {
     taxon.put("genus", this.genus);
     return taxon;
   }
+
+  public List<String> toTaxonList() {
+    List<String> taxon = new ArrayList<>();
+
+    if (this.taxonID != null) {
+      taxon.add(this.taxonID);
+    } else if (this.scientificName != null) {
+      taxon.add(this.scientificName);
+    } else {
+      taxon.add(null);
+    }
+
+    return taxon;
+  }
   
   public Object getPropFromKey(String key) {
     switch(key) {

@@ -330,7 +330,8 @@ public class TaxonService {
   }
 
   public List<Classification> lookupTaxa(List<SpeciesListItem> items) throws Exception {
-
+    // First perform lookup using the `searchAllByClassification` name matching service
+    // that takes a list of classification objects and returns a list of classifications
     List<Map<String, String>> values =
         items.stream().map(SpeciesListItem::toTaxonMap).collect(Collectors.toList());
     ObjectMapper om = new ObjectMapper();
@@ -340,7 +341,6 @@ public class TaxonService {
             .POST(HttpRequest.BodyPublishers.ofString(json))
             .header("Content-Type", "application/json")
             .build();
-
 
     long matchRequestStart = System.nanoTime();
     HttpResponse<String> response =
@@ -352,14 +352,76 @@ public class TaxonService {
     logger.info("[{}|taxonMatch] Match request took {}ms", items.get(0).getSpeciesListID(), matchRequestElapsed);
 
     ObjectMapper objectMapper = new ObjectMapper();
+    List<Classification> classifications1 = new ArrayList<>();
 
     if (response.statusCode() == 200) {
-      List<Classification> classifications =
+      classifications1 =
           objectMapper.readValue(response.body(), new TypeReference<List<Classification>>() {});
-      return classifications;
+      // return classifications;
     } else {
       logger.error("Classification lookup failed " + items);
     }
+
+    // Secondly, perform lookup using the `getAllByTaxonID` name matching service 
+    // that takes a list of taxonIDs and returns a list of classifications
+    List<String> values2 =
+        items.stream().flatMap(item -> item.toTaxonList().stream()).collect(Collectors.toList());
+    // Build the URI with the taxonIDs as a request parameter
+    // Encode the taxonIDsParam to ensure special characters are handled
+    // Encode each taxonID individually, then join with commas (commas are not encoded)
+    List<String> encodedTaxonIDsList = values2.stream()
+      .map(id -> java.net.URLEncoder.encode(id, java.nio.charset.StandardCharsets.UTF_8))
+      .collect(Collectors.toList());
+    String encodedParams = encodedTaxonIDsList.stream()
+      .map(id -> "taxonIDs=" + id)
+      .collect(Collectors.joining("&"));
+    URI uriWithParams = new URI(namematchingQueryUrl + "/api/getAllByTaxonID" + (encodedParams.isEmpty() ? "" : "?" + encodedParams));
+
+    HttpRequest httpRequest2 =
+      HttpRequest.newBuilder(uriWithParams)
+        .POST(HttpRequest.BodyPublishers.noBody())
+        .header("Content-Type", "application/json")
+        .build();
+    long matchRequest2Start = System.nanoTime();
+    HttpResponse<String> response2 =
+        HttpClient.newBuilder()
+            .proxy(ProxySelector.getDefault())
+            .build()
+            .send(httpRequest2, HttpResponse.BodyHandlers.ofString());
+
+    long matchRequest2Elapsed = (System.nanoTime() - matchRequest2Start) / 1000000;
+    logger.info("[{}|taxonIDLookup] Match request 2 took {}ms", items.get(0).getSpeciesListID(), matchRequest2Elapsed);
+
+    ObjectMapper objectMapper2 = new ObjectMapper();
+    List<Classification> classifications2 = new ArrayList<>();
+
+    if (response2.statusCode() == 200) {
+      classifications2 =
+          objectMapper2.readValue(response2.body(), new TypeReference<List<Classification>>() {});
+      // return classifications;
+    } else {
+      logger.error("Classification taxonID lookup failed " + items);
+    }
+
+    // Merge the two lists of classifications
+    List<Classification> mergedClassifications = new ArrayList<>();
+    for (int i = 0; i < classifications1.size(); i++) {
+      Classification c1 = classifications1.get(i);
+      Classification c2 = (i < classifications2.size()) ? classifications2.get(i) : null;
+      // Prefer c1 if it has a non-null taxonConceptID, otherwise use c2
+      if (c1 != null && c1.getTaxonConceptID() != null) {
+        mergedClassifications.add(c1);
+      } else if (c2 != null && c2.getTaxonConceptID() != null) {
+        mergedClassifications.add(c2);
+      } else {
+        mergedClassifications.add(c1); // c1 is preferred fallback
+      }
+    }
+
+    if (mergedClassifications != null && !mergedClassifications.isEmpty()) {
+      return mergedClassifications;
+    }
+
     return null;
   }
 
