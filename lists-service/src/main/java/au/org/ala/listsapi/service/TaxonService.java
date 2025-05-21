@@ -277,10 +277,9 @@ public class TaxonService {
     progressService.resetIngestProgress(speciesList.getId());
     long resetProgressElapsed = (System.nanoTime() - resetProgressStart) / 1000000;
     logger.info("[{}|taxonMatch] Reset ingest progress {}ms", speciesListID, resetProgressElapsed);
-
     logger.info("[{}|taxonMatch] Started taxon matching", speciesListID);
 
-    int batchSize = 1000;
+    int batchSize = 200;
     ObjectId lastId = null;
 
     Set<String> distinctTaxa = new HashSet<>();
@@ -380,7 +379,7 @@ public class TaxonService {
     List<Classification> classifications2 =
         performTaxonIdLookup(
             items.stream().flatMap(item -> item.toTaxonList().stream()).collect(Collectors.toList()),
-            "/api/getAllByTaxonID",
+            "/api/getAllByTaxonID?follow=true&",
             speciesListID,
             "taxonIDLookup"
         );
@@ -410,7 +409,7 @@ public class TaxonService {
         .map(id -> "taxonIDs=" + URLEncoder.encode(id, StandardCharsets.UTF_8))
         .collect(Collectors.joining("&"));
 
-    URI uriWithParams = URI.create(namematchingQueryUrl + endpoint + (encodedParams.isEmpty() ? "" : "?" + encodedParams));
+    URI uriWithParams = URI.create(namematchingQueryUrl + endpoint + encodedParams);
 
     HttpRequest httpRequest =
         HttpRequest.newBuilder(uriWithParams)
