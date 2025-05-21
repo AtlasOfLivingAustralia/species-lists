@@ -17,9 +17,12 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bson.types.ObjectId;
@@ -58,7 +61,8 @@ public class TaxonService {
   @Autowired protected ProgressService progressService;
   @Autowired protected MongoUtils mongoUtils;
 
-
+  private final ObjectMapper objectMapper = new ObjectMapper();
+  
   @Async("processExecutor")
   public void reindex() {
     logger.info("Indexing all datasets");
@@ -329,100 +333,130 @@ public class TaxonService {
     return lookupTaxa(List.of(item)).get(0);
   }
 
-  public List<Classification> lookupTaxa(List<SpeciesListItem> items) throws Exception {
-    // First perform lookup using the `searchAllByClassification` name matching service
-    // that takes a list of classification objects and returns a list of classifications
-    List<Map<String, String>> values =
-        items.stream().map(SpeciesListItem::toTaxonMap).collect(Collectors.toList());
-    ObjectMapper om = new ObjectMapper();
-    String json = om.writeValueAsString(values);
+  /**
+   * Classification lookup using a list of SpeciesListItem objects via the name matching API.
+   * This method performs two lookups:
+   * 1. Using the searchAllByClassification endpoint to get classifications based on taxon maps (scientificName).
+   * 2. Using the getAllByTaxonID endpoint to get classifications based on taxon IDs (a Spatial Portal requirement)
+   * The results from both lookups are (destructively) merged and returned.
+   * This allows for a mixture of scientific names and taxon IDs to be provided in the 
+   * input list via the scientificName column - so it is backwards compatible with old lists app.
+   * 
+   * @param items List of SpeciesListItem objects to look up.
+   * @return List of Classification objects.
+   * @throws IOException If an I/O error occurs during the lookup.
+   * @throws InterruptedException If the thread is interrupted during the lookup.
+   */
+  public List<Classification> lookupTaxa(List<SpeciesListItem> items) throws IOException, InterruptedException { // Declared specific exceptions
+    if (items == null || items.isEmpty()) {
+      return new ArrayList<>(); // Return empty list for no items
+    }
+
+    String speciesListID = items.get(0).getSpeciesListID(); // Assuming consistent ID across items
+
+    // Perform lookup using searchAllByClassification
+    List<Classification> classifications1 =
+        performClassificationLookup(
+            items.stream().map(SpeciesListItem::toTaxonMap).collect(Collectors.toList()),
+            "/api/searchAllByClassification",
+            speciesListID,
+            "taxonMatch"
+        );
+
+    // Perform lookup using getAllByTaxonID
+    List<Classification> classifications2 =
+        performTaxonIdLookup(
+            items.stream().flatMap(item -> item.toTaxonList().stream()).collect(Collectors.toList()),
+            "/api/getAllByTaxonID",
+            speciesListID,
+            "taxonIDLookup"
+        );
+
+    return mergeClassifications(classifications1, classifications2);
+  }
+
+  private <T> List<Classification> performClassificationLookup(
+      T requestBody, String endpoint, String speciesListID, String logTag)
+      throws IOException, InterruptedException {
+
+    String json = objectMapper.writeValueAsString(requestBody);
     HttpRequest httpRequest =
-        HttpRequest.newBuilder(new URI(namematchingQueryUrl + "/api/searchAllByClassification"))
+        HttpRequest.newBuilder(URI.create(namematchingQueryUrl + endpoint))
             .POST(HttpRequest.BodyPublishers.ofString(json))
             .header("Content-Type", "application/json")
             .build();
 
-    long matchRequestStart = System.nanoTime();
-    HttpResponse<String> response =
-        HttpClient.newBuilder()
-            .proxy(ProxySelector.getDefault())
-            .build()
-            .send(httpRequest, HttpResponse.BodyHandlers.ofString());
-    long matchRequestElapsed = (System.nanoTime() - matchRequestStart) / 1000000;
-    logger.info("[{}|taxonMatch] Match request took {}ms", items.get(0).getSpeciesListID(), matchRequestElapsed);
+    return sendRequestAndParseResponse(httpRequest, speciesListID, logTag);
+  }
 
-    ObjectMapper objectMapper = new ObjectMapper();
-    List<Classification> classifications1 = new ArrayList<>();
+  private List<Classification> performTaxonIdLookup(
+      List<String> taxonIDs, String endpoint, String speciesListID, String logTag)
+      throws IOException, InterruptedException {
+
+    String encodedParams = taxonIDs.stream()
+        .map(id -> "taxonIDs=" + URLEncoder.encode(id, StandardCharsets.UTF_8))
+        .collect(Collectors.joining("&"));
+
+    URI uriWithParams = URI.create(namematchingQueryUrl + endpoint + (encodedParams.isEmpty() ? "" : "?" + encodedParams));
+
+    HttpRequest httpRequest =
+        HttpRequest.newBuilder(uriWithParams)
+            .POST(HttpRequest.BodyPublishers.noBody()) // No body for GET
+            .header("Content-Type", "application/json")
+            .build();
+
+    return sendRequestAndParseResponse(httpRequest, speciesListID, logTag);
+  }
+
+  private List<Classification> sendRequestAndParseResponse(
+      HttpRequest httpRequest, String speciesListID, String logTag)
+      throws IOException, InterruptedException {
+
+    long requestStart = System.nanoTime();
+    HttpClient httpClient = HttpClient.newHttpClient();
+    HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+    long requestElapsed = (System.nanoTime() - requestStart) / 1_000_000;
+    logger.info("[{}|{}] Request took {}ms", speciesListID, logTag, requestElapsed);
 
     if (response.statusCode() == 200) {
-      classifications1 =
-          objectMapper.readValue(response.body(), new TypeReference<List<Classification>>() {});
-      // return classifications;
+      return objectMapper.readValue(response.body(), new TypeReference<List<Classification>>() {});
     } else {
-      logger.error("Classification lookup failed " + items);
+      logger.error("Classification lookup failed for {}: Status code {}", logTag, response.statusCode());
+      return new ArrayList<>();
     }
+  }
 
-    // Secondly, perform lookup using the `getAllByTaxonID` name matching service 
-    // that takes a list of taxonIDs and returns a list of classifications
-    List<String> values2 =
-        items.stream().flatMap(item -> item.toTaxonList().stream()).collect(Collectors.toList());
-    // Build the URI with the taxonIDs as a request parameter
-    // Encode the taxonIDsParam to ensure special characters are handled
-    // Encode each taxonID individually, then join with commas (commas are not encoded)
-    List<String> encodedTaxonIDsList = values2.stream()
-      .map(id -> java.net.URLEncoder.encode(id, java.nio.charset.StandardCharsets.UTF_8))
-      .collect(Collectors.toList());
-    String encodedParams = encodedTaxonIDsList.stream()
-      .map(id -> "taxonIDs=" + id)
-      .collect(Collectors.joining("&"));
-    URI uriWithParams = new URI(namematchingQueryUrl + "/api/getAllByTaxonID" + (encodedParams.isEmpty() ? "" : "?" + encodedParams));
-
-    HttpRequest httpRequest2 =
-      HttpRequest.newBuilder(uriWithParams)
-        .POST(HttpRequest.BodyPublishers.noBody())
-        .header("Content-Type", "application/json")
-        .build();
-    long matchRequest2Start = System.nanoTime();
-    HttpResponse<String> response2 =
-        HttpClient.newBuilder()
-            .proxy(ProxySelector.getDefault())
-            .build()
-            .send(httpRequest2, HttpResponse.BodyHandlers.ofString());
-
-    long matchRequest2Elapsed = (System.nanoTime() - matchRequest2Start) / 1000000;
-    logger.info("[{}|taxonIDLookup] Match request 2 took {}ms", items.get(0).getSpeciesListID(), matchRequest2Elapsed);
-
-    ObjectMapper objectMapper2 = new ObjectMapper();
-    List<Classification> classifications2 = new ArrayList<>();
-
-    if (response2.statusCode() == 200) {
-      classifications2 =
-          objectMapper2.readValue(response2.body(), new TypeReference<List<Classification>>() {});
-      // return classifications;
-    } else {
-      logger.error("Classification taxonID lookup failed " + items);
-    }
-
-    // Merge the two lists of classifications
+  /**
+   * Merges two lists of Classification objects, producing a list of the same size as the input lists.
+   * It prioritizing the first list's values if both lists have values at the same index.
+   *
+   * @param classifications1 First list of Classification objects.
+   * @param classifications2 Second list of Classification objects.
+   * @return Merged list of Classification objects.
+   */
+  private List<Classification> mergeClassifications(
+      List<Classification> classifications1, List<Classification> classifications2) {
     List<Classification> mergedClassifications = new ArrayList<>();
-    for (int i = 0; i < classifications1.size(); i++) {
-      Classification c1 = classifications1.get(i);
+    int maxSize = Math.max(classifications1.size(), classifications2.size());
+
+    for (int i = 0; i < maxSize; i++) {
+      Classification c1 = (i < classifications1.size()) ? classifications1.get(i) : null;
       Classification c2 = (i < classifications2.size()) ? classifications2.get(i) : null;
-      // Prefer c1 if it has a non-null taxonConceptID, otherwise use c2
+
       if (c1 != null && c1.getTaxonConceptID() != null) {
         mergedClassifications.add(c1);
       } else if (c2 != null && c2.getTaxonConceptID() != null) {
         mergedClassifications.add(c2);
+      } else if (c1 != null) { // Fallback to c1 if c2 is null or doesn't have ID
+        mergedClassifications.add(c1);
+      } else if (c2 != null) { // Fallback to c2 if c1 is null
+        mergedClassifications.add(c2);
       } else {
-        mergedClassifications.add(c1); // c1 is preferred fallback
+        // Both are null for this index, potentially add a null or skip based on desired behavior
+        // For now, we'll skip if both are null, assuming the lists are aligned by input
       }
     }
-
-    if (mergedClassifications != null && !mergedClassifications.isEmpty()) {
-      return mergedClassifications;
-    }
-
-    return null;
+    return mergedClassifications;
   }
 
   public long getDistinctTaxaCount(String speciesListID) {
