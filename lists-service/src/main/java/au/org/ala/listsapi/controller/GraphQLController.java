@@ -192,19 +192,18 @@ public class GraphQLController {
             @AuthenticationPrincipal Principal principal) {
 
         // if searching private lists, check user is authorized
+        // String userIdToCheck = userId;
         if (isPrivate) {
             AlaUserProfile profile = authUtils.getUserProfile(principal);
             if (profile == null) {
                 logger.info("User not authorized to private access lists");
                 throw new AccessDeniedException("You must be logged in to view private lists");
-            } else {
-                userId = profile.getUserId();
-            }
+            } 
         }
 
-        NativeQueryBuilder builder = NativeQuery.builder().withPageable(PageRequest.of(1, 1));
-        String finalUserId = userId;
+        NativeQueryBuilder builder = NativeQuery.builder().withPageable(PageRequest.of(1, 1));        
         Boolean isAdmin = principal != null ? authUtils.hasAdminRole(authUtils.getUserProfile(principal)) : false;
+        String finalUserId = checkUserIdForAdmin(isPrivate, userId, principal, isAdmin);
         builder.withQuery(
                 q -> q.bool(
                         bq -> ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null,
@@ -880,14 +879,7 @@ public class GraphQLController {
         // ElasticUtils.cleanRawQuery will handle a null searchQuery, typically
         // returning an empty string.
         Boolean isAdmin = authUtils.hasAdminRole(authUtils.getUserProfile(principal));
-        String finalUserId;
-
-        if (userId == null && principal != null) {
-            AlaUserProfile profile = authUtils.getUserProfile(principal);
-            finalUserId = profile != null ? profile.getUserId() : null;
-        } else {
-            finalUserId = userId;
-        }
+        String finalUserId = checkUserIdForAdmin(isPrivate, userId, principal, isAdmin);
 
         builder.withQuery(
                 q -> q.bool(bq -> {
@@ -1296,5 +1288,31 @@ public class GraphQLController {
             return filter + ".keyword";
         }
         return "properties." + filter + ".keyword";
+    }
+
+    private String checkUserIdForAdmin(Boolean isPrivate, String userId, Principal principal,
+            Boolean isAdmin) {
+        String finalUserId;
+
+        if (isPrivate != null && isPrivate) {
+            if (userId != null) {
+                // If userId is provided and the user is not an admin, use the provided userId
+                // to filter the results. Noting admins can see all private lists.
+                finalUserId = userId;
+            } else if (userId == null && principal != null && !isAdmin) {
+                AlaUserProfile profile = authUtils.getUserProfile(principal);
+                finalUserId = profile != null ? profile.getUserId() : null;
+            } else {
+                finalUserId = null;
+            }
+        } else if ((isPrivate == null || !isPrivate) && userId != null && isAdmin) {
+            finalUserId = userId;
+        } else if ((isPrivate == null || !isPrivate) && userId == null && isAdmin) {
+            finalUserId = null;
+        } else {
+            finalUserId = userId;
+        }
+
+        return finalUserId;
     }
 }

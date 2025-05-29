@@ -200,8 +200,8 @@ public class ElasticUtils {
             bq.minimumShouldMatch("1");
         }
 
-        // Add userId filter for non-admin users
-        if (userId != null && !isAdmin) {
+        // Add userId filter for non-admin users TODO: fix me
+        if (userId != null || (!isAdmin && isPrivate)) {
             bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
         }
 
