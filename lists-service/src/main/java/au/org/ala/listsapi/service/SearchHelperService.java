@@ -13,18 +13,18 @@
  * rights and limitations under the License.
  */
 
-package au.org.ala.listsapi.controller;
+package au.org.ala.listsapi.service;
 
-import au.org.ala.listsapi.model.Filter;
-import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.model.SpeciesListIndex;
-import au.org.ala.listsapi.model.SpeciesListItem;
-import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
-import au.org.ala.ws.security.profile.AlaUserProfile;
-import co.elastic.clients.elasticsearch._types.FieldSort;
-import co.elastic.clients.elasticsearch._types.FieldValue;
-import co.elastic.clients.elasticsearch._types.SortOrder;
-import com.mongodb.bulk.BulkWriteResult;
+import java.security.Principal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -43,19 +43,26 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
-import java.security.Principal;
-import java.util.*;
-import java.util.stream.Collectors;
+import com.mongodb.bulk.BulkWriteResult;
 
-/**
- * Utility class for MongoDB operations related to species lists.
- * Provides common methods used by the REST and Legacy controllers
- */
+import au.org.ala.listsapi.controller.AuthUtils;
+import au.org.ala.listsapi.model.Filter;
+import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesListIndex;
+import au.org.ala.listsapi.model.SpeciesListItem;
+import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import au.org.ala.listsapi.util.ElasticUtils;
+import au.org.ala.ws.security.profile.AlaUserProfile;
+import co.elastic.clients.elasticsearch._types.FieldSort;
+import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.SortOrder;
+
 @Component
-public class MongoUtils {
+public class SearchHelperService {
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SearchHelperService.class);
+    @Autowired private AuthUtils authUtils;
     @Autowired private MongoTemplate mongoTemplate;
-    @Autowired protected AuthUtils authUtils;
-    @Autowired protected ElasticsearchOperations elasticsearchOperations;
+    @Autowired private ElasticsearchOperations elasticsearchOperations;
     @Autowired private SpeciesListMongoRepository speciesListMongoRepository;
 
     /**
@@ -139,11 +146,13 @@ public class MongoUtils {
 
                                     // If the user is not an admin, only query their private lists, and all other public lists
                                     if (!authUtils.isAuthenticated(principal)) {
+                                        logger.debug("Filtering for public lists only (user not authenticated)");
                                         bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
                                     } else if (!authUtils.hasAdminRole(profile)) {
+                                        logger.debug("Filtering for private lists only (admin users)");
                                         bq.filter(f -> f.bool(b -> b
                                                 .should(s -> s.bool(b2 -> b2
-                                                        .must(m -> m.term(t -> t.field("owner").value(profile.getUserId())))
+                                                        // .must(m -> m.term(t -> t.field("owner").value(profile.getUserId())))
                                                         .must(m -> m.term(t -> t.field("isPrivate").value(true)))
                                                 ))
                                                 .should(s -> s.term(t -> t.field("isPrivate").value(false)))
@@ -203,13 +212,14 @@ public class MongoUtils {
                 return new ArrayList<>();
             }
 
+            Boolean isAdmin = principal != null ? authUtils.hasAdminRole(authUtils.getUserProfile(principal)) : false;
             ArrayList<Filter> tempFilters = new ArrayList<>();
             Pageable pageableRequest = PageRequest.of(page - 1, pageSize);
             NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
             builder.withQuery(
                     q -> q.bool(
                             bq -> {
-                                ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), validIDs, null, null, tempFilters, bq);
+                                ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), validIDs, null, isAdmin, null, tempFilters, bq);
                                 ElasticUtils.restrictFields(searchQuery, restrictedFields, bq);
                                 return bq;
                             }));

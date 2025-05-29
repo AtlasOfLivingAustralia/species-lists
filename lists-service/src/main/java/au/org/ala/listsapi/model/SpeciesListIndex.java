@@ -1,19 +1,20 @@
 package au.org.ala.listsapi.model;
 
-import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
-import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Mapping;
 import org.springframework.data.elasticsearch.annotations.Setting;
 
+/**
+ * SpeciesListIndex is a model/bean that represents a single elastic search document and
+ * each entry corresponds to a denormalised taxon row entry for a species list. Individual 
+ * lists are represented by aggregating the entries for each list's taxa in the index.
+ */
 @Document(indexName = "species-lists", createIndex = true)
 @Setting(settingPath = "/elasticsearch/settings.json")
 @Mapping(mappingPath = "/elasticsearch/mappings.json")

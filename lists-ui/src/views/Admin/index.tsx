@@ -70,7 +70,10 @@ export function Component() {
       try {
         const progress = await ala.rest.admin!.migrateProgress();
         setMigrationProgress(progress);
-        if (progress == null) setMigrationDisabled(false);
+        if (progress == null || progress?.started == null) {
+          setMigrationProgress(null);
+          setMigrationDisabled(false);
+        }
       } catch (error) {
         console.log('admin error', error);
         // Show error notification
@@ -104,7 +107,7 @@ export function Component() {
       }
     };
 
-    setTimeout(check, 3000);
+    setTimeout(check, 5000);
   }, [ala]);
 
   // Show warning message on page navigation
