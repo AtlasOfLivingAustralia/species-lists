@@ -41,7 +41,7 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.lang.Nullable;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import com.mongodb.bulk.BulkWriteResult;
 
@@ -57,7 +57,12 @@ import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 
-@Component
+/**
+ * A helper service for performing search-related operations on species lists.
+ * Provides read and write operations for species list items,
+ * interacting with both MongoDB and Elasticsearch.
+ */
+@Service
 public class SearchHelperService {
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SearchHelperService.class);
     @Autowired private AuthUtils authUtils;
