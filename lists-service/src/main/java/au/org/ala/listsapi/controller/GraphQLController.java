@@ -203,7 +203,7 @@ public class GraphQLController {
 
         NativeQueryBuilder builder = NativeQuery.builder().withPageable(PageRequest.of(1, 1));        
         Boolean isAdmin = principal != null ? authUtils.hasAdminRole(authUtils.getUserProfile(principal)) : false;
-        String finalUserId = checkUserIdForAdmin(isPrivate, userId, principal, isAdmin);
+        String finalUserId = getUserIdBasedOnRole(isPrivate, userId, principal, isAdmin);
         builder.withQuery(
                 q -> q.bool(
                         bq -> ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null,
@@ -879,7 +879,7 @@ public class GraphQLController {
         // ElasticUtils.cleanRawQuery will handle a null searchQuery, typically
         // returning an empty string.
         Boolean isAdmin = authUtils.hasAdminRole(authUtils.getUserProfile(principal));
-        String finalUserId = checkUserIdForAdmin(isPrivate, userId, principal, isAdmin);
+        String finalUserId = getUserIdBasedOnRole(isPrivate, userId, principal, isAdmin);
 
         builder.withQuery(
                 q -> q.bool(bq -> {
@@ -1290,11 +1290,26 @@ public class GraphQLController {
         return "properties." + filter + ".keyword";
     }
 
-    private String checkUserIdForAdmin(Boolean isPrivate, String userId, Principal principal,
+    /**
+     * Determine the (final) userId based on isPrivate, userId and the
+     * principal's role. The logic is quite complicated, due to non-admin users
+     * being able to see their own private lists, but admins being able to see all
+     * private lists. UserId is a proxy for "my lists" but is also used for private
+     * lists, so has a double role here.
+     * 
+     * @param isPrivate
+     * @param userId
+     * @param principal
+     * @param isAdmin
+     * @return
+     */
+    private String getUserIdBasedOnRole(Boolean isPrivate, String userId, Principal principal,
             Boolean isAdmin) {
         String finalUserId;
 
         if (isPrivate != null && isPrivate) {
+            // Viewing private lists - non-admin users should only see their own private lists
+            // so include userId to enforce this (but not for admins).
             if (userId != null) {
                 // If userId is provided and the user is not an admin, use the provided userId
                 // to filter the results. Noting admins can see all private lists.
@@ -1308,8 +1323,10 @@ public class GraphQLController {
         } else if ((isPrivate == null || !isPrivate) && userId != null && isAdmin) {
             finalUserId = userId;
         } else if ((isPrivate == null || !isPrivate) && userId == null && isAdmin) {
+            // admin and no userId passed in and not viewing private lists, so don't filter by userId
             finalUserId = null;
         } else {
+            // pass the userId through
             finalUserId = userId;
         }
 
