@@ -15,8 +15,35 @@
 
 package au.org.ala.listsapi.controller;
 
-import au.org.ala.listsapi.model.*;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.security.Principal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.lang.Nullable;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import au.org.ala.listsapi.model.QueryListItemVersion1;
+import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesListItem;
+import au.org.ala.listsapi.model.SpeciesListItemVersion1;
+import au.org.ala.listsapi.model.SpeciesListVersion1;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import au.org.ala.listsapi.service.SearchHelperService;
 import au.org.ala.listsapi.service.SpeciesListLegacyService;
 import io.micrometer.common.util.StringUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,20 +53,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.servlet.http.HttpServletRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.lang.Nullable;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.security.Principal;
-import java.util.*;
 
 /**
  * Controller for legacy API endpoints `(`/v1/**), that are deprecated.
@@ -57,7 +70,7 @@ public class LegacyController {
     protected SpeciesListLegacyService legacyService;
 
     @Autowired
-    protected MongoUtils mongoUtils;
+    protected SearchHelperService searchHelperService;
 
     @Autowired
     protected AuthUtils authUtils;
@@ -120,7 +133,7 @@ public class LegacyController {
             int[] pageAndSize = calculatePageAndSize(offset, max);
             int page = pageAndSize[0];
             int pageSize = pageAndSize[1];
-            List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems(speciesListIDs, searchQuery, fields, page, pageSize, sort, dir, principal);
+            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs, searchQuery, fields, page, pageSize, sort, dir, principal);
 
             if (speciesListItems.isEmpty()) {
                 return ResponseEntity.notFound().build();
@@ -166,7 +179,7 @@ public class LegacyController {
                     return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
                 }
 
-                return new ResponseEntity<>(MongoUtils.findCommonKeys(speciesLists), HttpStatus.OK);
+                return new ResponseEntity<>(SearchHelperService.findCommonKeys(speciesLists), HttpStatus.OK);
             }
 
             return ResponseEntity.status(404).body("Species list(s) not found: " + speciesListIDs);
@@ -218,7 +231,7 @@ public class LegacyController {
         int pageSizeVal = Math.max((pageSize != null ? pageSize : 9999), 1); // Ensure pageSize is at least 1
 
         try {
-            List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems(inputGuids, speciesListIDs, pageVal, pageSizeVal, principal);
+            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(inputGuids, speciesListIDs, pageVal, pageSizeVal, principal);
 
             if (speciesListItems.isEmpty()) {
                 return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK); // empty list
@@ -266,7 +279,7 @@ public class LegacyController {
             int[] pageAndSize = calculatePageAndSize(offset, max);
             int page = pageAndSize[0];
             int pageSize = pageAndSize[1];
-            List<SpeciesListItem> speciesListItems = mongoUtils.fetchSpeciesListItems(druid, q, fields, page, pageSize, sort, order, principal);
+            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(druid, q, fields, page, pageSize, sort, order, principal);
 
             if (speciesListItems.isEmpty()) {
                 return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
