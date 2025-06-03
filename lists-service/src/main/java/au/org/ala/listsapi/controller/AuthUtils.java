@@ -35,9 +35,9 @@ public class AuthUtils {
         AlaUserProfile profile = null;
 
         if (principal instanceof PreAuthenticatedAuthenticationToken) {
-        profile = (AlaUserProfile) ((PreAuthenticatedAuthenticationToken) principal).getPrincipal();
+            profile = (AlaUserProfile) ((PreAuthenticatedAuthenticationToken) principal).getPrincipal();
         } else if (principal instanceof AlaUserProfile) {
-        profile = (AlaUserProfile) principal;
+            profile = (AlaUserProfile) principal;
         }
 
         return profile;
@@ -48,10 +48,11 @@ public class AuthUtils {
         return false;
 
         for (String role : profile.getRoles()) {
-        if (adminRoles.contains(role)) {
-            return true;
+            if (adminRoles.contains(role)) {
+                return true;
+            }
         }
-        }
+
         return false;
     }
 
