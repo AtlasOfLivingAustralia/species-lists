@@ -1277,7 +1277,7 @@ public class GraphQLController {
 
     public Map<String, Object> loadJson(String url) throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.readValue(new URL(url), Map.class);
+        return objectMapper.readValue(new URL(url), objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class));
     }
 
     private static String getPropertiesFacetField(String filter) {
