@@ -39,7 +39,7 @@ interface ListMetaProps {
 
 // Custom validator for the `listType` and `licence` fields.
 const notEmpty = (value: string) =>
-  value && value.length < 2 ? 'Please select a value' : null;
+  !value || value.trim().length === 0 ? 'Please select a value' : null;
 
 // Custom validator for the `wkt` field.
 const validGeoJSON = (value: string) =>
@@ -211,6 +211,7 @@ export function ListMeta({
             placeholder='List type'
             required
             disabled={!loaded || loading}
+            error={form.errors.listType}
             {...form.getInputProps('listType')}
           />
         </Grid.Col>
