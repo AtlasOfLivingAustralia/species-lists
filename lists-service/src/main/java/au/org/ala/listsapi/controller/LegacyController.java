@@ -41,7 +41,7 @@ import au.org.ala.listsapi.model.QueryListItemVersion1;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.model.SpeciesListItemVersion1;
-import au.org.ala.listsapi.model.SpeciesListVersion1;
+import au.org.ala.listsapi.model.SpeciesListPage;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.SearchHelperService;
 import au.org.ala.listsapi.service.SpeciesListLegacyService;
@@ -77,19 +77,42 @@ public class LegacyController {
 
     @Operation(tags = "REST v1", summary = "Get species list metadata for a given species list ID", deprecated = true)
     @ApiResponses({
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Species list found",
-                    content = @Content(
-                            mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = SpeciesListVersion1.class)
-                    )
-            )
+            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "User does not have permission to view species list: dr123"))),
+            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found: dr123"))),
     })
     @GetMapping("/v1/speciesList/{speciesListID}")
     public ResponseEntity<Object> speciesList(
-            @PathVariable("speciesListID") String speciesListID) {
+            @PathVariable("speciesListID") String speciesListID,
+            @AuthenticationPrincipal Principal principal) {
+        return getListDetails(speciesListID, principal);
+    }
+
+    @Operation(tags = "REST v1", summary = "(Internal use) Get  species list metadata for a given species list ID", deprecated = true, hidden = true)
+    @GetMapping("/v1/speciesListInternal/{druid}")
+    public ResponseEntity<Object> speciesListInternal(
+            @PathVariable("speciesListID") String speciesListID, 
+            @AuthenticationPrincipal Principal principal) {
+
+        return getListDetails(speciesListID, principal);
+    }
+
+    /**
+     * Get the details of a species list by its ID or data resource UID.
+     * This method is used by both the public and internal endpoints.
+     * 
+     * @param speciesListID
+     * @return
+     */
+    private ResponseEntity<Object> getListDetails(String speciesListID, 
+                                                    @AuthenticationPrincipal Principal principal) {
+
         Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+
+        if (speciesList.isPresent() && !authUtils.isAuthorized(speciesList.get(), principal)) {
+            // If the list is private and the user is not authorized, return 403 Forbidden
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
 
         return speciesList
                 .map(list -> ResponseEntity.<Object>ok(legacyService.convertListToVersion1(list)))

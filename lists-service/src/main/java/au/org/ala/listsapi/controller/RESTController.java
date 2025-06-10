@@ -91,11 +91,23 @@ public class RESTController {
     protected ElasticsearchOperations elasticsearchOperations;
 
     @Operation(tags = "REST v2", summary = "Get species list metadata")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "User does not have permission to view species list: dr123"))),
+            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found: dr123"))),
+    })
     @GetMapping("/v2/speciesList/{speciesListID}")
     public ResponseEntity<SpeciesList> speciesList(
-            @PathVariable("speciesListID") String speciesListID) {
+            @PathVariable("speciesListID") String speciesListID,
+            @AuthenticationPrincipal Principal principal) {
         Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
                 speciesListID);
+
+        if (speciesList.isPresent() && !authUtils.isAuthorized(speciesList.get(), principal)) {
+            // If the list is private and the user is not authorized, return 403 Forbidden
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         return speciesList.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
