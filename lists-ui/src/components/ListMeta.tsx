@@ -1,27 +1,32 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 
+import { SpeciesList, SpeciesListConstraints, SpeciesListSubmit } from '#/api';
+import { ExternalLinkIcon } from '@atlasoflivingaustralia/ala-mantine';
 import {
   Anchor,
   Autocomplete,
   Button,
+  Center,
   Divider,
   Grid,
   Group,
   MultiSelect,
+  SegmentedControl,
   Select,
+  Text,
   Textarea,
   TextInput,
 } from '@mantine/core';
-import { SpeciesList, SpeciesListConstraints, SpeciesListSubmit } from '#/api';
 import { useForm } from '@mantine/form';
-import { ExternalLinkIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { useEffect, useMemo, useState } from 'react';
 import { useMounted } from '@mantine/hooks';
+import { useEffect, useMemo, useState } from 'react';
 
 import { listFlags } from '#/helpers';
-import { FlagCard } from './FlagCard';
-import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { ALAContextProps } from '#/helpers/context/ALAContext';
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { FormattedMessage } from 'react-intl';
+import { FlagCard } from './FlagCard';
 
 interface ListMetaProps {
   ala: ALAContextProps;
@@ -150,6 +155,31 @@ export function ListMeta({
     [ala.isAdmin]
   );
 
+  const visibilityLabels = useMemo(
+    () => [
+      {
+        value: 'public',
+        label: (
+          <Center style={{ gap: 10 }}>
+            <FontAwesomeIcon icon={faEye} fontSize={14} />
+            <span><FormattedMessage id='public.label' defaultMessage='Public' /></span>
+          </Center>
+        ),
+      },
+      {
+        value: 'private',
+        label: (
+          <Center style={{ gap: 10 }}>
+            <FontAwesomeIcon icon={faEyeSlash} fontSize={14} />
+            <span><FormattedMessage id='private.label' defaultMessage='Private' /></span>
+          </Center>
+        ),
+      },
+    ],
+    [ala.isAdmin]
+  );
+
+
   return (
     <form onSubmit={form.onSubmit(handleSumbit)}>
       <Grid>
@@ -230,6 +260,18 @@ export function ListMeta({
             {...form.getInputProps('tags')}
           />
         </Grid.Col>
+        <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+          <Text size="sm" fw={500} mt={3} mb={1}>
+            Visibility
+          </Text>
+          <SegmentedControl
+            disabled={loading}
+            radius='md'
+            data={visibilityLabels}
+            value={form.values.isPrivate ? 'private' : 'public'}
+            onChange={(value) => form.setFieldValue('isPrivate', value === 'private')}
+          />
+        </Grid.Col>
         <Grid.Col span={{ base: 12 }}>
           <Textarea
             name='wkt'
@@ -257,23 +299,6 @@ export function ListMeta({
         </Grid.Col>
         <Grid.Col span={12}>
           <Divider variant='dashed' my='md' />
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, xs: 12, sm: 6, md: 4, lg: 3 }}>
-          <FlagCard
-            key={form.key('isPrivate')}
-            label={form.values.isPrivate ? 'Private' : 'Public'}
-            description={
-              form.values.isPrivate
-                ? 'Hidden from the public'
-                : 'Visible to everyone'
-            }
-            icon={form.values.isPrivate ? faEyeSlash : faEye}
-            onClick={() =>
-              form.setFieldValue('isPrivate', !form.values.isPrivate)
-            }
-            disabled={loading}
-            {...form.getInputProps('isPrivate', { type: 'checkbox' })}
-          />
         </Grid.Col>
         {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
         {filteredFlags.map(({ flag, admin, ...props }) => (

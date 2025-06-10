@@ -793,9 +793,9 @@ public class GraphQLController {
             @AuthenticationPrincipal Principal principal) {
 
         String ID;
+        final SpeciesList speciesList;
 
         if (speciesListID != null) {
-
             Optional<SpeciesList> speciesListOptional = speciesListMongoRepository
                     .findByIdOrDataResourceUid(speciesListID, speciesListID);
 
@@ -803,7 +803,8 @@ public class GraphQLController {
                 return null;
             }
 
-            SpeciesList speciesList = speciesListOptional.get();
+            final SpeciesList speciesListFinal = speciesListOptional.get();
+            speciesList = new SpeciesList(speciesListFinal);
 
             if (speciesList.getIsPrivate()) {
                 // private list, check user is authorized
@@ -815,6 +816,7 @@ public class GraphQLController {
 
             ID = speciesList.getId();
         } else {
+            speciesList = null;
             ID = null;
         }
 
@@ -826,7 +828,7 @@ public class GraphQLController {
         builder.withQuery(
                 q -> q.bool(
                         bq -> {
-                            ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), ID, userId, isAdmin, null, filters, bq);
+                            ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), ID, null, isAdmin, null, filters, bq);
                             return bq;
                         }));
 
@@ -1277,7 +1279,7 @@ public class GraphQLController {
 
     public Map<String, Object> loadJson(String url) throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.readValue(new URL(url), Map.class);
+        return objectMapper.readValue(new URL(url), objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class));
     }
 
     private static String getPropertiesFacetField(String filter) {
