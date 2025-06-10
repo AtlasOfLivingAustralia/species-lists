@@ -92,7 +92,7 @@ public class RESTController {
 
     @Operation(tags = "REST v2", summary = "Get species list metadata")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
+            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesList.class))),
             @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "User does not have permission to view species list: dr123"))),
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found: dr123"))),
     })
@@ -103,7 +103,7 @@ public class RESTController {
         Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
                 speciesListID);
 
-        if (speciesList.isPresent() && !authUtils.isAuthorized(speciesList.get(), principal)) {
+        if (speciesList.isPresent() && speciesList.get().getIsPrivate() && !authUtils.isAuthorized(speciesList.get(), principal)) {
             // If the list is private and the user is not authorized, return 403 Forbidden
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
