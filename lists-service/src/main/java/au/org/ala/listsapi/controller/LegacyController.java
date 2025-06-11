@@ -52,6 +52,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
@@ -75,6 +76,7 @@ public class LegacyController {
     @Autowired
     protected AuthUtils authUtils;
 
+    @SecurityRequirement(name = "JWT")
     @Operation(tags = "REST v1", summary = "Get species list metadata for a given species list ID", deprecated = true)
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListVersion1.class))),
@@ -88,8 +90,9 @@ public class LegacyController {
         return getListDetails(speciesListID, principal);
     }
 
-    @Operation(tags = "REST v1", summary = "(Internal use) Get  species list metadata for a given species list ID", deprecated = true, hidden = true)
-    @GetMapping("/v1/speciesListInternal/{druid}")
+    @SecurityRequirement(name = "JWT")
+    @Operation(tags = "REST v1", summary = "(Internal use) Get  species list metadata for a given species list ID", deprecated = true, hidden = false)
+    @GetMapping("/v1/speciesListInternal/{speciesListID}")
     public ResponseEntity<Object> speciesListInternal(
             @PathVariable("speciesListID") String speciesListID, 
             @AuthenticationPrincipal Principal principal) {
