@@ -96,6 +96,11 @@ public class LegacyController {
     public ResponseEntity<Object> speciesListInternal(
             @PathVariable("speciesListID") String speciesListID, 
             @AuthenticationPrincipal Principal principal) {
+        if (!authUtils.isAuthorized(principal)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"error\": \"Not authorised to access this endpoint\"}");
+        }
 
         return getListDetails(speciesListID, principal);
     }
@@ -122,7 +127,7 @@ public class LegacyController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(tags = "REST v1", summary = "Get species list metadata for a given species list ID", deprecated = true)
+    @Operation(tags = "REST v1", summary = "Get species list items for a given species list ID", deprecated = true)
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -155,22 +160,89 @@ public class LegacyController {
             @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
             @AuthenticationPrincipal Principal principal) {
         try {
-            // convert max and offset to page and pageSize
-            int[] pageAndSize = calculatePageAndSize(offset, max);
-            int page = pageAndSize[0];
-            int pageSize = pageAndSize[1];
-            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs, searchQuery, fields, page, pageSize, sort, dir, principal);
-
-            if (speciesListItems.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            List<SpeciesListItemVersion1> legacySpeciesListItems = legacyService.convertListItemToVersion1(speciesListItems);
-
-            return new ResponseEntity<>(legacySpeciesListItems, HttpStatus.OK);
+            return getLegacySpeciesListItems(speciesListIDs, searchQuery, fields, offset, max, sort, dir, principal);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @Operation(tags = "REST v1", summary = "Get species list items (internal use) for a given species list ID", deprecated = true)
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Species list found",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = SpeciesListItemVersion1.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "User does not have permission to access this endpoint"))),
+            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found: dr123"))),
+
+    })
+    @SecurityRequirement(name = "JWT")
+    @GetMapping("/v1/speciesListItemsInternal/{druid}")
+    public ResponseEntity<Object> speciesListInternal(
+            @Parameter(
+                    name = "druid",
+                    description = "The data resource id (or speciesListID) or comma separated ids to identify list(s) to return list items for e.g. '/v1/speciesListItemsInternal/dr123,dr456,dr789'",
+                    schema = @Schema(type = "string")
+            )
+            @PathVariable("druid") String speciesListIDs,
+            @Parameter(
+                    name = "includeKVP",
+                    description = "Whether to include KVP (key value pairs) values in the returned list item. Note this is now ignored and  KVP values are always returned.",
+                    schema = @Schema(type = "boolean", defaultValue = "true")
+            )
+            @RequestParam(name = "includeKVP", defaultValue = "false") Boolean _includeKVP,
+            @Nullable @RequestParam(name = "q") String searchQuery,
+            @Nullable @RequestParam(name = "fields") String fields,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") Integer offset,
+            @Nullable @RequestParam(name = "max", defaultValue = "10") Integer max,
+            @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
+            @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
+            @AuthenticationPrincipal Principal principal) {
+        try {
+            if (!authUtils.isAuthorized(principal)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"error\": \"Not authorised to access this endpoint\"}");
+            }
+
+            return getLegacySpeciesListItems(speciesListIDs, searchQuery, fields, offset, max, sort, dir, principal);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Get species list items for a given species list ID (legacy API).
+     * 
+     * @param speciesListIDs
+     * @param searchQuery
+     * @param fields
+     * @param offset
+     * @param max
+     * @param sort
+     * @param dir
+     * @param principal
+     * @return
+     */
+    private ResponseEntity<Object> getLegacySpeciesListItems(String speciesListIDs, String searchQuery, String fields,
+            Integer offset, Integer max, String sort, String dir, Principal principal) {
+        // convert max and offset to page and pageSize
+        int[] pageAndSize = calculatePageAndSize(offset, max);
+        int page = pageAndSize[0];
+        int pageSize = pageAndSize[1];
+        List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs, searchQuery, fields, page, pageSize, sort, dir, principal);
+
+        if (speciesListItems.isEmpty()) {
+            return ResponseEntity.notFound().build(); 
+        }
+
+        List<SpeciesListItemVersion1> legacySpeciesListItems = legacyService.convertListItemToVersion1(speciesListItems);
+
+        return new ResponseEntity<>(legacySpeciesListItems, HttpStatus.OK);
     }
 
     @Operation(tags = "REST v1", summary = "Get a list of keys from KVP common across a list multiple species lists", deprecated = true)
