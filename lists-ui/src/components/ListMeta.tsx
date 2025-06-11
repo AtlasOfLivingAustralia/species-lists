@@ -25,7 +25,7 @@ import { listFlags } from '#/helpers';
 import { ALAContextProps } from '#/helpers/context/ALAContext';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { FlagCard } from './FlagCard';
 
 interface ListMetaProps {
@@ -36,14 +36,6 @@ interface ListMetaProps {
   onReset?: () => void;
   onSubmit: (list: SpeciesListSubmit) => void;
 }
-
-// Custom validator for the `listType` and `licence` fields.
-const notEmpty = (value: string) =>
-  !value || value.trim().length === 0 ? 'Please select a value' : null;
-
-// Custom validator for the `wkt` field.
-const validGeoJSON = (value: string) =>
-  /-?(?:\.\d+|\d+(?:\.\d*)?)/.test(value) ? null : 'Please enter valid GeoJSON';
 
 const defaultList = (
   list?: SpeciesList,
@@ -85,6 +77,20 @@ export function ListMeta({
 
   const loaded = Boolean(constraints);
   const mounted = useMounted();
+  const intl = useIntl();
+
+  // Custom validator for the `listType` and `licence` fields.
+  const notEmpty = (value: string) =>
+    !value || value.trim().length === 0 
+        ? intl.formatMessage({id:'listmeta.validation.notEmpty', defaultMessage:'Please select a value'}) 
+        : null;
+
+  // Custom validator for the `wkt` field.
+  const validGeoJSON = (value: string) =>
+    /-?(?:\.\d+|\d+(?:\.\d*)?)/.test(value) 
+        ? null 
+        : intl.formatMessage({id:'listmeta.validation.geojson', defaultMessage:'Please enter valid GeoJSON'});
+
 
   // Form hook
   const form = useForm({
@@ -162,7 +168,7 @@ export function ListMeta({
         label: (
           <Center style={{ gap: 10 }}>
             <FontAwesomeIcon icon={faEye} fontSize={14} />
-            <span><FormattedMessage id='public.label' defaultMessage='Public' /></span>
+            <span><FormattedMessage id='listmeta.public.label' defaultMessage='Public' /></span>
           </Center>
         ),
       },
@@ -171,7 +177,7 @@ export function ListMeta({
         label: (
           <Center style={{ gap: 10 }}>
             <FontAwesomeIcon icon={faEyeSlash} fontSize={14} />
-            <span><FormattedMessage id='private.label' defaultMessage='Private' /></span>
+            <span><FormattedMessage id='listmeta.private.label' defaultMessage='Private' /></span>
           </Center>
         ),
       },
@@ -186,8 +192,10 @@ export function ListMeta({
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
           <TextInput
             name='title'
-            label='Name'
-            placeholder='List name'
+            label={
+              <FormattedMessage id="listmeta.title.label" defaultMessage="Name" />
+            }
+            placeholder={intl.formatMessage({ id: 'listmeta.title.placeholder', defaultMessage: 'List name' })}
             required
             disabled={loading}
             {...form.getInputProps('title')}
@@ -196,8 +204,10 @@ export function ListMeta({
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
           <TextInput
             name='description'
-            label='Description'
-            placeholder='List details'
+            label={
+              <FormattedMessage id="listmeta.description.label" defaultMessage="Description" />
+            }
+            placeholder={intl.formatMessage({ id: 'listmeta.description.placeholder', defaultMessage: 'List details' })}
             required
             disabled={loading}
             {...form.getInputProps('description')}
@@ -206,9 +216,11 @@ export function ListMeta({
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
           <Select
             name='listType'
-            label='Type'
+            label={
+              <FormattedMessage id="listmeta.type.label" defaultMessage="Type" />
+            }
             data={constraints?.listType || []}
-            placeholder='List type'
+            placeholder={intl.formatMessage({ id: 'listmeta.type.placeholder', defaultMessage: 'List type' })}
             required
             disabled={!loaded || loading}
             error={form.errors.listType}
@@ -218,9 +230,11 @@ export function ListMeta({
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
           <Select
             name='licence'
-            label='Licence'
+            label={
+              <FormattedMessage id="listmeta.licence.label" defaultMessage="Licence" />
+            }
             data={constraints?.licence || []}
-            placeholder='List licence'
+            placeholder={intl.formatMessage({ id: 'listmeta.licence.placeholder', defaultMessage: 'List licence' })}
             required
             disabled={!loaded || loading}
             {...form.getInputProps('licence')}
@@ -229,8 +243,10 @@ export function ListMeta({
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
           <TextInput
             name='authority'
-            label='Authority'
-            placeholder='Authority'
+            label={
+              <FormattedMessage id="listmeta.authority.label" defaultMessage="Authority" />
+            }
+            placeholder={intl.formatMessage({ id: 'listmeta.authority.placeholder', defaultMessage: 'Authority' })}
             disabled={loading}
             {...form.getInputProps('authority')}
           />
@@ -238,8 +254,10 @@ export function ListMeta({
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
           <Autocomplete
             name='region'
-            label="Region"
-            placeholder="Select OR type a custom value"
+            label={
+              <FormattedMessage id="listmeta.region.label" defaultMessage="Region" />
+            }
+            placeholder={intl.formatMessage({ id: 'listmeta.region.placeholder', defaultMessage: 'Select OR type a custom value' })}
             clearable
             radius='md'
             data={constraints?.region || []} 
@@ -252,10 +270,14 @@ export function ListMeta({
         </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
           <MultiSelect
-            label='Tags'
+            label={
+              <FormattedMessage id="listmeta.tags.label" defaultMessage="Tags" />
+            }
             data={['biocollect', 'galah', 'spatial-portal', 'profiles', 'arga']}
             placeholder={
-              (form.values['tags'] || []).length > 0 ? undefined : 'Select tags'
+              (form.values['tags'] || []).length > 0
+          ? undefined
+          : intl.formatMessage({ id: 'listmeta.tags.placeholder', defaultMessage: 'Select tags' })
             }
             disabled={loading}
             {...form.getInputProps('tags')}
@@ -263,7 +285,7 @@ export function ListMeta({
         </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
           <Text size="sm" fw={500} mt={3} mb={1}>
-            Visibility
+            <FormattedMessage id="listmeta.visibility.label" defaultMessage="Visibility" />
           </Text>
           <SegmentedControl
             disabled={loading}
@@ -278,19 +300,19 @@ export function ListMeta({
             name='wkt'
             label={
               <>
-                Geo Coordinates (
-                <Anchor
-                  style={{ fontSize: 14 }}
-                  fw='bold'
-                  target='_blank'
-                  href='https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry'
-                >
-                  WKT <ExternalLinkIcon />
-                </Anchor>
-                )
+          <FormattedMessage id="listmeta.wkt.label" defaultMessage="Geo Coordinates" /> (
+          <Anchor
+            style={{ fontSize: 14 }}
+            fw='bold'
+            target='_blank'
+            href='https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry'
+          >
+            WKT <ExternalLinkIcon />
+          </Anchor>
+          )
               </>
             }
-            placeholder='Enter geo coordinates'
+            placeholder={intl.formatMessage({ id: 'listmeta.wkt.placeholder', defaultMessage: 'Enter geo coordinates' })}
             minRows={3}
             maxRows={8}
             autosize
@@ -323,7 +345,10 @@ export function ListMeta({
               type='submit'
               loading={loading}
             >
-              Confirm
+              { initialValues 
+                  ? intl.formatMessage({ id: 'listmeta.button.update.label', defaultMessage: 'Update'})
+                  : intl.formatMessage({ id: 'listmeta.button.create.label', defaultMessage: 'Create'})
+              }
             </Button>
             <Button
               radius='md'
@@ -331,7 +356,7 @@ export function ListMeta({
               onClick={() => (onReset ? onReset() : form.reset())}
               disabled={loading}
             >
-              Reset
+              <FormattedMessage id='listmeta.button.cancel.label' defaultMessage='Cancel' />
             </Button>
           </Group>
         </Grid.Col>

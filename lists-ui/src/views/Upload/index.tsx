@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useState, useCallback } from 'react';
+import { SpeciesListSubmit, UploadResult } from '#/api';
+import { getErrorMessage } from '#/helpers';
 import {
   Container,
   Grid,
@@ -7,19 +8,23 @@ import {
   Title,
 } from '@mantine/core';
 import { useDocumentTitle } from '@mantine/hooks';
-import { FormattedMessage, useIntl } from 'react-intl';
-import { SpeciesListSubmit, UploadResult } from '#/api';
 import { notifications } from '@mantine/notifications';
-import { getErrorMessage } from '#/helpers';
+import { useCallback, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 // Helpers & local components
+import { FileUploadDropzone } from '#/components/FileUploadDropzone';
+import { IngestProgress } from '#/components/IngestProgress';
 import { ListMeta } from '#/components/ListMeta';
 import { useALA } from '#/helpers/context/useALA';
-import { IngestProgress } from '#/components/IngestProgress';
 import { Breadcrumbs } from '../Dashboard/components/Breadcrumbs';
-import { FileUploadDropzone } from '#/components/FileUploadDropzone';
 
 import classes from './index.module.css';
+
+const convertFileNameToTitle = (fileName: string): string => {
+  // Convert the file name to a title by removing the extension and replacing underscores with spaces
+  return fileName.replace(/\.[^/.]+$/, '').replace(/_/g, ' ');
+}
 
 /**
  * Upload component for uploading species lists
@@ -39,7 +44,7 @@ export default function Component() {
 
   // Handler for successful file upload
   const handleUploadSuccess = useCallback((uploadResult: UploadResult, fileName: string) => {
-    setOriginalName(fileName);
+    setOriginalName(convertFileNameToTitle(fileName));
     setResult(uploadResult);
   }, []);
 
@@ -69,6 +74,8 @@ export default function Component() {
   const handleReset = useCallback(() => {
     setResult(null);
     setIngestId(null);
+    setOriginalName(null);
+    window.location.reload(); // refresh page to reset dropzone area after user clicks cancel
   }, []);
 
   return (
