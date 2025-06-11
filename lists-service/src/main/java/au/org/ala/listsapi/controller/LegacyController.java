@@ -37,6 +37,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import au.org.ala.listsapi.model.ErrorResponse;
 import au.org.ala.listsapi.model.QueryListItemVersion1;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListItem;
@@ -80,8 +81,8 @@ public class LegacyController {
     @Operation(tags = "REST v1", summary = "Get species list metadata for a given species list ID", deprecated = true)
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListVersion1.class))),
-            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "User does not have permission to view species list: dr123"))),
-            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found: dr123"))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
     })
     @GetMapping("/v1/speciesList/{speciesListID}")
     public ResponseEntity<Object> speciesList(
@@ -92,10 +93,23 @@ public class LegacyController {
 
     @SecurityRequirement(name = "JWT")
     @Operation(tags = "REST v1", summary = "(Internal use) Get  species list metadata for a given species list ID", deprecated = true, hidden = false)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListVersion1.class))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+    })
     @GetMapping("/v1/speciesListInternal/{speciesListID}")
     public ResponseEntity<Object> speciesListInternal(
             @PathVariable("speciesListID") String speciesListID, 
             @AuthenticationPrincipal Principal principal) {
+        
+        // Check if the user/client app is authorized to access this endpoint
+        if (!authUtils.isAuthorized(principal)) {
+            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.name(), "Not authorised to access this endpoint", HttpStatus.FORBIDDEN.value());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(errorResponse);
+        }
 
         return getListDetails(speciesListID, principal);
     }
@@ -113,16 +127,27 @@ public class LegacyController {
         Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
 
         if (speciesList.isPresent() && speciesList.get().getIsPrivate() && !authUtils.isAuthorized(speciesList.get(), principal)) {
-            // If the list is private and the user is not authorized, return 403 Forbidden
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.name(), "Not authorised to access this endpoint", HttpStatus.FORBIDDEN.value());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(errorResponse);
         }
 
         return speciesList
-                .map(list -> ResponseEntity.<Object>ok(legacyService.convertListToVersion1(list)))
-                .orElse(ResponseEntity.notFound().build());
+            .map(list -> ResponseEntity.<Object>ok(legacyService.convertListToVersion1(list)))
+            .orElseGet(() -> {
+                ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.NOT_FOUND.name(),
+                "Species list not found for id: " + speciesListID,
+                HttpStatus.NOT_FOUND.value()
+                );
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(errorResponse);
+            });
     }
 
-    @Operation(tags = "REST v1", summary = "Get species list metadata for a given species list ID", deprecated = true)
+    @Operation(tags = "REST v1", summary = "Get species list items for a given species list ID", deprecated = true)
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -131,7 +156,9 @@ public class LegacyController {
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = SpeciesListItemVersion1.class)
                     )
-            )
+            ),
+            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+
     })
     @GetMapping("/v1/speciesListItems/{druid}")
     public ResponseEntity<Object> speciesListItems(
@@ -155,22 +182,93 @@ public class LegacyController {
             @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
             @AuthenticationPrincipal Principal principal) {
         try {
-            // convert max and offset to page and pageSize
-            int[] pageAndSize = calculatePageAndSize(offset, max);
-            int page = pageAndSize[0];
-            int pageSize = pageAndSize[1];
-            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs, searchQuery, fields, page, pageSize, sort, dir, principal);
-
-            if (speciesListItems.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-
-            List<SpeciesListItemVersion1> legacySpeciesListItems = legacyService.convertListItemToVersion1(speciesListItems);
-
-            return new ResponseEntity<>(legacySpeciesListItems, HttpStatus.OK);
+            return getLegacySpeciesListItems(speciesListIDs, searchQuery, fields, offset, max, sort, dir, principal);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @Operation(tags = "REST v1", summary = "Get species list items (internal use) for a given species list ID", deprecated = true)
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Species list found",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = SpeciesListItemVersion1.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+
+    })
+    @SecurityRequirement(name = "JWT")
+    @GetMapping("/v1/speciesListItemsInternal/{druid}")
+    public ResponseEntity<Object> speciesListInternal(
+            @Parameter(
+                    name = "druid",
+                    description = "The data resource id (or speciesListID) or comma separated ids to identify list(s) to return list items for e.g. '/v1/speciesListItemsInternal/dr123,dr456,dr789'",
+                    schema = @Schema(type = "string")
+            )
+            @PathVariable("druid") String speciesListIDs,
+            @Parameter(
+                    name = "includeKVP",
+                    description = "Whether to include KVP (key value pairs) values in the returned list item. Note this is now ignored and  KVP values are always returned.",
+                    schema = @Schema(type = "boolean", defaultValue = "true")
+            )
+            @RequestParam(name = "includeKVP", defaultValue = "false") Boolean _includeKVP,
+            @Nullable @RequestParam(name = "q") String searchQuery,
+            @Nullable @RequestParam(name = "fields") String fields,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") Integer offset,
+            @Nullable @RequestParam(name = "max", defaultValue = "10") Integer max,
+            @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
+            @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
+            @AuthenticationPrincipal Principal principal) {
+        try {
+            if (!authUtils.isAuthorized(principal)) {
+                ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.name(), "Not authorised to access this endpoint", HttpStatus.FORBIDDEN.value());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(errorResponse);
+            }
+
+            return getLegacySpeciesListItems(speciesListIDs, searchQuery, fields, offset, max, sort, dir, principal);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Get species list items for a given species list ID (legacy API).
+     * 
+     * @param speciesListIDs
+     * @param searchQuery
+     * @param fields
+     * @param offset
+     * @param max
+     * @param sort
+     * @param dir
+     * @param principal
+     * @return
+     */
+    private ResponseEntity<Object> getLegacySpeciesListItems(String speciesListIDs, String searchQuery, String fields,
+            Integer offset, Integer max, String sort, String dir, Principal principal) {
+        // convert max and offset to page and pageSize
+        int[] pageAndSize = calculatePageAndSize(offset, max);
+        int page = pageAndSize[0];
+        int pageSize = pageAndSize[1];
+        List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs, searchQuery, fields, page, pageSize, sort, dir, principal);
+
+        if (speciesListItems.isEmpty()) {
+            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND.name(), "Species list not found for id: " + speciesListIDs, HttpStatus.NOT_FOUND.value());
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(errorResponse); 
+        }
+
+        List<SpeciesListItemVersion1> legacySpeciesListItems = legacyService.convertListItemToVersion1(speciesListItems);
+
+        return new ResponseEntity<>(legacySpeciesListItems, HttpStatus.OK);
     }
 
     @Operation(tags = "REST v1", summary = "Get a list of keys from KVP common across a list multiple species lists", deprecated = true)
