@@ -15,13 +15,14 @@
 
 package au.org.ala.listsapi.model;
 
+import java.io.Serializable;
+import java.util.List;
+
+import org.springframework.data.annotation.Id;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-
-import java.io.Serializable;
-import java.util.List;
 
 /**
  * Model class representing a species list version for /v1 backwards compatibility.
@@ -37,7 +38,10 @@ public class SpeciesListItemVersion1 implements Serializable {
     private String id;
     private String speciesListID;
     private String dataResourceUid;
-    private String guid;
+    private String lsid;
+    private String name;
+    private String scientificName;
+    private String commonName;
     private AbbrListVersion1 list;
     private List<KvpValueVersion1> kvpValues;
 }
