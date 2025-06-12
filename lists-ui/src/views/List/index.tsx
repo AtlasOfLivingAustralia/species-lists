@@ -1,5 +1,14 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Facet,
+  FilteredSpeciesList,
+  KV,
+  performGQLQuery,
+  queries,
+  SpeciesList,
+  SpeciesListItem,
+  SpeciesListSubmit,
+} from '#/api';
 import {
   ActionIcon,
   Badge,
@@ -30,55 +39,46 @@ import {
   useMounted,
 } from '@mantine/hooks';
 import {
-  FilteredSpeciesList,
-  SpeciesList,
-  Facet,
-  performGQLQuery,
-  SpeciesListItem,
-  queries,
-  KV,
-  SpeciesListSubmit,
-} from '#/api';
-import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
-import { Outlet, useLocation, useParams } from 'react-router';
-import {
   parseAsBoolean,
   parseAsInteger,
   parseAsString,
   parseAsStringEnum,
   useQueryState,
 } from 'nuqs';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
+import { Outlet, useLocation, useParams } from 'react-router';
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faAngleRight, faMagnifyingGlass, faPlus, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import tableClasses from './classes/Table.module.css';
 
 // Table components
+import { ThCreate } from './components/Table/ThCreate';
 import { ThEditable } from './components/Table/ThEditable';
 import { TrItem } from './components/Table/TrItem';
-import { ThCreate } from './components/Table/ThCreate';
 
 // Local component imports
+import { ActiveFilters, FiltersSection, ToggleFiltersButton } from '#/components/FiltersSection';
 import { IngestProgress } from '#/components/IngestProgress';
 import { Message } from '#/components/Message';
-import { getErrorMessage, parseAsFilters } from '#/helpers';
-import { SpeciesItemDrawer } from './components/SpeciesItemDrawer';
-import { useALA } from '#/helpers/context/useALA';
-import { Flags } from './components/Flags';
-import { Actions } from './components/Actions';
-import { Summary } from './components/Summary';
-import { ToggleFiltersButton, ActiveFilters, FiltersSection } from '#/components/FiltersSection';
-import { ThSortable } from './components/Table/ThSortable';
-import { Dates } from './components/Dates';
 import PageLoader from '#/components/PageLoader';
+import { getErrorMessage, parseAsFilters } from '#/helpers';
+import { useALA } from '#/helpers/context/useALA';
 import { getAccessToken } from '#/helpers/utils/getAccessToken';
+import { Actions } from './components/Actions';
+import { Dates } from './components/Dates';
+import { Flags } from './components/Flags';
+import { SpeciesItemDrawer } from './components/SpeciesItemDrawer';
+import { Summary } from './components/Summary';
+import { ThSortable } from './components/Table/ThSortable';
 
 // Styles
-import classes from './classes/index.module.css';
 import { Breadcrumbs } from '../Dashboard/components/Breadcrumbs';
+import classes from './classes/index.module.css';
 
 interface ListLoaderData {
   meta: SpeciesList;
@@ -709,7 +709,7 @@ export function List() {
                               }
                             >
                               <FormattedMessage
-                                id={`classification.${field}`}
+                                id={`classification.${field ? field : 'none'}`}
                               />
                             </ThSortable>
                           ))}

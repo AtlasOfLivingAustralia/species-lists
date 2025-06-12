@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { SpeciesList, SpeciesListItem } from '#/api';
-import { useState } from 'react';
 import { Group, Switch, Table, Textarea, Title } from '@mantine/core';
+import { useState } from 'react';
 
+import { getStyleForTaxon } from '#/helpers/utils/formatName';
+import { FormattedMessage } from 'react-intl';
 import classes from './Display.module.css';
 import displayClasses from './TextArea.module.css';
-import { FormattedMessage } from 'react-intl';
-import { getStyleForTaxon } from '#/helpers/utils/formatName';
 
 interface SpeciesItemDisplayProps {
   item: SpeciesListItem;
