@@ -421,5 +421,7 @@
 
   "licence.CC0": "Creative Commons Zero",
   "licence.CC-BY": "Creative Commons By Attribution",
-  "licence.CC-BY-NC": "Creative Commons Attribution-Noncommercial"
+  "licence.CC-BY-NC": "Creative Commons Attribution-Noncommercial",
+
+  "summary.listtype.notFound": "Undefined list type"
 }

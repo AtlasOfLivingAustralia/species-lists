@@ -10,7 +10,6 @@ import {
 import { FormattedMessage } from 'react-intl';
 
 // Icons
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCreativeCommons } from '@fortawesome/free-brands-svg-icons';
 import {
   faBank,
@@ -18,6 +17,7 @@ import {
   faIdBadge,
   faUser,
 } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 // API
 import { SpeciesList } from '#/api';
@@ -33,7 +33,7 @@ export function Summary({ meta, ...rest }: SummaryProps) {
   return (
     <Group {...rest} gap='xs' align='center'>
       <Text>
-        <FormattedMessage id={meta.listType} />
+        <FormattedMessage id={meta.listType ? meta.listType : 'summary.listtype.notFound'} />
       </Text>
       <Divider mx={4} orientation='vertical' />
       {meta.region && (
