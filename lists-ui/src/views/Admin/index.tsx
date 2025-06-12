@@ -1,6 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Navigate, useLoaderData, useNavigate } from 'react-router';
-import { FormattedMessage, useIntl } from 'react-intl';
+import {
+  faArrowsRotate,
+  faCode,
+  faIdCard,
+  faRefresh,
+  faRightLeft,
+  faSearch,
+  faTrash,
+  faUser,
+  faWarning,
+} from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   Alert,
   Badge,
@@ -19,27 +28,18 @@ import {
 import { useDocumentTitle, useMounted } from '@mantine/hooks';
 import { modals } from '@mantine/modals';
 import { notifications } from '@mantine/notifications';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faArrowsRotate,
-  faCode,
-  faIdCard,
-  faRefresh,
-  faRightLeft,
-  faSearch,
-  faTrash,
-  faUser,
-  faWarning,
-} from '@fortawesome/free-solid-svg-icons';
+import { useCallback, useEffect, useState } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
+import { Navigate, useLoaderData, useNavigate } from 'react-router';
 
 // Local components
-import { ActionCard } from './components/ActionCard';
-import { FetchInfo } from './components/FetchInfo';
-import { Breadcrumbs } from '../Dashboard/components/Breadcrumbs';
+import { MigrateProgress } from '#/api';
 import { IngestProgress } from '#/components/IngestProgress';
 import { getErrorMessage } from '#/helpers';
-import { MigrateProgress } from '#/api';
 import { useALA } from '#/helpers/context/useALA';
+import { Breadcrumbs } from '../Dashboard/components/Breadcrumbs';
+import { ActionCard } from './components/ActionCard';
+import { FetchInfo } from './components/FetchInfo';
 
 // Very important warning image
 import warningImage from '#/static/warning.gif';
@@ -70,10 +70,11 @@ export function Component() {
       try {
         const progress = await ala.rest.admin!.migrateProgress();
         setMigrationProgress(progress);
-        if (progress == null || progress?.started == null) {
-          setMigrationProgress(null);
-          setMigrationDisabled(false);
-        }
+        // Uncomment the following lines to reset if server was restarted during migration
+        // if (progress == null || progress?.started == null) {
+        //   setMigrationProgress(null);
+        //   setMigrationDisabled(false);
+        // }
       } catch (error) {
         console.log('admin error', error);
         // Show error notification
