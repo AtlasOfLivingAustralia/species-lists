@@ -15,19 +15,26 @@
 
 package au.org.ala.listsapi.util;
 
-import au.org.ala.listsapi.model.*;
-import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
-import au.org.ala.listsapi.service.UserdetailsService;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import au.org.ala.listsapi.model.AbbrListVersion1;
+import au.org.ala.listsapi.model.KvpValueVersion1;
+import au.org.ala.listsapi.model.QueryListItemVersion1;
+import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesListItem;
+import au.org.ala.listsapi.model.SpeciesListItemVersion1;
+import au.org.ala.listsapi.model.SpeciesListVersion1;
+import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import au.org.ala.listsapi.service.UserdetailsService;
 
 /**
  * Transformer utility to convert a SpeciesList to a legacy SpeciesListVersion1 format
@@ -118,7 +125,10 @@ public class SpeciesListTransformer {
         // Map properties from SpeciesList to SpeciesListVersion1
         listItemVersion1.setId(speciesListItem.getId().toString());
         listItemVersion1.setSpeciesListID(speciesListID);
-        listItemVersion1.setGuid(speciesListItem.getClassification().getTaxonConceptID());
+        listItemVersion1.setLsid(speciesListItem.getClassification().getTaxonConceptID());
+        listItemVersion1.setScientificName(speciesListItem.getScientificName());
+        listItemVersion1.setCommonName(speciesListItem.getVernacularName() == null ? speciesListItem.getClassification().getVernacularName() : speciesListItem.getVernacularName());
+        listItemVersion1.setName(speciesListItem.getClassification().getScientificName());
         listItemVersion1.setDataResourceUid(speciesListID); // fallback - attempt to set actual DataResourceUid further down
 
         // Get list details via MongoDB

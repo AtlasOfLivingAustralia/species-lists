@@ -61,9 +61,10 @@
   "upload.button.title": "Upload a list from a CSV file",
   "upload.help.prefix": "Upload",
   "reingest.help.prefix": "Reingest",
-  "upload.help.title": "a species list in {csv} format",
-  "upload.help.description": "A species list should consist of a list of scientific names (or taxon IDs) and may include other optional associated properties. The input file should consist of a header row and one or more rows of data. The first column in the list MUST contain either: scientific names and have a header value of \"scientificName\" OR taxon IDs and have a header value of \"taxonID\" or \"taxonConceptID\". Where possible, other header values should be provided as {dwc}. A species list can be uploaded either as a CSV file, or as a zip compressed CSV file.",
-
+  "upload.help.title": "a species list in comma-separated values (CSV) format",
+  "upload.help.description": "CSV file format requirements:<ul><li>Upload file must contain text in UTF-8 encoding and follow the <csv>CSV RFC-4180 specification</csv></li><li>the first line must be a header row</li><li>the first column must be either \"scientific name\" (latin name) OR \"taxon ID\" (sourced from ALA's taxonomic backbone)</li><li>scientific names column should have a header value of <code>scientificName</code> OR if using taxon IDs, have a header value of <code>taxonID</code> or <code>taxonConceptID</code></li><li>optional properties can be provided in subsequent columns and should use header values from <dwc>Darwin Core terms</dwc>, where possible</li></ul>",
+  "upload.help.example.title": "Example CSV file",
+  "upload.help.csv.content": "scientificName,vernacularName,stateProvince,measurementType,measurementValue{br}Phascolarctos cinereus,Koala,Queensland,weight,8.5{br}Macropus rufus,Red Kangaroo,New South Wales,height,1.8{br}Eucalyptus regnans,Mountain Ash,Victoria,height,100{br}Ornithorhynchus anatinus,Platypus,Tasmania,length,0.5{br}Sarcophilus harrisii,Tasmanian Devil,Tasmania,weight,8.0{br}Acacia pycnantha,Golden Wattle,South Australia,height,8{br}Crocodylus porosus,Saltwater Crocodile,Northern Territory,length,5.2{br}Setonix brachyurus,Quokka,Western Australia,weight,3.5{br}Banksia integrifolia,Coast Banksia,Victoria,height,15{br}Dromaius novaehollandiae,Emu,Western Australia,speed,48",
 
   "scientificName": "Scientific name",
   "scientificNameAuthority": "Scientific name authority",
@@ -122,6 +123,45 @@
 
   "visiblility.private": "This list is private. It is only accessible to the owner, editors and administrators.",
   "visiblility.public": "This list is public. It is accessible to everyone.",
+
+  "listmeta.validation.notEmpty": "Please select a value",
+  "listmeta.validation.geojson": "Please enter valid GeoJSON",
+  "listmeta.public.label": "Public",
+  "listmeta.private.label": "Private",
+  "listmeta.title.label": "Name",
+  "listmeta.title.placeholder": "List name",
+  "listmeta.description.label": "Description",
+  "listmeta.description.placeholder": "List details",
+  "listmeta.type.label": "Type",
+  "listmeta.type.placeholder": "List type",
+  "listmeta.licence.label": "Licence",
+  "listmeta.licence.placeholder": "List licence",
+  "listmeta.authority.label": "Authority",
+  "listmeta.authority.placeholder": "Authority",
+  "listmeta.region.label": "Region",
+  "listmeta.region.placeholder": "Select OR type a custom value",
+  "listmeta.tags.label": "Tags",
+  "listmeta.tags.placeholder": "Select tags",
+  "listmeta.visibility.label": "Visibility",
+  "listmeta.wkt.label": "Geo Coordinates",
+  "listmeta.wkt.placeholder": "Enter geo coordinates",
+  "listmeta.button.update.label": "Update",
+  "listmeta.button.create.label": "Create",
+  "listmeta.button.cancel.label": "Cancel",
+
+  "actions.editMetadata.title": "Edit list metadata",
+  "actions.editMetadata.success": "updated successfully",
+  "actions.menu.ariaLabel": "List actions",
+  "actions.downloadList": "Download list",
+  "actions.menu.label": "Actions",
+  "actions.spatialPortal": "Spatial portal",
+  "actions.menu.administration": "Administration",
+  "actions.editMetadata": "Edit metadata",
+  "actions.rematchList": "Rematch list",
+  "actions.reingestList": "Reingest list",
+  "actions.deleteList": "Delete list",
+  "actions.editFields": "Edit fields",
+  "actions.distinctValues": "distinct",
 
   "region.": "None",
   "region.OTH": "Other",
@@ -381,5 +421,7 @@
 
   "licence.CC0": "Creative Commons Zero",
   "licence.CC-BY": "Creative Commons By Attribution",
-  "licence.CC-BY-NC": "Creative Commons Attribution-Noncommercial"
+  "licence.CC-BY-NC": "Creative Commons Attribution-Noncommercial",
+
+  "summary.listtype.notFound": "Undefined list type"
 }

@@ -1,21 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useCallback, useRef, useState } from 'react';
-import {
-  ActionIcon,
-  Box,
-  Flex,
-  Group,
-  Menu,
-  Paper,
-  Switch,
-  Tooltip,
-  Text,
-  Stack,
-  Button,
-  Divider,
-} from '@mantine/core';
 import { DotsThreeIcon, FolderIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrashAlt } from '@fortawesome/free-regular-svg-icons';
 import {
   faDownload,
@@ -26,21 +10,38 @@ import {
   faTableColumns,
   faUpload,
 } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  ActionIcon,
+  Box,
+  Button,
+  Divider,
+  Flex,
+  Group,
+  Menu,
+  Paper,
+  Stack,
+  Switch,
+  Text,
+  Tooltip,
+} from '@mantine/core';
+import { useCallback, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 
 // Mantine Notifications & Modals manager
-import { notifications } from '@mantine/notifications';
 import { modals } from '@mantine/modals';
+import { notifications } from '@mantine/notifications';
 
 // API & Helpers
 import { performGQLQuery, SpeciesList, SpeciesListSubmit } from '#/api';
+import { MUTATION_LIST_UPDATE } from '#/api/queries';
+import { ListMeta } from '#/components/ListMeta';
+import { getErrorMessage } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
 
 // Local styles
+import { useIntl } from 'react-intl';
 import classes from './Actions.module.css';
-import { useNavigate } from 'react-router';
-import { getErrorMessage } from '#/helpers';
-import { ListMeta } from '#/components/ListMeta';
-import { MUTATION_LIST_UPDATE } from '#/api/queries';
 
 interface ActionsProps {
   meta: SpeciesList;
@@ -64,6 +65,7 @@ export function Actions({
   const [fetchingQid, setFetchingQid] = useState<string | null>(null);
   const listQid = useRef<string | null>(null);
   const navigate = useNavigate();
+  const intl = useIntl();
 
   const ala = useALA();
   const authorisedForList = ala.isAuthorisedForList(meta);
@@ -188,7 +190,7 @@ export function Actions({
     modals.open({
       title: (
         <Text fw='bold' size='lg'>
-          Editing {meta.title}
+          {intl.formatMessage({id:'actions.editMetadata.title', defaultMessage:'Edit List Metadata'})}
         </Text>
       ),
       size: 'xl',
@@ -196,6 +198,7 @@ export function Actions({
         <ListMeta
           ala={ala}
           initialValues={meta}
+          onReset={() => modals.closeAll()}
           onSubmit={async (values) => {
             modals.closeAll();
             setUpdating(true);
@@ -214,9 +217,13 @@ export function Actions({
               // Show success notification
               notifications.show({
                 message: (
-                  <>
-                    <b>{values.title}</b> updated successfully
-                  </>
+                    <>
+                    <b>{values.title}</b>{' '}
+                    {intl.formatMessage({
+                      id: 'actions.editMetadata.success',
+                      defaultMessage: 'updated successfully',
+                    })}
+                    </>
                 ),
                 position: 'bottom-left',
                 radius: 'md',
@@ -243,25 +250,27 @@ export function Actions({
     <>
       <Menu shadow='md' width={200} position='bottom-end' radius='lg'>
         <Menu.Target>
-          <ActionIcon
+            <ActionIcon
             className={classes.mobile}
             variant='light'
             size='md'
             radius='lg'
-            aria-label='List actions'
-          >
+            aria-label={intl.formatMessage({ id: 'actions.menu.ariaLabel', defaultMessage: 'List actions' })}
+            >
             <DotsThreeIcon />
-          </ActionIcon>
+            </ActionIcon>
         </Menu.Target>
         <Menu.Dropdown>
-          <Menu.Label>Actions</Menu.Label>
-          <Menu.Item
+            <Menu.Label>
+              {intl.formatMessage({ id: 'actions.menu.label', defaultMessage: 'Actions' })}
+            </Menu.Label>
+            <Menu.Item
             onClick={handleDownload}
             disabled={updating || rematching || deleting}
             leftSection={<FontAwesomeIcon icon={faDownload} />}
-          >
-            Download list
-          </Menu.Item>
+            >
+            {intl.formatMessage({ id: 'actions.downloadList', defaultMessage: 'Download list' })}
+            </Menu.Item>
           <Menu.Item
             onClick={() =>
               handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH)
@@ -271,47 +280,49 @@ export function Actions({
           >
             Occurrence records
           </Menu.Item>
-          <Menu.Item
-            onClick={() => handleQidRedirect(import.meta.env.VITE_ALA_SPATIAL)}
-            disabled={Boolean(fetchingQid)}
-            leftSection={<FontAwesomeIcon icon={faGlobe} />}
-          >
-            Spatial portal
-          </Menu.Item>
+            <Menu.Item
+              onClick={() => handleQidRedirect(import.meta.env.VITE_ALA_SPATIAL)}
+              disabled={Boolean(fetchingQid)}
+              leftSection={<FontAwesomeIcon icon={faGlobe} />}
+            >
+              {intl.formatMessage({ id: 'actions.spatialPortal', defaultMessage: 'Spatial portal' })}
+            </Menu.Item>
           {authorisedForList && (
             <>
-              <Menu.Label>Administration</Menu.Label>
-              <Menu.Item
-                onClick={handleMetaEdit}
-                disabled={updating || rematching || deleting}
-                leftSection={<FontAwesomeIcon icon={faEdit} />}
-              >
-                Edit metadata
-              </Menu.Item>
-              <Menu.Item
-                onClick={handleRematch}
-                disabled={updating || rematching || deleting}
-                color='red'
-                leftSection={<FontAwesomeIcon icon={faRefresh} />}
-              >
-                Rematch list
-              </Menu.Item>
-              <Menu.Item
-                onClick={handleReingest}
-                disabled={updating || rematching || deleting}
-                color='red'
-                leftSection={<FontAwesomeIcon icon={faUpload} />}
-              >
-                Reingest list
-              </Menu.Item>
-              <Menu.Item
-                onClick={handleDelete}
-                disabled={updating || rematching || deleting}
-                color='red'
-                leftSection={<FontAwesomeIcon icon={faTrashAlt} />}
-              >
-                Delete list
-              </Menu.Item>
+                <Menu.Label>
+                  {intl.formatMessage({ id: 'actions.menu.administration', defaultMessage: 'Administration' })}
+                </Menu.Label>
+                <Menu.Item
+                  onClick={handleMetaEdit}
+                  disabled={updating || rematching || deleting}
+                  leftSection={<FontAwesomeIcon icon={faEdit} />}
+                >
+                  {intl.formatMessage({ id: 'actions.editMetadata', defaultMessage: 'Edit metadata' })}
+                </Menu.Item>
+                <Menu.Item
+                  onClick={handleRematch}
+                  disabled={updating || rematching || deleting}
+                  color='red'
+                  leftSection={<FontAwesomeIcon icon={faRefresh} />}
+                >
+                  {intl.formatMessage({ id: 'actions.rematchList', defaultMessage: 'Rematch list' })}
+                </Menu.Item>
+                <Menu.Item
+                  onClick={handleReingest}
+                  disabled={updating || rematching || deleting}
+                  color='red'
+                  leftSection={<FontAwesomeIcon icon={faUpload} />}
+                >
+                  {intl.formatMessage({ id: 'actions.reingestList', defaultMessage: 'Reingest list' })}
+                </Menu.Item>
+                <Menu.Item
+                  onClick={handleDelete}
+                  disabled={updating || rematching || deleting}
+                  color='red'
+                  leftSection={<FontAwesomeIcon icon={faTrashAlt} />}
+                >
+                  {intl.formatMessage({ id: 'actions.deleteList', defaultMessage: 'Delete list' })}
+                </Menu.Item>
               <Menu.Divider />
               <Flex
                 direction='row'
@@ -326,9 +337,9 @@ export function Actions({
                     fontSize={14}
                     style={{ marginRight: 10 }}
                   />
-                  <Text style={{ fontSize: 14, fontSizeAdjust: 'none' }}>
-                    Edit fields
-                  </Text>
+                    <Text style={{ fontSize: 14, fontSizeAdjust: 'none' }}>
+                      {intl.formatMessage({ id: 'actions.editFields', defaultMessage: 'Edit fields' })}
+                    </Text>
                 </Flex>
                 <Switch
                   size='sm'
@@ -366,21 +377,24 @@ export function Actions({
               {meta.distinctMatchCount && (
                 <>
                   <Divider orientation='vertical' mx='xs' />
-                  <Text
+                    <Text
                     fw='bold'
                     style={{
                       textAlign: 'center',
                       fontSize: '0.8rem',
                       flexBasis: '100%',
                     }}
-                  >
+                    >
                     <FontAwesomeIcon
                       icon={faFingerprint}
                       style={{ marginRight: 10 }}
                     />
                     {new Intl.NumberFormat().format(meta.distinctMatchCount)}{' '}
-                    distinct
-                  </Text>
+                    {intl.formatMessage({
+                      id: 'actions.distinct',
+                      defaultMessage: 'distinct',
+                    })}
+                    </Text>
                 </>
               )}
             </Flex>
@@ -394,16 +408,16 @@ export function Actions({
               radius='lg'
               withBorder
             >
-              <Group gap='xs'>
+                <Group gap='xs'>
                 <Switch
                   disabled={updating || rematching || deleting}
                   mr='xs'
                   size='xs'
-                  label='Edit fields'
+                  label={intl.formatMessage({ id: 'actions.editFields', defaultMessage: 'Edit fields' })}
                   checked={editing}
                   onChange={(ev) => onEditingChange(ev.currentTarget.checked)}
                 />
-                <Tooltip label='Edit metadata' position='left'>
+                <Tooltip label={intl.formatMessage({ id: 'actions.editMetadata', defaultMessage: 'Edit metadata' })} position='left'>
                   <ActionIcon
                     onClick={handleMetaEdit}
                     disabled={rematching || deleting}
@@ -411,12 +425,12 @@ export function Actions({
                     variant='light'
                     size='md'
                     radius='lg'
-                    aria-label='Edit metadata'
+                    aria-label={intl.formatMessage({ id: 'actions.editMetadata', defaultMessage: 'Edit metadata' })}
                   >
                     <FontAwesomeIcon size='sm' icon={faEdit} />
                   </ActionIcon>
                 </Tooltip>
-                <Tooltip label='Rematch list' position='left'>
+                <Tooltip label={intl.formatMessage({ id: 'actions.rematchList', defaultMessage: 'Rematch list' })} position='left'>
                   <ActionIcon
                     onClick={handleRematch}
                     disabled={updating || deleting}
@@ -424,24 +438,24 @@ export function Actions({
                     variant='light'
                     size='md'
                     radius='lg'
-                    aria-label='Rematch list'
+                    aria-label={intl.formatMessage({ id: 'actions.rematchList', defaultMessage: 'Rematch list' })}
                   >
                     <FontAwesomeIcon size='sm' icon={faRefresh} />
                   </ActionIcon>
                 </Tooltip>
-                <Tooltip label='Reingest list' position='left'>
+                <Tooltip label={intl.formatMessage({ id: 'actions.reingestList', defaultMessage: 'Reingest list' })} position='left'>
                   <ActionIcon
                     onClick={handleReingest}
                     disabled={updating || deleting || rematching}
                     variant='light'
                     size='md'
                     radius='lg'
-                    aria-label='Reingest list'
+                    aria-label={intl.formatMessage({ id: 'actions.reingestList', defaultMessage: 'Reingest list' })}
                   >
                     <FontAwesomeIcon size='sm' icon={faUpload} />
                   </ActionIcon>
                 </Tooltip>
-                <Tooltip label='Delete list' position='left'>
+                <Tooltip label={intl.formatMessage({ id: 'actions.deleteList', defaultMessage: 'Delete list' })} position='left'>
                   <ActionIcon
                     onClick={handleDelete}
                     disabled={updating || rematching}
@@ -449,12 +463,12 @@ export function Actions({
                     variant='light'
                     size='md'
                     radius='lg'
-                    aria-label='Delete list'
+                    aria-label={intl.formatMessage({ id: 'actions.deleteList', defaultMessage: 'Delete list' })}
                   >
                     <FontAwesomeIcon size='sm' icon={faTrashAlt} />
                   </ActionIcon>
                 </Tooltip>
-              </Group>
+                </Group>
             </Paper>
           )}
           <Paper withBorder radius='lg'>

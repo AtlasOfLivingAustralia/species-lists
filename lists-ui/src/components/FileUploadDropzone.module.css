@@ -10,3 +10,14 @@
 .inner * {
   pointer-events: all;
 }
+
+.code {
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+  background-color: transparent;
+}
+
+.codeBlock {
+  font-size: var(--mantine-font-size-md);
+  padding: 20px !important;
+}

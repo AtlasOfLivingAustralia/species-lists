@@ -1,63 +1,49 @@
-package au.org.ala.listsapi.controller;
+/**
+ * Copyright (c) 2025 Atlas of Living Australia
+ * All Rights Reserved.
+ * 
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ */
 
-import au.org.ala.listsapi.model.*;
+package au.org.ala.listsapi.util;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
+import org.bson.types.ObjectId;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.stereotype.Component;
+
+import au.org.ala.listsapi.controller.AuthUtils;
+import au.org.ala.listsapi.model.Filter;
+import au.org.ala.listsapi.model.SpeciesListIndex;
+import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.repo.ReleaseMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.MetadataService;
-import au.org.ala.listsapi.service.ValidationService;
 import au.org.ala.listsapi.service.TaxonService;
-import co.elastic.clients.elasticsearch._types.FieldSort;
+import au.org.ala.listsapi.service.ValidationService;
 import co.elastic.clients.elasticsearch._types.FieldValue;
-import co.elastic.clients.elasticsearch._types.SortOrder;
-import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
-import co.elastic.clients.elasticsearch._types.aggregations.LongTermsBucket;
-import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.ChildScoreMode;
-import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
-import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import graphql.*;
-import graphql.schema.DataFetchingEnvironment;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import java.net.URL;
-import java.security.Principal;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.stream.Collectors;
-import org.apache.commons.lang3.StringUtils;
-import org.bson.types.ObjectId;
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregation;
-import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregations;
-import org.springframework.data.elasticsearch.client.elc.NativeQuery;
-import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
-import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.data.elasticsearch.core.SearchHitSupport;
-import org.springframework.data.elasticsearch.core.SearchHits;
-import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
-import org.springframework.data.elasticsearch.core.query.Query;
-import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.GraphQlExceptionHandler;
-import org.springframework.graphql.data.method.annotation.QueryMapping;
-import org.springframework.graphql.data.method.annotation.SchemaMapping;
-import org.springframework.lang.NonNull;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.CrossOrigin;
 
 /** GraphQL API for lists */
 @Component
@@ -149,14 +135,13 @@ public class ElasticUtils {
         return speciesListItem;
     }
 
-    static Date parsedDate(String date) {
+    private static Date parsedDate(String date) {
         try {
             return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").parse(date);
         } catch (Exception e) {
             return null;
         }
     }
-
 
     public static List<SpeciesListItem> convertList(List<SpeciesListIndex> list) {
         return list.stream().map(index -> convert(index)).collect(Collectors.toList());
@@ -166,12 +151,14 @@ public class ElasticUtils {
         String searchQuery,
         String speciesListID,
         String userId,
+        Boolean isAdmin,
         Boolean isPrivate,
         List<Filter> filters,
         BoolQuery.Builder bq) {
 
         // Add common query logic
-        addCommonQueryLogic(searchQuery, userId, isPrivate, bq);
+        addCommonQueryLogic(searchQuery, userId, isAdmin, isPrivate, bq);
+
 
         // Add speciesListID filter
         if (speciesListID != null) {
@@ -188,12 +175,13 @@ public class ElasticUtils {
         String searchQuery,
         List<FieldValue> speciesListIDs,
         String userId,
+        Boolean isAdmin,
         Boolean isPrivate,
         List<Filter> filters,
         BoolQuery.Builder bq) {
 
         // Add common query logic
-        addCommonQueryLogic(searchQuery, userId, isPrivate, bq);
+        addCommonQueryLogic(searchQuery, userId, isAdmin, isPrivate, bq);
 
         // Add speciesListIDs filter
         if (speciesListIDs != null && !speciesListIDs.isEmpty()) {
@@ -204,7 +192,7 @@ public class ElasticUtils {
         addFilters(filters, bq);
     }
 
-    private static void addCommonQueryLogic(String searchQuery, String userId, Boolean isPrivate, BoolQuery.Builder bq) {
+    private static void addCommonQueryLogic(String searchQuery, String userId, Boolean isAdmin, Boolean isPrivate, BoolQuery.Builder bq) {
         // Add search query logic
         bq.should(m -> m.matchPhrase(mq -> mq.field("all").query(searchQuery.toLowerCase() + "*").boost(2.0f)));
 
@@ -212,8 +200,8 @@ public class ElasticUtils {
             bq.minimumShouldMatch("1");
         }
 
-        // Add userId filter
-        if (userId != null) {
+        // Add userId filter for non-admin users and private lists
+        if (userId != null || (!isAdmin && isPrivate != null && isPrivate)) {
             bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
         }
 
