@@ -331,8 +331,12 @@ public class TaxonService {
                     long updateProgressElapsed = (System.nanoTime() - updatedProgressStart) / 1000000;
                     logger.info("[{}|taxonMatch] Update mongo progress {}ms", speciesListID, updateProgressElapsed);
 
-                    items.forEach(speciesListItem -> distinctTaxa
-                            .add(speciesListItem.getClassification().getTaxonConceptID()));
+                    items.forEach(speciesListItem -> {
+                        Classification classification = speciesListItem.getClassification();
+                        if (classification != null && classification.getTaxonConceptID() != null) {
+                            distinctTaxa.add(classification.getTaxonConceptID());
+                        }
+                    });
                     lastId = items.get(items.size() - 1).getId();
 
                 } catch (Exception e) {
