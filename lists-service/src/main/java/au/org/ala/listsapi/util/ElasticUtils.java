@@ -162,7 +162,7 @@ public class ElasticUtils {
 
         // Add speciesListID filter
         if (speciesListID != null) {
-            bq.filter(f -> f.term(t -> t.field("speciesListID").value(speciesListID)));
+            bq.filter(f -> f.term(t -> t.field("speciesListID").value(FieldValue.of(speciesListID))));
         }
 
         // Add filters
@@ -202,12 +202,12 @@ public class ElasticUtils {
 
         // Add userId filter for non-admin users and private lists
         if (userId != null || (!isAdmin && isPrivate != null && isPrivate)) {
-            bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
+            bq.filter(f -> f.term(t -> t.field("owner").value(FieldValue.of(userId))));
         }
 
         // Add isPrivate filter
         if (isPrivate != null) {
-            bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
+            bq.filter(f -> f.term(t -> t.field("isPrivate").value(FieldValue.of(isPrivate))));
         }
     }
 
@@ -243,21 +243,21 @@ public class ElasticUtils {
                         .path("properties")
                         .query(nq -> nq
                             .bool(nbq -> nbq
-                                .must(nm -> nm.term(t -> t.field("properties.key.keyword").value(propertyField)))
-                                .must(nm -> nm.term(t -> t.field("properties.value.keyword").value(filter.getValue())))
+                                .must(nm -> nm.term(t -> t.field("properties.key.keyword").value(FieldValue.of(propertyField))))
+                                .must(nm -> nm.term(t -> t.field("properties.value.keyword").value(FieldValue.of(filter.getValue()))))
                             )
                         )
                         .query(q -> q.bool(propBq -> {
                             // First match the property key
-                            propBq.must(pm -> pm.term(pt -> pt.field("properties.key.keyword").value(propertyField)));
+                            propBq.must(pm -> pm.term(pt -> pt.field("properties.key.keyword").value(FieldValue.of(propertyField))));
 
                             // Then match any of the values (OR)
                             if (values.size() == 1) {
-                                propBq.must(pm -> pm.term(pt -> pt.field("properties.value.keyword").value(filter.getValue())));
+                                propBq.must(pm -> pm.term(pt -> pt.field("properties.value.keyword").value(FieldValue.of(filter.getValue()))));
                             } else {
                                 propBq.must(pm -> pm.bool(valuesBq -> {
                                     for (String value : values) {
-                                        valuesBq.should(s -> s.term(t -> t.field("properties.value.keyword").value(value)));
+                                        valuesBq.should(s -> s.term(t -> t.field("properties.value.keyword").value(FieldValue.of(value))));
                                     }
                                     return valuesBq;
                                 }));
@@ -274,11 +274,11 @@ public class ElasticUtils {
                             if (filtersForKey.size() == 1) {
                                 // Single filter for this key
                                 Filter filter = filtersForKey.get(0);
-                                keyBool.must(m -> m.term(t -> t.field(getPropertiesFacetField(filter.getKey())).value(filter.getValue())));
+                                keyBool.must(m -> m.term(t -> t.field(getPropertiesFacetField(filter.getKey())).value(FieldValue.of(filter.getValue()))));
                             } else {
                                 // Multiple filters with OR logic
                                 filtersForKey.forEach(filter ->
-                                    keyBool.should(m -> m.term(t -> t.field(getPropertiesFacetField(filter.getKey())).value(filter.getValue())))
+                                    keyBool.should(m -> m.term(t -> t.field(getPropertiesFacetField(filter.getKey())).value(FieldValue.of(filter.getValue()))))
                                 );
                                 keyBool.minimumShouldMatch("1");
                             }
@@ -332,7 +332,7 @@ public class ElasticUtils {
                             // Key must match
                             nb.must(m1 -> m1.term(t -> t
                                     .field("properties.key")
-                                    .value(field)));
+                                    .value(FieldValue.of(field))));
 
                             // Value must match exactly
                             nb.must(m2 -> m2.matchPhrase(mp -> mp

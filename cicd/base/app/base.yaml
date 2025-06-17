@@ -21,6 +21,21 @@ Parameters:
   pAppClientServiceHost:
     Type: String
     Description: The host for the app client for the service
+  pOidcConnectProvider:
+    Type: String
+    Description: The OIDC connect provider
+  pClusterOidcIssuerUrl:
+    Type: String
+    Description: The OIDC issuer URL for the cluster
+  pOpenSearchDomainName:
+    Type: String
+    Description: The name of the OpenSearch domain
+  pEksNamespace:
+    Type: String
+    Description: The EKS namespace for the Lists service
+  pProductName:
+    Type: String
+    Description: The product name for the Lists service
 
 Conditions:
 
@@ -146,6 +161,59 @@ Resources:
         Fn::ImportValue:
             !Sub ${pCognitoStackName}-UserPoolId
 
+  AlaSpeciesListsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: !Sub |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Federated": "${pOidcConnectProvider}"
+              },
+              "Action": "sts:AssumeRoleWithWebIdentity",
+              "Condition": {
+                "StringEquals": {
+                  "${pClusterOidcIssuerUrl}:sub": "system:serviceaccount:${pEksNamespace}:ala-species-lists-${pCleanBranch}",
+                  "${pClusterOidcIssuerUrl}:aud": "sts.amazonaws.com"
+                }
+              }
+            }
+          ]
+        }
+      Description: !Sub 'IRSA role for ${pProductName} ala-species-lists in ${pEnvironment}'
+      RoleName: !Sub
+        - ${pProductName}-ala-species-lists-${ResourceSuffix}
+        - ResourceSuffix: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      Policies:
+        - PolicyName: AllowOpenSearchServerless
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - es:ListDomainNames
+                  - es:DescribeDomain
+                  - es:ESHttpGet
+                  - es:ESHttpPost
+                  - es:ESHttpPut
+                  - es:ESHttpDelete
+                  - es:ESHttpHead
+                  - es:ESHttpPatch
+                  - es:ESHttpOptions
+                  - es:ESHttpTrace
+                  - es:ESHttpConnect
+                  - es:ESHttpPatch
+                Resource:
+                  - "*"
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - ${pProductName}-ala-species-lists-${ResourceSuffix}
+            - ResourceSuffix: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+
 Outputs:
 
   AppClientId:
@@ -167,3 +235,9 @@ Outputs:
     Value: !Ref ListsServiceAppClient
     Export:
       Name: !Sub ${AWS::StackName}-ServiceAppClientId
+
+  ListsRoleArn:
+    Description: The ARN of the role for the lists service
+    Value: !GetAtt AlaSpeciesListsRole.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-ListsRoleArn

@@ -10,12 +10,12 @@ import org.springframework.web.client.RestTemplate;
 @Configuration
 public class Config extends ElasticsearchConfiguration {
 
-  @Value("${elastic.host}")
-  private String elasticHost;
+//  @Value("${elastic.host}")
+//  private String elasticHost;
 
   @Override
   public ClientConfiguration clientConfiguration() {
-    return ClientConfiguration.builder().connectedTo(elasticHost).withSocketTimeout(20000).build();
+    return ClientConfiguration.builder().connectedTo("vpc-os-provisioned-kbgh52sqbaulm6bvjm3vbfpyaa.ap-southeast-2.es.amazonaws.com:443").usingSsl().withSocketTimeout(20000).build();
   }
 
   @Bean

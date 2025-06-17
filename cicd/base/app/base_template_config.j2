@@ -5,7 +5,12 @@
     "pBuild"                : "{{ codebuild_build_number }}",
     "pCleanBranch"          : "{{ clean_branch }}",
     "pCognitoStackName"     : "{{ cognito_stack_name }}",
-    "pEnvironment"          : "{{ environment }}"
+    "pOidcConnectProvider"  : "{{ oidc_connect_provider }}",
+    "pClusterOidcIssuerUrl" : "{{ cluster_oidc_issuer_url }}",
+    "pOpenSearchDomainName" : "{{ open_search_domain_name }}",
+    "pEnvironment"          : "{{ environment }}",
+    "pProductName"          : "{{ product_name }}",
+    "pEksNamespace"         : "{{ eks_namespace }}"
   },
   "Tags" : {
     "product"     : "{{ product_name }}",
