@@ -327,7 +327,6 @@ Resources:
                    {"name":"ECR_REPO","value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}"},
                    {"name":"EKS_CLUSTER_NAME","value":"${EksClusterName}"},
                    {"name":"EKS_NAMESPACE","value":"#{ExportConfigNS.EKS_NAMESPACE}"},
-                   {"name":"FILE_SYSTEM_ID","value":"${FileSystemId}"},
                    {"name":"HELM_RELEASE_NAME","value":"#{ExportConfigNS.HELM_RELEASE_NAME}"},
                    {"name":"BUILD_TAG","value":"#{BuildListsNS.BUILD_TAG}"},
                    {"name":"HOSTED_ZONE","value":"#{ExportConfigNS.HOSTED_ZONE}"},
@@ -353,9 +352,6 @@ Resources:
                     EksClusterName:
                       Fn::ImportValue:
                         Fn::Sub: "${pRegolithStackName}-ClusterName"
-                    FileSystemId: 
-                      Fn::ImportValue:
-                        Fn::Sub: "${pRegolithStackName}-FileSystemId"
                     ListSecretName:
                       Fn::ImportValue:
                         Fn::Sub: "${pBaseStackName}-DocDbPasswordSecretName"

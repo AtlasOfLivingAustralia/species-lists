@@ -7,15 +7,6 @@ resources:
   limits:
     cpu: "1"
     memory: "2Gi"
-pvc:
-  name: elasticsearch-pvc
-  enabled: true
-  accessMode: ReadWriteOnce
-  size: "5Gi"
-pv:
-  name: elasticsearch-pv
-  size: "5Gi"
-  volumeHandle: fs-xxxxxxxxxxxxx
 env:
   - name: node.name
     value: "elasticsearch"
