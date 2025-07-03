@@ -18,13 +18,6 @@ spec:
       labels:
         app: {{ .Values.deployment.name }}
     spec:
-      initContainers:
-        - name: fix-permissions
-          image: busybox
-          command: [ "sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch/data" ]
-          volumeMounts:
-            - name: elasticsearch-storage
-              mountPath: /usr/share/elasticsearch/data/{{ .Release.Name }}
       containers:
         - name: elasticsearch
           image: {{ .Values.image }}
@@ -40,10 +33,3 @@ spec:
             limits:
               cpu: {{ .Values.resources.limits.cpu }}
               memory: {{ .Values.resources.limits.memory }}
-          volumeMounts:
-            - name: elasticsearch-storage
-              mountPath: /usr/share/elasticsearch/data/{{ .Release.Name }}
-      volumes:
-        - name: elasticsearch-storage
-          persistentVolumeClaim:
-            claimName: {{ .Values.pvc.name }}
