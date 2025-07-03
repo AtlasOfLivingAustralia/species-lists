@@ -11,7 +11,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   csi:
     driver: efs.csi.aws.com
-    volumeHandle: {{ .Values.pv.volumeHandle }}
+    volumeHandle: fs-008ef19f15acc2af8
   storageClassName: ""
   mountOptions:
     - tls

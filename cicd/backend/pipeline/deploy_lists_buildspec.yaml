@@ -71,7 +71,6 @@ phases:
             port: $ELASTIC_PORT
           pv:
             name: pv-$ELASTIC_HOST
-            volumeHandle: $FILE_SYSTEM_ID
           pvc:
             name: pvc-$ELASTIC_HOST" > helm_values.yaml
       - echo helm values
