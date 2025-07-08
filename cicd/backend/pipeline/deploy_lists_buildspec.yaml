@@ -35,6 +35,17 @@ phases:
 #      - kubectl config set-context --current --namespace=$PRODUCT_NAME
 #      - printf "$(kubectl config current-context)\n"
       # do we need to create the service account here?
+      - export ELASTIC_USERNAME=elasticsearch
+      - export ELASTIC_PASSWORD="password"
+      - export ELASTIC_AUTH_ENABLED=false
+      - export ELASTIC_ENDPOINT=$ELASTIC_HOST
+      - |  
+        if [ "$ENVIRONMENT" = "testing" ]; then
+          export ELASTIC_PASSWORD=$(kubectl -n elasticsearch get secret testing-cluster-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')
+          export ELASTIC_USERNAME=elasticsearch
+          export ELASTIC_AUTH_ENABLED=true
+          export ELASTIC_ENDPOINT="testing-elasticsearch.elasticsearch.svc.cluster.local"
+        fi
       - cd lists-service/helm
       - |
         echo "mongodb:
@@ -67,8 +78,11 @@ phases:
             name: $ELASTIC_HOST
           service:
             name: $ELASTIC_HOST
-            host: $ELASTIC_HOST
+            host: $ELASTIC_ENDPOINT
             port: $ELASTIC_PORT
+            username: $ELASTIC_USERNAME
+            password: $ELASTIC_PASSWORD
+            authEnabled: $ELASTIC_AUTH_ENABLED
           pv:
             name: pv-$ELASTIC_HOST
           pvc:

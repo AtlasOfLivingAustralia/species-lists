@@ -13,9 +13,22 @@ public class Config extends ElasticsearchConfiguration {
   @Value("${elastic.host}")
   private String elasticHost;
 
+  @Value("${elastic.username}")
+  private String elasticUsername;
+
+  @Value("${elastic.password}")
+  private String elasticPassword;
+
+  @Value("${elastic.auth.enabled:false}")
+  private boolean elasticAuthEnabled;
+
   @Override
   public ClientConfiguration clientConfiguration() {
-    return ClientConfiguration.builder().connectedTo(elasticHost).withSocketTimeout(20000).build();
+    ClientConfiguration.TerminalClientConfigurationBuilder builder = ClientConfiguration.builder().connectedTo(elasticHost).withSocketTimeout(20000);
+    if (elasticAuthEnabled) {
+      builder = builder.withBasicAuth(elasticUsername, elasticPassword);
+    }
+    return builder.build();
   }
 
   @Bean

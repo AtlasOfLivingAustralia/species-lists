@@ -121,6 +121,9 @@ elasticsearch:
     name: "elasticsearch"
     host: ""
     port: 9200
+    username: ""
+    password: ""
+    authEnabled: false
   pvc:
     name: "elasticsearch-pvc"
   pv:
