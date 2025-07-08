@@ -7,6 +7,12 @@ import org.springframework.data.elasticsearch.client.ClientConfiguration;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchConfiguration;
 import org.springframework.web.client.RestTemplate;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
+
 @Configuration
 public class Config extends ElasticsearchConfiguration {
 
@@ -24,12 +30,35 @@ public class Config extends ElasticsearchConfiguration {
 
   @Override
   public ClientConfiguration clientConfiguration() {
-    ClientConfiguration.TerminalClientConfigurationBuilder builder = ClientConfiguration.builder().connectedTo(elasticHost).withSocketTimeout(20000);
-    if (elasticAuthEnabled) {
-      builder = builder.withBasicAuth(elasticUsername, elasticPassword);
+    ClientConfiguration.MaybeSecureClientConfigurationBuilder initialBuilder =
+            ClientConfiguration.builder().connectedTo(elasticHost);
+
+    ClientConfiguration.TerminalClientConfigurationBuilder terminalBuilder;
+
+    try {
+      SSLContext sslContext = SSLContext.getInstance("TLS");
+      sslContext.init(null, new TrustManager[]{
+              new X509TrustManager() {
+                public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+                public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+                public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+              }
+      }, new SecureRandom());
+
+      terminalBuilder = initialBuilder.usingSsl(sslContext);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to configure SSL context", e);
     }
-    return builder.build();
+
+    if (elasticAuthEnabled) {
+      terminalBuilder = terminalBuilder.withBasicAuth(elasticUsername, elasticPassword);
+    }
+
+    return terminalBuilder
+            .withSocketTimeout(20000)
+            .build();
   }
+
 
   @Bean
   public RestTemplate restTemplate() {
