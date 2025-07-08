@@ -40,7 +40,7 @@ phases:
       - export ELASTIC_AUTH_ENABLED=false
       - export ELASTIC_ENDPOINT=$ELASTIC_HOST
       - |  
-        if [ "$ENVIRONMENT" = "testing" ]; then
+        if [ "$EKS_NAMESPACE" = "testing" ]; then
           export ELASTIC_PASSWORD=$(kubectl -n elasticsearch get secret testing-cluster-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')
           export ELASTIC_USERNAME=elasticsearch
           export ELASTIC_AUTH_ENABLED=true
