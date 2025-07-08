@@ -7,6 +7,7 @@ import org.springframework.data.elasticsearch.client.ClientConfiguration;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchConfiguration;
 import org.springframework.web.client.RestTemplate;
 
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
@@ -30,8 +31,7 @@ public class Config extends ElasticsearchConfiguration {
 
   @Override
   public ClientConfiguration clientConfiguration() {
-    ClientConfiguration.MaybeSecureClientConfigurationBuilder initialBuilder =
-            ClientConfiguration.builder().connectedTo(elasticHost);
+    ClientConfiguration.MaybeSecureClientConfigurationBuilder maybeSecureBuilder = ClientConfiguration.builder().connectedTo(elasticHost);
 
     ClientConfiguration.TerminalClientConfigurationBuilder terminalBuilder;
 
@@ -45,7 +45,8 @@ public class Config extends ElasticsearchConfiguration {
               }
       }, new SecureRandom());
 
-      terminalBuilder = initialBuilder.usingSsl(sslContext);
+      HostnameVerifier allowAllHosts = (hostname, session) -> true;
+      terminalBuilder = maybeSecureBuilder.usingSsl(sslContext, allowAllHosts);
     } catch (Exception e) {
       throw new RuntimeException("Failed to configure SSL context", e);
     }
