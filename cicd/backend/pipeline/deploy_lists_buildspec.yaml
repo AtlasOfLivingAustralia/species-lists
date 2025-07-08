@@ -35,7 +35,7 @@ phases:
 #      - kubectl config set-context --current --namespace=$PRODUCT_NAME
 #      - printf "$(kubectl config current-context)\n"
       # do we need to create the service account here?
-      - export ELASTIC_USERNAME=elasticsearch
+      - export ELASTIC_USERNAME=elastic
       - export ELASTIC_PASSWORD="password"
       - export ELASTIC_AUTH_ENABLED=false
       - export ELASTIC_ENDPOINT=$ELASTIC_HOST
