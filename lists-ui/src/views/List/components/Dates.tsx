@@ -1,9 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Group, Text, Paper, PaperProps, Tooltip } from '@mantine/core';
 import { SpeciesList } from '#/api';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCalendar } from '@fortawesome/free-solid-svg-icons';
-import { useColorScheme } from '@mantine/hooks';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  Group,
+  Paper,
+  PaperProps,
+  Text,
+  Tooltip,
+  useMantineTheme,
+} from '@mantine/core';
 
 interface DatesProps extends PaperProps {
   meta: SpeciesList;
@@ -18,19 +24,20 @@ const formatDateString = (inputDate: string) => {
 };
 
 export function Dates({ meta, ...rest }: DatesProps) {
-  const colorScheme = useColorScheme();
+  const theme = useMantineTheme();
 
   return (
     <Tooltip
       position='top'
       disabled={!meta.metadataLastUpdated}
+      style={{ fontSize: theme.fontSizes.sm }}
       label={
-        <Text size='xs' c={colorScheme === 'dark' ? 'white' : 'black'}>
+        <>
           <b>Metadata</b>{' '}
           {meta.metadataLastUpdated
             ? formatDateString(meta.metadataLastUpdated)
             : '?'}
-        </Text>
+        </>
       }
       withArrow
     >
