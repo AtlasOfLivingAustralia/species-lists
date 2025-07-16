@@ -11,7 +11,11 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import au.org.ala.listsapi.service.auth.WebService;
+import au.org.ala.listsapi.util.auth.TokenService;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
 import org.apache.commons.io.FileUtils;
+import org.apache.http.entity.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,11 +23,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.client.RequestCallback;
 import org.springframework.web.client.RestTemplate;
 
 @Service
@@ -36,6 +42,8 @@ public class MigrateService {
   @Autowired ReleaseService releaseService;
   @Autowired ProgressService progressService;
   @Autowired UserdetailsService userdetailsService;
+  @Autowired WebService webService;
+  @Autowired TokenService tokenService;
 
   String tempDir;
   String migrateUrl;
@@ -59,24 +67,27 @@ public class MigrateService {
     this.restTemplate = restTemplate;
   }
 
-  private List<SpeciesList> fetchLegacyLists(String query, int offset) {
+  private List<SpeciesList> fetchLegacyLists(int offset) {
     try {
-      ResponseEntity<Map> response =
-              restTemplate.exchange(
-                      migrateUrl + query + "&offset=" + offset,
-                      HttpMethod.GET,
-                      null,
-                      Map.class);
+      Map params = Map.of("offset", String.valueOf(offset), "max", "1000", "includePrivate", "true");
+      Map request = webService.get(
+              migrateUrl + "/ws/speciesListInternal",
+              params,
+              ContentType.APPLICATION_JSON,
+              true,
+              false,
+              null
+      );
 
-      logger.info("Fetching legacy lists: " + migrateUrl + query + "&offset=" + offset);
-
-      if (response.getStatusCode() == HttpStatus.OK) {
-        Map<String, Object> responseMap = response.getBody();
-        List<Map<String, Object>> lists = (List<Map<String, Object>>) responseMap.get("lists");
+      if ((int)request.get("statusCode") == 200) {
+        Map response = (Map)request.get("resp");
+        List<Map<String, Object>> lists = (List<Map<String, Object>>) response.get("lists");
 
         return lists.stream().map(this::mapListToSpeciesList).filter(Objects::nonNull).toList();
-
       }
+
+      throw new Error("Got non-success response from legacy lists API call.");
+
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
     }
@@ -84,13 +95,14 @@ public class MigrateService {
     return Collections.emptyList();
   }
 
-  private List<SpeciesList> getLegacyLists(String query, Boolean skipExisting) {
+  private List<SpeciesList> getLegacyLists(Boolean skipExisting) {
     int offset = 0;
+    int total = 0;
     boolean done = false;
     List<SpeciesList> lists = new ArrayList<>();
 
     while (!done) {
-      List<SpeciesList> batch = fetchLegacyLists(query, offset);
+      List<SpeciesList> batch = fetchLegacyLists(offset);
       lists.addAll(skipExisting ? filterExistingLists(batch, false) : batch);
 
       if (batch.size() < 1000) {
@@ -98,13 +110,13 @@ public class MigrateService {
       } else {
         offset += 1000;
       }
+
+      total += batch.size();
     }
 
-    return lists;
-  }
+    logger.info("Retrieved {} new legacy lists for migration ({} total)", lists.size(), total);
 
-  private List<SpeciesList> getLegacyLists(String query) {
-    return getLegacyLists(query, true);
+    return lists;
   }
 
   private List<SpeciesList> filterExistingLists(List<SpeciesList> lists, boolean doesExist) {
@@ -185,12 +197,7 @@ public class MigrateService {
 
   public void migrateAll() {
     logger.info("Starting migration of ALL lists...");
-    migration(getLegacyLists(ALL_LISTS));
-  }
-
-  public void migrateCustom(String query) {
-    logger.info("Starting CUSTOM migration of lists with query: " + query);
-    migration(getLegacyLists(query));
+    migration(getLegacyLists(true));
   }
 
   public void migration(List<SpeciesList> speciesLists) {
@@ -201,20 +208,23 @@ public class MigrateService {
 
     speciesLists.forEach(
         speciesList -> {
-          logger.info("Downloading file for {}" + speciesList.getDataResourceUid());
+          logger.info("Downloading file for {}", speciesList.getDataResourceUid());
           String downloadUrl =
               migrateUrl
-                  + "/speciesListItem/downloadList/"
+                  + "/ws/speciesListInternal/download/"
                   + speciesList.getDataResourceUid()
                   + "?fetch=%7BkvpValues%3Dselect%7";
           try {
             File localFile =
                 new File(
                     tempDir + "/species-list-migrate-" + speciesList.getDataResourceUid() + ".csv");
+
+            AccessToken token = tokenService.getAuthToken(false, null, null);
+
             restTemplate.execute(
                 downloadUrl,
                 HttpMethod.GET,
-                null,
+                request -> request.getHeaders().set(HttpHeaders.AUTHORIZATION, token.toAuthorizationHeader()),
                 response -> {
                   try (InputStream is = response.getBody()) {
                     FileUtils.copyInputStreamToFile(is, localFile);
@@ -246,31 +256,6 @@ public class MigrateService {
             logger.error(e.getMessage(), e);
           }
         });
-
-    progressService.clearMigrationProgress();
-  }
-
-  public void syncUserdeatils() {
-    List<SpeciesList> existingLegacyLists = filterExistingLists(getLegacyLists(ALL_LISTS, false), true);
-    progressService.setupMigrationProgress(existingLegacyLists.size());
-
-    // Create a map to store already retrieved user info
-    HashMap<String, Map> foundUsers = new HashMap<>();
-
-    existingLegacyLists.forEach(list -> {
-      progressService.updateMigrationProgress(list);
-
-      Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByDataResourceUid(list.getDataResourceUid());
-      if (optionalSpeciesList.isPresent()) {
-        SpeciesList speciesList = optionalSpeciesList.get();
-        speciesList.setOwner(list.getOwner());
-
-        updateLegacyUserDetails(speciesList, foundUsers);
-        speciesListMongoRepository.save(speciesList);
-      } else {
-        logger.info("Legacy list {} ({}) not found in system, skipping...", list.getTitle(), list.getDataResourceUid());
-      }
-    });
 
     progressService.clearMigrationProgress();
   }
