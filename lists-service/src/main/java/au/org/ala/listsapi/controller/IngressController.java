@@ -463,20 +463,6 @@ public class IngressController {
 
   @Hidden
   @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Migrate species lists with custom query", tags = "Migrate")
-  @PostMapping(value ="/admin/migrate/custom", consumes = {MediaType.APPLICATION_JSON_VALUE})
-  public ResponseEntity<Object> migrateCustom(@RequestBody CustomLegacyQuery query, @AuthenticationPrincipal Principal principal) {
-
-    ResponseEntity<Object> errorResponse = checkAuthorized(principal);
-    if (errorResponse != null) return errorResponse;
-
-    String cleanQuery = URLDecoder.decode(query.getQuery(), StandardCharsets.UTF_8);
-
-    return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrateCustom(cleanQuery));
-  }
-
-  @Hidden
-  @SecurityRequirement(name = "JWT")
   @Operation(summary = "Clear migration progress", tags = "Migrate")
   @PostMapping(value ="/admin/migrate/reset")
   public ResponseEntity<Object> migrateReset(@AuthenticationPrincipal Principal principal) {
@@ -485,22 +471,6 @@ public class IngressController {
     if (errorResponse != null) return errorResponse;
 
     progressService.clearMigrationProgress();
-    return new ResponseEntity<>(HttpStatus.OK);
-  }
-
-  @Hidden
-  @SecurityRequirement(name = "JWT")
-  @Operation(summary = "Sync legacy lists with userdetails", tags = "Migrate")
-  @GetMapping(value ="/admin/migrate/userdetails")
-  public ResponseEntity<Object> syncUserdetails(@AuthenticationPrincipal Principal principal) {
-
-    ResponseEntity<Object> errorResponse = checkAuthorized(principal);
-    if (errorResponse != null) return errorResponse;
-
-    startAsyncTaskIfNotBusy("USERDETAILS-SYNC", () -> {
-      migrateService.syncUserdeatils();
-    });
-
     return new ResponseEntity<>(HttpStatus.OK);
   }
 

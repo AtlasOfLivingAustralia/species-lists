@@ -6,7 +6,6 @@ import {
   faRightLeft,
   faSearch,
   faTrash,
-  faUser,
   faWarning,
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -152,8 +151,6 @@ export function Component() {
 
   const handleClick = useCallback(
     (action: string, verb: string) => {
-      if (migrationProgress !== null) return;
-
       modals.openConfirmModal({
         title: (
           <Text fw='bold' size='lg'>
@@ -192,22 +189,10 @@ export function Component() {
                 handleMigrationStart();
                 await ala.rest.admin?.migrate();
                 break;
-              case 'migrate-custom':
-                const query = prompt(
-                  'Please enter your custom query (i.e. /ws/speciesList?isAuthoritative=eq:true)'
-                );
-                if (query) {
-                  handleMigrationStart();
-                  await ala.rest.admin?.migrateCustom(
-                    decodeURIComponent(query)
-                  );
-                } else {
-                  cancelSucessNotification = true;
-                }
-                break;
-              case 'migrate-userdetails':
-                handleMigrationStart();
-                await ala.rest.admin?.migrateUserdetails();
+              case 'migrate-reset':
+                await ala.rest.admin?.migrateReset();
+                setMigrationDisabled(false);
+                setMigrationProgress(null);
                 break;
               case 'wipe-index':
                 await ala.rest.admin?.wipe('index');
@@ -303,7 +288,7 @@ export function Component() {
             <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
               <ActionCard
                 disabled={Boolean(migrationProgress) || migrationDisabled}
-                title='All'
+                title='All lists'
                 description={
                   <>
                     Migrate <b>all</b> lists from the legacy lists tool
@@ -313,37 +298,22 @@ export function Component() {
                 onClick={() => handleClick('migrate-all', 'All Migration')}
               />
             </Grid.Col>
-            {['56599'].includes(ala.userid) && (
               <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
                 <ActionCard
-                  disabled={Boolean(migrationProgress) || migrationDisabled}
-                  title='Custom'
+                  disabled={!(Boolean(migrationProgress) || migrationDisabled)}
+                  title='Reset'
                   description={
                     <>
-                      Migrate lists from the legacy lists tool{' '}
-                      <b>using a custom query</b>
+                      Clears migration progress and re-enables UI<br />
+                      <b>Only use when the migration is stuck</b>
                     </>
                   }
                   icon={faCode}
                   onClick={() =>
-                    handleClick('migrate-custom', 'Custom Migration')
+                    handleClick('migrate-reset', 'Reset Migration')
                   }
                 />
               </Grid.Col>
-            )}
-            <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
-              <ActionCard
-                disabled={Boolean(migrationProgress) || migrationDisabled}
-                title='Userdetails'
-                description={
-                  <>Migrate user data from userdetails for legacy lists</>
-                }
-                icon={faUser}
-                onClick={() =>
-                  handleClick('migrate-userdetails', 'Userdetails Migration')
-                }
-              />
-            </Grid.Col>
           </Grid>
           <Grid>
             <Grid.Col span={12}>
