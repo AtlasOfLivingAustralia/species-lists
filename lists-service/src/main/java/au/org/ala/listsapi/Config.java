@@ -29,26 +29,33 @@ public class Config extends ElasticsearchConfiguration {
   @Value("${elastic.auth.enabled:false}")
   private boolean elasticAuthEnabled;
 
+  @Value("${elastic.tls.enabled:true}")
+  private boolean elasticTlsEnabled;
+
   @Override
   public ClientConfiguration clientConfiguration() {
     ClientConfiguration.MaybeSecureClientConfigurationBuilder maybeSecureBuilder = ClientConfiguration.builder().connectedTo(elasticHost);
 
     ClientConfiguration.TerminalClientConfigurationBuilder terminalBuilder;
 
-    try {
-      SSLContext sslContext = SSLContext.getInstance("TLS");
-      sslContext.init(null, new TrustManager[]{
-              new X509TrustManager() {
-                public void checkClientTrusted(X509Certificate[] chain, String authType) {}
-                public void checkServerTrusted(X509Certificate[] chain, String authType) {}
-                public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
-              }
-      }, new SecureRandom());
+    if (elasticTlsEnabled) {
+      try {
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, new TrustManager[]{
+                new X509TrustManager() {
+                  public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+                  public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+                  public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+                }
+        }, new SecureRandom());
 
-      HostnameVerifier allowAllHosts = (hostname, session) -> true;
-      terminalBuilder = maybeSecureBuilder.usingSsl(sslContext, allowAllHosts);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to configure SSL context", e);
+        HostnameVerifier allowAllHosts = (hostname, session) -> true;
+        terminalBuilder = maybeSecureBuilder.usingSsl(sslContext, allowAllHosts);
+      } catch (Exception e) {
+        throw new RuntimeException("Failed to configure SSL context", e);
+      }
+    } else {
+      terminalBuilder = ClientConfiguration.builder().connectedTo(elasticHost).withSocketTimeout(20000);
     }
 
     if (elasticAuthEnabled) {

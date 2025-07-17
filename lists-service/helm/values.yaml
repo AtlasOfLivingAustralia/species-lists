@@ -124,6 +124,7 @@ elasticsearch:
     username: ""
     password: ""
     authEnabled: false
+    tlsEnabled: true
   pvc:
     name: "elasticsearch-pvc"
   pv:
