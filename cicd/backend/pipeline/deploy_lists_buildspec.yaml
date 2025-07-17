@@ -38,12 +38,14 @@ phases:
       - export ELASTIC_USERNAME=elastic
       - export ELASTIC_PASSWORD="password"
       - export ELASTIC_AUTH_ENABLED=false
+      - export ELASTIC_TLS_ENABLED=false
       - export ELASTIC_ENDPOINT=$ELASTIC_HOST
       - |  
         if [ "$EKS_NAMESPACE" = "testing" ]; then
           export ELASTIC_PASSWORD=$(kubectl -n elasticsearch get secret testing-cluster-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')
           export ELASTIC_USERNAME=elastic
           export ELASTIC_AUTH_ENABLED=true
+          export ELASTIC_TLS_ENABLED=true
           export ELASTIC_ENDPOINT="testing-elasticsearch.elasticsearch.svc.cluster.local"
         fi
       - cd lists-service/helm
@@ -83,6 +85,7 @@ phases:
             username: $ELASTIC_USERNAME
             password: $ELASTIC_PASSWORD
             authEnabled: $ELASTIC_AUTH_ENABLED
+            tlsEnabled: $ELASTIC_TLS_ENABLED
           pv:
             name: pv-$ELASTIC_HOST
           pvc:
