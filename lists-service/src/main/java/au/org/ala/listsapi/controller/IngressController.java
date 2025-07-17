@@ -245,7 +245,12 @@ public class IngressController {
             description = "Bad Request",
             content = {@Content(mediaType = "text/plain")})
       })
-  public ResponseEntity<Object> handleFileUpload(@RequestPart("file") MultipartFile file) {
+  public ResponseEntity<Object> handleFileUpload(@RequestPart("file") MultipartFile file, @AuthenticationPrincipal Principal principal) {
+    // check user logged in
+    AlaUserProfile alaUserProfile = (AlaUserProfile) principal;
+    if (alaUserProfile == null) {
+      return ResponseEntity.badRequest().body("User not found");
+    }
 
     try {
       logger.info("Upload to temporary area started...");
