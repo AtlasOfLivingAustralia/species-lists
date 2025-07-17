@@ -245,10 +245,9 @@ public class IngressController {
             description = "Bad Request",
             content = {@Content(mediaType = "text/plain")})
       })
-  public ResponseEntity<Object> handleFileUpload(@RequestPart("file") MultipartFile file, @AuthenticationPrincipal Principal principal) {
+  public ResponseEntity<Object> handleFileUpload(@RequestPart("file") MultipartFile file, @AuthenticationPrincipal AlaUserProfile profile) {
     // check user logged in
-    AlaUserProfile alaUserProfile = (AlaUserProfile) principal;
-    if (alaUserProfile == null) {
+    if (profile == null) {
       return ResponseEntity.badRequest().body("User not found");
     }
 
