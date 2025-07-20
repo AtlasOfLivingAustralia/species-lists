@@ -1,11 +1,11 @@
 import {
+  Badge,
   Chip,
   Divider,
   Group,
   GroupProps,
   Text,
   Tooltip,
-  UnstyledButton,
 } from '@mantine/core';
 import { FormattedMessage } from 'react-intl';
 
@@ -21,19 +21,18 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 // API
 import { SpeciesList } from '#/api';
-import { useClipboard } from '@mantine/hooks';
 
 interface SummaryProps extends GroupProps {
   meta: SpeciesList;
 }
 
 export function Summary({ meta, ...rest }: SummaryProps) {
-  const clipboard = useClipboard();
-
   return (
     <Group {...rest} gap='xs' align='center'>
       <Text>
-        <FormattedMessage id={meta.listType ? meta.listType : 'summary.listtype.notFound'} />
+        <FormattedMessage
+          id={meta.listType ? meta.listType : 'summary.listtype.notFound'}
+        />
       </Text>
       <Divider mx={4} orientation='vertical' />
       {meta.region && (
@@ -89,26 +88,30 @@ export function Summary({ meta, ...rest }: SummaryProps) {
         )}
       </Chip>
       {meta.dataResourceUid && (
-        <Tooltip
-          position='right'
-          label={clipboard.copied ? 'Copied' : 'Click to copy'}
-          withArrow
-        >
-          <UnstyledButton
+        <Tooltip position='right' label='View in Collectory' withArrow>
+          <Badge
+            h={23}
+            variant='light'
+            color='gray'
+            leftSection={<FontAwesomeIcon icon={faIdBadge} fontSize={10} />}
             component='a'
             target='_blank'
-            onClick={() => clipboard.copy(meta.dataResourceUid)}
+            href={`${import.meta.env.VITE_ALA_COLLECTORY}/${
+              meta.isPrivate ? 'dataResource' : 'public'
+            }/show/${meta.dataResourceUid}`}
+            style={{ cursor: 'pointer' }}
           >
-            <Chip
-              size='xs'
-              variant='light'
-              color='gray'
-              checked={true}
-              icon={<FontAwesomeIcon icon={faIdBadge} fontSize={10} />}
+            <span
+              style={{
+                textTransform: 'lowercase',
+                color: 'var(--chip-color)',
+                fontSize: 'var(--mantine-font-size-xs)',
+                fontWeight: 400,
+              }}
             >
-              {meta.dataResourceUid || 'DR'}
-            </Chip>
-          </UnstyledButton>
+              {meta.dataResourceUid}
+            </span>
+          </Badge>
         </Tooltip>
       )}
     </Group>
