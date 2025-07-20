@@ -14,9 +14,9 @@
   <name>lists-service</name>
   <description>REST and GraphQL APIs for managing and searching species lists</description>
   <properties>
-    <java.version>17</java.version>
+    <java.version>21</java.version>
     <spotless-maven-plugin.version>2.22.8</spotless-maven-plugin.version>
-    <spring-boot-maven-plugin.version>3.0.2</spring-boot-maven-plugin.version>
+    <spring-boot-maven-plugin.version>3.1.6</spring-boot-maven-plugin.version>
   </properties>
 
   <repositories>
@@ -139,8 +139,8 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.11.0</version>
         <configuration>
-          <source>17</source>
-          <target>17</target>
+          <source>21</source>
+          <target>21</target>
           <annotationProcessorPaths>
             <path>
               <groupId>org.projectlombok</groupId>
