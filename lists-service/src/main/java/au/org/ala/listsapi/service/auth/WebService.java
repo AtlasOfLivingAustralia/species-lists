@@ -1,6 +1,6 @@
 package au.org.ala.listsapi.service.auth;
 
-import au.org.ala.listsapi.util.auth.TokenService;
+import au.org.ala.ws.security.TokenService;
 import au.org.ala.web.UserDetails;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.net.HttpHeaders;

@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import au.org.ala.listsapi.service.auth.WebService;
-import au.org.ala.listsapi.util.auth.TokenService;
+import au.org.ala.ws.security.TokenService;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import org.apache.commons.io.FileUtils;
 import org.apache.http.entity.ContentType;

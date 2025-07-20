@@ -1,8 +1,8 @@
 package au.org.ala.listsapi;
 
-import au.org.ala.listsapi.util.auth.TokenClient;
-import au.org.ala.listsapi.util.auth.TokenInterceptor;
-import au.org.ala.listsapi.util.auth.TokenService;
+import au.org.ala.ws.security.TokenClient;
+import au.org.ala.ws.security.TokenInterceptor;
+import au.org.ala.ws.security.TokenService;
 import org.pac4j.core.context.session.SessionStore;
 import org.pac4j.oidc.config.OidcConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
