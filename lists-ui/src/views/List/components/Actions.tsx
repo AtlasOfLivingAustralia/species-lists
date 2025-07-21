@@ -489,9 +489,34 @@ export function Actions({
             </Button>
             <Divider />
             <Button
-              onClick={() =>
-                handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH)
-              }
+              onClick={() => {
+                modals.openConfirmModal({
+                  title: (
+                    <Text fw='bold' size='lg'>
+                      Occurrence Records
+                    </Text>
+                  ),
+                  children: meta.isAuthoritative ? (
+                    <Text>
+                      All taxa from this list will be used in the following Biocache search.
+                    </Text>
+                  ) : (
+                    <Text>
+                      Only the first 200 taxa from this list will be used in the following Biocache search, due to querying limitations.
+                    </Text>
+                  ),
+                  labels: { confirm: 'Proceed to results', cancel: 'Cancel' },
+                  confirmProps: {
+                    variant: 'filled',
+                    radius: 'md',
+                  },
+                  cancelProps: { radius: 'md' },
+                  onConfirm: () => {
+                    handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH)
+                  },
+                  centered: true
+                });
+              }}
               loading={
                 fetchingQid === import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH
               }
