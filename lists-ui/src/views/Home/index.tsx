@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Facet, KV, queries, SpeciesListPage, useGQLQuery } from '#/api';
 import {
   ActionIcon,
   Box,
@@ -15,6 +15,7 @@ import {
   Paper,
   SegmentedControl,
   Select,
+  Skeleton,
   Space,
   Stack,
   Table,
@@ -23,35 +24,34 @@ import {
   Title,
   Tooltip,
 } from '@mantine/core';
-import { useMediaQuery } from '@mantine/hooks';
-import { useGQLQuery, queries, SpeciesListPage, KV, Facet } from '#/api';
-import { useDebouncedValue, useDocumentTitle } from '@mantine/hooks';
-import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
+import { useDebouncedValue, useDocumentTitle, useMediaQuery } from '@mantine/hooks';
 import {
   parseAsBoolean,
   parseAsInteger,
   parseAsString,
   useQueryState,
 } from 'nuqs';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 
 // Icons
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEyeSlash, faXmark, faMagnifyingGlass, faCode } from '@fortawesome/free-solid-svg-icons';
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
+import { faCode, faEye, faEyeSlash, faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 // Project components
 import { Message } from '#/components/Message';
 import { ListRow } from './components/ListRow';
 
 // Helpers
+import { ActiveFilters, FiltersSection, ToggleFiltersButton } from '#/components/FiltersSection';
 import { getErrorMessage, parseAsFilters } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
-import { ToggleFiltersButton, ActiveFilters, FiltersSection } from '#/components/FiltersSection';
 
 // Styles
-import classes from './classes/index.module.css';
-import { Breadcrumbs } from '../Dashboard/components/Breadcrumbs';
 import { Link } from 'react-router';
+import { Breadcrumbs } from '../Dashboard/components/Breadcrumbs';
+import classes from './classes/index.module.css';
 
 interface HomeQuery {
   lists: SpeciesListPage;
@@ -399,17 +399,24 @@ function Home() {
                         </Text>
                       </>
                     ) : (
-                      <Text size='sm' mb={6} mt={4} className={classes.resultsSummary} component='span'>
-                        <FormattedMessage id='results.noRecords' defaultMessage='No records found' />
-                        { search && search.length > 0 ? (
-                          <>{' '} <FormattedMessage id='results.for' defaultMessage='for' /> "{search}"{' '}</>
-                        ) : (
-                          <>{' '}</>
-                        )}
-                        { filters && filters.length > 0 && (
-                          <>with{' '}</>
-                        )}
-                      </Text>
+                        <Skeleton
+                          mb={6}
+                          mt={4}
+                          visible={!totalElements}
+                          maw={totalElements ? undefined : 180}
+                        >
+                          <Text size='sm' className={classes.resultsSummary} component='span'>
+                            <FormattedMessage id='results.noRecords' defaultMessage='No records found' />
+                            { search && search.length > 0 ? (
+                              <>{' '} <FormattedMessage id='results.for' defaultMessage='for' /> "{search}"{' '}</>
+                            ) : (
+                              <>{' '}</>
+                            )}
+                            { filters && filters.length > 0 && (
+                              <>with{' '}</>
+                            )}
+                          </Text>
+                      </Skeleton>
                     )}
                     { filters && filters.length > 0 && (
                       <Paper 
