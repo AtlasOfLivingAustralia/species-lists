@@ -20,6 +20,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -198,26 +199,40 @@ public class GraphQLController {
             if (profile == null) {
                 logger.info("User not authorized to private access lists");
                 throw new AccessDeniedException("You must be logged in to view private lists");
-            } 
+            }
         }
 
-        NativeQueryBuilder builder = NativeQuery.builder().withPageable(PageRequest.of(1, 1));        
+        NativeQueryBuilder builder = NativeQuery.builder().withPageable(PageRequest.of(1, 1));
         Boolean isAdmin = principal != null ? authUtils.hasAdminRole(authUtils.getUserProfile(principal)) : false;
         String finalUserId = getUserIdBasedOnRole(isPrivate, userId, principal, isAdmin);
-        builder.withQuery(
-                q -> q.bool(
-                        bq -> ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null,
-                                finalUserId, isAdmin, isPrivate, filters, bq)));
-        // ES "explain" flag for debugging queries
-        builder.withExplain(ES_DEBUG);
+
+        // For relevance-based sorting, we need to capture and use the search scores
+        boolean useRelevanceSort = "relevance".equalsIgnoreCase(sort);
+
+        if (useRelevanceSort && StringUtils.isNotBlank(searchQuery)) {
+            // Use the new list search query for better relevance scoring
+            builder.withQuery(
+                    q -> q.bool(
+                            bq -> ElasticUtils.buildListSearchQuery(ElasticUtils.cleanRawQuery(searchQuery),
+                                    finalUserId, isAdmin, isPrivate, filters, bq)));
+        } else {
+            // Use existing query for non-relevance sorts
+            builder.withQuery(
+                    q -> q.bool(
+                            bq -> ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null,
+                                    finalUserId, isAdmin, isPrivate, filters, bq)));
+        }
+
         builder.withAggregation(
                 "types_count",
                 Aggregation.of(a -> a.cardinality(ca -> ca.field(SPECIES_LIST_ID + ".keyword"))));
 
-        // aggregation on species list ID
+        // aggregation on species list ID, also capture the maximum score per species list
         builder.withAggregation(
                 SPECIES_LIST_ID,
-                Aggregation.of(a -> a.terms(ta -> ta.field(SPECIES_LIST_ID + ".keyword").size(MAX_LIST_ENTRIES))));
+                Aggregation.of(a -> a.terms(ta -> ta.field(SPECIES_LIST_ID + ".keyword").size(MAX_LIST_ENTRIES))
+                        .aggregations("max_score", Aggregation
+                                .of(ma -> ma.max(m -> m.script(s -> s.inline(si -> si.source("_score"))))))));
 
         Query aggQuery = builder.build();
 
@@ -237,6 +252,19 @@ public class GraphQLController {
                         Collectors.toMap(
                                 bucket -> bucket.key().stringValue(), MultiBucketBase::docCount));
 
+        // Extract scores for relevance sorting if applicable
+        Map<String, Double> speciesListScores = new HashMap<>();
+        for (StringTermsBucket bucket : array) {
+            String listId = bucket.key().stringValue();
+            // Extract the max score from the aggregation
+            if (bucket.aggregations().containsKey("max_score")) {
+                Double maxScore = bucket.aggregations().get("max_score").max().value();
+                if (maxScore != null && !maxScore.isInfinite() && !maxScore.isNaN()) {
+                    speciesListScores.put(listId, maxScore);
+                }
+            }
+        }
+
         // lookup species list metadata
         Iterable<SpeciesList> speciesLists = speciesListMongoRepository.findAllById(speciesListIDs.keySet());
 
@@ -249,11 +277,12 @@ public class GraphQLController {
         speciesLists.forEach(result::add);
 
         // Sort the list using the provided sort and dir parameters
-        if (StringUtils.isNotEmpty(sort) && StringUtils.isNotEmpty(dir)) {
-            result.sort(getSpeciesListComparator(sort, dir));
+        if (StringUtils.isNotEmpty(sort)) {
+            String sortDirection = StringUtils.isNotEmpty(dir) ? dir : "desc"; // Default direction
+            result.sort(getSpeciesListComparator(sort, sortDirection, speciesListScores));
         } else {
-            // Default sort to title if no params are passed in.
-            result.sort(getSpeciesListComparator("title", "asc"));
+            // Default sort - use relevance
+            result.sort(getSpeciesListComparator("relevance", "desc", speciesListScores));
         }
 
         // Apply pagination after sorting.
@@ -274,11 +303,30 @@ public class GraphQLController {
      * @return A `Comparator<SpeciesList>` that can be used to sort a list of
      *         `SpeciesList` objects.
      */
-    private Comparator<SpeciesList> getSpeciesListComparator(String sort, String dir) {
+    private Comparator<SpeciesList> getSpeciesListComparator(String sort, String dir, Map<String, Double> speciesListScores) {
         Comparator<SpeciesList> comparator;
         boolean ascending = "asc".equalsIgnoreCase(dir);
 
         switch (sort) {
+            case "relevance":
+                comparator = (list1, list2) -> {
+                    Double score1 = speciesListScores.getOrDefault(list1.getId(), 0.0);
+                    Double score2 = speciesListScores.getOrDefault(list2.getId(), 0.0);
+
+                    // Primary sort by score
+                    int scoreComparison = Double.compare(score1, score2);
+
+                    // Secondary sort by title for stable sorting when scores are equal
+                    if (scoreComparison == 0) {
+                        String title1 = list1.getTitle() != null ? list1.getTitle() : "";
+                        String title2 = list2.getTitle() != null ? list2.getTitle() : "";
+                        return title1.compareToIgnoreCase(title2);
+                    }
+
+                    return scoreComparison;
+                };
+                if (ascending) comparator = comparator.reversed();
+                break;
             case "title":
                 comparator = Comparator.comparing(SpeciesList::getTitle, String.CASE_INSENSITIVE_ORDER);
                 break;
@@ -1037,7 +1085,7 @@ public class GraphQLController {
 
         Boolean isAdmin = principal != null ? authUtils.hasAdminRole(authUtils.getUserProfile(principal)) : false;
         String finalUserId;
-        
+
         if (principal != null) {
             AlaUserProfile profile = authUtils.getUserProfile(principal);
             finalUserId = profile != null ? profile.getUserId() : null;
