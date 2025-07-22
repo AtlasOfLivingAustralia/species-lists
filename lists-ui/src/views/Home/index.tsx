@@ -117,7 +117,7 @@ function Home() {
   const toggleFilters = () => setHideFilters((o) => !o);
 
   const ala = useALA();
-  const { data, error, update } = useGQLQuery<HomeQuery>(
+  const { data, error, loading, update } = useGQLQuery<HomeQuery>(
     queries.QUERY_LISTS_SEARCH,
     {
       searchQuery: search,
@@ -402,8 +402,7 @@ function Home() {
                         <Skeleton
                           mb={6}
                           mt={4}
-                          visible={!totalElements}
-                          maw={totalElements ? undefined : 180}
+                          visible={!totalElements && loading}
                         >
                           <Text size='sm' className={classes.resultsSummary} component='span'>
                             <FormattedMessage id='results.noRecords' defaultMessage='No records found' />
