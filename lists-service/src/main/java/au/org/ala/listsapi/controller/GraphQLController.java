@@ -206,10 +206,7 @@ public class GraphQLController {
         Boolean isAdmin = principal != null ? authUtils.hasAdminRole(authUtils.getUserProfile(principal)) : false;
         String finalUserId = getUserIdBasedOnRole(isPrivate, userId, principal, isAdmin);
 
-        // For relevance-based sorting, we need to capture and use the search scores
-        boolean useRelevanceSort = "relevance".equalsIgnoreCase(sort);
-
-        if (useRelevanceSort && StringUtils.isNotBlank(searchQuery)) {
+        if ("relevance".equalsIgnoreCase(sort) && StringUtils.isNotBlank(searchQuery)) {
             // Use the new list search query for better relevance scoring
             builder.withQuery(
                     q -> q.bool(
