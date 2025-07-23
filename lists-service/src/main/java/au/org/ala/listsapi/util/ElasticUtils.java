@@ -159,7 +159,6 @@ public class ElasticUtils {
         // Add common query logic
         addCommonQueryLogic(searchQuery, userId, isAdmin, isPrivate, bq);
 
-
         // Add speciesListID filter
         if (speciesListID != null) {
             bq.filter(f -> f.term(t -> t.field("speciesListID").value(speciesListID)));
@@ -171,14 +170,45 @@ public class ElasticUtils {
         return bq;
     }
 
-    public static void buildQuery(
+    /**
+     * Build a query specifically for searching species lists with prioritized
+     * relevance scoring.
+     * This method prioritizes matches in the speciesListName field over matches in
+     * the general 'all' field.
+     *
+     * @param searchQuery The search query string
+     * @param userId      The user ID for authorization filtering
+     * @param isAdmin     Whether the user is an admin
+     * @param isPrivate   Whether to search private lists
+     * @param filters     Additional filters to apply
+     * @param bq          The BoolQuery.Builder to build upon
+     * @return The BoolQuery.Builder with the search query applied
+     */
+    public static BoolQuery.Builder buildListSearchQuery(
         String searchQuery,
-        List<FieldValue> speciesListIDs,
         String userId,
         Boolean isAdmin,
         Boolean isPrivate,
         List<Filter> filters,
         BoolQuery.Builder bq) {
+
+        // Add search query logic with prioritized relevance scoring
+        addListSearchQueryLogic(searchQuery, userId, isAdmin, isPrivate, bq);
+
+        // Add filters
+        addFilters(filters, bq);
+
+        return bq;
+    }
+
+    public static void buildQuery(
+            String searchQuery,
+            List<FieldValue> speciesListIDs,
+            String userId,
+            Boolean isAdmin,
+            Boolean isPrivate,
+            List<Filter> filters,
+            BoolQuery.Builder bq) {
 
         // Add common query logic
         addCommonQueryLogic(searchQuery, userId, isAdmin, isPrivate, bq);
@@ -192,11 +222,60 @@ public class ElasticUtils {
         addFilters(filters, bq);
     }
 
-    private static void addCommonQueryLogic(String searchQuery, String userId, Boolean isAdmin, Boolean isPrivate, BoolQuery.Builder bq) {
+    private static void addCommonQueryLogic(String searchQuery, String userId, Boolean isAdmin, Boolean isPrivate,
+            BoolQuery.Builder bq) {
         // Add search query logic
         bq.should(m -> m.matchPhrase(mq -> mq.field("all").query(searchQuery.toLowerCase() + "*").boost(2.0f)));
 
         if (StringUtils.trimToNull(searchQuery) != null && searchQuery.length() > 1) {
+            bq.minimumShouldMatch("1");
+        }
+
+        // Add userId filter for non-admin users and private lists
+        if (userId != null || (!isAdmin && isPrivate != null && isPrivate)) {
+            bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
+        }
+
+        // Add isPrivate filter
+        if (isPrivate != null) {
+            bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
+        }
+    }
+
+    /**
+     * Add search query logic specifically for list searches with prioritized
+     * relevance scoring.
+     * This method prioritizes matches in the speciesListName field over matches in
+     * the general 'all' field.
+     */
+    private static void addListSearchQueryLogic(String searchQuery, String userId, Boolean isAdmin, Boolean isPrivate,
+            BoolQuery.Builder bq) {
+        if (StringUtils.trimToNull(searchQuery) != null && searchQuery.length() > 1) {
+
+            // Primary priority: prefix match on speciesListName field
+            bq.should(s -> s.prefix(p -> p
+                    .field("speciesListName.keyword")
+                    .value(searchQuery)
+                    .boost(50.0f)));
+
+            // Secondary priority: exact match on speciesListName field
+            bq.should(s -> s.matchPhrase(mp -> mp
+                    .field("speciesListName")
+                    .query(searchQuery)
+                    .boost(25.0f)));
+
+            // Tertiary priority: fuzzy match on speciesListName field
+            bq.should(s -> s.fuzzy(f -> f
+                    .field("speciesListName")
+                    .value(searchQuery)
+                    .fuzziness("AUTO")
+                    .boost(15.0f)));
+
+            // Lower priority: search across all fields (existing behavior)
+            bq.should(s -> s.matchPhrase(mp -> mp
+                    .field("all")
+                    .query(searchQuery + "*")));
+
             bq.minimumShouldMatch("1");
         }
 
@@ -223,7 +302,6 @@ public class ElasticUtils {
         }
         return "properties." + filter + ".keyword";
     }
-
 
     private static void addFilters(List<Filter> filters, BoolQuery.Builder bq) {
         if (filters != null && !filters.isEmpty()) {
@@ -299,9 +377,10 @@ public class ElasticUtils {
     /**
      * Filter results based on "query" being present in the provided fields param.
      *
-     * @param searchQuery The search query string.
+     * @param searchQuery      The search query string.
      * @param restrictedFields The fields to restrict the search to.
-     * @param mainBq The main BoolQuery.Builder to which the restrictions will be added.
+     * @param mainBq           The main BoolQuery.Builder to which the restrictions
+     *                         will be added.
      */
     public static void restrictFields(String searchQuery, HashSet<String> restrictedFields, BoolQuery.Builder mainBq) {
         String search = cleanRawQuery(searchQuery);
@@ -340,8 +419,7 @@ public class ElasticUtils {
                                     .query(search)));
 
                             return nb;
-                        }))
-                ));
+                        }))));
             }
         }
 
