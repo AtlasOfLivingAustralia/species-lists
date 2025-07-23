@@ -1,5 +1,5 @@
 # Use an official Maven runtime as a parent image
-FROM maven:3.8-openjdk-17 AS builder
+FROM maven:3.9.6-eclipse-temurin-21 AS builder
 
 # Set the working directory in the container
 WORKDIR /app
@@ -29,7 +29,7 @@ RUN echo "deb [arch=amd64] https://apt.gbif.es/ bionic main" > /etc/apt/sources.
         apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F697D8D2ADB9E24A
 
 # Install main dependencies
-RUN apt-get install -y -q openjdk-17-jdk openjdk-17-jre
+RUN apt-get install -y -q openjdk-21-jdk openjdk-21-jre
 
 # Directories and perms
 RUN mkdir -p /data/$APP_ARTIFACT && \

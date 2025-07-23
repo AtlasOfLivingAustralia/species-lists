@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
 import { useMounted } from '@mantine/hooks';
+import { useEffect, useRef, useState } from 'react';
 
 import performGQLQuery, { Variables } from './performGQLQuery';
 
@@ -17,6 +17,7 @@ function useGQLQuery<T>(
   }
 ) {
   const [variables, setVariables] = useState<Variables>(initialVariables);
+  const [loading, setLoading] = useState<boolean>(false);
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const controller = useRef<AbortController | null>(null);
@@ -28,6 +29,8 @@ function useGQLQuery<T>(
       try {
         if (controller.current)
           controller.current.abort('New GraphQL request invoked');
+
+        setLoading(true);
         controller.current = new AbortController();
 
         const queryData = await performGQLQuery<T>(
@@ -37,6 +40,7 @@ function useGQLQuery<T>(
           controller.current.signal
         );
 
+        setLoading(false);
         controller.current = null;
 
         setData(queryData);
@@ -54,7 +58,7 @@ function useGQLQuery<T>(
 
   const update = (newVariables: Variables) => setVariables(newVariables);
 
-  return { data, error, update };
+  return { data, error, loading, update };
 }
 
 export default useGQLQuery;

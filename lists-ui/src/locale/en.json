@@ -37,6 +37,7 @@
   "lists.title": "Species Lists",
   "lists.subtitle": "Discover, create and manage species lists with custom attributes like traits, geographic extent, conservation status, sensitivity, invasiveness, etc.",
   "list.title.prefix": "List details",
+  "relevance_desc": "Relevance",
   "lastUpdated_desc": "Date (latest)",
   "lastUpdated_asc": "Date (oldest)",
   "title_asc": "Name (A-Z)",
