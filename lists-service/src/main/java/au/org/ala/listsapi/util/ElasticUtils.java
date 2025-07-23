@@ -251,25 +251,24 @@ public class ElasticUtils {
     private static void addListSearchQueryLogic(String searchQuery, String userId, Boolean isAdmin, Boolean isPrivate,
             BoolQuery.Builder bq) {
         if (StringUtils.trimToNull(searchQuery) != null && searchQuery.length() > 1) {
+            // Primary priority: exact match on speciesListName field
+            bq.should(s -> s.matchPhrase(mp -> mp
+                    .field("speciesListName.search")
+                    .query(searchQuery.toLowerCase())
+                    .boost(100.0f)));
 
-            // Primary priority: prefix match on speciesListName field
+            // Secondary priority: prefix match on speciesListName field
             bq.should(s -> s.prefix(p -> p
                     .field("speciesListName.keyword")
                     .value(searchQuery)
-                    .boost(50.0f)));
-
-            // Secondary priority: exact match on speciesListName field
-            bq.should(s -> s.matchPhrase(mp -> mp
-                    .field("speciesListName")
-                    .query(searchQuery)
-                    .boost(25.0f)));
+                    .boost(75.0f)));
 
             // Tertiary priority: fuzzy match on speciesListName field
             bq.should(s -> s.fuzzy(f -> f
-                    .field("speciesListName")
-                    .value(searchQuery)
+                    .field("speciesListName.search")
+                    .value(searchQuery.toLowerCase())
                     .fuzziness("AUTO")
-                    .boost(15.0f)));
+                    .boost(50.0f)));
 
             // Lower priority: search across all fields (existing behavior)
             bq.should(s -> s.matchPhrase(mp -> mp
