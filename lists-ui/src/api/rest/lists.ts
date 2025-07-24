@@ -1,3 +1,4 @@
+import { FileWithPath } from '@mantine/dropzone';
 import { request } from './query';
 
 import {
@@ -7,7 +8,6 @@ import {
   SpeciesListSubmit,
   UploadResult,
 } from '../graphql/types';
-import { FileWithPath } from '@mantine/dropzone';
 
 const listToForm = (list: SpeciesListSubmit, file: string): FormData => {
   // Create a new FormData object
@@ -41,15 +41,21 @@ export default (token: string) => ({
       token
     ),
   download: async (id: string): Promise<void> => {
+    const headers: HeadersInit = {};
+    
+    // Only include Authorization header if we have a valid token
+    // If token is empty string, don't send Authorization header
+    if (token && token.trim() !== '') {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    
     const response = await fetch(
       `${import.meta.env.VITE_API_BASEURL}${
         import.meta.env.VITE_API_LIST_DOWNLOAD
       }/${id}`,
       {
         method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers,
       }
     );
 
