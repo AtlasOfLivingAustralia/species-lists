@@ -11,6 +11,8 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.firewall.DefaultHttpFirewall;
@@ -46,7 +48,7 @@ public class SecurityConfig {
             .maxAgeInSeconds(31536000) // 1 year
             .includeSubDomains(true)
             .preload(true))
-        .frameOptions(frameOptions -> frameOptions.deny())
+        .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
         .contentTypeOptions(Customizer.withDefaults())
         .contentSecurityPolicy(csp -> csp.policyDirectives(
             "default-src 'self'; " +
@@ -58,7 +60,7 @@ public class SecurityConfig {
                 "frame-ancestors 'none'; " +
                 "base-uri 'self'")));
 
-    return http.csrf(httpSecurityCsrfConfigurer -> httpSecurityCsrfConfigurer.disable()).build();
+    return http.csrf(AbstractHttpConfigurer::disable).build();
   }
 
   @Bean
