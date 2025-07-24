@@ -27,8 +27,8 @@ export const userManager = new UserManager({
   client_id: import.meta.env.VITE_AUTH_CLIENT_ID,
   redirect_uri: import.meta.env.VITE_AUTH_REDIRECT_URI,
   scope: import.meta.env.VITE_AUTH_SCOPE,
-  // tell it to persist into localStorage
   userStore: new WebStorageStateStore({ store: window.localStorage }),
+  automaticSilentRenew: false,
 });
 
 function Main() {

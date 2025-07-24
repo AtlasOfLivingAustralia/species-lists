@@ -19,13 +19,12 @@ function App() {
 
   useEffect(() => {
     if (auth.isAuthenticated) {
-      const accessTokenExpiringCallback = () => handleRefresh(auth);
+      const refreshInterval = setInterval(async () => {
+        console.log(auth.user?.expires_in);
+        if ((auth.user?.expires_in || 0) < 60) await handleRefresh(auth);
+      }, 1000);
 
-      auth.events.addAccessTokenExpiring(accessTokenExpiringCallback);
-      return () =>
-        auth.events.removeAccessTokenExpiring(accessTokenExpiringCallback);
-    } else {
-      auth.removeUser();
+      return () => clearInterval(refreshInterval);
     }
   }, [auth.isAuthenticated]);
 
