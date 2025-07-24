@@ -20,7 +20,6 @@ function App() {
   useEffect(() => {
     if (auth.isAuthenticated) {
       const refreshInterval = setInterval(async () => {
-        console.log(auth.user?.expires_in);
         if ((auth.user?.expires_in || 0) < 60) await handleRefresh(auth);
       }, 1000);
 
