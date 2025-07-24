@@ -1,14 +1,14 @@
+import { faLock } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { notifications } from '@mantine/notifications';
 import { PropsWithChildren } from 'react';
 import { useAuth } from 'react-oidc-context';
-import { notifications } from '@mantine/notifications';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLock } from '@fortawesome/free-solid-svg-icons';
 
-import ALAContext from './ALAContext';
-import { SpeciesList } from '../../api';
 import rest from '#/api/rest';
-import classes from '../../Notifications.module.css';
 import { useIntl } from 'react-intl';
+import { SpeciesList } from '../../api';
+import classes from '../../Notifications.module.css';
+import ALAContext from './ALAContext';
 
 const JWT_ROLES = import.meta.env.VITE_AUTH_JWT_ROLES;
 const JWT_USERID = import.meta.env.VITE_AUTH_JWT_USERID;
@@ -51,7 +51,7 @@ export const ALAProvider = ({ children }: PropsWithChildren) => {
         userid,
         roles,
         showAuthRequiredNotification,
-        rest: rest(auth.user?.access_token || '', isAdmin),
+        rest: rest(auth.isAuthenticated ? auth.user?.access_token || '' : '', isAdmin),
         isAdmin,
         isAuthenticated: auth.isAuthenticated,
         isAuthorisedForList,

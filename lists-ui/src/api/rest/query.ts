@@ -5,7 +5,7 @@ export const request = async <T>(
   token?: string,
   additionalHeaders?: HeadersInit
 ): Promise<T> => {
-  const headers: HeadersInit = token
+  const headers: HeadersInit = (token && token.trim() !== '')
     ? { Authorization: `Bearer ${token}`, ...(additionalHeaders || {}) }
     : additionalHeaders || {};
 

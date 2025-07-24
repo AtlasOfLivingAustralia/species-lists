@@ -1,51 +1,34 @@
 /// <reference types="vite-plugin-svgr/client" />
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 // Routing
-import { RouterProvider } from 'react-router/dom';
 import { NuqsAdapter } from 'nuqs/adapters/react-router/v7';
+import { RouterProvider } from 'react-router/dom';
 import routes from './Router';
 
 // Authentication
 import { useAuth } from 'react-oidc-context';
-import handleSignout from './helpers/auth/handleSignout';
 
 // Local components
 import PageLoader from './components/PageLoader';
+import handleRefresh from './helpers/auth/handleRefresh';
 
 function App() {
   const auth = useAuth();
-  const [silentRenew, setSilentRenew] = useState<boolean>(false);
 
   useEffect(() => {
     if (auth.isAuthenticated) {
-      // Create an interval to silently refresh the token
-      const interval = setInterval(async () => {
-        if (
-          auth.isAuthenticated &&
-          !auth.isLoading &&
-          (auth.user?.expires_in || 0) <= 60
-        ) {
-          setSilentRenew(true);
-
-          try {
-            await auth.signinSilent();
-          } catch (error) {
-            // Sign out if the token renewal wasn't successful
-            handleSignout(auth);
-          }
-
-          setSilentRenew(false);
-        }
+      const refreshInterval = setInterval(async () => {
+        if ((auth.user?.expires_in || 0) < 60) await handleRefresh(auth);
       }, 1000);
 
-      return () => clearInterval(interval);
+      return () => clearInterval(refreshInterval);
     }
-  }, [auth]);
+  }, [auth.isAuthenticated]);
 
   // If the user hasn't been authenticated, show a page loader instead
-  return auth.isLoading && !silentRenew ? (
+  return auth.isLoading ? (
     <div style={{ width: '100vw', height: '100vh' }}>
       <PageLoader />
     </div>

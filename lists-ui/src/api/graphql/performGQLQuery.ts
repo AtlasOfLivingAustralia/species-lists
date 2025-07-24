@@ -9,7 +9,7 @@ async function performGQLQuery<T = any>(
 ): Promise<T> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...((token && token.trim() !== '') ? { Authorization: `Bearer ${token}` } : {}),
   };
 
   const response = await fetch(
