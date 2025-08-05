@@ -203,7 +203,7 @@ public class GraphQLController {
         }
 
         NativeQueryBuilder builder = NativeQuery.builder().withPageable(PageRequest.of(1, 1));
-        Boolean isAdmin = principal != null ? authUtils.hasAdminRole(authUtils.getUserProfile(principal)) : false;
+        Boolean isAdmin = principal != null ? (authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal))) : false;
         String finalUserId = getUserIdBasedOnRole(isPrivate, userId, principal, isAdmin);
 
         if ("relevance".equalsIgnoreCase(sort) && StringUtils.isNotBlank(searchQuery)) {
@@ -869,7 +869,7 @@ public class GraphQLController {
         NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
         AlaUserProfile profile = authUtils.getUserProfile(principal);
         String userId = profile != null ? profile.getUserId() : null;
-        Boolean isAdmin = authUtils.hasAdminRole(profile);
+        Boolean isAdmin = authUtils.hasAdminRole(profile) || authUtils.hasInternalScope(profile);
         builder.withQuery(
                 q -> q.bool(
                         bq -> {
@@ -925,7 +925,7 @@ public class GraphQLController {
         // applied.
         // ElasticUtils.cleanRawQuery will handle a null searchQuery, typically
         // returning an empty string.
-        Boolean isAdmin = authUtils.hasAdminRole(authUtils.getUserProfile(principal));
+        Boolean isAdmin = authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal));
         String finalUserId = getUserIdBasedOnRole(isPrivate, userId, principal, isAdmin);
 
         builder.withQuery(
@@ -1080,7 +1080,7 @@ public class GraphQLController {
             }
         }
 
-        Boolean isAdmin = principal != null ? authUtils.hasAdminRole(authUtils.getUserProfile(principal)) : false;
+        Boolean isAdmin = principal != null ? (authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal))) : false;
         String finalUserId;
 
         if (principal != null) {

@@ -149,12 +149,12 @@ public class SearchHelperService {
                                         ));
                                     }
 
-                                    // If the user is not an admin, only query their private lists, and all other public lists
+                                    // If the user is not an admin or doesn't have internal scope, only query their private lists, and all other public lists
                                     if (!authUtils.isAuthenticated(principal)) {
                                         logger.debug("Filtering for public lists only (user not authenticated)");
                                         bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
-                                    } else if (!authUtils.hasAdminRole(profile)) {
-                                        logger.debug("Filtering for private lists only (admin users)");
+                                    } else if (!authUtils.hasAdminRole(profile) && !authUtils.hasInternalScope(profile)) {
+                                        logger.debug("Filtering for private lists only (non-admin/non-internal users)");
                                         bq.filter(f -> f.bool(b -> b
                                                 .should(s -> s.bool(b2 -> b2
                                                         // .must(m -> m.term(t -> t.field("owner").value(profile.getUserId())))
@@ -163,6 +163,7 @@ public class SearchHelperService {
                                                 .should(s -> s.term(t -> t.field("isPrivate").value(false)))
                                         ));
                                     }
+                                    // If user is admin or has internal scope, no filters applied (can see all lists)
 
                                     return bq;
                                 }));
@@ -217,7 +218,7 @@ public class SearchHelperService {
                 return new ArrayList<>();
             }
 
-            Boolean isAdmin = principal != null ? authUtils.hasAdminRole(authUtils.getUserProfile(principal)) : false;
+            Boolean isAdmin = principal != null ? (authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal))) : false;
             ArrayList<Filter> tempFilters = new ArrayList<>();
             Pageable pageableRequest = PageRequest.of(page - 1, pageSize);
             NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);

@@ -345,7 +345,7 @@ public class IngressController {
     // check user logged in
     AlaUserProfile alaUserProfile = (AlaUserProfile) principal;
     if (alaUserProfile == null) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("The user ");
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("You must be authenticated to get the ingest progress of a list.");
     }
 
     IngestProgressItem ingestProgress = progressService.getIngestProgress(speciesListID);
