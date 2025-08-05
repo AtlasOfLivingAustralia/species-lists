@@ -133,11 +133,12 @@ public class RESTController {
             Pageable paging = PageRequest.of(page - 1, pageSize);
 
             if (!authUtils.isAuthenticated(principal)) {
-                logger.info(Boolean.toString(authUtils.isAuthenticated(principal)));
                 if (eq(speciesList.getIsPrivate(), "true")) {
                     return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                             .body("You must be authenticated to query private lists");
                 }
+
+                speciesList.setIsPrivate("false");
             } else {
                 AlaUserProfile profile = authUtils.getUserProfile(principal);
 
