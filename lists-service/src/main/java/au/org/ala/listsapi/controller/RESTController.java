@@ -141,13 +141,13 @@ public class RESTController {
             } else {
                 AlaUserProfile profile = authUtils.getUserProfile(principal);
 
-                // If the user isn't an admin
-                if (!authUtils.hasAdminRole(profile)) {
+                // If the user isn't an admin or doesn't have internal scope
+                if (!authUtils.hasAdminRole(profile) && !authUtils.hasInternalScope(profile)) {
                     // If the user is querying both public & private lists
                     if (speciesList.getIsPrivate() == null) {
                         // If no owner is supplied, or the owner is the current user,
                         // query all the user's private lists, and all public lists
-                        if (speciesList.getOwner() == null || speciesList.getOwner().equals(profile.getUserId())) {
+                        if (speciesList.getOwner() == null || (profile.getUserId() != null && speciesList.getOwner().equals(profile.getUserId()))) {
                             RESTSpeciesListQuery privateLists = speciesList.copy();
                             privateLists.setIsPrivate("true");
                             privateLists.setOwner(profile.getUserId());
@@ -162,12 +162,16 @@ public class RESTController {
                             speciesList.setIsPrivate("false");
                         }
                     } else if (eq(speciesList.getIsPrivate(), "true")) {
+                        if (profile.getUserId() == null) {
+                            return ResponseEntity.badRequest().body("Cannot query private lists without a user ID");
+                        }
                         if (speciesList.getOwner() != null && !speciesList.getOwner().equals(profile.getUserId())) {
                             return ResponseEntity.badRequest().body("You can only query your own private lists");
                         }
                         speciesList.setOwner(profile.getUserId());
                     }
                 }
+                // If the user is an admin or has internal scope, they can query any lists without restrictions
             }
 
             if (speciesList == null || speciesList.isEmpty()) {
@@ -225,17 +229,23 @@ public class RESTController {
                                         .field("taxonID.keyword")
                                         .value(guid)));
 
-                                // If the user is not an admin, only query their private lists, and all other
+                                // If the user is not an admin or doesn't have internal scope, only query their private lists, and all other
                                 // public lists
                                 if (!authUtils.isAuthenticated(principal)) {
                                     bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
-                                } else if (!authUtils.hasAdminRole(profile)) {
-                                    bq.filter(f -> f.bool(b -> b
-                                            .should(s -> s.bool(b2 -> b2
-                                                    .must(m -> m.term(t -> t.field("owner").value(profile.getUserId())))
-                                                    .must(m -> m.term(t -> t.field("isPrivate").value(true)))))
-                                            .should(s -> s.term(t -> t.field("isPrivate").value(false)))));
+                                } else if (!authUtils.hasAdminRole(profile) && !authUtils.hasInternalScope(profile)) {
+                                    if (profile.getUserId() != null) {
+                                        bq.filter(f -> f.bool(b -> b
+                                                .should(s -> s.bool(b2 -> b2
+                                                        .must(m -> m.term(t -> t.field("owner").value(profile.getUserId())))
+                                                        .must(m -> m.term(t -> t.field("isPrivate").value(true)))))
+                                                .should(s -> s.term(t -> t.field("isPrivate").value(false)))));
+                                    } else {
+                                        // If user has no userId (e.g., M2M token without internal scope), only show public lists
+                                        bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
+                                    }
                                 }
+                                // If user is admin or has internal scope, no additional filters are applied (can see all lists)
 
                                 return bq;
                             }))
