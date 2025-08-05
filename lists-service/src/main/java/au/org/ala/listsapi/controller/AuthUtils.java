@@ -17,6 +17,7 @@ package au.org.ala.listsapi.controller;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
@@ -56,6 +57,15 @@ public class AuthUtils {
         return false;
     }
 
+    public boolean hasInternalScope(AlaUserProfile profile) {
+        if (profile == null) {
+            return false;
+        }
+
+        Set<String> roles = profile.getRoles();
+        return roles != null && roles.contains("ala/internal");
+    }
+
     public boolean isAuthenticated(Principal principal) {
         return getUserProfile(principal) != null;
     }
@@ -66,20 +76,33 @@ public class AuthUtils {
         if (profile == null)
         return false;
 
-        return (profile.getRoles() != null && hasAdminRole(profile));
+        return (profile.getRoles() != null && (hasAdminRole(profile) || hasInternalScope(profile)));
     }
 
     public boolean isAuthorized(SpeciesList list, Principal principal) {
-        // Principal needs to on of the following:
+        // Principal needs to be one of the following:
         // 1) ROLE_ADMIN
         // 2) ROLE_USER and is the owner of the list
         // 3) ROLE_USER and an editor of the list
+        // 4) M2M token with ala/internal scope
         AlaUserProfile profile = getUserProfile(principal);
 
-        return profile != null && (
-        (list.getOwner() != null && list.getOwner().equals(profile.getUserId()))
-        || (list.getEditors() != null && list.getEditors().contains(profile.getUserId()))
-        || isAuthorized(principal)
-        );
+        if (profile == null) {
+            return false;
+        }
+
+        // Check for admin role or internal scope first (these don't require user ID)
+        if (hasAdminRole(profile) || hasInternalScope(profile)) {
+            return true;
+        }
+
+        // For regular users, check ownership/editor status (requires user ID)
+        String userId = profile.getUserId();
+        if (userId == null) {
+            return false; // Can't be owner or editor without a user ID
+        }
+
+        return (list.getOwner() != null && list.getOwner().equals(userId))
+                || (list.getEditors() != null && list.getEditors().contains(userId));
     }
 }

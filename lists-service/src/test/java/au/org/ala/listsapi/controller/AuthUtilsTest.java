@@ -78,10 +78,60 @@ class AuthUtilsTest {
         @Test
         @DisplayName("Admin user should be authorized regardless of list ownership or editor status")
         void adminUser_isAuthorized() {
-            when(mockProfile.getUserId()).thenReturn(adminUserId);
+            lenient().when(mockProfile.getUserId()).thenReturn(adminUserId);
             when(mockProfile.getRoles()).thenReturn(Set.of(adminRole));
             Principal adminPrincipal = createPrincipal(mockProfile);
             assertTrue(authUtils.isAuthorized(speciesList, adminPrincipal));
+        }
+    }
+
+    @Nested
+    @DisplayName("M2M Token with Internal Scope Tests")
+    class InternalScopeTests {
+        @Test
+        @DisplayName("M2M token with ala/internal scope should be authorized regardless of list ownership")
+        void m2mTokenWithInternalScope_isAuthorized() {
+            lenient().when(mockProfile.getUserId()).thenReturn(null); // M2M tokens don't have user IDs
+            when(mockProfile.getRoles()).thenReturn(Set.of("ala/internal"));
+            Principal m2mPrincipal = createPrincipal(mockProfile);
+            assertTrue(authUtils.isAuthorized(speciesList, m2mPrincipal));
+        }
+
+        @Test
+        @DisplayName("M2M token with ala/internal scope should pass isAuthorized(Principal) check")
+        void m2mTokenWithInternalScope_isAuthorizedPrincipal() {
+            when(mockProfile.getRoles()).thenReturn(Set.of("ala/internal"));
+            Principal m2mPrincipal = createPrincipal(mockProfile);
+            assertTrue(authUtils.isAuthorized(m2mPrincipal));
+        }
+
+        @Test
+        @DisplayName("M2M token without ala/internal scope should NOT be authorized")
+        void m2mTokenWithoutInternalScope_isNotAuthorized() {
+            lenient().when(mockProfile.getUserId()).thenReturn(null);
+            when(mockProfile.getRoles()).thenReturn(Set.of("some/other/scope"));
+            Principal m2mPrincipal = createPrincipal(mockProfile);
+            assertFalse(authUtils.isAuthorized(speciesList, m2mPrincipal));
+        }
+
+        @Test
+        @DisplayName("hasInternalScope should return true for ala/internal scope")
+        void hasInternalScope_withInternalScope_returnsTrue() {
+            when(mockProfile.getRoles()).thenReturn(Set.of("ala/internal"));
+            assertTrue(authUtils.hasInternalScope(mockProfile));
+        }
+
+        @Test
+        @DisplayName("hasInternalScope should return false for other scopes")
+        void hasInternalScope_withoutInternalScope_returnsFalse() {
+            when(mockProfile.getRoles()).thenReturn(Set.of("some/other/scope"));
+            assertFalse(authUtils.hasInternalScope(mockProfile));
+        }
+
+        @Test
+        @DisplayName("hasInternalScope should return false for null profile")
+        void hasInternalScope_withNullProfile_returnsFalse() {
+            assertFalse(authUtils.hasInternalScope(null));
         }
     }
 
