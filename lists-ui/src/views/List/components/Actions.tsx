@@ -69,8 +69,31 @@ export function Actions({
 
   const ala = useALA();
   const authorisedForList = ala.isAuthorisedForList(meta);
+  const maxTaxaSearch = 2000; // May change, see lists-service/src/main/java/au/org/ala/listsapi/service/BiocacheService.java#getQidForSpeciesList
 
-  // Download callback handler
+  // Handle Biocache links
+  const handleBiocacheLink = useCallback(
+    (isAuthoritative: boolean, dataResourceId: string) => {
+      if (isAuthoritative) {
+        handleAuthoritativeBiocacheLink(dataResourceId);
+      } else {
+        handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH);
+      }
+    },
+    []
+  );
+
+  // Authoritative Biocache link handler
+  const handleAuthoritativeBiocacheLink = useCallback((dataResourceId: string) => {
+    const url = import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH;
+    window.open(`${url}?q=species_list_uid:${dataResourceId}`, '_blank');
+  }, []);
+  
+  // Biocache QID callback handler
+  // NOTE: Biocache can handle more than 2000 taxa for non-authoritative lists, 
+  // as long they are public (it calls the API). We could implement this service
+  // in the future but it won't easily work with private lists, so might not be worth 
+  // implementing yet another way of linking to biocache records page.
   const handleQidRedirect = useCallback(
     async (url: string) => {
       if (!listQid.current) {
@@ -489,9 +512,46 @@ export function Actions({
             </Button>
             <Divider />
             <Button
-              onClick={() =>
-                handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH)
-              }
+              onClick={() => {
+                modals.openConfirmModal({
+                  title: (
+                    <Text fw='bold' size='lg'>
+                      {intl.formatMessage({
+                        id: 'actions.occurrenceRecords.title',
+                        defaultMessage: 'View Occurrence Records'
+                      })}
+                    </Text>
+                  ),
+                  children: meta.isAuthoritative ? (
+                    <Text>
+                      {intl.formatMessage({
+                        id: 'actions.occurrenceRecords.authoritative',
+                        defaultMessage: 'All taxa from this list will be used in the following Biocache search.'
+                      })}
+                    </Text>
+                  ) : (
+                    <Text>
+                      {intl.formatMessage({
+                      id: 'actions.occurrenceRecords.limited',
+                      defaultMessage: 'Only the first {limit} taxa from this list will be used in the following Biocache search, due to querying limitations.'
+                      }, { limit: maxTaxaSearch })}
+                    </Text>
+                  ),
+                  labels: { 
+                    confirm: intl.formatMessage({ id: 'actions.occurrenceRecords.proceed', defaultMessage: 'View all records' }), 
+                    cancel: intl.formatMessage({ id: 'actions.cancel', defaultMessage: 'Cancel' }) 
+                  },
+                  confirmProps: {
+                    variant: 'filled',
+                    radius: 'md',
+                  },
+                  cancelProps: { radius: 'md' },
+                  onConfirm: () => {
+                    handleBiocacheLink(meta.isAuthoritative, meta.dataResourceUid);
+                  },
+                  centered: true
+                });
+              }}
               loading={
                 fetchingQid === import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH
               }
