@@ -13,6 +13,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.index.Indexed;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
@@ -119,5 +120,10 @@ public class SpeciesListItem {
         }
 
         return null;
+    }
+
+    @JsonProperty("class")
+    public String getClasss() {
+        return this.classs;
     }
 }

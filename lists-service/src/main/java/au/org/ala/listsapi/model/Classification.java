@@ -1,14 +1,18 @@
 package au.org.ala.listsapi.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
+
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.jackson.Jacksonized;
-import org.springframework.data.elasticsearch.annotations.Field;
-import org.springframework.data.elasticsearch.annotations.FieldType;
 
 @NoArgsConstructor
 @Data
@@ -52,4 +56,9 @@ public class Classification {
   List<String> issues;
   Integer lft;
   Integer rgt;
+
+  @JsonProperty("class")
+  public String getClasss() {
+    return this.classs;
+  }
 }
