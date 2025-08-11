@@ -21,7 +21,9 @@ import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,6 +100,7 @@ public class LegacyController {
     @GetMapping("/v1/speciesList")
     public ResponseEntity<Object> speciesListSearch(
             @Nullable @RequestParam(name = "isAuthoritative") String isAuthoritative,
+            @Nullable @RequestParam(name = "isThreatended") String isThreatended,
             @RequestParam(name = "sort", defaultValue = "", required = false) String sort,
             @RequestParam(name = "max", defaultValue = "10", required = false) int max,
             @RequestParam(name = "offset", defaultValue = "0", required = false) int offset,
@@ -110,6 +113,10 @@ public class LegacyController {
 
             if (StringUtils.isNotBlank(isAuthoritative)) {
                 speciesListQuery.setIsAuthoritative(isAuthoritative.replaceAll("eq:", "")); // eq:true to true, etc.
+            }            
+            
+            if (StringUtils.isNotBlank(isThreatended)) {
+                speciesListQuery.setIsThreatened(isThreatended.replaceAll("eq:", "")); // eq:true to true, etc.
             }
 
             ExampleMatcher matcher = ExampleMatcher.matching()
@@ -381,7 +388,19 @@ public class LegacyController {
                     return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
                 }
 
-                return new ResponseEntity<>(SearchHelperService.findCommonKeys(speciesLists), HttpStatus.OK);
+                Set<String> commonKeys = SearchHelperService.findCommonKeys(speciesLists);
+
+                // Perform string replacement for some values in the Set based on a Map<String, String>
+                Map<String, String> replacements = Map.of(
+                    "taxonRank", "rank",
+                    "rawfamily", "family"
+                );
+
+                Set<String> renamedCommonKeys = commonKeys.stream()
+                        .map(key -> replacements.getOrDefault(key, key))
+                        .collect(java.util.stream.Collectors.toSet());
+
+                return new ResponseEntity<>(renamedCommonKeys, HttpStatus.OK);
             }
 
             return ResponseEntity.status(404).body("Species list(s) not found: " + speciesListIDs);

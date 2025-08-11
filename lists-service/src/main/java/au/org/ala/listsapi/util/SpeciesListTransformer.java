@@ -118,18 +118,18 @@ public class SpeciesListTransformer {
      * Transforms a SpeciesListItem object to a SpeciesListItemVersion1 object
      *
      * @param speciesListItem The source SpeciesListItem object
+     * @param index The index of the item in the list
      * @return A new SpeciesListItemVersion1 object populated with values from the source
      */
-    public SpeciesListItemVersion1 transformToVersion1(SpeciesListItem speciesListItem) {
+    public SpeciesListItemVersion1 transformToVersion1(SpeciesListItem speciesListItem, int index) {
         if (speciesListItem == null) {
             return null;
         }
 
         SpeciesListItemVersion1 listItemVersion1 = new SpeciesListItemVersion1();
         String speciesListID = speciesListItem.getSpeciesListID();
-        // Map properties from SpeciesList to SpeciesListVersion1
-        listItemVersion1.setId(speciesListItem.getId().toString());
-        listItemVersion1.setSpeciesListID(speciesListID);
+        int fakeId = speciesListItem.getId().getTimestamp() + index; // just needs to be unique and is not referenced anywhere
+        listItemVersion1.setId((long) fakeId);
         listItemVersion1.setLsid(speciesListItem.getClassification().getTaxonConceptID());
         listItemVersion1.setScientificName(speciesListItem.getScientificName());
         listItemVersion1.setCommonName(speciesListItem.getVernacularName() == null ? speciesListItem.getClassification().getVernacularName() : speciesListItem.getVernacularName());
@@ -147,7 +147,6 @@ public class SpeciesListTransformer {
             list.setUsername(speciesListV2.getOwner());
             list.setSds(speciesListV2.getIsSDS());
             list.setIsBIE(speciesListV2.getIsBIE());
-            listItemVersion1.setList(list);
             listItemVersion1.setDataResourceUid(speciesListV2.getDataResourceUid() == null ? speciesListID : speciesListV2.getDataResourceUid());
         } else {
             logger.warn("SpeciesListItemVersion1 transformToVersion1() -> Species list not found for ID: " + speciesListID);

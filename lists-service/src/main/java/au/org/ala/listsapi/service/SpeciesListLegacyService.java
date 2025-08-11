@@ -17,6 +17,7 @@ package au.org.ala.listsapi.service;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -65,8 +66,8 @@ public class SpeciesListLegacyService {
      * @return List of legacy SpeciesListItemVersion1 representations
      */
     public List<SpeciesListItemVersion1> convertListItemToVersion1(List<SpeciesListItem> speciesListItems) {
-        return speciesListItems.stream()
-                .map(speciesListTransformer::transformToVersion1)
+        return IntStream.range(0, speciesListItems.size())
+                .mapToObj(i -> speciesListTransformer.transformToVersion1(speciesListItems.get(i), i))
                 .collect(Collectors.toList());
     }
 
