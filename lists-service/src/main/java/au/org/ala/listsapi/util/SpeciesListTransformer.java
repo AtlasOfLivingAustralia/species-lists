@@ -76,6 +76,7 @@ public class SpeciesListTransformer {
         version1.setIsAuthoritative(speciesList.getIsAuthoritative());
         version1.setIsInvasive(speciesList.getIsInvasive());
         version1.setIsThreatened(speciesList.getIsThreatened());
+        version1.setIsPrivate(speciesList.getIsPrivate());
         version1.setIsSDS(speciesList.getIsSDS());
         version1.setIsBIE(speciesList.getIsBIE());
         version1.setItemCount(speciesList.getRowCount());
@@ -88,6 +89,10 @@ public class SpeciesListTransformer {
         version1.setListName(speciesList.getTitle());
         version1.setDescription(speciesList.getDescription());
         version1.setListType(speciesList.getListType());
+        version1.setRegion(speciesList.getRegion());
+        version1.setSdsType(null); // Not implemented in SpeciesList
+        version1.setGeneralisation(null); // Not implemented in SpeciesList
+        version1.setWkt(speciesList.getWkt());
 
         // Fetch user details using the userdetailsService if enabled, and the owner is not an email address (e.g., a userID number)
         if (legacyLookupUsersEnabled && speciesList.getOwner() != null && !speciesList.getOwner().isEmpty()

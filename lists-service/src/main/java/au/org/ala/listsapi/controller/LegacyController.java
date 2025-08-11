@@ -26,6 +26,11 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -39,10 +44,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import au.org.ala.listsapi.model.ErrorResponse;
 import au.org.ala.listsapi.model.QueryListItemVersion1;
+import au.org.ala.listsapi.model.RESTSpeciesListQuery;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.model.SpeciesListItemVersion1;
+import au.org.ala.listsapi.model.SpeciesListPageVersion1;
 import au.org.ala.listsapi.model.SpeciesListVersion1;
+import au.org.ala.listsapi.repo.SpeciesListCustomRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.SearchHelperService;
 import au.org.ala.listsapi.service.SpeciesListLegacyService;
@@ -69,6 +77,9 @@ public class LegacyController {
     protected SpeciesListMongoRepository speciesListMongoRepository;
 
     @Autowired
+    protected SpeciesListCustomRepository speciesListCustomRepository;
+
+    @Autowired
     protected SpeciesListLegacyService legacyService;
 
     @Autowired
@@ -76,6 +87,73 @@ public class LegacyController {
 
     @Autowired
     protected AuthUtils authUtils;
+
+    @SecurityRequirement(name = "JWT")
+    @Operation(tags = "REST v1", summary = "Get species list metadata for all lists", deprecated = true)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Species lists found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPageVersion1.class))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+    })
+    @GetMapping("/v1/speciesList")
+    public ResponseEntity<Object> speciesListSearch(
+            @Nullable @RequestParam(name = "isAuthoritative") String isAuthoritative,
+            @RequestParam(name = "sort", defaultValue = "", required = false) String sort,
+            @RequestParam(name = "max", defaultValue = "10", required = false) int max,
+            @RequestParam(name = "offset", defaultValue = "0", required = false) int offset,
+            @AuthenticationPrincipal Principal principal) {
+        try {
+            Integer page = offset / max; // zero indexed, as required by Pageable
+            Pageable paging = PageRequest.of(page, max);
+            RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
+            speciesListQuery.setIsPrivate("false"); // Legacy version had no access to private lists
+
+            if (StringUtils.isNotBlank(isAuthoritative)) {
+                speciesListQuery.setIsAuthoritative(isAuthoritative);
+            }
+
+            ExampleMatcher matcher = ExampleMatcher.matching()
+                    .withIgnoreCase()
+                    .withIgnoreNullValues()
+                    .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
+
+            Example<SpeciesList> example = Example.of(speciesListQuery.convertTo(), matcher);
+
+            Pageable pageable;
+            if (StringUtils.isNotBlank(sort)) {
+                // Default to ascending if not specified, as dir param is not present in this method
+                pageable = PageRequest.of(page, max, org.springframework.data.domain.Sort.by(sort).ascending());
+            } else {
+                pageable = paging;
+            }
+
+            Page<SpeciesList> results = speciesListMongoRepository.findAll(example, pageable);
+            
+            return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
+        } catch (Exception e) {
+            logger.error("Error occurred while searching species lists", e);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+    }
+
+    /**
+     * Convert the results to a version 1 legacy format
+     * Note: this is not 100% backwards compatible with the old API, see the
+     * 
+     * @au.org.ala.listsapi.LegacyController
+     *
+     * @param results
+     * @return
+     */
+    public SpeciesListPageVersion1 getLegacyFormatModel(Page<SpeciesList> results) {
+        SpeciesListPageVersion1 legacyFormat = new SpeciesListPageVersion1();
+        legacyFormat.setListCount(results.getTotalElements());
+        legacyFormat.setOffset(results.getPageable().getPageNumber());
+        legacyFormat.setMax(results.getPageable().getPageSize());
+        legacyFormat.setLists(legacyService.convertListToVersion1(results.getContent()));
+        return legacyFormat;
+    }
 
     @SecurityRequirement(name = "JWT")
     @Operation(tags = "REST v1", summary = "Get species list metadata for a given species list ID", deprecated = true)

@@ -15,13 +15,18 @@
 
 package au.org.ala.listsapi.service;
 
-import au.org.ala.listsapi.model.*;
-import au.org.ala.listsapi.util.SpeciesListTransformer;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import au.org.ala.listsapi.model.QueryListItemVersion1;
+import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesListItem;
+import au.org.ala.listsapi.model.SpeciesListItemVersion1;
+import au.org.ala.listsapi.model.SpeciesListVersion1;
+import au.org.ala.listsapi.util.SpeciesListTransformer;
 
 /**
  * Service for providing legacy compatibility for species lists.
