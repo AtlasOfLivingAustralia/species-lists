@@ -179,7 +179,8 @@ public class SpeciesListTransformer {
         queryListItemV1.setSpeciesListID(speciesListID);
         queryListItemV1.setDataResourceUid(speciesListID); // fallback - attempt to set actual DataResourceUid via lookup, below
         queryListItemV1.setLsid(speciesListItem.getClassification().getTaxonConceptID());
-        queryListItemV1.setScientificName(speciesListItem.getScientificName());
+        queryListItemV1.setMatchedName(speciesListItem.getClassification().getScientificName());
+        queryListItemV1.setRawScientificName(speciesListItem.getScientificName());
         queryListItemV1.setCommonName(speciesListItem.getVernacularName() == null ? speciesListItem.getClassification().getVernacularName() : speciesListItem.getVernacularName());
 
         // Get extra details via MongoDB lookup
@@ -187,7 +188,7 @@ public class SpeciesListTransformer {
 
         List<KvpValueVersion1> kvps = new ArrayList<>();
         speciesListItem.getProperties()
-                .forEach(kvpValue -> kvps.add(new KvpValueVersion1(kvpValue.getKey(), kvpValue.getValue())));
+                .forEach(kvpValue -> kvps.add(new KvpValueVersion1(replaceKnownKeys(kvpValue.getKey()), kvpValue.getValue())));
         queryListItemV1.setKvpValues(kvps);
 
         if (speciesList.isPresent()) {
@@ -199,5 +200,17 @@ public class SpeciesListTransformer {
         }
 
         return queryListItemV1;
+    }
+
+    private String replaceKnownKeys(String key) {
+        // Replace known keys with their new names
+        switch (key) {
+            case "taxonRank":
+                return "rank";
+            case "rawfamily":
+                return "family";
+            default:
+                return key;
+        }
     }
 }
