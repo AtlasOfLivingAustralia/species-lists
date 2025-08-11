@@ -109,7 +109,7 @@ public class LegacyController {
             speciesListQuery.setIsPrivate("false"); // Legacy version had no access to private lists
 
             if (StringUtils.isNotBlank(isAuthoritative)) {
-                speciesListQuery.setIsAuthoritative(isAuthoritative);
+                speciesListQuery.setIsAuthoritative(isAuthoritative.replaceAll("eq:", "")); // eq:true to true, etc.
             }
 
             ExampleMatcher matcher = ExampleMatcher.matching()
