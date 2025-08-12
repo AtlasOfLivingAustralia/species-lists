@@ -52,7 +52,6 @@ import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.model.SpeciesListItemVersion1;
 import au.org.ala.listsapi.model.SpeciesListPageVersion1;
 import au.org.ala.listsapi.model.SpeciesListVersion1;
-import au.org.ala.listsapi.repo.SpeciesListCustomRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.SearchHelperService;
 import au.org.ala.listsapi.service.SpeciesListLegacyService;
@@ -77,9 +76,6 @@ public class LegacyController {
 
     @Autowired
     protected SpeciesListMongoRepository speciesListMongoRepository;
-
-    @Autowired
-    protected SpeciesListCustomRepository speciesListCustomRepository;
 
     @Autowired
     protected SpeciesListLegacyService legacyService;
