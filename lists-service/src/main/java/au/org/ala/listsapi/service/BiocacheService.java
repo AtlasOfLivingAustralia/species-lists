@@ -87,18 +87,20 @@ public class BiocacheService {
 
         // Build the final query string: ((batch1) OR (batch2) OR ...)
         String finalQuery = batchQueries.stream()
-                .collect(Collectors.joining(" OR "));
+            .collect(Collectors.joining(" OR "));
         String formData = "q=" + URLEncoder.encode("(" + finalQuery + ")", StandardCharsets.UTF_8);
 
-        HttpRequest httpRequest = HttpRequest.newBuilder(new URI(biocacheUrl + "/ws/qid"))
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .POST(HttpRequest.BodyPublishers.ofString(formData))
-                .build();
+        HttpClient client = HttpClient.newBuilder()
+            .proxy(ProxySelector.getDefault())
+            .followRedirects(HttpClient.Redirect.ALWAYS)
+            .build();
 
-        HttpResponse<String> response = HttpClient.newBuilder()
-                .proxy(ProxySelector.getDefault())
-                .build()
-                .send(httpRequest, HttpResponse.BodyHandlers.ofString());
+        HttpRequest httpRequest = HttpRequest.newBuilder(new URI(biocacheUrl + "/ws/qid"))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .POST(HttpRequest.BodyPublishers.ofString(formData))
+            .build();
+
+        HttpResponse<String> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
 
         return response.body();
     }

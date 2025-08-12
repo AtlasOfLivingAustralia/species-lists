@@ -69,13 +69,17 @@ export function Actions({
 
   const ala = useALA();
   const authorisedForList = ala.isAuthorisedForList(meta);
-  const maxTaxaSearch = 2000; // May change, see lists-service/src/main/java/au/org/ala/listsapi/service/BiocacheService.java#getQidForSpeciesList
+  // Maximum entries to use in a Biocache records search
+  // Value may change, see lists-service/src/main/java/au/org/ala/listsapi/service/BiocacheService.java#getQidForSpeciesList
+  const maxTaxaSearch = 2000; 
 
   // Handle Biocache links
   const handleBiocacheLink = useCallback(
-    (isAuthoritative: boolean, dataResourceId: string) => {
-      if (isAuthoritative) {
+    (dataResourceId: string) => {
+      if (meta.isAuthoritative) {
         handleAuthoritativeBiocacheLink(dataResourceId);
+      } else if (!meta.isPrivate) {
+        handlePublicBiocacheLink(dataResourceId);
       } else {
         handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH);
       }
@@ -87,6 +91,12 @@ export function Actions({
   const handleAuthoritativeBiocacheLink = useCallback((dataResourceId: string) => {
     const url = import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH;
     window.open(`${url}?q=species_list_uid:${dataResourceId}`, '_blank');
+  }, []);
+
+  // Public list Biocache link handler (subtly different URL to handleAuthoritativeBiocacheLink)
+  const handlePublicBiocacheLink = useCallback((dataResourceId: string) => {
+    const url = import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH;
+    window.open(`${url}?q=species_list:${dataResourceId}`, '_blank');
   }, []);
   
   // Biocache QID callback handler
@@ -522,11 +532,15 @@ export function Actions({
                       })}
                     </Text>
                   ),
-                  children: meta.isAuthoritative ? (
+                  children: (meta.isAuthoritative || !meta.isPrivate) ? (
                     <Text>
                       {intl.formatMessage({
                         id: 'actions.occurrenceRecords.authoritative',
                         defaultMessage: 'All taxa from this list will be used in the following Biocache search.'
+                      })}{' '}
+                      {!meta.isAuthoritative && intl.formatMessage({
+                        id: 'actions.occurrenceRecords.delayMsg',
+                        defaultMessage: 'Note: There may be a delay in the occurrence record page loading with larger lists.'
                       })}
                     </Text>
                   ) : (
@@ -547,7 +561,7 @@ export function Actions({
                   },
                   cancelProps: { radius: 'md' },
                   onConfirm: () => {
-                    handleBiocacheLink(meta.isAuthoritative, meta.dataResourceUid);
+                    handleBiocacheLink(meta.dataResourceUid);
                   },
                   centered: true
                 });

@@ -76,6 +76,7 @@ public class SpeciesListTransformer {
         version1.setIsAuthoritative(speciesList.getIsAuthoritative());
         version1.setIsInvasive(speciesList.getIsInvasive());
         version1.setIsThreatened(speciesList.getIsThreatened());
+        version1.setIsPrivate(speciesList.getIsPrivate());
         version1.setIsSDS(speciesList.getIsSDS());
         version1.setIsBIE(speciesList.getIsBIE());
         version1.setItemCount(speciesList.getRowCount());
@@ -88,6 +89,10 @@ public class SpeciesListTransformer {
         version1.setListName(speciesList.getTitle());
         version1.setDescription(speciesList.getDescription());
         version1.setListType(speciesList.getListType());
+        version1.setRegion(speciesList.getRegion());
+        version1.setSdsType(null); // Not implemented in SpeciesList
+        version1.setGeneralisation(null); // Not implemented in SpeciesList
+        version1.setWkt(speciesList.getWkt());
 
         // Fetch user details using the userdetailsService if enabled, and the owner is not an email address (e.g., a userID number)
         if (legacyLookupUsersEnabled && speciesList.getOwner() != null && !speciesList.getOwner().isEmpty()
@@ -113,18 +118,18 @@ public class SpeciesListTransformer {
      * Transforms a SpeciesListItem object to a SpeciesListItemVersion1 object
      *
      * @param speciesListItem The source SpeciesListItem object
+     * @param index The index of the item in the list
      * @return A new SpeciesListItemVersion1 object populated with values from the source
      */
-    public SpeciesListItemVersion1 transformToVersion1(SpeciesListItem speciesListItem) {
+    public SpeciesListItemVersion1 transformToVersion1(SpeciesListItem speciesListItem, int index) {
         if (speciesListItem == null) {
             return null;
         }
 
         SpeciesListItemVersion1 listItemVersion1 = new SpeciesListItemVersion1();
         String speciesListID = speciesListItem.getSpeciesListID();
-        // Map properties from SpeciesList to SpeciesListVersion1
-        listItemVersion1.setId(speciesListItem.getId().toString());
-        listItemVersion1.setSpeciesListID(speciesListID);
+        int fakeId = speciesListItem.getId().getTimestamp() + index; // just needs to be unique and is not referenced anywhere
+        listItemVersion1.setId((long) fakeId);
         listItemVersion1.setLsid(speciesListItem.getClassification().getTaxonConceptID());
         listItemVersion1.setScientificName(speciesListItem.getScientificName());
         listItemVersion1.setCommonName(speciesListItem.getVernacularName() == null ? speciesListItem.getClassification().getVernacularName() : speciesListItem.getVernacularName());
@@ -142,7 +147,6 @@ public class SpeciesListTransformer {
             list.setUsername(speciesListV2.getOwner());
             list.setSds(speciesListV2.getIsSDS());
             list.setIsBIE(speciesListV2.getIsBIE());
-            listItemVersion1.setList(list);
             listItemVersion1.setDataResourceUid(speciesListV2.getDataResourceUid() == null ? speciesListID : speciesListV2.getDataResourceUid());
         } else {
             logger.warn("SpeciesListItemVersion1 transformToVersion1() -> Species list not found for ID: " + speciesListID);
@@ -175,7 +179,8 @@ public class SpeciesListTransformer {
         queryListItemV1.setSpeciesListID(speciesListID);
         queryListItemV1.setDataResourceUid(speciesListID); // fallback - attempt to set actual DataResourceUid via lookup, below
         queryListItemV1.setLsid(speciesListItem.getClassification().getTaxonConceptID());
-        queryListItemV1.setScientificName(speciesListItem.getScientificName());
+        queryListItemV1.setMatchedName(speciesListItem.getClassification().getScientificName());
+        queryListItemV1.setRawScientificName(speciesListItem.getScientificName());
         queryListItemV1.setCommonName(speciesListItem.getVernacularName() == null ? speciesListItem.getClassification().getVernacularName() : speciesListItem.getVernacularName());
 
         // Get extra details via MongoDB lookup
@@ -183,7 +188,7 @@ public class SpeciesListTransformer {
 
         List<KvpValueVersion1> kvps = new ArrayList<>();
         speciesListItem.getProperties()
-                .forEach(kvpValue -> kvps.add(new KvpValueVersion1(kvpValue.getKey(), kvpValue.getValue())));
+                .forEach(kvpValue -> kvps.add(new KvpValueVersion1(replaceKnownKeys(kvpValue.getKey()), kvpValue.getValue())));
         queryListItemV1.setKvpValues(kvps);
 
         if (speciesList.isPresent()) {
@@ -195,5 +200,17 @@ public class SpeciesListTransformer {
         }
 
         return queryListItemV1;
+    }
+
+    private String replaceKnownKeys(String key) {
+        // Replace known keys with their new names
+        switch (key) {
+            case "taxonRank":
+                return "rank";
+            case "rawfamily":
+                return "family";
+            default:
+                return key;
+        }
     }
 }

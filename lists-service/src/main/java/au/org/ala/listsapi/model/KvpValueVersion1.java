@@ -31,10 +31,4 @@ import lombok.experimental.SuperBuilder;
 public class KvpValueVersion1 {
     private String key;
     private String value;
-    private String vocabValue; // not used in new lists but keeping for backwards compatibility
-
-    public KvpValueVersion1(String key, String value) {
-        this.key = key;
-        this.value = value;
-    }
 }

@@ -22,6 +22,8 @@ import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Mapping;
 import org.springframework.data.elasticsearch.annotations.Setting;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -67,4 +69,9 @@ public class SpeciesListIndex {
     public String dateCreated;
     public String lastUpdated;
     private String lastUpdatedBy;
+
+    @JsonProperty("class")
+    public String getClasss() {
+        return classs;
+    }
 }

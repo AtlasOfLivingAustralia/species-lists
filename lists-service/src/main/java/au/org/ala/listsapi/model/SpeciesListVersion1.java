@@ -15,14 +15,16 @@
 
 package au.org.ala.listsapi.model;
 
+import java.io.Serializable;
+import java.util.Date;
+
+import org.springframework.data.annotation.Id;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-
-import java.io.Serializable;
-import java.util.Date;
 
 /**
  * Model class representing a species list version for /v1 backwards compatibility.
@@ -52,10 +54,16 @@ public class SpeciesListVersion1 implements Serializable {
     private String listType;
     private String username;
     private String fullName;
+    private String authority; 
+    private String region;
+    private String sdsType;
+    private String generalisation;
+    private String wkt;
 
     private Integer itemCount;
 
     private Boolean isAuthoritative;
+    private Boolean isPrivate;
     private Boolean isInvasive;
     private Boolean isThreatened;
     private Boolean isSDS;

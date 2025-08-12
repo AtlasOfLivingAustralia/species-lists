@@ -35,13 +35,11 @@ public class SpeciesListItemVersion1 implements Serializable {
 
     private static final long serialVersionUID = 1L;
     @Id
-    private String id;
-    private String speciesListID;
+    private Long id;
     private String dataResourceUid;
     private String lsid;
     private String name;
     private String scientificName;
     private String commonName;
-    private AbbrListVersion1 list;
     private List<KvpValueVersion1> kvpValues;
 }
