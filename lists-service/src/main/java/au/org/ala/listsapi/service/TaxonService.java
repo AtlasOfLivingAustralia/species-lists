@@ -429,9 +429,11 @@ public class TaxonService {
             List<String> taxonIDs, String endpoint, String speciesListID, String logTag)
             throws IOException, InterruptedException {
 
+        // Ensure the encodedParams contains the same number of entries as taxonIDs,
+        // inserting empty values for nulls (nulls trigger an exception when encoded)
         String encodedParams = taxonIDs.stream()
-                .map(id -> "taxonIDs=" + URLEncoder.encode(id, StandardCharsets.UTF_8))
-                .collect(Collectors.joining("&"));
+            .map(id -> "taxonIDs=" + (id == null ? "" : URLEncoder.encode(id, StandardCharsets.UTF_8)))
+            .collect(Collectors.joining("&"));
 
         URI uriWithParams = URI.create(namematchingQueryUrl + endpoint + encodedParams);
 

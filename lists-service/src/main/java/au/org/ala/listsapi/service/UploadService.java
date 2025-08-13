@@ -355,6 +355,7 @@ public class UploadService {
             String scientificName = values.remove(DwcTerm.scientificName.simpleName());
             String taxonID = values.remove(DwcTerm.taxonID.simpleName());
             String taxonConceptID = values.remove(DwcTerm.taxonConceptID.simpleName());
+            String vernacularName = values.remove(DwcTerm.vernacularName.simpleName());
 
             String suppliedName = values.remove("Supplied Name");
 
@@ -363,12 +364,12 @@ public class UploadService {
             }
 
             if (StringUtils.isEmpty(scientificName)
+                    && StringUtils.isEmpty(vernacularName)
                     && StringUtils.isEmpty(taxonID)
                     && StringUtils.isEmpty(taxonConceptID)) {
                 recordsWithoutScientificName++;
             }
 
-            String vernacularName = values.remove(DwcTerm.vernacularName.simpleName());
             String kingdom = values.remove(DwcTerm.kingdom.simpleName());
             String phylum = values.remove(DwcTerm.phylum.simpleName());
             String classs = values.remove(DwcTerm.class_.simpleName());
@@ -376,7 +377,7 @@ public class UploadService {
             String family = values.remove(DwcTerm.family.simpleName());
             String genus = values.remove(DwcTerm.genus.simpleName());
 
-            // lookup the scientific name
+            // process remaining fields (user supplied KVP data)
             List<KeyValue> keyValues = new ArrayList<>();
             Map<String, String> properties = new HashMap<>();
             values.entrySet().stream()
