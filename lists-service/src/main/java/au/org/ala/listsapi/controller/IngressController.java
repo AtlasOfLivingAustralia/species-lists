@@ -134,14 +134,17 @@ public class IngressController {
             @AuthenticationPrincipal Principal principal) {
         try {
             ResponseEntity<Object> errorResponse = checkAuthorized(speciesListID, principal);
-            if (errorResponse != null)
+            if (errorResponse != null) {
                 return errorResponse;
+            }
 
             boolean success = uploadService.deleteList(speciesListID, (AlaUserProfile) principal);
-            if (success)
+
+            if (success) {
                 return new ResponseEntity<>(HttpStatus.OK);
-            else
+            } else {
                 return ResponseEntity.badRequest().body("Unable to delete species list");
+            }
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body("Error while deleting species list: " + e.getMessage());
@@ -157,9 +160,11 @@ public class IngressController {
             @AuthenticationPrincipal Principal principal) {
         try {
             ResponseEntity<Object> errorResponse = checkAuthorized(speciesListID, principal);
+
             if (errorResponse != null) {
                 return errorResponse;
             }
+
             Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository
                     .findByIdOrDataResourceUid(speciesListID, speciesListID);
 
@@ -190,8 +195,11 @@ public class IngressController {
     public ResponseEntity<Object> rematch(@AuthenticationPrincipal Principal principal) {
         try {
             ResponseEntity<Object> errorResponse = checkAuthorized(principal);
-            if (errorResponse != null)
+
+            if (errorResponse != null) {
                 return errorResponse;
+            }
+
             return startAsyncTaskIfNotBusy("REMATCH", () -> taxonService.taxonMatchDatasets());
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
@@ -209,8 +217,9 @@ public class IngressController {
             @AuthenticationPrincipal Principal principal) {
         try {
             ResponseEntity<Object> errorResponse = checkAuthorized(speciesListID, principal);
-            if (errorResponse != null)
+            if (errorResponse != null) {
                 return errorResponse;
+            }
 
             taxonService.reindex(speciesListID);
             return new ResponseEntity<>(HttpStatus.OK);
@@ -227,8 +236,11 @@ public class IngressController {
     public ResponseEntity<Object> reindex(@AuthenticationPrincipal Principal principal) {
         try {
             ResponseEntity<Object> errorResponse = checkAuthorized(principal);
-            if (errorResponse != null)
+
+            if (errorResponse != null) {
                 return errorResponse;
+            }
+
             // start async task
             return startAsyncTaskIfNotBusy("REINDEX", () -> taxonService.reindex());
 
@@ -359,8 +371,10 @@ public class IngressController {
         try {
 
             ResponseEntity<Object> errorResponse = checkAuthorized(speciesListID, principal);
-            if (errorResponse != null)
+
+            if (errorResponse != null) {
                 return errorResponse;
+            }
 
             logger.info("Re-Ingestion started...");
             File tempFile = new File(tempDir + "/" + fileName);
@@ -423,8 +437,10 @@ public class IngressController {
     @GetMapping("/admin/migrate/progress")
     public ResponseEntity<Object> migrateProgress(@AuthenticationPrincipal Principal principal) {
         ResponseEntity<Object> errorResponse = checkAuthorized(principal);
-        if (errorResponse != null)
+
+        if (errorResponse != null) {
             return errorResponse;
+        }
 
         MigrateProgressItem migrateProgress = progressService.getMigrationProgress();
 
@@ -437,8 +453,10 @@ public class IngressController {
     @GetMapping("/admin/migrate")
     public ResponseEntity<Object> migrate(@AuthenticationPrincipal Principal principal) {
         ResponseEntity<Object> errorResponse = checkAuthorized(principal);
-        if (errorResponse != null)
+
+        if (errorResponse != null) {
             return errorResponse;
+        }
 
         return startAsyncTaskIfNotBusy("MIGRATION", () -> migrateService.migrateAll());
     }
@@ -448,10 +466,11 @@ public class IngressController {
     @Operation(summary = "Clear migration progress", tags = "Migrate")
     @PostMapping(value = "/admin/migrate/reset")
     public ResponseEntity<Object> migrateReset(@AuthenticationPrincipal Principal principal) {
-
         ResponseEntity<Object> errorResponse = checkAuthorized(principal);
-        if (errorResponse != null)
+
+        if (errorResponse != null) {
             return errorResponse;
+        }
 
         progressService.clearMigrationProgress();
         return new ResponseEntity<>(HttpStatus.OK);
