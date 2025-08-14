@@ -20,3 +20,8 @@ service:
   port: 9200
 deployment:
   name: elasticsearch
+persistence:
+  enabled: true
+  storageClass: "auto-ebs-sc"
+  accessMode: ReadWriteOnce
+  size: 5Gi
