@@ -21,11 +21,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -353,6 +349,11 @@ public class TaxonService {
         try {
             List<Classification> classification = lookupTaxa(speciesListItems);
             for (int i = 0; i < speciesListItems.size(); i++) {
+                // Update "matchType" based on classification success
+                if (classification.get(i).getSuccess() == false) {
+                    classification.get(i).setMatchType("noMatch");
+                }
+
                 speciesListItems.get(i).setClassification(classification.get(i));
             }
             // write to mongo
