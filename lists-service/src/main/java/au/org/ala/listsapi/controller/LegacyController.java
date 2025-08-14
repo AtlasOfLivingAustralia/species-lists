@@ -66,7 +66,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
- * Controller for legacy API endpoints `(`/v1/**), that are deprecated.
+ * Controller for legacy API endpoints (/v1/**), that are deprecated.
  */
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController

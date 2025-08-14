@@ -83,6 +83,7 @@ export const QUERY_LISTS_GET = `query loadList(
   ) {
     content {
       id
+      suppliedName
       scientificName
       vernacularName
       genus

@@ -1,7 +1,7 @@
-import { Anchor, MantineStyleProp, Table, TableTrProps } from '@mantine/core';
 import { SpeciesListItem } from '#/api';
-import find from 'lodash-es/find';
 import { getStyleForTaxon } from '#/helpers/utils/formatName';
+import { Anchor, MantineStyleProp, Table, TableTrProps } from '@mantine/core';
+import find from 'lodash-es/find';
 
 interface TrItemProps extends TableTrProps {
   row: SpeciesListItem;
@@ -32,7 +32,7 @@ export function TrItem({
       }}
       {...rest}
     >
-      <Table.Td width='auto'>{row.scientificName}</Table.Td>
+      <Table.Td width='auto'>{row.suppliedName || row.scientificName}</Table.Td>
       <Table.Td width='auto'>
         {row.classification?.scientificName ? (
           <Anchor

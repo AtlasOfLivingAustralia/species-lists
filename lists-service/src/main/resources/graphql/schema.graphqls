@@ -89,6 +89,7 @@ type SpeciesListItem {
   id: ID
   version: Int
   speciesListID: String
+  suppliedName: String
   scientificName: String
   taxonID: String
   vernacularName: String
