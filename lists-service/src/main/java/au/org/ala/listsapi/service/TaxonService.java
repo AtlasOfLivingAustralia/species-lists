@@ -195,6 +195,7 @@ public class TaxonService {
                 speciesList.getTitle(),
                 speciesList.getListType(),
                 speciesListItem.getSpeciesListID(),
+                speciesListItem.getSuppliedName(),
                 speciesListItem.getScientificName(),
                 speciesListItem.getVernacularName(),
                 speciesListItem.getTaxonID(),

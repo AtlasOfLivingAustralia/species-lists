@@ -121,6 +121,7 @@ public class GraphQLController {
 
     public static final List<String> CORE_FIELDS = List.of(
             "id",
+            "suppliedName",
             "scientificName",
             "vernacularName",
             "taxonID",
@@ -634,6 +635,7 @@ public class GraphQLController {
                 speciesList.getTitle(),
                 speciesList.getListType(),
                 speciesListItem.getSpeciesListID(),
+                speciesListItem.getSuppliedName(),
                 speciesListItem.getScientificName(),
                 speciesListItem.getVernacularName(),
                 speciesListItem.getTaxonID(),

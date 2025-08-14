@@ -117,6 +117,7 @@ public class ElasticUtils {
         SpeciesListItem speciesListItem = new SpeciesListItem();
         speciesListItem.setId(new ObjectId(index.getId()));
         speciesListItem.setSpeciesListID(index.getSpeciesListID());
+        speciesListItem.setSuppliedName(index.getSuppliedName());
         speciesListItem.setScientificName(index.getScientificName());
         speciesListItem.setVernacularName(index.getVernacularName());
         speciesListItem.setPhylum(index.getPhylum());

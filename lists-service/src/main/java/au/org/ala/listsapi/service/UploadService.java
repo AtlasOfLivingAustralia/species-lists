@@ -99,6 +99,18 @@ public class UploadService {
         NULL_VALUES.add("not specified");
     }
 
+    /**
+     * Returns the first non-empty string from the provided arguments.
+     */
+    private static String firstNonEmpty(String... values) {
+        for (String value : values) {
+            if (StringUtils.isNotEmpty(value)) {
+                return value;
+            }
+        }
+        return null;
+    }
+
     public boolean deleteList(String speciesListID, AlaUserProfile userProfile) {
 
         Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
@@ -360,7 +372,9 @@ public class UploadService {
             String suppliedName = values.remove("Supplied Name");
 
             if (suppliedName != null) {
-                scientificName = suppliedName;
+                scientificName = suppliedName; // undocumented input field, left in for backward compatibility
+            } else {
+                suppliedName = firstNonEmpty(scientificName, taxonID, taxonConceptID, vernacularName);
             }
 
             if (StringUtils.isEmpty(scientificName)
@@ -417,6 +431,7 @@ public class UploadService {
                         null,
                         speciesListID,
                         cleanField(taxonID),
+                        cleanField(suppliedName),
                         cleanField(scientificName),
                         cleanField(vernacularName),
                         cleanField(kingdom),

@@ -229,8 +229,6 @@ public class IngressController {
             ResponseEntity<Object> errorResponse = checkAuthorized(principal);
             if (errorResponse != null)
                 return errorResponse;
-            if (errorResponse != null)
-                return errorResponse;
             // start async task
             return startAsyncTaskIfNotBusy("REINDEX", () -> taxonService.reindex());
 

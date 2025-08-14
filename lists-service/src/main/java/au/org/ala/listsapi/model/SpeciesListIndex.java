@@ -47,6 +47,7 @@ public class SpeciesListIndex {
     private String speciesListName;
     private String listType;
     private String speciesListID;
+    private String suppliedName;
     private String scientificName;
     private String vernacularName;
     private String taxonID;

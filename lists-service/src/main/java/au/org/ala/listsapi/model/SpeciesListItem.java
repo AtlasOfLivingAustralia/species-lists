@@ -36,6 +36,7 @@ public class SpeciesListItem {
     @Indexed
     private String speciesListID;
     private String taxonID;
+    private String suppliedName;
     private String scientificName;
     private String vernacularName;
     private String kingdom;
@@ -91,6 +92,8 @@ public class SpeciesListItem {
                 return this.speciesListID;
             case "taxonID":
                 return this.taxonID;
+            case "suppliedName":
+                return this.suppliedName;
             case "scientificName":
                 return this.scientificName;
             case "vernacularName":
