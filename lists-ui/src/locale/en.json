@@ -23,6 +23,8 @@
   "classification.taxonID": "Taxon ID",
   "classification.rank": "Taxon rank",
   "classification.rankID": "Taxon rank ID",
+  "classification.matchType": "Match type",
+  "classification.default.matchType": "unmatched",
 
   "isAuthoritative": "Authoritative",
   "listType": "List type",

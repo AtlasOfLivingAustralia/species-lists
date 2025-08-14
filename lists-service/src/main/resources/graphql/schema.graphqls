@@ -148,6 +148,7 @@ type Classification {
   genusID: String
   rank: String
   rankID: Int
+  matchType: String
 }
 
 input Filter {
