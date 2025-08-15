@@ -36,7 +36,7 @@ jobs:
         cache: maven
     - name: Run tests
       working-directory: ${{ env.JAVA_APP_PATH }}
-      run: ./mvnw test
+      run: mvn test
     - name: Generate test report
       uses: dorny/test-reporter@v1
       if: success() || failure()
