@@ -91,7 +91,7 @@ enum SortDirection {
   DESC = 'desc',
 }
 
-const classificationFields = ['family', 'kingdom', 'vernacularName'];
+const classificationFields = ['family', 'kingdom', 'vernacularName', 'matchType'];
 
 export function List() {
   const { id } = useParams();

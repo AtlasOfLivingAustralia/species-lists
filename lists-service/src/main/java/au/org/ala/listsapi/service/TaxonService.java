@@ -21,11 +21,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -59,7 +55,6 @@ import au.org.ala.listsapi.model.Classification;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListIndex;
 import au.org.ala.listsapi.model.SpeciesListItem;
-import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
@@ -68,7 +63,7 @@ import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 public class TaxonService {
 
     @Value("${namematching.url}")
-    private String namematchingQueryUrl;
+    private String nameMatchingQueryUrl;
 
     private static final Logger logger = LoggerFactory.getLogger(TaxonService.class);
     public static final String SPECIES_LIST_ID = "speciesListID";
@@ -76,8 +71,6 @@ public class TaxonService {
     protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
     @Autowired
     protected SpeciesListMongoRepository speciesListMongoRepository;
-    @Autowired
-    protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
     @Autowired
     protected ElasticsearchOperations elasticsearchOperations;
     @Autowired
@@ -356,6 +349,11 @@ public class TaxonService {
         try {
             List<Classification> classification = lookupTaxa(speciesListItems);
             for (int i = 0; i < speciesListItems.size(); i++) {
+                // Update "matchType" based on classification success
+                if (classification.get(i).getSuccess() == false) {
+                    classification.get(i).setMatchType("noMatch");
+                }
+
                 speciesListItems.get(i).setClassification(classification.get(i));
             }
             // write to mongo
@@ -418,7 +416,7 @@ public class TaxonService {
             throws IOException, InterruptedException {
 
         String json = objectMapper.writeValueAsString(requestBody);
-        HttpRequest httpRequest = HttpRequest.newBuilder(URI.create(namematchingQueryUrl + endpoint))
+        HttpRequest httpRequest = HttpRequest.newBuilder(URI.create(nameMatchingQueryUrl + endpoint))
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .header("Content-Type", "application/json")
                 .build();
@@ -436,7 +434,7 @@ public class TaxonService {
             .map(id -> "taxonIDs=" + (id == null ? "" : URLEncoder.encode(id, StandardCharsets.UTF_8)))
             .collect(Collectors.joining("&"));
 
-        URI uriWithParams = URI.create(namematchingQueryUrl + endpoint + encodedParams);
+        URI uriWithParams = URI.create(nameMatchingQueryUrl + endpoint + encodedParams);
 
         HttpRequest httpRequest = HttpRequest.newBuilder(uriWithParams)
                 .POST(HttpRequest.BodyPublishers.noBody()) // No body for GET

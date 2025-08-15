@@ -23,6 +23,8 @@
   "classification.taxonID": "Taxon ID",
   "classification.rank": "Taxon rank",
   "classification.rankID": "Taxon rank ID",
+  "classification.matchType": "Match type",
+  "classification.default.matchType": "unmatched",
 
   "isAuthoritative": "Authoritative",
   "listType": "List type",
@@ -46,6 +48,27 @@
   "rowCount_asc": "taxa count (lowest)",
   "access.private": "Private",
   "access.public": "Public",
+  "noMatch": "No match",
+  "exactMatch": "Exact match",
+  "vernacularMatch": "Vernacular match",
+  "taxonIdMatch": "Taxon ID match",
+  "partialMatch": "Partial match",
+  "fuzzyMatch": "Fuzzy match",
+  "higherMatch": "Higher match",
+  "canonicalMatch": "Canonical match",
+  "phraseMatch": "Phrase match",
+
+
+  "classification.noMatch": "No match",
+  "classification.exactMatch": "Exact match",
+  "classification.vernacularMatch": "Vernacular match",
+  "classification.taxonIdMatch": "Taxon ID match",
+  "classification.partialMatch": "Partial match",
+  "classification.fuzzyMatch": "Fuzzy match",
+  "classification.higherMatch": "Higher match",
+  "classification.canonicalMatch": "Canonical match",
+  "classification.phraseMatch": "Phrase match",
+
 
   "list.isAuthoritative": "Authoritative",
   "list.isSDS": "Sensitive data service",

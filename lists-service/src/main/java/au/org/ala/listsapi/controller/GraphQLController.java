@@ -1141,6 +1141,7 @@ public class GraphQLController {
         }
 
         // Add classification fields
+        // TODO: move to configuration
         List<String> classificationFields = new ArrayList<>();
         classificationFields.add("classification.family");
         classificationFields.add("classification.order");
@@ -1150,6 +1151,7 @@ public class GraphQLController {
         classificationFields.add("classification.speciesSubgroup");
         classificationFields.add("classification.rank");
         classificationFields.add("classification.vernacularName");
+        classificationFields.add("classification.matchType");
 
         for (String classificationField : classificationFields) {
             builder.withAggregation(

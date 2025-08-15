@@ -405,7 +405,11 @@ export function Actions({
                 }}
               >
                 <FolderIcon size={14} style={{ marginRight: 10 }} />
-                {new Intl.NumberFormat().format(meta.rowCount)} total
+                {new Intl.NumberFormat().format(meta.rowCount)} {' '}
+                {intl.formatMessage({
+                  id: 'actions.total',
+                  defaultMessage: 'total',
+                })}<br />
               </Text>
               {meta.distinctMatchCount && (
                 <>

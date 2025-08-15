@@ -115,6 +115,7 @@ export const QUERY_LISTS_GET = `query loadList(
         genusID
         rank
         rankID
+        matchType
       }
       dateCreated
       lastUpdated
