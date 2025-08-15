@@ -91,6 +91,7 @@ enum SortDirection {
   DESC = 'desc',
 }
 
+const maxEntries = 10000; // ES maximumDocuments limit (see elastic.maximumDocuments config in lists-service)
 const classificationFields = ['family', 'kingdom', 'vernacularName', 'matchType'];
 
 export function List() {
@@ -191,7 +192,15 @@ export function List() {
 
   // Destructure results & calculate the real page offset
   const { totalElements, totalPages } = list || { totalElements: 0, totalPages: 0 };
+  let totalEntries = totalElements;
+
+  if (totalElements == maxEntries) {
+    totalEntries = meta?.rowCount ?? totalElements;
+  }
+
   const realPage = page + 1;
+  const startPage = (realPage - 1) * size + 1;
+  const endPage = Math.min(realPage * size, totalEntries || 0);
 
   // Request abort controller
   const controller = useRef<AbortController | null>(null);
@@ -606,13 +615,17 @@ export function List() {
                   <>
                     <Text size='sm' mb={6} mt={6} className={classes.resultsSummary} component='span'>
                       <FormattedMessage id='results.showing' defaultMessage='Showing' /> {' '}
-                      {(realPage - 1) * size + 1}-
-                      {Math.min((realPage - 1) * size + size, totalElements || 0)} of {' '}
-                      <FormattedNumber value={totalElements || 0} /> {' '}
-                      <FormattedMessage id='results.records' defaultMessage='records' />
+                        {startPage}-{endPage} of {' '}
+                      <FormattedNumber value={totalEntries || 0} /> {' '}
+                      <FormattedMessage id='results.records' defaultMessage='records' /> {' '}
                       { filters && filters.length > 0 && (
                         <><Space w={5} />–<Space w={2} /></>
                       )}
+                      { endPage == maxEntries &&
+                        <Text style={{ color: 'red', marginLeft: 5 }}>
+                          <FormattedMessage id='results.warning.max' defaultMessage='Maximum number of pages reached. Try filtering or sorting table by a different column.' />
+                        </Text>
+                      }
                     </Text>
                   </>
                 ) : (
