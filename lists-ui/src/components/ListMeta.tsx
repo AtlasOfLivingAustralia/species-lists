@@ -85,18 +85,21 @@ export function ListMeta({
         ? intl.formatMessage({id:'listmeta.validation.notEmpty', defaultMessage:'Please select a value'}) 
         : null;
 
-  // Custom validator for the `wkt` field.
-  const validGeoJSON = (value: string) =>
-    /-?(?:\.\d+|\d+(?:\.\d*)?)/.test(value) 
-        ? null 
-        : intl.formatMessage({id:'listmeta.validation.geojson', defaultMessage:'Please enter valid GeoJSON'});
+  // Custom validator for the `wkt` field. It checks for the basic WKT structure:
+  // a keyword (e.g., POLYGON) followed by parentheses.
+  // This is a basic check and not a full validation.
+  const validWKT = (value: string) =>
+    // Checks that the entire string is a word, optional whitespace, and content enclosed in parentheses.
+    /^\s*\w+\s*\((.|\s)*\)\s*$/i.test(value)
+      ? null
+      : intl.formatMessage({id:'listmeta.validation.wkt', defaultMessage:'Please enter valid WKT format (e.g., POLYGON(...))'});
 
 
   // Form hook
   const form = useForm({
     initialValues: defaultList(initialValues, initialTitle),
     validate: {
-      wkt: (value) => (value.length > 0 ? validGeoJSON(value) : null),
+      wkt: (value) => (value.length > 0 ? validWKT(value) : null),
       listType: notEmpty,
       licence: notEmpty,
     },

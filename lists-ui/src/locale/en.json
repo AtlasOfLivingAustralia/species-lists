@@ -149,7 +149,7 @@
   "visiblility.public": "This list is public. It is accessible to everyone.",
 
   "listmeta.validation.notEmpty": "Please select a value",
-  "listmeta.validation.geojson": "Please enter valid GeoJSON",
+  "listmeta.validation.wkt": "Please enter valid WKT format, e.g. POLYGON(...)",
   "listmeta.public.label": "Public",
   "listmeta.private.label": "Private",
   "listmeta.title.label": "Name",

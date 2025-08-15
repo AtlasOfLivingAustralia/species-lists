@@ -115,6 +115,7 @@ function Home() {
     'view',
     parseAsString.withDefault('public')
   );
+  // Shows the user's lists (my lists) when true
   const [isUser, setIsUser] = useQueryState<boolean>(
     'isUser',
     parseAsBoolean.withDefault(false)
