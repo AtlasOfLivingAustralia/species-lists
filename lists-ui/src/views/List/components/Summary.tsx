@@ -1,119 +1,100 @@
 import {
   Badge,
-  Chip,
-  Divider,
   Group,
   GroupProps,
-  Text,
-  Tooltip,
+  Tooltip
 } from '@mantine/core';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 // Icons
 import { faCreativeCommons } from '@fortawesome/free-brands-svg-icons';
 import {
   faBank,
+  faBookmark,
   faGlobe,
   faIdBadge,
+  faTag,
   faUser,
+  IconDefinition
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 // API
 import { SpeciesList } from '#/api';
+import classes from '../classes/Summary.module.css';
 
 interface SummaryProps extends GroupProps {
   meta: SpeciesList;
 }
 
-export function Summary({ meta, ...rest }: SummaryProps) {
+function MetaBadge({
+  typeName,
+  typeValue,
+  href,
+  color = 'default',
+  icon,
+  children,
+}: {
+  typeName?: string;
+  typeValue: string;
+  href?: string;
+  color?: string;
+  icon: IconDefinition;
+  children?: React.ReactNode;
+}) {
+  const intl = useIntl();
   return (
-    <Group {...rest} gap='xs' align='center'>
-      <Text>
-        <FormattedMessage
-          id={meta.listType ? meta.listType : 'summary.listtype.notFound'}
-        />
-      </Text>
-      <Divider mx={4} orientation='vertical' />
-      {meta.region && (
-        <Chip
-          size='xs'
+    <Tooltip 
+        position='bottom' 
+        label={intl.formatMessage({ id: 'summary.' + typeName + '.tooltip', defaultMessage: typeName })} 
+        withArrow
+    >
+      <span>
+        <Badge
           variant='light'
-          color='gray'
-          checked={true}
-          icon={<FontAwesomeIcon icon={faGlobe} fontSize={10} />}
+          color={color || undefined}
+          leftSection={<FontAwesomeIcon icon={icon} fontSize={10} />}
+          className={classes.metaBadge}
+          style={!color ? { fontWeight: 500 } : href ? { cursor: 'pointer' } : {}}
+          component={href ? 'a' : undefined}
+          {...(href ? { href } : {})}
         >
-          <FormattedMessage
-            id={`region.${meta.region || ''}`}
-            defaultMessage={meta.region}
-          />
-        </Chip>
-      )}
-      {meta.ownerName && (
-        <Chip
-          size='xs'
-          variant='light'
-          color='gray'
-          checked={true}
-          icon={<FontAwesomeIcon icon={faUser} fontSize={10} />}
-        >
-          {meta.ownerName}
-        </Chip>
-      )}
-      {meta.authority && (
-        <Chip
-          size='xs'
-          variant='light'
-          color='gray'
-          checked={true}
-          icon={<FontAwesomeIcon icon={faBank} fontSize={10} />}
-        >
-          {meta.authority || 'Authority'}
-        </Chip>
-      )}
-      <Chip
-        size='xs'
-        variant='light'
-        color='gray'
-        checked={true}
-        icon={<FontAwesomeIcon icon={faCreativeCommons} fontSize={10} />}
-      >
-        {meta.licence ? (
-          <FormattedMessage
-            id={`licence.${meta.licence}`}
-            defaultMessage={meta.licence}
-          />
-        ) : (
-          'No licence'
+          <FormattedMessage id={typeValue || '–'} defaultMessage={typeValue} />{' '}
+          {children}
+        </Badge>
+      </span>
+    </Tooltip>
+  );
+}
+
+export function Summary({ meta, ...rest }: SummaryProps) {
+  const intl = useIntl();
+  console.log('Summary component rendered with meta:', meta);
+  return (
+    <Group {...rest} gap='xs' align='center' mt={10} ml={0}>
+      <MetaBadge typeName='listType' typeValue={meta.listType ?? 'No list type'} color='' icon={faBookmark} >
+        {!intl.formatMessage({ id: meta.listType ?? 'No list type', defaultMessage: 'meta.listType' })?.toLowerCase().includes('list') && (
+          <FormattedMessage id='summary.list.label' defaultMessage='list' />
         )}
-      </Chip>
-      {meta.dataResourceUid && (
-        <Tooltip position='right' label='View in Collectory' withArrow>
-          <Badge
-            h={23}
-            variant='light'
-            color='gray'
-            leftSection={<FontAwesomeIcon icon={faIdBadge} fontSize={10} />}
-            component='a'
-            target='_blank'
-            href={`${import.meta.env.VITE_ALA_COLLECTORY}/${
-              meta.isPrivate ? 'dataResource' : 'public'
-            }/show/${meta.dataResourceUid}`}
-            style={{ cursor: 'pointer' }}
-          >
-            <span
-              style={{
-                textTransform: 'lowercase',
-                color: 'var(--chip-color)',
-                fontSize: 'var(--mantine-font-size-xs)',
-                fontWeight: 400,
-              }}
-            >
-              {meta.dataResourceUid}
-            </span>
-          </Badge>
-        </Tooltip>
-      )}
+      </MetaBadge>
+      <MetaBadge typeName='ownerName' typeValue={meta.ownerName ?? '–'} icon={faUser} />
+      {meta.licence && <MetaBadge typeName='licence' typeValue={meta.licence} icon={faCreativeCommons} />}
+      {meta.region && <MetaBadge typeName='region' typeValue={meta.region} icon={faGlobe} />}
+      {meta.authority && <MetaBadge typeName='authority' typeValue={meta.authority} icon={faBank} />}
+      {((meta?.tags || []).length > 0) && meta!.tags.map((tag) => (
+        <MetaBadge
+          color='brown'
+          typeName='tag'
+          typeValue={tag}
+          icon={faTag}
+        />
+      ))}
+      {meta.dataResourceUid && <MetaBadge
+        typeName='dataResourceUid'
+        typeValue={meta.dataResourceUid}
+        href={`${import.meta.env.VITE_ALA_COLLECTORY}/${meta.isPrivate ? 'dataResource' : 'public'}/show/${meta.dataResourceUid}`}
+        icon={faIdBadge}
+      />}
     </Group>
   );
 }
