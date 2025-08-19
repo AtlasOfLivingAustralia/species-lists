@@ -25,7 +25,7 @@
   "classification.rankID": "Taxon rank ID",
   "classification.matchType": "Match type",
   "classification.default.matchType": "unmatched",
-  "classification.null":"No match",
+  "classification.null": "No match",
 
   "isAuthoritative": "Authoritative",
   "listType": "List type",
@@ -60,7 +60,6 @@
   "higherMatch": "Higher match",
   "canonicalMatch": "Canonical match",
   "phraseMatch": "Phrase match",
-
 
   "classification.noMatch": "No match",
   "classification.exactMatch": "Exact match",
@@ -177,8 +176,8 @@
 
   "summary.list.label": "list",
   "summary.dataResourceUid.tooltip": "View data resource details",
-  "summary.listType.tooltip": "list type",
-  "summary.ownerName.tooltip": "owner",
+  "summary.listType.tooltip": "List type",
+  "summary.ownerName.tooltip": "Owner",
 
   "actions.editMetadata.title": "Edit list metadata",
   "actions.editMetadata.success": "updated successfully",
