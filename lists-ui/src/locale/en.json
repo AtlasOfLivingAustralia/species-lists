@@ -1,14 +1,14 @@
 {
-  "CONSERVATION_LIST": "Conservation list",
-  "SENSITIVE_LIST": "Sensitive list",
-  "COMMON_TRAIT": "Common traits list",
-  "LOCAL_LIST": "Local list",
-  "SPECIES_CHARACTERS": "Species characters list",
-  "INVASIVE": "Invasive species list",
-  "COMMON_HABITAT": "Common habitat list",
-  "PROFILE": "Profile list",
-  "TEST": "Testing list",
-  "OTHER": "Other list",
+  "CONSERVATION_LIST": "Conservation",
+  "SENSITIVE_LIST": "Sensitive",
+  "COMMON_TRAIT": "Common traits",
+  "LOCAL_LIST": "Local checklist",
+  "SPECIES_CHARACTERS": "Species characters",
+  "INVASIVE": "Invasive species",
+  "COMMON_HABITAT": "Common habitat",
+  "PROFILE": "Profile",
+  "TEST": "Testing",
+  "OTHER": "Other",
 
   "classification.kingdom": "Kingdom",
   "classification.phylum": "Phylum",
@@ -25,11 +25,14 @@
   "classification.rankID": "Taxon rank ID",
   "classification.matchType": "Match type",
   "classification.default.matchType": "unmatched",
+  "classification.null": "No match",
 
   "isAuthoritative": "Authoritative",
   "listType": "List type",
   "isBIE": "Species pages",
   "isSDS": "Sensitive data service",
+  "isThreatened": "Threatened",
+  "isInvasive": "Invasive",
   "tags": "Tags",
   "hasRegion": "Region specific",
   "true": "yes",
@@ -58,7 +61,6 @@
   "canonicalMatch": "Canonical match",
   "phraseMatch": "Phrase match",
 
-
   "classification.noMatch": "No match",
   "classification.exactMatch": "Exact match",
   "classification.vernacularMatch": "Vernacular match",
@@ -68,7 +70,6 @@
   "classification.higherMatch": "Higher match",
   "classification.canonicalMatch": "Canonical match",
   "classification.phraseMatch": "Phrase match",
-
 
   "list.isAuthoritative": "Authoritative",
   "list.isSDS": "Sensitive data service",
@@ -136,7 +137,7 @@
   "reingest.error.message.tryAgain": "please try again with another file",
 
   "add.species.title": "Add a new taxon entry",
-  "add.species.label": "Add species",
+  "add.taxa.label": "Add taxon",
   "search.input.placeholder": "Search lists by name or taxa",
   "search.input.label": "Search input",
   "search.clear.label": "Clear search",
@@ -149,7 +150,7 @@
   "visiblility.public": "This list is public. It is accessible to everyone.",
 
   "listmeta.validation.notEmpty": "Please select a value",
-  "listmeta.validation.geojson": "Please enter valid GeoJSON",
+  "listmeta.validation.wkt": "Please enter valid WKT format, e.g. POLYGON(...)",
   "listmeta.public.label": "Public",
   "listmeta.private.label": "Private",
   "listmeta.title.label": "Name",
@@ -172,6 +173,11 @@
   "listmeta.button.update.label": "Update",
   "listmeta.button.create.label": "Create",
   "listmeta.button.cancel.label": "Cancel",
+
+  "summary.list.label": "list",
+  "summary.dataResourceUid.tooltip": "View data resource details",
+  "summary.listType.tooltip": "List type",
+  "summary.ownerName.tooltip": "Owner",
 
   "actions.editMetadata.title": "Edit list metadata",
   "actions.editMetadata.success": "updated successfully",

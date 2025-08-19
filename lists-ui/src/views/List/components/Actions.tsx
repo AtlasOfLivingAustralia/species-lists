@@ -1,14 +1,14 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { DotsThreeIcon, FolderIcon } from '@atlasoflivingaustralia/ala-mantine';
+import { DotsThreeIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { faEdit, faTrashAlt } from '@fortawesome/free-regular-svg-icons';
 import {
   faDownload,
-  faFingerprint,
   faGlobe,
+  faPlus,
   faRefresh,
   faSearch,
   faTableColumns,
-  faUpload,
+  faUpload
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -40,7 +40,7 @@ import { getErrorMessage } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
 
 // Local styles
-import { useIntl } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import classes from './Actions.module.css';
 
 interface ActionsProps {
@@ -50,6 +50,7 @@ interface ActionsProps {
   onEditingChange: (editing: boolean) => void;
   onMetaEdited: (meta: SpeciesListSubmit) => void;
   onRematch: () => void;
+  handleAddClick: () => void;
 }
 
 export function Actions({
@@ -59,6 +60,7 @@ export function Actions({
   onEditingChange,
   onMetaEdited,
   onRematch,
+  handleAddClick,
 }: ActionsProps) {
   const [updating, setUpdating] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
@@ -66,6 +68,7 @@ export function Actions({
   const listQid = useRef<string | null>(null);
   const navigate = useNavigate();
   const intl = useIntl();
+  const isReingest = location.pathname.endsWith('reingest');
 
   const ala = useALA();
   const authorisedForList = ala.isAuthorisedForList(meta);
@@ -387,73 +390,17 @@ export function Actions({
       </Menu>
       <Box className={classes.desktop}>
         <Stack gap='xs'>
-          <Paper
-            miw={authorisedForList ? 285 : undefined}
-            py={8}
-            px='xs'
-            shadow='sm'
-            radius='lg'
-            withBorder
-          >
-            <Flex>
-              <Text
-                fw='bold'
-                style={{
-                  textAlign: 'center',
-                  fontSize: '0.8rem',
-                  flexBasis: '100%',
-                }}
-              >
-                <FolderIcon size={14} style={{ marginRight: 10 }} />
-                {new Intl.NumberFormat().format(meta.rowCount)} {' '}
-                {intl.formatMessage({
-                  id: 'actions.total',
-                  defaultMessage: 'total',
-                })}<br />
-              </Text>
-              {meta.distinctMatchCount && (
-                <>
-                  <Divider orientation='vertical' mx='xs' />
-                    <Text
-                    fw='bold'
-                    style={{
-                      textAlign: 'center',
-                      fontSize: '0.8rem',
-                      flexBasis: '100%',
-                    }}
-                    >
-                    <FontAwesomeIcon
-                      icon={faFingerprint}
-                      style={{ marginRight: 10 }}
-                    />
-                    {new Intl.NumberFormat().format(meta.distinctMatchCount)}{' '}
-                    {intl.formatMessage({
-                      id: 'actions.distinct',
-                      defaultMessage: 'distinct',
-                    })}
-                    </Text>
-                </>
-              )}
-            </Flex>
-          </Paper>
           {authorisedForList && (
+          <>
             <Paper
-              miw={authorisedForList ? 285 : undefined}
+              // miw={authorisedForList ? 285 : undefined}
               py={8}
               px='sm'
               shadow='sm'
               radius='lg'
               withBorder
             >
-                <Group gap='xs'>
-                <Switch
-                  disabled={updating || rematching || deleting}
-                  mr='xs'
-                  size='xs'
-                  label={intl.formatMessage({ id: 'actions.editFields', defaultMessage: 'Edit fields' })}
-                  checked={editing}
-                  onChange={(ev) => onEditingChange(ev.currentTarget.checked)}
-                />
+              <Group gap='xs'>
                 <Tooltip label={intl.formatMessage({ id: 'actions.editMetadata', defaultMessage: 'Edit metadata' })} position='left'>
                   <ActionIcon
                     onClick={handleMetaEdit}
@@ -505,8 +452,32 @@ export function Actions({
                     <FontAwesomeIcon size='sm' icon={faTrashAlt} />
                   </ActionIcon>
                 </Tooltip>
+              </Group>
+              <Group gap='sm' mt='md'>
+                <Switch
+                  disabled={updating || rematching || deleting}
+                  mr='xs'
+                  size='xs'
+                  label={intl.formatMessage({ id: 'actions.editFields', defaultMessage: 'Edit fields' })}
+                  checked={editing}
+                  onChange={(ev) => onEditingChange(ev.currentTarget.checked)}
+                />
+                {!isReingest && (
+                  <Button
+                    radius='lg'
+                    size='xs'
+                    leftSection={<FontAwesomeIcon icon={faPlus} />}
+                    variant='light'
+                    onClick={handleAddClick}
+                    title={intl.formatMessage({ id: 'add.species.title', defaultMessage: 'Add a new taxon entry' })}
+                    aria-label={intl.formatMessage({ id: 'add.species.title', defaultMessage: 'Add a new taxon entry' })}
+                  >
+                    <FormattedMessage id='add.taxa.label' defaultMessage='Add taxa' />
+                  </Button>
+                )}
                 </Group>
             </Paper>
+          </>
           )}
           <Paper withBorder radius='lg'>
             <Button

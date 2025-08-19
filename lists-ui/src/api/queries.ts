@@ -61,6 +61,7 @@ export const QUERY_LISTS_GET = `query loadList(
     editors
     tags
     region
+    wkt
     licence
     listType
     metadataLastUpdated

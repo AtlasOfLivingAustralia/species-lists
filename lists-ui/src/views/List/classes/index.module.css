@@ -14,7 +14,7 @@
 }
 
 .speciesHeader {
-  padding: 10px 20px 15px 20px;
+  padding: 10px 30px 10px 20px;
   z-index: 0;
   background-repeat: no-repeat;
   background-position: right -10px top -20px;
@@ -28,6 +28,11 @@
       background-color: var(--mantine-color-charcoal-9);
       background-image: url('/logo/logo-back-dark.svg');
   }
+}
+
+.listDetails {
+  /* Increase right padding so FreshDesk widget does not block content */
+  padding-right: 30px;
 }
 
 .listTitlePrefix {
