@@ -14,7 +14,7 @@ on:
       - 'lists-service/**'
       - '.github/workflows/maven.yml'
   pull_request:
-    # branches: [ main, testing, develop ]
+    branches: [ main, testing, develop ]
     paths:
       - 'lists-service/**'
     
