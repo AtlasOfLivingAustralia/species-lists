@@ -11,9 +11,7 @@ import {
 } from '#/api';
 import {
   ActionIcon,
-  Badge,
   Box,
-  Button,
   Center,
   Collapse,
   Container,
@@ -29,7 +27,7 @@ import {
   Table,
   Text,
   TextInput,
-  Title,
+  Title
 } from '@mantine/core';
 import {
   useDebouncedValue,
@@ -51,7 +49,7 @@ import { Outlet, useLocation, useParams } from 'react-router';
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { faAngleRight, faMagnifyingGlass, faPlus, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faAngleRight, faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import tableClasses from './classes/Table.module.css';
@@ -469,27 +467,18 @@ export function List() {
           </Grid.Col>
         </Grid>
       </Container>
-      <Container fluid>
+      <Container fluid className={classes.listDetails}>
         <Grid>
           <Grid.Col span={12} pb={6} mt='lg'>
             <Flex direction='row' justify='space-between' gap={16}>
               <Stack gap='xs' mb={14}>
-                <Summary meta={meta!} mr={-42} />
-                {(meta?.tags || []).length > 0 && (
-                  <Group mt={4} gap={4}>
-                    {meta!.tags.map((tag) => (
-                      <Badge variant='dot' radius='md' key={tag}>
-                        {tag}
-                      </Badge>
-                    ))}
-                  </Group>
-                )}
                 {meta?.description && (
                   <Text c='dark-grey-1' size='sm' mt='xs' opacity={0.75}>
                     {meta.description}
                   </Text>
                 )}
-                <Group mt='sm' gap='xs'>
+                <Summary meta={meta!} />
+                <Group gap={6} mt={0}>
                   <Flags meta={meta!} />
                   <Dates meta={meta!} />
                 </Group>
@@ -501,23 +490,14 @@ export function List() {
                   rematching={rematching}
                   onEditingChange={setEditing}
                   onMetaEdited={handleListMetaUpdated}
+                  handleAddClick={handleAddClick}
                   onRematch={() => {
                     setRematching(true);
                   }}
                 />
               )}
             </Flex>
-            {!isReingest && (<Button
-              radius='md'
-              leftSection={<FontAwesomeIcon icon={faPlus} />}
-              variant='light'
-              onClick={handleAddClick}
-              title={intl.formatMessage({ id: 'add.species.title', defaultMessage: 'Add a new taxon entry' })}
-              aria-label={intl.formatMessage({ id: 'add.species.title', defaultMessage: 'Add a new taxon entry' })}
-            >
-              <FormattedMessage id='add.species.label' defaultMessage='Add species' />
-            </Button>
-            )}
+            
           </Grid.Col>
           { rematching && (
             <Grid.Col span={12}>
@@ -618,6 +598,17 @@ export function List() {
                         {startPage}-{endPage} of {' '}
                       <FormattedNumber value={totalEntries || 0} /> {' '}
                       <FormattedMessage id='results.records' defaultMessage='records' /> {' '}
+                      { meta?.distinctMatchCount &&
+                        <>
+                          {'('}
+                          {new Intl.NumberFormat().format(meta?.distinctMatchCount ?? 0)}{' '}
+                          {intl.formatMessage({
+                            id: 'actions.distinct',
+                            defaultMessage: 'distinct taxa',
+                          })}
+                          {')'}
+                        </>
+                      }
                       { filters && filters.length > 0 && (
                         <><Space w={5} />–<Space w={2} /></>
                       )}
