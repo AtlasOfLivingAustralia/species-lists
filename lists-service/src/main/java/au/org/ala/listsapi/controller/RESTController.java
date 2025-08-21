@@ -25,6 +25,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.data.domain.Page;
@@ -89,6 +90,9 @@ public class RESTController {
 
     @Autowired
     protected ElasticsearchOperations elasticsearchOperations;
+
+    @Value("${elastic.maximumDocuments}")
+    public static final int MAX_LIST_ENTRIES = 10000;
 
     @Operation(tags = "REST v2", summary = "Get species list metadata")
     @ApiResponses({
@@ -208,7 +212,7 @@ public class RESTController {
         try {
             AlaUserProfile profile = authUtils.getUserProfile(principal);
 
-            if (page < 1 || (page * pageSize) > 10000) {
+            if (page < 1 || (page * pageSize) > MAX_LIST_ENTRIES) {
                 return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
             }
 

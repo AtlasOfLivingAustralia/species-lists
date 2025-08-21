@@ -17,6 +17,7 @@ package au.org.ala.listsapi.util;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +27,10 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.types.ObjectId;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.stereotype.Component;
 
@@ -41,9 +45,14 @@ import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.MetadataService;
 import au.org.ala.listsapi.service.TaxonService;
 import au.org.ala.listsapi.service.ValidationService;
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.ChildScoreMode;
+import co.elastic.clients.elasticsearch.indices.IndexSettings;
+import co.elastic.clients.elasticsearch.indices.PutIndicesSettingsRequest;
+import co.elastic.clients.json.JsonData;
+import jakarta.annotation.PostConstruct;
 
 /** GraphQL API for lists */
 @Component
@@ -65,10 +74,13 @@ public class ElasticUtils {
                     "isAuthoritative",
                     "hasRegion",
                     "isSDS",
+                    "isThreatened",
+                    "isInvasive",
                     "tags");
 
     public static final List<String> CORE_BOOL_FIELDS =
-            List.of("isBIE", "isAuthoritative", "hasRegion", "isSDS");
+            List.of("isBIE", "isAuthoritative", "hasRegion", "isSDS", 
+                    "isThreatened", "isInvasive");
 
     private static final Set<String> TOP_LEVEL_SEARCHABLE_FIELDS = Set.of(
             // Root-level fields that have a ".search" subfield
@@ -102,9 +114,12 @@ public class ElasticUtils {
     );
 
     public static final String SPECIES_LIST_ID = "speciesListID";
+    private static final Logger logger = LoggerFactory.getLogger(ElasticUtils.class);
     @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
     @Autowired protected ReleaseMongoRepository releaseMongoRepository;
     @Autowired protected ElasticsearchOperations elasticsearchOperations;
+    @Autowired protected ElasticsearchClient elasticsearchClient;
+
     @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
     @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
 
@@ -112,6 +127,32 @@ public class ElasticUtils {
     @Autowired protected ValidationService validationService;
     @Autowired protected AuthUtils authUtils;
     @Autowired protected MetadataService metadataService;
+
+    @Value("${elastic.maximumDocuments}")
+    public static final int MAX_LIST_ENTRIES = 10000;
+
+    @Value("${elastic.indexName}")
+    public static final String INDEX_NAME = "species-lists";
+
+    @PostConstruct
+    public void updateIndexSettings() {
+        try {
+            Map<String, JsonData> settingsMap = new HashMap<>();
+            settingsMap.put("index.max_result_window", JsonData.of(50000));
+            
+            PutIndicesSettingsRequest updateSettingsRequest = PutIndicesSettingsRequest.of(b -> b
+                .index(INDEX_NAME)
+                .settings(IndexSettings.of(s -> s
+                    .otherSettings(settingsMap)
+                ))
+            );
+            
+            elasticsearchClient.indices().putSettings(updateSettingsRequest);
+            logger.info("Index settings updated successfully with value: " + settingsMap.toString());
+        } catch (Exception e) {
+            logger.error("Failed to update index settings", e);
+        }
+    }
 
     public static SpeciesListItem convert(SpeciesListIndex index) {
         SpeciesListItem speciesListItem = new SpeciesListItem();

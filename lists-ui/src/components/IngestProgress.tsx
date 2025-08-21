@@ -1,17 +1,17 @@
-import { useEffect, useState } from 'react';
 import { Box, em, Group, Paper, Progress, Stepper, Text } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { IngestProgress as IngestProgressType } from '#/api';
+import { useALA } from '#/helpers/context/useALA';
 import {
   faBoxOpen,
   faCheck,
   faList,
   faSearch,
 } from '@fortawesome/free-solid-svg-icons';
-import { useALA } from '#/helpers/context/useALA';
-import { IngestProgress as IngestProgressType } from '#/api';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 // Content / icon definitions for ingestion steps
 const steps = [

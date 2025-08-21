@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
@@ -70,6 +71,8 @@ public class SearchHelperService {
     @Autowired private ElasticsearchOperations elasticsearchOperations;
     @Autowired private SpeciesListMongoRepository speciesListMongoRepository;
 
+    @Value("${elastic.maximumDocuments}")
+    public static final int MAX_LIST_ENTRIES = 10000;
     /**
      * Performs a bulk update on a list of SpeciesListItem objects.
      *
@@ -129,7 +132,7 @@ public class SearchHelperService {
         List<FieldValue> listIDs = speciesListIDs != null ?
                 Arrays.stream(speciesListIDs.split(",")).map(FieldValue::of).toList() : null;
 
-        if (page < 1 || (page * pageSize) > 10000) {
+        if (page < 1 || (page * pageSize) > MAX_LIST_ENTRIES) {
             return new ArrayList<>();
         }
 
@@ -214,7 +217,7 @@ public class SearchHelperService {
                     .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal))
                     .map(list -> FieldValue.of(list.getId())).toList();
 
-            if (page < 1 || (page * pageSize) > 10000 || validIDs.isEmpty()) {
+            if (page < 1 || (page * pageSize) > MAX_LIST_ENTRIES || validIDs.isEmpty()) {
                 return new ArrayList<>();
             }
 

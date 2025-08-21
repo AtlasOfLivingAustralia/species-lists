@@ -21,7 +21,11 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -204,6 +208,8 @@ public class TaxonService {
                 speciesList.getIsAuthoritative() != null ? speciesList.getIsAuthoritative() : false,
                 speciesList.getIsBIE() != null ? speciesList.getIsBIE() : false,
                 speciesList.getIsSDS() != null ? speciesList.getIsSDS() : false,
+                speciesList.getIsThreatened() != null ? speciesList.getIsThreatened() : false,
+                speciesList.getIsInvasive() != null ? speciesList.getIsInvasive() : false,
                 StringUtils.isNotEmpty(speciesList.getRegion()) || StringUtils.isNotEmpty(speciesList.getWkt()),
                 speciesList.getOwner(),
                 speciesList.getEditors(),

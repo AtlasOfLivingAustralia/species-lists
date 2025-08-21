@@ -21,6 +21,7 @@ export const QUERY_LISTS_SEARCH = `query findList($searchQuery: String, $page: I
       isSDS
       isThreatened
       isAuthoritative
+      isInvasive    
       __typename
     }
     totalPages

@@ -89,7 +89,7 @@ enum SortDirection {
   DESC = 'desc',
 }
 
-const maxEntries = 10000; // ES maximumDocuments limit (see elastic.maximumDocuments config in lists-service)
+const maxEntries = import.meta.env.VITE_ES_MAC_DOCUMENTS || 10000; // ES maximumDocuments limit (see elastic.maximumDocuments config in lists-service)
 const classificationFields = ['family', 'kingdom', 'vernacularName', 'matchType'];
 
 export function List() {
