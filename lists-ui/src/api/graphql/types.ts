@@ -179,8 +179,8 @@ interface ListsUser {
 
 interface FilteredSpeciesList {
   content: SpeciesListItem[];
-  totalPages: number;
   totalElements: number;
+  cursor?: string;
 }
 
 interface Constraint {
@@ -215,4 +215,3 @@ export type {
   SpeciesListSubmit,
   UploadResult
 };
-

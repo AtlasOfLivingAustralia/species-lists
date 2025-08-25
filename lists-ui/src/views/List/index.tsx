@@ -115,6 +115,10 @@ export function List() {
     'page',
     parseAsInteger.withDefault(0)
   );
+  const [cursor, setCursor] = useQueryState<string>(
+    'cursor',
+    parseAsString.withDefault('')
+  );
   const [size, setSize] = useQueryState<number>(
     'size',
     parseAsInteger.withDefault(20)
@@ -151,6 +155,10 @@ export function List() {
   const intl = useIntl();
 
   // Selection drawer
+  // NOTE: To use cursor-based pagination, you will need to ensure your GraphQL query
+  // (likely `queries.QUERY_LISTS_GET` in your API file) is updated to call the
+  // `filterSpeciesListCursor` endpoint and accepts a `cursor` argument instead of `page`.
+
   const [opened, { open, close }] = useDisclosure();
   const [selected, setSelected] = useState<SpeciesListItem | null>(null);
   // If we're on the reingest page
@@ -189,7 +197,8 @@ export function List() {
   }, [id]);
 
   // Destructure results & calculate the real page offset
-  const { totalElements, totalPages } = list || { totalElements: 0, totalPages: 0 };
+  const { totalElements } = list || { totalElements: 0 };
+  const totalPages = size > 0 ? Math.ceil(totalElements / size) : 0;
   let totalEntries = totalElements;
 
   if (totalElements == maxEntries) {
@@ -220,8 +229,8 @@ export function List() {
           {
             speciesListID: id,
             searchQuery: searchDebounced,
-            page,
             size,
+            cursor,
             filters, // filters: toKV(filters),
             isPrivate: false,
             sort,
@@ -246,12 +255,7 @@ export function List() {
 
     if (mounted) runQuery();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, size, filters, searchDebounced, refresh, sort, dir, isReingest]);
-
-  // Keep the current page in check
-  useEffect(() => {
-    if (totalPages && page >= totalPages) setPage(totalPages - 1);
-  }, [page, totalPages]);
+  }, [cursor, size, filters, searchDebounced, refresh, sort, dir, isReingest]);
 
   const handleSortClick = useCallback(
     (newSort: string) => {
@@ -263,6 +267,8 @@ export function List() {
         setSort(newSort);
         setDir(SortDirection.DESC);
       }
+      setCursor('');
+      setPage(0);
     },
     [sort, dir]
   );
@@ -274,24 +280,22 @@ export function List() {
 
   const resetFilters = useCallback(
     () => {
-      setPage(0); // Reset 'page' when filters are reset
+      setCursor(''); // Reset to first page
+      setPage(0);
       setFilters([]);
     },[filters]
   );
 
   const handleSizeChange = (newSize: string | null) => {
     const newSizeInt = parseInt(newSize || '20');
-    // Ensure we don't try to query beyond what exists
-    if (realPage * newSizeInt > totalElements) {
-      setPage(Math.floor(totalElements / newSizeInt));
-    }
-
     setSize(newSizeInt);
+    setCursor('');
+    setPage(0);
   };
 
   // Retry handler
   const handleRetry = useCallback(() => {
-    setPage(0);
+    setCursor('');
     setSize(20);
     setSearch('');
     setRefresh(!refresh);
@@ -409,13 +413,15 @@ export function List() {
         )
       ) {
         setFilters(
-          (filters || []).filter(
+          (f) => (f || []).filter(
             ({ key, value }) => filter.key !== key || filter.value !== value
           )
         );
       } else {
-        setFilters([...(filters || []), filter]);
+        setFilters((f) => [...(f || []), filter]);
       }
+      setCursor('');
+      setPage(0);
     },
     [filters]
   );
@@ -539,7 +545,8 @@ export function List() {
                     disabled={hasError}
                     value={search}
                     onChange={(event) => {
-                      setSearch(event.currentTarget.value);
+                      setSearch(event.currentTarget.value)
+                      setCursor('');
                       setPage(0);
                     }}
                     placeholder={intl.formatMessage({ id: 'search.input.placeholder', defaultMessage: 'Search within list' })}
@@ -733,18 +740,37 @@ export function List() {
                       </Table.Tbody>
                     </Table>
                   )}
-                  <Center mt='xl'>
-                    <Pagination
-                      disabled={(totalPages || 0) < 1 || hasError}
-                      value={realPage}
-                      onChange={(value) => setPage(value - 1)}
-                      total={totalPages || 9}
-                      radius='md'
-                      getControlProps={(control) => ({
-                        'aria-label': `${control} page`,
-                      })}
-                    />
-                  </Center>
+                    <Center mt='xl'>
+                      <Pagination.Root
+                        disabled={(totalPages || 0) < 1 || hasError}
+                        value={realPage}
+                        onChange={(value) => {
+                          // With cursor-based pagination, we can only reliably go to the next page
+                          // or back to the first page.
+                          if (value === realPage + 1 && list?.cursor) {
+                            // User clicked "Next", so we use the cursor from the current response.
+                            setCursor(list.cursor);
+                            setPage(value - 1);
+                          } else {
+                            // For any other page jump (e.g., "Previous", a specific page number, or first page),
+                            // we must reset to the first page by clearing the cursor.
+                            setCursor('');
+                            setPage(0);
+                          }
+                        }}
+                        total={totalPages || 1}
+                        radius='md'
+                        // getControlProps={(control) => ({
+                        // 'aria-label': `${control} page`,
+                        // })}
+                      >
+                        <Group gap={5} justify="center">
+                          <Pagination.First />
+                          <Pagination.Previous />
+                          <Pagination.Next />
+                        </Group>
+                      </Pagination.Root>
+                    </Center>
                 </Box>
               </Grid.Col>
               <Grid.Col span={12} py='xl'>

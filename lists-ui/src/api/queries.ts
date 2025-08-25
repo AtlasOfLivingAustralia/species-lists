@@ -43,7 +43,7 @@ export const QUERY_LISTS_GET = `query loadList(
   $speciesListID: String!
   $searchQuery: String
   $filters: [Filter]
-  $page: Int
+  $cursor: String
   $size: Int
   $sort: String
   $dir: String
@@ -74,10 +74,10 @@ export const QUERY_LISTS_GET = `query loadList(
     isSDS
     isThreatened
   }
-  list: filterSpeciesList(
+  list: filterSpeciesListCursor(
     speciesListID: $speciesListID
     searchQuery: $searchQuery
-    page: $page
+    cursor: $cursor
     size: $size
     filters: $filters
     sort: $sort
@@ -123,8 +123,9 @@ export const QUERY_LISTS_GET = `query loadList(
       lastUpdated
       lastUpdatedBy
     }
-    totalPages
     totalElements
+    cursor
+    hasNext
   }
   facets: facetSpeciesList(
     speciesListID: $speciesListID

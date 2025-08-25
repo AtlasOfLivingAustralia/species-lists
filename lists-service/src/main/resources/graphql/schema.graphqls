@@ -5,8 +5,11 @@ type Query {
   listReleases(speciesListID: String, page:Int = 0, size: Int = 10): [Release]
   getSpeciesListMetadata(speciesListID: String!): SpeciesList
   getSpeciesList(speciesListID: String, page:Int = 0, size: Int = 10): SpeciesListItemPage
+  getSpeciesListCursor(speciesListID: String, cursor:String, size: Int = 10): SpeciesListItemCursorPage
   filterSpeciesList(speciesListID: String!, searchQuery: String, filters:[Filter],
     page:Int = 0, size: Int = 10, sort: String = "scientificName", dir: String = "asc"): SpeciesListItemPage
+  filterSpeciesListCursor(speciesListID: String!, searchQuery: String, filters:[Filter],
+    cursor:String, size: Int = 10, sort: String = "scientificName", dir: String = "asc"): SpeciesListItemCursorPage
   facetSpeciesList(speciesListID: String!, searchQuery:String, filters:[Filter], facetFields:[String], page:Int = 0, size: Int = 10): [Facet]
   facetSpeciesLists(searchQuery:String, filters:[Filter], facetFields:[String], page:Int = 0, size: Int = 10, userId:String, isPrivate: Boolean = false): [Facet]
   getTaxonImage(taxonID:String): Image
@@ -121,11 +124,17 @@ input InputSpeciesListItem {
   properties: [InputKeyValue]
 }
 
-
 type SpeciesListItemPage {
   content: [SpeciesListItem]
   totalPages: Int
   currentPage: Int
+  totalElements: Int
+}
+
+type SpeciesListItemCursorPage {
+  content: [SpeciesListItem]
+  cursor: String
+  hasNext: Boolean
   totalElements: Int
 }
 

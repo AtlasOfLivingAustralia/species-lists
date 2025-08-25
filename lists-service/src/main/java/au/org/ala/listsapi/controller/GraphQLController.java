@@ -18,6 +18,8 @@ import java.net.URL;
 import java.security.Principal;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
@@ -44,6 +46,7 @@ import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregatio
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHitSupport;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
@@ -63,6 +66,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import au.org.ala.listsapi.model.Classification;
 import au.org.ala.listsapi.model.ConstraintType;
+import au.org.ala.listsapi.model.CursorPage;
 import au.org.ala.listsapi.model.Facet;
 import au.org.ala.listsapi.model.FacetCount;
 import au.org.ala.listsapi.model.Filter;
@@ -404,6 +408,16 @@ public class GraphQLController {
             @AuthenticationPrincipal Principal principal) {
         return filterSpeciesList(
                 speciesListID, null, new ArrayList<>(), page, size, null, null, principal);
+    }
+
+    @QueryMapping
+    public CursorPage<SpeciesListItem> getSpeciesList2(
+            @Argument String speciesListID,
+            @Argument Integer size,
+            @Argument String cursor,
+            @AuthenticationPrincipal Principal principal) {
+        return filterSpeciesListCursor(
+                speciesListID, null, new ArrayList<>(), cursor, size, null, null, principal);
     }
 
     @SchemaMapping(typeName = "Mutation", field = "addField")
@@ -1060,6 +1074,113 @@ public class GraphQLController {
                 }); // End of facetFields.forEach
 
         return facets;
+    }
+
+    @QueryMapping
+    public CursorPage<SpeciesListItem> filterSpeciesListCursor(
+            @Argument String speciesListID,
+            @Argument String searchQuery,
+            @Argument List<Filter> filters,
+            @Argument String cursor, // Base64 encoded sort values
+            @Argument Integer size,
+            @Argument String sort,
+            @Argument String dir,
+            @AuthenticationPrincipal Principal principal) {
+
+        // Your existing authorization code...
+        String ID = getSpeciesListId(speciesListID, principal);
+        
+        size = Math.min(size, 10000); // Cap at 10k per request
+        
+        NativeQueryBuilder builder = NativeQuery.builder().withPageable(PageRequest.of(0, size));
+        builder.withTrackTotalHits(true);
+        AlaUserProfile profile = authUtils.getUserProfile(principal);
+        Boolean isAdmin = authUtils.hasAdminRole(profile) || authUtils.hasInternalScope(profile);
+        
+        builder.withQuery(
+                q -> q.bool(
+                        bq -> {
+                            ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), ID, null, isAdmin, null, filters, bq);
+                            return bq;
+                        }));
+
+        // Add sort
+        builder.withSort(
+                s -> s.field(
+                        new FieldSort.Builder()
+                                .field(sort)
+                                .order(dir.equals("asc") ? SortOrder.Asc : SortOrder.Desc)
+                                .build()));
+        
+        // Add search_after if cursor provided
+        if (cursor != null && !cursor.isEmpty()) {
+            List<Object> searchAfter = decodeCursor(cursor);
+            builder.withSearchAfter(searchAfter);
+        }
+
+        Query query = builder.build();
+        SearchHits<SpeciesListIndex> results = elasticsearchOperations.search(
+                query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
+
+        List<SearchHit<SpeciesListIndex>> hits = results.getSearchHits();
+        List<SpeciesListItem> speciesLists = hits.stream()
+                .map(hit -> ElasticUtils.convert(hit.getContent()))
+                .collect(Collectors.toList());
+
+        // Generate next cursor
+        String cursorValue = null;
+        if (!hits.isEmpty()) {
+            SearchHit<SpeciesListIndex> lastHit = hits.get(hits.size() - 1);
+            cursorValue = encodeCursor(lastHit.getSortValues().toArray());
+        }
+
+        CursorPage<SpeciesListItem> page = new CursorPage<>(speciesLists, cursorValue, results.getTotalHits());
+        
+        return page;
+    }
+
+    // Helper methods for cursor encoding/decoding
+    private String encodeCursor(Object[] sortValues) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            String json = mapper.writeValueAsString(sortValues);
+            return Base64.getEncoder().encodeToString(json.getBytes());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to encode cursor", e);
+        }
+    }
+
+    private List<Object> decodeCursor(String cursor) {
+        try {
+            byte[] decoded = Base64.getDecoder().decode(cursor);
+            String json = new String(decoded);
+            ObjectMapper mapper = new ObjectMapper();
+            Object[] array = mapper.readValue(json, Object[].class);
+            return Arrays.asList(array);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to decode cursor", e);
+        }
+    }
+
+    // Helper method to extract species list ID logic
+    private String getSpeciesListId(String speciesListID, Principal principal) {
+        if (speciesListID == null) return null;
+        
+        Optional<SpeciesList> speciesListOptional = speciesListMongoRepository
+                .findByIdOrDataResourceUid(speciesListID, speciesListID);
+
+        if (speciesListOptional.isEmpty()) {
+            return null;
+        }
+
+        final SpeciesList speciesList = speciesListOptional.get();
+        
+        if (speciesList.getIsPrivate() && !authUtils.isAuthorized(speciesList, principal)) {
+            logger.info("User not authorized to private access list: " + speciesListID);
+            throw new AccessDeniedException("You dont have access to this list");
+        }
+
+        return speciesList.getId();
     }
 
     @QueryMapping
