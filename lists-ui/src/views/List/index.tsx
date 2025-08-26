@@ -22,6 +22,7 @@ import {
   Pagination,
   Paper,
   Select,
+  Skeleton,
   Space,
   Stack,
   Table,
@@ -135,7 +136,6 @@ export function List() {
   const [hidefilters, setHideFilters] = useQueryState<boolean>('hideFilters', parseAsBoolean.withDefault(false)); 
   const toggleFilters = () => setHideFilters((o) => !o);
 
-
   // Internal state (not driven by search params)
   const [facets, setFacets] = useState<Facet[]>([]);
   const [error, setError] = useState<Error | null>(null);
@@ -144,6 +144,7 @@ export function List() {
   const [rematching, setRematching] = useState<boolean>(false);
   const [lastProgress, setLastProgress] = useState<boolean>(false);
   const [pageTitle, setPageTitle] = useState<string | null>(null);
+  const [paginationLoading, setPaginationLoading] = useState<boolean>(false);
 
   const location = useLocation();
   const mounted = useMounted();
@@ -241,6 +242,8 @@ export function List() {
         if (error !== 'New GraphQL request invoked') {
           setError(error as Error);
         }
+      } finally {
+        setPaginationLoading(false);
       }
     }
 
@@ -646,104 +649,123 @@ export function List() {
                 )}
                 <Box style={{ overflowX: 'auto' }}>
                   {error ? (
-                    <Message
-                      title={intl.formatMessage({ id: 'list.page.error.title', defaultMessage: 'An error occured' })}
-                      subtitle={getErrorMessage(error)}
-                      icon={<StopIcon size={18} />}
-                      action={intl.formatMessage({ id: 'retry', defaultMessage: 'Retry' })}
-                      onAction={handleRetry}
-                    />
+                  <Message
+                    title={intl.formatMessage({ id: 'list.page.error.title', defaultMessage: 'An error occured' })}
+                    subtitle={getErrorMessage(error)}
+                    icon={<StopIcon size={18} />}
+                    action={intl.formatMessage({ id: 'retry', defaultMessage: 'Retry' })}
+                    onAction={handleRetry}
+                  />
                   ) : totalElements === 0 ? (
-                    <Message />
+                  <Message />
+                  ) : paginationLoading ? (
+                    <Stack gap="xs" mt={4}>
+                      {[...Array(size)].map((_, i) => (
+                      <Skeleton key={i} height={i === 0 ? 42 : 30} radius={4} />
+                      ))}
+                    </Stack>
                   ) : (
-                    <Table
-                      highlightOnHover
-                      classNames={tableClasses}
-                      withColumnBorders
-                      withRowBorders
-                    >
-                      <Table.Thead>
-                        <Table.Tr>
-                          <ThSortable
-                            active={sort === 'scientificName'}
-                            dir={dir}
-                            onSort={() => handleSortClick('scientificName')}
-                          >
-                            <FormattedMessage id='suppliedName' defaultMessage='Supplied name' />
-                          </ThSortable>
-                          <ThSortable
-                            active={sort === 'classification.scientificName'}
-                            dir={dir}
-                            onSort={() =>
-                              handleSortClick('classification.scientificName')
-                            }
-                          >
-                            <FormattedMessage
-                              id='scientificName'
-                              defaultMessage='Scientific name'
-                            />
-                          </ThSortable>
-                          {meta!.fieldList.map((field) => (
-                            <ThEditable
-                              key={field}
-                              id={meta!.id}
-                              editing={editing}
-                              field={field}
-                              token={ala.token || ''}
-                              onDelete={() => handleFieldDeleted(field)}
-                              onRename={(newField) =>
-                                handleFieldRenamed(field, newField)
-                              }
-                            />
-                          ))}
-                          {editing && (
-                            <ThCreate
-                              id={meta!.id}
-                              token={ala.token || ''}
-                              onCreate={handleFieldCreated}
-                            />
-                          )}
-                          {classificationFields.map((field) => (
-                            <ThSortable
-                              key={field}
-                              active={sort === `classification.${field}`}
-                              dir={dir}
-                              onSort={() =>
-                                handleSortClick(`classification.${field}`)
-                              }
-                            >
-                              <FormattedMessage
-                                id={`classification.${field ? field : 'none'}`}
-                              />
-                            </ThSortable>
-                          ))}
-                        </Table.Tr>
-                      </Table.Thead>
-                      <Table.Tbody>
-                        {list!.content.map((item) => (
-                          <TrItem
-                            key={item.id}
-                            row={item}
-                            fields={meta!.fieldList}
-                            classification={classificationFields}
-                            editing={editing}
-                            onClick={() => handleRowClick(item)}
-                          />
-                        ))}
-                      </Table.Tbody>
-                    </Table>
+                  <Table
+                    highlightOnHover
+                    classNames={tableClasses}
+                    withColumnBorders
+                    withRowBorders
+                  >
+                    <Table.Thead>
+                    <Table.Tr>
+                      <ThSortable
+                      active={sort === 'scientificName'}
+                      dir={dir}
+                      onSort={() => handleSortClick('scientificName')}
+                      >
+                      <FormattedMessage id='suppliedName' defaultMessage='Supplied name' />
+                      </ThSortable>
+                      <ThSortable
+                      active={sort === 'classification.scientificName'}
+                      dir={dir}
+                      onSort={() =>
+                        handleSortClick('classification.scientificName')
+                      }
+                      >
+                      <FormattedMessage
+                        id='scientificName'
+                        defaultMessage='Scientific name'
+                      />
+                      </ThSortable>
+                      {meta!.fieldList.map((field) => (
+                      <ThEditable
+                        key={field}
+                        id={meta!.id}
+                        editing={editing}
+                        field={field}
+                        token={ala.token || ''}
+                        onDelete={() => handleFieldDeleted(field)}
+                        onRename={(newField) =>
+                        handleFieldRenamed(field, newField)
+                        }
+                      />
+                      ))}
+                      {editing && (
+                      <ThCreate
+                        id={meta!.id}
+                        token={ala.token || ''}
+                        onCreate={handleFieldCreated}
+                      />
+                      )}
+                      {classificationFields.map((field) => (
+                      <ThSortable
+                        key={field}
+                        active={sort === `classification.${field}`}
+                        dir={dir}
+                        onSort={() =>
+                        handleSortClick(`classification.${field}`)
+                        }
+                      >
+                        <FormattedMessage
+                        id={`classification.${field ? field : 'none'}`}
+                        />
+                      </ThSortable>
+                      ))}
+                    </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                    {list!.content.map((item) => (
+                      <TrItem
+                      key={item.id}
+                      row={item}
+                      fields={meta!.fieldList}
+                      classification={classificationFields}
+                      editing={editing}
+                      onClick={() => handleRowClick(item)}
+                      />
+                    ))}
+                    </Table.Tbody>
+                  </Table>
                   )}
                   <Center mt='xl'>
-                    <Pagination
-                      disabled={(totalPages || 0) < 1 || hasError}
-                      value={realPage}
-                      onChange={(value) => setPage(value - 1)}
-                      total={totalPages || 9}
-                      radius='md'
-                      getControlProps={(control) => ({
-                        'aria-label': `${control} page`,
-                      })}
-                    />
+                  <Pagination
+                    disabled={(totalPages || 0) < 1 || hasError}
+                    value={realPage}
+                    onChange={(value) => {
+                    setPaginationLoading(true);
+                    setPage(value - 1);
+                    }}
+                    total={totalPages || 9}
+                    radius='md'
+                    siblings={2}
+                    getControlProps={(control) => ({
+                    'aria-label': `${control} page`,
+                    })}
+                    getItemProps={(page) => {
+                    // Hide the last page number button (but keep navigation arrows)
+                    if (page === totalPages) {
+                      return {
+                      style: { display: 'none' }
+                      };
+                    }
+                    return {};
+                    }}
+                  /> 
                   </Center>
                 </Box>
               </Grid.Col>
