@@ -136,9 +136,9 @@
   "reingest.error.message.title": "An error has occurred",
   "reingest.error.message.tryAgain": "please try again with another file",
 
-  "add.species.title": "Add a new taxon entry",
-  "add.taxa.label": "Add taxon",
-  "search.input.placeholder": "Search lists by name or taxa",
+  "add.species.title": "Add a new entry to the list",
+  "add.taxa.label": "Add species",
+  "search.input.placeholder": "Search lists by name or species",
   "search.input.label": "Search input",
   "search.clear.label": "Clear search",
   "list.page.size.label": "Select number of results",
@@ -190,8 +190,9 @@
   "actions.rematchList": "Rematch list",
   "actions.reingestList": "Reingest list",
   "actions.deleteList": "Delete list",
-  "actions.editFields": "Edit fields",
+  "actions.editFields": "Edit column headings",
   "actions.distinctValues": "distinct",
+  "actions.edit.field.tooltip": "Edit custom field column headers",
 
   "region.": "None",
   "region.OTH": "Other",

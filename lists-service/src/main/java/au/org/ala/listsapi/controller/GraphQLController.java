@@ -134,6 +134,8 @@ public class GraphQLController {
             "isBIE",
             "listType",
             "isAuthoritative",
+            "isThreatened",
+            "isInvasive",
             "hasRegion",
             "isSDS",
             "tags");
@@ -651,6 +653,8 @@ public class GraphQLController {
                 speciesList.getIsAuthoritative() != null ? speciesList.getIsAuthoritative() : false,
                 speciesList.getIsBIE() != null ? speciesList.getIsBIE() : false,
                 speciesList.getIsSDS() != null ? speciesList.getIsSDS() : false,
+                speciesList.getIsThreatened() != null ? speciesList.getIsThreatened() : false,
+                speciesList.getIsInvasive() != null ? speciesList.getIsInvasive() : false,
                 StringUtils.isNotEmpty(speciesList.getRegion()) || StringUtils.isNotEmpty(speciesList.getWkt()),
                 speciesList.getOwner(),
                 speciesList.getEditors(),
@@ -944,6 +948,8 @@ public class GraphQLController {
         facetFields.add("isSDS");
         facetFields.add("hasRegion");
         facetFields.add("tags");
+        facetFields.add("isThreatened");
+        facetFields.add("isInvasive");
 
         // Define the name for the nested cardinality aggregation
         String distinctCountAggName = "distinct_species_list_count";

@@ -747,23 +747,24 @@ export function List() {
                     disabled={(totalPages || 0) < 1 || hasError}
                     value={realPage}
                     onChange={(value) => {
-                    setPaginationLoading(true);
-                    setPage(value - 1);
+                      if (paginationLoading) return; // better than setting paginationLoading in disabled property as UI jitters when that is used
+                      setPaginationLoading(true);
+                      setPage(value - 1);
                     }}
                     total={totalPages || 9}
                     radius='md'
                     siblings={2}
                     getControlProps={(control) => ({
-                    'aria-label': `${control} page`,
+                      'aria-label': `${control} page`,
                     })}
                     getItemProps={(page) => {
-                    // Hide the last page number button (but keep navigation arrows)
-                    if (page === totalPages) {
-                      return {
-                      style: { display: 'none' }
-                      };
-                    }
-                    return {};
+                      // Hide the last page number button (but keep navigation arrows)
+                      if (page === totalPages) {
+                        return {
+                        style: { display: 'none' }
+                        };
+                      }
+                      return {};
                     }}
                   /> 
                   </Center>
