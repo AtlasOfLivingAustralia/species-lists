@@ -33,6 +33,8 @@ import lombok.experimental.SuperBuilder;
  * SpeciesListIndex is a model/bean that represents a single elastic search document and
  * each entry corresponds to a denormalised taxon row entry for a species list. Individual 
  * lists are represented by aggregating the entries for each list's taxa in the index.
+ * Note: any changes to this file will require the ElasticSearch index to be deleted, 
+ * recreated and reindexed again. Otherwise the mappings.jon file is not sent to the server.
  */
 @Document(indexName = "species-lists", createIndex = true)
 @Setting(settingPath = "/elasticsearch/settings.json")
