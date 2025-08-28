@@ -401,7 +401,7 @@ export function Actions({
               withBorder
             >
               <Group gap='xs'>
-                <Tooltip label={intl.formatMessage({ id: 'actions.editMetadata', defaultMessage: 'Edit metadata' })} position='left'>
+                <Tooltip label={intl.formatMessage({ id: 'actions.editMetadata', defaultMessage: 'Edit metadata' })} withArrow position='bottom'>
                   <ActionIcon
                     onClick={handleMetaEdit}
                     disabled={rematching || deleting}
@@ -414,7 +414,7 @@ export function Actions({
                     <FontAwesomeIcon size='sm' icon={faEdit} />
                   </ActionIcon>
                 </Tooltip>
-                <Tooltip label={intl.formatMessage({ id: 'actions.rematchList', defaultMessage: 'Rematch list' })} position='left'>
+                <Tooltip label={intl.formatMessage({ id: 'actions.rematchList', defaultMessage: 'Rematch list' })} withArrow position='bottom'>
                   <ActionIcon
                     onClick={handleRematch}
                     disabled={updating || deleting}
@@ -427,7 +427,7 @@ export function Actions({
                     <FontAwesomeIcon size='sm' icon={faRefresh} />
                   </ActionIcon>
                 </Tooltip>
-                <Tooltip label={intl.formatMessage({ id: 'actions.reingestList', defaultMessage: 'Reingest list' })} position='left'>
+                <Tooltip label={intl.formatMessage({ id: 'actions.reingestList', defaultMessage: 'Reingest list' })} withArrow position='bottom'>
                   <ActionIcon
                     onClick={handleReingest}
                     disabled={updating || deleting || rematching}
@@ -439,7 +439,7 @@ export function Actions({
                     <FontAwesomeIcon size='sm' icon={faUpload} />
                   </ActionIcon>
                 </Tooltip>
-                <Tooltip label={intl.formatMessage({ id: 'actions.deleteList', defaultMessage: 'Delete list' })} position='left'>
+                <Tooltip label={intl.formatMessage({ id: 'actions.deleteList', defaultMessage: 'Delete list' })} withArrow position='bottom'>
                   <ActionIcon
                     onClick={handleDelete}
                     disabled={updating || rematching}
@@ -453,29 +453,37 @@ export function Actions({
                   </ActionIcon>
                 </Tooltip>
               </Group>
-              <Group gap='sm' mt='md'>
-                <Switch
-                  disabled={updating || rematching || deleting}
-                  mr='xs'
-                  size='xs'
-                  label={intl.formatMessage({ id: 'actions.editFields', defaultMessage: 'Edit fields' })}
-                  checked={editing}
-                  onChange={(ev) => onEditingChange(ev.currentTarget.checked)}
-                />
-                {!isReingest && (
-                  <Button
-                    radius='lg'
+              <Stack gap='sm' mt='md'>
+                <Tooltip  
+                  label={intl.formatMessage({ id: 'actions.edit.field.tooltip', defaultMessage: 'Edit custom field column headers' })} 
+                  refProp="rootRef"
+                  withArrow 
+                  position='bottom'
+                >
+                  <Switch
+                    disabled={updating || rematching || deleting}
+                    mr='xs'
                     size='xs'
-                    leftSection={<FontAwesomeIcon icon={faPlus} />}
-                    variant='light'
-                    onClick={handleAddClick}
-                    title={intl.formatMessage({ id: 'add.species.title', defaultMessage: 'Add a new taxon entry' })}
-                    aria-label={intl.formatMessage({ id: 'add.species.title', defaultMessage: 'Add a new taxon entry' })}
-                  >
-                    <FormattedMessage id='add.taxa.label' defaultMessage='Add taxa' />
+                    label={intl.formatMessage({ id: 'actions.editFields', defaultMessage: 'Edit column headings' })}
+                    checked={editing}
+                    onChange={(ev) => onEditingChange(ev.currentTarget.checked)}
+                  />
+                </Tooltip>
+                {!isReingest && (
+                  <Tooltip label={intl.formatMessage({ id: 'add.species.title', defaultMessage: 'Add a new taxon entry' })} withArrow position='bottom'>
+                    <Button
+                      radius='lg'
+                      size='xs'
+                      leftSection={<FontAwesomeIcon icon={faPlus} />}
+                      variant='light'
+                      onClick={handleAddClick}
+                      aria-label={intl.formatMessage({ id: 'add.species.title', defaultMessage: 'Add a new taxon entry' })}
+                    >
+                    <FormattedMessage id='add.taxa.label' defaultMessage='Add species' />
                   </Button>
+                  </Tooltip>
                 )}
-                </Group>
+                </Stack>
             </Paper>
           </>
           )}

@@ -173,6 +173,8 @@ public class UploadService {
         speciesList.setIsThreatened(Boolean.parseBoolean(speciesListMetadata.getIsThreatened()));
         speciesList.setIsSDS(Boolean.parseBoolean(speciesListMetadata.getIsSDS()));
         speciesList.setIsBIE(Boolean.parseBoolean(speciesListMetadata.getIsBIE()));
+        speciesList.setIsThreatened(Boolean.parseBoolean(speciesListMetadata.getIsThreatened()));
+        speciesList.setIsInvasive(Boolean.parseBoolean(speciesListMetadata.getIsInvasive()));
         speciesList.setLicence(speciesListMetadata.getLicence());
         speciesList.setListType(speciesListMetadata.getListType());
         speciesList.setRegion(speciesListMetadata.getRegion());
