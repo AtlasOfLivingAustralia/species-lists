@@ -63,7 +63,9 @@ public class SpeciesListIndex {
     private boolean isAuthoritative;
     private boolean isBIE;
     private boolean isSDS;
+    @JsonProperty("isThreatened")
     private boolean isThreatened;
+    @JsonProperty("isInvasive")
     private boolean isInvasive;
     private boolean hasRegion;
     private String owner;

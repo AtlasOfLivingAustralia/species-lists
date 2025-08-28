@@ -792,6 +792,8 @@ public class GraphQLController {
                     || isAuthoritative != null && !isAuthoritative.equals(toUpdate.getIsAuthoritative())
                     || isBIE != null && !isBIE.equals(toUpdate.getIsBIE())
                     || isSDS != null && !isSDS.equals(toUpdate.getIsSDS())
+                    || isInvasive != null && !isInvasive.equals(toUpdate.getIsInvasive())
+                    || isThreatened != null && !isThreatened.equals(toUpdate.getIsThreatened())
                     || wkt != null && !wkt.equals(toUpdate.getWkt())
                     || region != null && !region.equals(toUpdate.getRegion())
                     || licence != null && !licence.equals(toUpdate.getLicence())
@@ -957,7 +959,7 @@ public class GraphQLController {
         String speciesListIdKeywordField = SPECIES_LIST_ID + ".keyword";
 
         // Define which of the facet fields are boolean
-        Set<String> booleanFacetFields = Set.of("isAuthoritative", "isBIE", "isSDS", "hasRegion");
+        Set<String> booleanFacetFields = Set.of("isAuthoritative", "isBIE", "isSDS", "hasRegion", "isThreatened", "isInvasive");
 
         for (String facetField : facetFields) {
             // Determine the correct field for the terms aggregation
