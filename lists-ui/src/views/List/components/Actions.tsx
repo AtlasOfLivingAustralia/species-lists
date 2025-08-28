@@ -453,10 +453,15 @@ export function Actions({
                   </ActionIcon>
                 </Tooltip>
               </Group>
-              <Stack gap='sm' mt='md'> check is {rematching || deleting ? 'disabled' : 'enabled'}
-                <Tooltip label={intl.formatMessage({ id: 'actions.edit.field.tooltip', defaultMessage: 'Edit custom field column headers' })} withArrow position='bottom'>
+              <Stack gap='sm' mt='md'>
+                <Tooltip  
+                  label={intl.formatMessage({ id: 'actions.edit.field.tooltip', defaultMessage: 'Edit custom field column headers' })} 
+                  refProp="rootRef"
+                  withArrow 
+                  position='bottom'
+                >
                   <Switch
-                    data-disabled={updating || rematching || deleting}
+                    disabled={updating || rematching || deleting}
                     mr='xs'
                     size='xs'
                     label={intl.formatMessage({ id: 'actions.editFields', defaultMessage: 'Edit column headings' })}
