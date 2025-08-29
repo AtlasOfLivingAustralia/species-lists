@@ -71,6 +71,12 @@ export function ListRow({ list, isUser }: ListRowProps) {
               { list?.isBIE && (
                 <><Space w={3} /><ListTypeBadge listTypeValue='isBIE'/></>
               )}
+              { list?.isThreatened && (
+                <><Space w={3} /><ListTypeBadge listTypeValue='isThreatened'/></>
+              )}
+              { list?.isInvasive && (
+                <><Space w={3} /><ListTypeBadge listTypeValue='isInvasive'/></>
+              )}
               { list?.region && list.region.trim() !== '' && (
                 // Not currently used as GraphQL is not reuturning this field
                 <><Space w={3} /><ListTypeBadge listTypeValue='hasRegion'/></>

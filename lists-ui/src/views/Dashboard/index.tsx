@@ -53,7 +53,7 @@ function Dashboard() {
           if (auth.isAuthenticated) {
             handleSignout(auth);
           } else {
-            auth.signinRedirect({ redirect_uri: window.location.href });
+            auth.signinRedirect();
           }
         }}
         onSearchClick={() => (window.location.href = 'https://bie.ala.org.au')
