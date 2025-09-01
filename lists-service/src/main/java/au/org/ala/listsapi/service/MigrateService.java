@@ -1,262 +1,280 @@
 package au.org.ala.listsapi.service;
 
-import au.org.ala.listsapi.model.IngestJob;
-import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-import au.org.ala.listsapi.service.auth.WebService;
-import au.org.ala.ws.security.TokenService;
-import com.nimbusds.oauth2.sdk.token.AccessToken;
 import org.apache.commons.io.FileUtils;
 import org.apache.http.entity.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.client.RequestCallback;
 import org.springframework.web.client.RestTemplate;
+
+import com.nimbusds.oauth2.sdk.token.AccessToken;
+
+import au.org.ala.listsapi.model.ConstraintListItem;
+import au.org.ala.listsapi.model.ConstraintType;
+import au.org.ala.listsapi.model.IngestJob;
+import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import au.org.ala.listsapi.service.auth.WebService;
+import au.org.ala.ws.security.TokenService;
+import jakarta.annotation.PostConstruct;
 
 @Service
 public class MigrateService {
 
-  private static final Logger logger = LoggerFactory.getLogger(MigrateService.class);
+    private static final Logger logger = LoggerFactory.getLogger(MigrateService.class);
 
-  @Autowired SpeciesListMongoRepository speciesListMongoRepository;
-  @Autowired UploadService uploadService;
-  @Autowired ReleaseService releaseService;
-  @Autowired ProgressService progressService;
-  @Autowired UserdetailsService userdetailsService;
-  @Autowired WebService webService;
-  @Autowired TokenService tokenService;
+    @Autowired
+    SpeciesListMongoRepository speciesListMongoRepository;
+    @Autowired
+    UploadService uploadService;
+    @Autowired
+    ReleaseService releaseService;
+    @Autowired
+    ProgressService progressService;
+    @Autowired
+    UserdetailsService userdetailsService;
+    @Autowired
+    WebService webService;
+    @Autowired
+    TokenService tokenService;
+    @Autowired
+    ValidationService validationService;
 
-  String tempDir;
-  String migrateUrl;
+    String tempDir;
+    String migrateUrl;
 
-  private final RestTemplate restTemplate;
-  private final String ALL_LISTS = "/ws/speciesList?max=1000";
+    private final RestTemplate restTemplate;
 
-  public MigrateService(
-      SpeciesListMongoRepository speciesListMongoRepository,
-      UploadService uploadService,
-      ReleaseService releaseService,
-      @Value("${temp.dir:/tmp}") String tempDir,
-      @Value("${migrate.url:https://lists.ala.org.au}") String migrateUrl,
-      RestTemplate restTemplate) {
+    private String defaultLicence;
 
-    this.speciesListMongoRepository = speciesListMongoRepository;
-    this.uploadService = uploadService;
-    this.releaseService = releaseService;
-    this.tempDir = tempDir;
-    this.migrateUrl = migrateUrl;
-    this.restTemplate = restTemplate;
-  }
-
-  private List<SpeciesList> fetchLegacyLists(int offset) {
-    try {
-      Map params = Map.of("offset", String.valueOf(offset), "max", "1000", "includePrivate", "true");
-      Map request = webService.get(
-              migrateUrl + "/ws/speciesListInternal",
-              params,
-              ContentType.APPLICATION_JSON,
-              true,
-              false,
-              null
-      );
-
-      if ((int)request.get("statusCode") == 200) {
-        Map response = (Map)request.get("resp");
-        List<Map<String, Object>> lists = (List<Map<String, Object>>) response.get("lists");
-
-        return lists.stream().map(this::mapListToSpeciesList).filter(Objects::nonNull).toList();
-      }
-
-      throw new Error("Got non-success response from legacy lists API call.");
-
-    } catch (Exception e) {
-      logger.error(e.getMessage(), e);
+    @PostConstruct
+    private void initializeDefaultLicence() {
+        List<ConstraintListItem> licenceValues = validationService.getConstraintsByKey(ConstraintType.licence);
+        // Get the second licence value (first is CC0) if it exists, otherwise default to "CC-BY"
+        defaultLicence = (licenceValues != null && !licenceValues.isEmpty()) ? licenceValues.get(1).getValue() : "CC-BY";
     }
 
-    return Collections.emptyList();
-  }
+    public MigrateService(
+            SpeciesListMongoRepository speciesListMongoRepository,
+            UploadService uploadService,
+            ReleaseService releaseService,
+            @Value("${temp.dir:/tmp}") String tempDir,
+            @Value("${migrate.url:https://lists.ala.org.au}") String migrateUrl,
+            RestTemplate restTemplate) {
 
-  private List<SpeciesList> getLegacyLists(Boolean skipExisting) {
-    int offset = 0;
-    int total = 0;
-    boolean done = false;
-    List<SpeciesList> lists = new ArrayList<>();
-
-    while (!done) {
-      List<SpeciesList> batch = fetchLegacyLists(offset);
-      lists.addAll(skipExisting ? filterExistingLists(batch, false) : batch);
-
-      if (batch.size() < 1000) {
-        done = true;
-      } else {
-        offset += 1000;
-      }
-
-      total += batch.size();
+        this.speciesListMongoRepository = speciesListMongoRepository;
+        this.uploadService = uploadService;
+        this.releaseService = releaseService;
+        this.tempDir = tempDir;
+        this.migrateUrl = migrateUrl;
+        this.restTemplate = restTemplate;
     }
 
-    logger.info("Retrieved {} new legacy lists for migration ({} total)", lists.size(), total);
+    private List<SpeciesList> fetchLegacyLists(int offset) {
+        try {
+            Map params = Map.of("offset", String.valueOf(offset), "max", "1000", "includePrivate", "true");
+            Map request = webService.get(
+                    migrateUrl + "/ws/speciesListInternal",
+                    params,
+                    ContentType.APPLICATION_JSON,
+                    true,
+                    false,
+                    null);
 
-    return lists;
-  }
+            if ((int) request.get("statusCode") == 200) {
+                Map response = (Map) request.get("resp");
+                List<Map<String, Object>> lists = (List<Map<String, Object>>) response.get("lists");
 
-  private List<SpeciesList> filterExistingLists(List<SpeciesList> lists, boolean doesExist) {
-    List<String> dataResources = lists.stream().map(SpeciesList::getDataResourceUid).toList();
-    Set<String> existingDrUIDs = speciesListMongoRepository
-            .findAllByDataResourceUidIsIn(dataResources)
-            .stream().map(SpeciesList::getDataResourceUid).collect(Collectors.toSet());
+                return lists.stream().map(this::mapListToSpeciesList).filter(Objects::nonNull).toList();
+            }
 
-    return lists.stream().filter(list -> existingDrUIDs.contains(list.getDataResourceUid()) == doesExist).toList();
-  }
+            throw new Error("Got non-success response from legacy lists API call.");
 
-  private SpeciesList mapListToSpeciesList(Map<String, Object> list) {
-    try {
-      SpeciesList speciesList = new SpeciesList();
-      speciesList.setDataResourceUid((String) list.get("dataResourceUid"));
-      speciesList.setDescription((String) list.get("description"));
-      speciesList.setTitle((String) list.get("listName"));
-      speciesList.setListType((String) list.get("listType"));
-      speciesList.setAuthority((String) list.get("authority"));
-      speciesList.setRegion((String) list.get("region"));
-      speciesList.setOwner((String) list.get("username"));
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+        }
 
-      if (list.get("lastUpdated") != null) {
-        String lastUpdatedString = (String) list.get("lastUpdated");
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-        speciesList.setLastUpdated(sdf.parse(lastUpdatedString));
-      }
-      if (list.get("dateCreated") != null) {
-        String dateCreatedString = (String) list.get("dateCreated");
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-        speciesList.setDateCreated(sdf.parse(dateCreatedString));
-      }
-
-      speciesList.setIsAuthoritative(
-          list.get("isAuthoritative") instanceof Boolean && (Boolean) list.get("isAuthoritative"));
-      speciesList.setIsPrivate(
-          list.get("isPrivate") instanceof Boolean && (Boolean) list.get("isPrivate"));
-      speciesList.setIsThreatened(
-          list.get("isThreatened") instanceof Boolean && (Boolean) list.get("isThreatened"));
-      speciesList.setIsInvasive(
-          list.get("isInvasive") instanceof Boolean && (Boolean) list.get("isInvasive"));
-      speciesList.setIsBIE(
-          list.get("isBIE") instanceof Boolean && (Boolean) list.get("isBIE"));
-      speciesList.setIsSDS(
-          list.get("isSDS") instanceof Boolean && (Boolean) list.get("isSDS"));
-      speciesList.setWkt((String) list.get("wkt"));
-
-      SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-      speciesList.setDateCreated(
-          list.get("dateCreated") != null ? sdf.parse((String) list.get("dateCreated")) : null);
-      speciesList.setLastUploaded(
-          list.get("lastUploaded") != null ? sdf.parse((String) list.get("lastUploaded")) : null);
-      speciesList.setLastUpdated(
-          list.get("lastUpdated") != null ? sdf.parse((String) list.get("lastUpdated")) : null);
-
-      return speciesList;
-    } catch (Exception e) {
-      logger.error(e.getMessage(), e);
-    }
-    return null;
-  }
-
-  private void updateLegacyUserDetails(SpeciesList list, HashMap<String, Map> foundUsers) {
-    Map legacyUser;
-
-    if (foundUsers.containsKey(list.getOwner())) {
-      legacyUser = foundUsers.get(list.getOwner());
-    } else {
-      legacyUser = userdetailsService.fetchUserByEmail(list.getOwner());
-      foundUsers.put(list.getOwner(), legacyUser);
+        return Collections.emptyList();
     }
 
-    if (legacyUser != null) {
-      list.setOwner((String)legacyUser.get("userId"));
-      list.setOwnerName((String)legacyUser.get("displayName"));
+    private List<SpeciesList> getLegacyLists(Boolean skipExisting) {
+        int offset = 0;
+        int total = 0;
+        boolean done = false;
+        List<SpeciesList> lists = new ArrayList<>();
+
+        while (!done) {
+            List<SpeciesList> batch = fetchLegacyLists(offset);
+            lists.addAll(skipExisting ? filterExistingLists(batch, false) : batch);
+
+            if (batch.size() < 1000) {
+                done = true;
+            } else {
+                offset += 1000;
+            }
+
+            total += batch.size();
+        }
+
+        logger.info("Retrieved {} new legacy lists for migration ({} total)", lists.size(), total);
+
+        return lists;
     }
-  }
 
-  public void migrateAll() {
-    logger.info("Starting migration of ALL lists...");
-    migration(getLegacyLists(true));
-  }
+    private List<SpeciesList> filterExistingLists(List<SpeciesList> lists, boolean doesExist) {
+        List<String> dataResources = lists.stream().map(SpeciesList::getDataResourceUid).toList();
+        Set<String> existingDrUIDs = speciesListMongoRepository
+                .findAllByDataResourceUidIsIn(dataResources)
+                .stream().map(SpeciesList::getDataResourceUid).collect(Collectors.toSet());
 
-  public void migration(List<SpeciesList> speciesLists) {
-    progressService.setupMigrationProgress(speciesLists.size());
+        return lists.stream().filter(list -> existingDrUIDs.contains(list.getDataResourceUid()) == doesExist).toList();
+    }
 
-    // Create a map to store already retrieved user info
-    HashMap<String, Map> foundUsers = new HashMap<>();
+    private SpeciesList mapListToSpeciesList(Map<String, Object> list) {
+        try {
+            SpeciesList speciesList = new SpeciesList();
+            speciesList.setDataResourceUid((String) list.get("dataResourceUid"));
+            speciesList.setDescription((String) list.get("description"));
+            speciesList.setTitle((String) list.get("listName"));
+            speciesList.setListType((String) list.get("listType"));
+            speciesList.setAuthority((String) list.get("authority"));
+            speciesList.setRegion((String) list.get("region"));
+            speciesList.setOwner((String) list.get("username"));
+            speciesList.setLicence(defaultLicence);
 
-    speciesLists.forEach(
-        speciesList -> {
-          logger.info("Downloading file for {}", speciesList.getDataResourceUid());
-          String downloadUrl =
-              migrateUrl
-                  + "/ws/speciesListInternal/download/"
-                  + speciesList.getDataResourceUid()
-                  + "?fetch=%7BkvpValues%3Dselect%7";
-          try {
-            File localFile =
-                new File(
-                    tempDir + "/species-list-migrate-" + speciesList.getDataResourceUid() + ".csv");
+            if (list.get("lastUpdated") != null) {
+                String lastUpdatedString = (String) list.get("lastUpdated");
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+                speciesList.setLastUpdated(sdf.parse(lastUpdatedString));
+            }
+            if (list.get("dateCreated") != null) {
+                String dateCreatedString = (String) list.get("dateCreated");
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+                speciesList.setDateCreated(sdf.parse(dateCreatedString));
+            }
 
-            AccessToken token = tokenService.getAuthToken(false, null, null);
+            speciesList.setIsAuthoritative(
+                    list.get("isAuthoritative") instanceof Boolean && (Boolean) list.get("isAuthoritative"));
+            speciesList.setIsPrivate(
+                    list.get("isPrivate") instanceof Boolean && (Boolean) list.get("isPrivate"));
+            speciesList.setIsThreatened(
+                    list.get("isThreatened") instanceof Boolean && (Boolean) list.get("isThreatened"));
+            speciesList.setIsInvasive(
+                    list.get("isInvasive") instanceof Boolean && (Boolean) list.get("isInvasive"));
+            speciesList.setIsBIE(
+                    list.get("isBIE") instanceof Boolean && (Boolean) list.get("isBIE"));
+            speciesList.setIsSDS(
+                    list.get("isSDS") instanceof Boolean && (Boolean) list.get("isSDS"));
+            speciesList.setWkt((String) list.get("wkt"));
 
-            restTemplate.execute(
-                downloadUrl,
-                HttpMethod.GET,
-                request -> request.getHeaders().set(HttpHeaders.AUTHORIZATION, token.toAuthorizationHeader()),
-                response -> {
-                  try (InputStream is = response.getBody()) {
-                    FileUtils.copyInputStreamToFile(is, localFile);
-                    return null;
-                  }
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            speciesList.setDateCreated(
+                    list.get("dateCreated") != null ? sdf.parse((String) list.get("dateCreated")) : null);
+            speciesList.setLastUploaded(
+                    list.get("lastUploaded") != null ? sdf.parse((String) list.get("lastUploaded")) : null);
+            speciesList.setLastUpdated(
+                    list.get("lastUpdated") != null ? sdf.parse((String) list.get("lastUpdated")) : null);
+
+            return speciesList;
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+        }
+        return null;
+    }
+
+    private void updateLegacyUserDetails(SpeciesList list, HashMap<String, Map> foundUsers) {
+        Map legacyUser;
+
+        if (foundUsers.containsKey(list.getOwner())) {
+            legacyUser = foundUsers.get(list.getOwner());
+        } else {
+            legacyUser = userdetailsService.fetchUserByEmail(list.getOwner());
+            foundUsers.put(list.getOwner(), legacyUser);
+        }
+
+        if (legacyUser != null) {
+            list.setOwner((String) legacyUser.get("userId"));
+            list.setOwnerName((String) legacyUser.get("displayName"));
+        }
+    }
+
+    public void migrateAll() {
+        logger.info("Starting migration of ALL lists...");
+        migration(getLegacyLists(true));
+    }
+
+    public void migration(List<SpeciesList> speciesLists) {
+        progressService.setupMigrationProgress(speciesLists.size());
+
+        // Create a map to store already retrieved user info
+        HashMap<String, Map> foundUsers = new HashMap<>();
+
+        speciesLists.forEach(
+                speciesList -> {
+                    logger.info("Downloading file for {}", speciesList.getDataResourceUid());
+                    String downloadUrl = migrateUrl
+                            + "/ws/speciesListInternal/download/"
+                            + speciesList.getDataResourceUid()
+                            + "?fetch=%7BkvpValues%3Dselect%7";
+                    try {
+                        File localFile = new File(
+                                tempDir + "/species-list-migrate-" + speciesList.getDataResourceUid() + ".csv");
+
+                        AccessToken token = tokenService.getAuthToken(false, null, null);
+
+                        restTemplate.execute(
+                                downloadUrl,
+                                HttpMethod.GET,
+                                request -> request.getHeaders().set(HttpHeaders.AUTHORIZATION,
+                                        token.toAuthorizationHeader()),
+                                response -> {
+                                    try (InputStream is = response.getBody()) {
+                                        FileUtils.copyInputStreamToFile(is, localFile);
+                                        return null;
+                                    }
+                                });
+
+                        updateLegacyUserDetails(speciesList, foundUsers);
+
+                        SpeciesList savedList = speciesListMongoRepository.save(speciesList);
+
+                        progressService.updateMigrationProgress(savedList);
+
+                        IngestJob ingestJob = uploadService.loadCSV(
+                                savedList.getId(), new FileInputStream(localFile), false, false, true);
+
+                        savedList.setRowCount(ingestJob.getRowCount());
+                        savedList.setFieldList(ingestJob.getFieldList());
+                        savedList.setFacetList(ingestJob.getFacetList());
+                        savedList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
+                        savedList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
+
+                        speciesListMongoRepository.save(savedList);
+
+                        // releaseService.release(speciesList.getId());
+                    } catch (Exception e) {
+                        logger.error("Download for " + speciesList.getDataResourceUid() + "failed");
+                        logger.error(e.getMessage(), e);
+                    }
                 });
 
-            updateLegacyUserDetails(speciesList, foundUsers);
-
-            SpeciesList savedList = speciesListMongoRepository.save(speciesList);
-
-            progressService.updateMigrationProgress(savedList);
-
-            IngestJob ingestJob =
-                uploadService.loadCSV(
-                    savedList.getId(), new FileInputStream(localFile), false, false, true);
-
-            savedList.setRowCount(ingestJob.getRowCount());
-            savedList.setFieldList(ingestJob.getFieldList());
-            savedList.setFacetList(ingestJob.getFacetList());
-            savedList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
-            savedList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
-
-            speciesListMongoRepository.save(savedList);
-
-            // releaseService.release(speciesList.getId());
-          } catch (Exception e) {
-            logger.error("Download for " + speciesList.getDataResourceUid() + "failed");
-            logger.error(e.getMessage(), e);
-          }
-        });
-
-    progressService.clearMigrationProgress();
-  }
+        progressService.clearMigrationProgress();
+    }
 }
