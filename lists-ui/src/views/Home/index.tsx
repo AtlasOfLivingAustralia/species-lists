@@ -115,6 +115,7 @@ function Home() {
     'view',
     parseAsString.withDefault('public')
   );
+  // Shows the user's lists (my lists) when true
   const [isUser, setIsUser] = useQueryState<boolean>(
     'isUser',
     parseAsBoolean.withDefault(false)
@@ -585,9 +586,19 @@ function Home() {
                   onChange={(value) => setPage(value - 1)}
                   total={totalPages || 9}
                   radius='md'
+                  siblings={2}
                   getControlProps={(control) => ({
                     'aria-label': `${control} page`,
                   })}
+                  getItemProps={(page) => {
+                    // Hide the last page number button (but keep navigation arrows)
+                    if (page === totalPages) {
+                      return {
+                        style: { display: 'none' }
+                      };
+                    }
+                    return {};
+                  }}
                 />
               </Stack>
             </Grid.Col>

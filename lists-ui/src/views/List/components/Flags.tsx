@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Group, Text, Paper, PaperProps } from '@mantine/core';
 import { SpeciesList } from '#/api';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { ListTypeBadge } from '#/components/ListTypeBadge';
 import { listFlags } from '#/helpers';
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Box, Group, Paper, PaperProps, Text } from '@mantine/core';
+import { FormattedMessage } from 'react-intl';
 
 interface FlagsProps extends PaperProps {
   meta: SpeciesList;
@@ -11,21 +13,21 @@ interface FlagsProps extends PaperProps {
 
 export function Flags({ meta, ...rest }: FlagsProps) {
   return (
-    <Paper {...rest} withBorder p='xs' radius='md'>
+    <Paper {...rest}  p={0} radius='lg' mt={5} mb={5}>
       <Group gap='xs'>
-        <Text size='xs' fw='bold' opacity={0.75}>
-          <FontAwesomeIcon
-            style={{ marginRight: 10 }}
-            icon={meta.isPrivate ? faEyeSlash : faEye}
-          />
-          {meta.isPrivate ? 'Private' : 'Public'}
-        </Text>
-        {listFlags.map(({ flag, label, icon }) =>
+        <Box style={{ display: 'flex', alignItems: 'center', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+          <FontAwesomeIcon fontSize={15} color='grey' icon={meta?.isPrivate ? faEyeSlash : faEye} />
+          <Text size='sm' fw='400' ml={6}>
+          {meta?.isPrivate ? (
+            <FormattedMessage id="access.private" defaultMessage="Private" />
+          ) : (
+            <FormattedMessage id="access.public" defaultMessage="Public" />
+          )}
+          </Text>
+        </Box>
+        {listFlags.map(({ flag }) =>
           (meta as any)[flag] ? (
-            <Text key={flag} size='xs' fw='bold' opacity={0.75}>
-              <FontAwesomeIcon style={{ marginRight: 10 }} icon={icon} />
-              {label}
-            </Text>
+            <ListTypeBadge listTypeValue={flag}/>
           ) : null
         )}
       </Group>

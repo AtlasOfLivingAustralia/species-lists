@@ -11,9 +11,7 @@ import {
 } from '#/api';
 import {
   ActionIcon,
-  Badge,
   Box,
-  Button,
   Center,
   Collapse,
   Container,
@@ -24,12 +22,13 @@ import {
   Pagination,
   Paper,
   Select,
+  Skeleton,
   Space,
   Stack,
   Table,
   Text,
   TextInput,
-  Title,
+  Title
 } from '@mantine/core';
 import {
   useDebouncedValue,
@@ -51,7 +50,7 @@ import { Outlet, useLocation, useParams } from 'react-router';
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { faAngleRight, faMagnifyingGlass, faPlus, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faAngleRight, faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import tableClasses from './classes/Table.module.css';
@@ -91,7 +90,8 @@ enum SortDirection {
   DESC = 'desc',
 }
 
-const classificationFields = ['family', 'kingdom', 'vernacularName'];
+const maxEntries = 10000; // ES maximumDocuments limit (see elastic.maximumDocuments config in lists-service)
+const classificationFields = ['family', 'kingdom', 'vernacularName', 'matchType'];
 
 export function List() {
   const { id } = useParams();
@@ -136,7 +136,6 @@ export function List() {
   const [hidefilters, setHideFilters] = useQueryState<boolean>('hideFilters', parseAsBoolean.withDefault(false)); 
   const toggleFilters = () => setHideFilters((o) => !o);
 
-
   // Internal state (not driven by search params)
   const [facets, setFacets] = useState<Facet[]>([]);
   const [error, setError] = useState<Error | null>(null);
@@ -145,6 +144,7 @@ export function List() {
   const [rematching, setRematching] = useState<boolean>(false);
   const [lastProgress, setLastProgress] = useState<boolean>(false);
   const [pageTitle, setPageTitle] = useState<string | null>(null);
+  const [paginationLoading, setPaginationLoading] = useState<boolean>(false);
 
   const location = useLocation();
   const mounted = useMounted();
@@ -191,7 +191,15 @@ export function List() {
 
   // Destructure results & calculate the real page offset
   const { totalElements, totalPages } = list || { totalElements: 0, totalPages: 0 };
+  let totalEntries = totalElements;
+
+  if (totalElements == maxEntries) {
+    totalEntries = meta?.rowCount ?? totalElements;
+  }
+
   const realPage = page + 1;
+  const startPage = (realPage - 1) * size + 1;
+  const endPage = Math.min(realPage * size, totalEntries || 0);
 
   // Request abort controller
   const controller = useRef<AbortController | null>(null);
@@ -234,6 +242,8 @@ export function List() {
         if (error !== 'New GraphQL request invoked') {
           setError(error as Error);
         }
+      } finally {
+        setPaginationLoading(false);
       }
     }
 
@@ -460,27 +470,18 @@ export function List() {
           </Grid.Col>
         </Grid>
       </Container>
-      <Container fluid>
+      <Container fluid className={classes.listDetails}>
         <Grid>
           <Grid.Col span={12} pb={6} mt='lg'>
             <Flex direction='row' justify='space-between' gap={16}>
               <Stack gap='xs' mb={14}>
-                <Summary meta={meta!} mr={-42} />
-                {(meta?.tags || []).length > 0 && (
-                  <Group mt={4} gap={4}>
-                    {meta!.tags.map((tag) => (
-                      <Badge variant='dot' radius='md' key={tag}>
-                        {tag}
-                      </Badge>
-                    ))}
-                  </Group>
-                )}
                 {meta?.description && (
                   <Text c='dark-grey-1' size='sm' mt='xs' opacity={0.75}>
                     {meta.description}
                   </Text>
                 )}
-                <Group mt='sm' gap='xs'>
+                <Summary meta={meta!} />
+                <Group gap={6} mt={0}>
                   <Flags meta={meta!} />
                   <Dates meta={meta!} />
                 </Group>
@@ -492,23 +493,14 @@ export function List() {
                   rematching={rematching}
                   onEditingChange={setEditing}
                   onMetaEdited={handleListMetaUpdated}
+                  handleAddClick={handleAddClick}
                   onRematch={() => {
                     setRematching(true);
                   }}
                 />
               )}
             </Flex>
-            {!isReingest && (<Button
-              radius='md'
-              leftSection={<FontAwesomeIcon icon={faPlus} />}
-              variant='light'
-              onClick={handleAddClick}
-              title={intl.formatMessage({ id: 'add.species.title', defaultMessage: 'Add a new taxon entry' })}
-              aria-label={intl.formatMessage({ id: 'add.species.title', defaultMessage: 'Add a new taxon entry' })}
-            >
-              <FormattedMessage id='add.species.label' defaultMessage='Add species' />
-            </Button>
-            )}
+            
           </Grid.Col>
           { rematching && (
             <Grid.Col span={12}>
@@ -606,13 +598,28 @@ export function List() {
                   <>
                     <Text size='sm' mb={6} mt={6} className={classes.resultsSummary} component='span'>
                       <FormattedMessage id='results.showing' defaultMessage='Showing' /> {' '}
-                      {(realPage - 1) * size + 1}-
-                      {Math.min((realPage - 1) * size + size, totalElements || 0)} of {' '}
-                      <FormattedNumber value={totalElements || 0} /> {' '}
-                      <FormattedMessage id='results.records' defaultMessage='records' />
+                        {startPage}-{endPage} of {' '}
+                      <FormattedNumber value={totalEntries || 0} /> {' '}
+                      <FormattedMessage id='results.records' defaultMessage='records' /> {' '}
+                      { meta?.distinctMatchCount &&
+                        <>
+                          {'('}
+                          {new Intl.NumberFormat().format(meta?.distinctMatchCount ?? 0)}{' '}
+                          {intl.formatMessage({
+                            id: 'actions.distinct',
+                            defaultMessage: 'distinct taxa',
+                          })}
+                          {')'}
+                        </>
+                      }
                       { filters && filters.length > 0 && (
                         <><Space w={5} />–<Space w={2} /></>
                       )}
+                      { endPage == maxEntries &&
+                        <Text style={{ color: 'red', marginLeft: 5 }}>
+                          <FormattedMessage id='results.warning.max' defaultMessage='Maximum number of pages reached. Try filtering or sorting table by a different column.' />
+                        </Text>
+                      }
                     </Text>
                   </>
                 ) : (
@@ -642,104 +649,124 @@ export function List() {
                 )}
                 <Box style={{ overflowX: 'auto' }}>
                   {error ? (
-                    <Message
-                      title={intl.formatMessage({ id: 'list.page.error.title', defaultMessage: 'An error occured' })}
-                      subtitle={getErrorMessage(error)}
-                      icon={<StopIcon size={18} />}
-                      action={intl.formatMessage({ id: 'retry', defaultMessage: 'Retry' })}
-                      onAction={handleRetry}
-                    />
+                  <Message
+                    title={intl.formatMessage({ id: 'list.page.error.title', defaultMessage: 'An error occured' })}
+                    subtitle={getErrorMessage(error)}
+                    icon={<StopIcon size={18} />}
+                    action={intl.formatMessage({ id: 'retry', defaultMessage: 'Retry' })}
+                    onAction={handleRetry}
+                  />
                   ) : totalElements === 0 ? (
-                    <Message />
+                  <Message />
+                  ) : paginationLoading ? (
+                    <Stack gap="xs" mt={4}>
+                      {[...Array(size)].map((_, i) => (
+                      <Skeleton key={i} height={i === 0 ? 42 : 30} radius={4} />
+                      ))}
+                    </Stack>
                   ) : (
-                    <Table
-                      highlightOnHover
-                      classNames={tableClasses}
-                      withColumnBorders
-                      withRowBorders
-                    >
-                      <Table.Thead>
-                        <Table.Tr>
-                          <ThSortable
-                            active={sort === 'scientificName'}
-                            dir={dir}
-                            onSort={() => handleSortClick('scientificName')}
-                          >
-                            <FormattedMessage id='suppliedName' defaultMessage='Supplied name' />
-                          </ThSortable>
-                          <ThSortable
-                            active={sort === 'classification.scientificName'}
-                            dir={dir}
-                            onSort={() =>
-                              handleSortClick('classification.scientificName')
-                            }
-                          >
-                            <FormattedMessage
-                              id='scientificName'
-                              defaultMessage='Scientific name'
-                            />
-                          </ThSortable>
-                          {meta!.fieldList.map((field) => (
-                            <ThEditable
-                              key={field}
-                              id={meta!.id}
-                              editing={editing}
-                              field={field}
-                              token={ala.token || ''}
-                              onDelete={() => handleFieldDeleted(field)}
-                              onRename={(newField) =>
-                                handleFieldRenamed(field, newField)
-                              }
-                            />
-                          ))}
-                          {editing && (
-                            <ThCreate
-                              id={meta!.id}
-                              token={ala.token || ''}
-                              onCreate={handleFieldCreated}
-                            />
-                          )}
-                          {classificationFields.map((field) => (
-                            <ThSortable
-                              key={field}
-                              active={sort === `classification.${field}`}
-                              dir={dir}
-                              onSort={() =>
-                                handleSortClick(`classification.${field}`)
-                              }
-                            >
-                              <FormattedMessage
-                                id={`classification.${field ? field : 'none'}`}
-                              />
-                            </ThSortable>
-                          ))}
-                        </Table.Tr>
-                      </Table.Thead>
-                      <Table.Tbody>
-                        {list!.content.map((item) => (
-                          <TrItem
-                            key={item.id}
-                            row={item}
-                            fields={meta!.fieldList}
-                            classification={classificationFields}
-                            editing={editing}
-                            onClick={() => handleRowClick(item)}
-                          />
-                        ))}
-                      </Table.Tbody>
-                    </Table>
+                  <Table
+                    highlightOnHover
+                    classNames={tableClasses}
+                    withColumnBorders
+                    withRowBorders
+                  >
+                    <Table.Thead>
+                    <Table.Tr>
+                      <ThSortable
+                      active={sort === 'scientificName'}
+                      dir={dir}
+                      onSort={() => handleSortClick('scientificName')}
+                      >
+                      <FormattedMessage id='suppliedName' defaultMessage='Supplied name' />
+                      </ThSortable>
+                      <ThSortable
+                      active={sort === 'classification.scientificName'}
+                      dir={dir}
+                      onSort={() =>
+                        handleSortClick('classification.scientificName')
+                      }
+                      >
+                      <FormattedMessage
+                        id='scientificName'
+                        defaultMessage='Scientific name'
+                      />
+                      </ThSortable>
+                      {meta!.fieldList.map((field) => (
+                      <ThEditable
+                        key={field}
+                        id={meta!.id}
+                        editing={editing}
+                        field={field}
+                        token={ala.token || ''}
+                        onDelete={() => handleFieldDeleted(field)}
+                        onRename={(newField) =>
+                        handleFieldRenamed(field, newField)
+                        }
+                      />
+                      ))}
+                      {editing && (
+                      <ThCreate
+                        id={meta!.id}
+                        token={ala.token || ''}
+                        onCreate={handleFieldCreated}
+                      />
+                      )}
+                      {classificationFields.map((field) => (
+                      <ThSortable
+                        key={field}
+                        active={sort === `classification.${field}`}
+                        dir={dir}
+                        onSort={() =>
+                        handleSortClick(`classification.${field}`)
+                        }
+                      >
+                        <FormattedMessage
+                        id={`classification.${field ? field : 'none'}`}
+                        />
+                      </ThSortable>
+                      ))}
+                    </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                    {list!.content.map((item) => (
+                      <TrItem
+                      key={item.id}
+                      row={item}
+                      fields={meta!.fieldList}
+                      classification={classificationFields}
+                      editing={editing}
+                      onClick={() => handleRowClick(item)}
+                      />
+                    ))}
+                    </Table.Tbody>
+                  </Table>
                   )}
                   <Center mt='xl'>
-                    <Pagination
-                      disabled={(totalPages || 0) < 1 || hasError}
-                      value={realPage}
-                      onChange={(value) => setPage(value - 1)}
-                      total={totalPages || 9}
-                      radius='md'
-                      getControlProps={(control) => ({
-                        'aria-label': `${control} page`,
-                      })}
-                    />
+                  <Pagination
+                    disabled={(totalPages || 0) < 1 || hasError}
+                    value={realPage}
+                    onChange={(value) => {
+                      if (paginationLoading) return; // better than setting paginationLoading in disabled property as UI jitters when that is used
+                      setPaginationLoading(true);
+                      setPage(value - 1);
+                    }}
+                    total={totalPages || 9}
+                    radius='md'
+                    siblings={2}
+                    getControlProps={(control) => ({
+                      'aria-label': `${control} page`,
+                    })}
+                    getItemProps={(page) => {
+                      // Hide the last page number button (but keep navigation arrows)
+                      if (page === totalPages) {
+                        return {
+                        style: { display: 'none' }
+                        };
+                      }
+                      return {};
+                    }}
+                  /> 
                   </Center>
                 </Box>
               </Grid.Col>

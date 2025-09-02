@@ -1,14 +1,14 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { DotsThreeIcon, FolderIcon } from '@atlasoflivingaustralia/ala-mantine';
+import { DotsThreeIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { faEdit, faTrashAlt } from '@fortawesome/free-regular-svg-icons';
 import {
   faDownload,
-  faFingerprint,
   faGlobe,
+  faPlus,
   faRefresh,
   faSearch,
   faTableColumns,
-  faUpload,
+  faUpload
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -40,7 +40,7 @@ import { getErrorMessage } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
 
 // Local styles
-import { useIntl } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import classes from './Actions.module.css';
 
 interface ActionsProps {
@@ -50,6 +50,7 @@ interface ActionsProps {
   onEditingChange: (editing: boolean) => void;
   onMetaEdited: (meta: SpeciesListSubmit) => void;
   onRematch: () => void;
+  handleAddClick: () => void;
 }
 
 export function Actions({
@@ -59,6 +60,7 @@ export function Actions({
   onEditingChange,
   onMetaEdited,
   onRematch,
+  handleAddClick,
 }: ActionsProps) {
   const [updating, setUpdating] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
@@ -66,11 +68,45 @@ export function Actions({
   const listQid = useRef<string | null>(null);
   const navigate = useNavigate();
   const intl = useIntl();
+  const isReingest = location.pathname.endsWith('reingest');
 
   const ala = useALA();
   const authorisedForList = ala.isAuthorisedForList(meta);
+  // Maximum entries to use in a Biocache records search
+  // Value may change, see lists-service/src/main/java/au/org/ala/listsapi/service/BiocacheService.java#getQidForSpeciesList
+  const maxTaxaSearch = 2000; 
 
-  // Download callback handler
+  // Handle Biocache links
+  const handleBiocacheLink = useCallback(
+    (dataResourceId: string) => {
+      if (meta.isAuthoritative) {
+        handleAuthoritativeBiocacheLink(dataResourceId);
+      } else if (!meta.isPrivate) {
+        handlePublicBiocacheLink(dataResourceId);
+      } else {
+        handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH);
+      }
+    },
+    []
+  );
+
+  // Authoritative Biocache link handler
+  const handleAuthoritativeBiocacheLink = useCallback((dataResourceId: string) => {
+    const url = import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH;
+    window.open(`${url}?q=species_list_uid:${dataResourceId}`, '_blank');
+  }, []);
+
+  // Public list Biocache link handler (subtly different URL to handleAuthoritativeBiocacheLink)
+  const handlePublicBiocacheLink = useCallback((dataResourceId: string) => {
+    const url = import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH;
+    window.open(`${url}?q=species_list:${dataResourceId}`, '_blank');
+  }, []);
+  
+  // Biocache QID callback handler
+  // NOTE: Biocache can handle more than 2000 taxa for non-authoritative lists, 
+  // as long they are public (it calls the API). We could implement this service
+  // in the future but it won't easily work with private lists, so might not be worth 
+  // implementing yet another way of linking to biocache records page.
   const handleQidRedirect = useCallback(
     async (url: string) => {
       if (!listQid.current) {
@@ -354,70 +390,18 @@ export function Actions({
       </Menu>
       <Box className={classes.desktop}>
         <Stack gap='xs'>
-          <Paper
-            miw={authorisedForList ? 285 : undefined}
-            py={8}
-            px='xs'
-            shadow='sm'
-            radius='lg'
-            withBorder
-          >
-            <Flex>
-              <Text
-                fw='bold'
-                style={{
-                  textAlign: 'center',
-                  fontSize: '0.8rem',
-                  flexBasis: '100%',
-                }}
-              >
-                <FolderIcon size={14} style={{ marginRight: 10 }} />
-                {new Intl.NumberFormat().format(meta.rowCount)} total
-              </Text>
-              {meta.distinctMatchCount && (
-                <>
-                  <Divider orientation='vertical' mx='xs' />
-                    <Text
-                    fw='bold'
-                    style={{
-                      textAlign: 'center',
-                      fontSize: '0.8rem',
-                      flexBasis: '100%',
-                    }}
-                    >
-                    <FontAwesomeIcon
-                      icon={faFingerprint}
-                      style={{ marginRight: 10 }}
-                    />
-                    {new Intl.NumberFormat().format(meta.distinctMatchCount)}{' '}
-                    {intl.formatMessage({
-                      id: 'actions.distinct',
-                      defaultMessage: 'distinct',
-                    })}
-                    </Text>
-                </>
-              )}
-            </Flex>
-          </Paper>
           {authorisedForList && (
+          <>
             <Paper
-              miw={authorisedForList ? 285 : undefined}
+              // miw={authorisedForList ? 285 : undefined}
               py={8}
               px='sm'
               shadow='sm'
               radius='lg'
               withBorder
             >
-                <Group gap='xs'>
-                <Switch
-                  disabled={updating || rematching || deleting}
-                  mr='xs'
-                  size='xs'
-                  label={intl.formatMessage({ id: 'actions.editFields', defaultMessage: 'Edit fields' })}
-                  checked={editing}
-                  onChange={(ev) => onEditingChange(ev.currentTarget.checked)}
-                />
-                <Tooltip label={intl.formatMessage({ id: 'actions.editMetadata', defaultMessage: 'Edit metadata' })} position='left'>
+              <Group gap='xs'>
+                <Tooltip label={intl.formatMessage({ id: 'actions.editMetadata', defaultMessage: 'Edit metadata' })} withArrow position='bottom'>
                   <ActionIcon
                     onClick={handleMetaEdit}
                     disabled={rematching || deleting}
@@ -430,7 +414,7 @@ export function Actions({
                     <FontAwesomeIcon size='sm' icon={faEdit} />
                   </ActionIcon>
                 </Tooltip>
-                <Tooltip label={intl.formatMessage({ id: 'actions.rematchList', defaultMessage: 'Rematch list' })} position='left'>
+                <Tooltip label={intl.formatMessage({ id: 'actions.rematchList', defaultMessage: 'Rematch list' })} withArrow position='bottom'>
                   <ActionIcon
                     onClick={handleRematch}
                     disabled={updating || deleting}
@@ -443,7 +427,7 @@ export function Actions({
                     <FontAwesomeIcon size='sm' icon={faRefresh} />
                   </ActionIcon>
                 </Tooltip>
-                <Tooltip label={intl.formatMessage({ id: 'actions.reingestList', defaultMessage: 'Reingest list' })} position='left'>
+                <Tooltip label={intl.formatMessage({ id: 'actions.reingestList', defaultMessage: 'Reingest list' })} withArrow position='bottom'>
                   <ActionIcon
                     onClick={handleReingest}
                     disabled={updating || deleting || rematching}
@@ -455,7 +439,7 @@ export function Actions({
                     <FontAwesomeIcon size='sm' icon={faUpload} />
                   </ActionIcon>
                 </Tooltip>
-                <Tooltip label={intl.formatMessage({ id: 'actions.deleteList', defaultMessage: 'Delete list' })} position='left'>
+                <Tooltip label={intl.formatMessage({ id: 'actions.deleteList', defaultMessage: 'Delete list' })} withArrow position='bottom'>
                   <ActionIcon
                     onClick={handleDelete}
                     disabled={updating || rematching}
@@ -468,8 +452,40 @@ export function Actions({
                     <FontAwesomeIcon size='sm' icon={faTrashAlt} />
                   </ActionIcon>
                 </Tooltip>
-                </Group>
+              </Group>
+              <Stack gap='sm' mt='md'>
+                <Tooltip  
+                  label={intl.formatMessage({ id: 'actions.edit.field.tooltip', defaultMessage: 'Edit custom field column headers' })} 
+                  refProp="rootRef"
+                  withArrow 
+                  position='bottom'
+                >
+                  <Switch
+                    disabled={updating || rematching || deleting}
+                    mr='xs'
+                    size='xs'
+                    label={intl.formatMessage({ id: 'actions.editFields', defaultMessage: 'Edit column headings' })}
+                    checked={editing}
+                    onChange={(ev) => onEditingChange(ev.currentTarget.checked)}
+                  />
+                </Tooltip>
+                {!isReingest && (
+                  <Tooltip label={intl.formatMessage({ id: 'add.species.title', defaultMessage: 'Add a new taxon entry' })} withArrow position='bottom'>
+                    <Button
+                      radius='lg'
+                      size='xs'
+                      leftSection={<FontAwesomeIcon icon={faPlus} />}
+                      variant='light'
+                      onClick={handleAddClick}
+                      aria-label={intl.formatMessage({ id: 'add.species.title', defaultMessage: 'Add a new taxon entry' })}
+                    >
+                    <FormattedMessage id='add.taxa.label' defaultMessage='Add species' />
+                  </Button>
+                  </Tooltip>
+                )}
+                </Stack>
             </Paper>
+          </>
           )}
           <Paper withBorder radius='lg'>
             <Button
@@ -489,9 +505,50 @@ export function Actions({
             </Button>
             <Divider />
             <Button
-              onClick={() =>
-                handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH)
-              }
+              onClick={() => {
+                modals.openConfirmModal({
+                  title: (
+                    <Text fw='bold' size='lg'>
+                      {intl.formatMessage({
+                        id: 'actions.occurrenceRecords.title',
+                        defaultMessage: 'View Occurrence Records'
+                      })}
+                    </Text>
+                  ),
+                  children: (meta.isAuthoritative || !meta.isPrivate) ? (
+                    <Text>
+                      {intl.formatMessage({
+                        id: 'actions.occurrenceRecords.authoritative',
+                        defaultMessage: 'All taxa from this list will be used in the following Biocache search.'
+                      })}{' '}
+                      {!meta.isAuthoritative && intl.formatMessage({
+                        id: 'actions.occurrenceRecords.delayMsg',
+                        defaultMessage: 'Note: There may be a delay in the occurrence record page loading with larger lists.'
+                      })}
+                    </Text>
+                  ) : (
+                    <Text>
+                      {intl.formatMessage({
+                      id: 'actions.occurrenceRecords.limited',
+                      defaultMessage: 'Only the first {limit} taxa from this list will be used in the following Biocache search, due to querying limitations.'
+                      }, { limit: maxTaxaSearch })}
+                    </Text>
+                  ),
+                  labels: { 
+                    confirm: intl.formatMessage({ id: 'actions.occurrenceRecords.proceed', defaultMessage: 'View all records' }), 
+                    cancel: intl.formatMessage({ id: 'actions.cancel', defaultMessage: 'Cancel' }) 
+                  },
+                  confirmProps: {
+                    variant: 'filled',
+                    radius: 'md',
+                  },
+                  cancelProps: { radius: 'md' },
+                  onConfirm: () => {
+                    handleBiocacheLink(meta.dataResourceUid);
+                  },
+                  centered: true
+                });
+              }}
               loading={
                 fetchingQid === import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH
               }

@@ -1,20 +1,24 @@
 package au.org.ala.listsapi.service;
 
-import au.org.ala.listsapi.model.*;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.PostConstruct;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import au.org.ala.listsapi.model.ConstraintListItem;
+import au.org.ala.listsapi.model.ConstraintType;
+import au.org.ala.listsapi.model.InputSpeciesList;
+import jakarta.annotation.PostConstruct;
 
 @Service
 public class ValidationService {
@@ -29,7 +33,7 @@ public class ValidationService {
 
   private Map<String, List<ConstraintListItem>> constraints = null;
 
-  private List<ConstraintListItem> getConstraintsByKey(ConstraintType constraintType) {
+  public List<ConstraintListItem> getConstraintsByKey(ConstraintType constraintType) {
     return constraints.get(constraintType.name());
   }
 

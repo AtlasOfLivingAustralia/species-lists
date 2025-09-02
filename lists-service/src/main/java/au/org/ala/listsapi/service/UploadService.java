@@ -99,6 +99,18 @@ public class UploadService {
         NULL_VALUES.add("not specified");
     }
 
+    /**
+     * Returns the first non-empty string from the provided arguments.
+     */
+    private static String firstNonEmpty(String... values) {
+        for (String value : values) {
+            if (StringUtils.isNotEmpty(value)) {
+                return value;
+            }
+        }
+        return null;
+    }
+
     public boolean deleteList(String speciesListID, AlaUserProfile userProfile) {
 
         Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
@@ -161,6 +173,8 @@ public class UploadService {
         speciesList.setIsThreatened(Boolean.parseBoolean(speciesListMetadata.getIsThreatened()));
         speciesList.setIsSDS(Boolean.parseBoolean(speciesListMetadata.getIsSDS()));
         speciesList.setIsBIE(Boolean.parseBoolean(speciesListMetadata.getIsBIE()));
+        speciesList.setIsThreatened(Boolean.parseBoolean(speciesListMetadata.getIsThreatened()));
+        speciesList.setIsInvasive(Boolean.parseBoolean(speciesListMetadata.getIsInvasive()));
         speciesList.setLicence(speciesListMetadata.getLicence());
         speciesList.setListType(speciesListMetadata.getListType());
         speciesList.setRegion(speciesListMetadata.getRegion());
@@ -355,20 +369,23 @@ public class UploadService {
             String scientificName = values.remove(DwcTerm.scientificName.simpleName());
             String taxonID = values.remove(DwcTerm.taxonID.simpleName());
             String taxonConceptID = values.remove(DwcTerm.taxonConceptID.simpleName());
+            String vernacularName = values.remove(DwcTerm.vernacularName.simpleName());
 
             String suppliedName = values.remove("Supplied Name");
 
             if (suppliedName != null) {
-                scientificName = suppliedName;
+                scientificName = suppliedName; // undocumented input field, left in for backward compatibility
+            } else {
+                suppliedName = firstNonEmpty(scientificName, taxonID, taxonConceptID, vernacularName);
             }
 
             if (StringUtils.isEmpty(scientificName)
+                    && StringUtils.isEmpty(vernacularName)
                     && StringUtils.isEmpty(taxonID)
                     && StringUtils.isEmpty(taxonConceptID)) {
                 recordsWithoutScientificName++;
             }
 
-            String vernacularName = values.remove(DwcTerm.vernacularName.simpleName());
             String kingdom = values.remove(DwcTerm.kingdom.simpleName());
             String phylum = values.remove(DwcTerm.phylum.simpleName());
             String classs = values.remove(DwcTerm.class_.simpleName());
@@ -376,7 +393,7 @@ public class UploadService {
             String family = values.remove(DwcTerm.family.simpleName());
             String genus = values.remove(DwcTerm.genus.simpleName());
 
-            // lookup the scientific name
+            // process remaining fields (user supplied KVP data)
             List<KeyValue> keyValues = new ArrayList<>();
             Map<String, String> properties = new HashMap<>();
             values.entrySet().stream()
@@ -416,6 +433,7 @@ public class UploadService {
                         null,
                         speciesListID,
                         cleanField(taxonID),
+                        cleanField(suppliedName),
                         cleanField(scientificName),
                         cleanField(vernacularName),
                         cleanField(kingdom),

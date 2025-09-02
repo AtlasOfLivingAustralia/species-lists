@@ -1,0 +1,9 @@
+.metaBadge {
+  /* display: flex;
+  align-items: center;
+  font-weight: 400;*/
+  height: 25px;
+  font-size: var(--mantine-font-size-xs);
+  text-transform: none; 
+  font-weight: 400;
+}

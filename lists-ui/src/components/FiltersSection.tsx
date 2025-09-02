@@ -1,18 +1,3 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Stack,
-  Text,
-  Group,
-  Paper,
-  Chip,
-  Collapse,
-  ActionIcon,
-  Checkbox,
-  Tooltip,
-  ThemeIcon,
-  Button,
-} from '@mantine/core';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faClose,
   faDeleteLeft,
@@ -21,11 +6,26 @@ import {
   faPlus,
   faSliders,
 } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  ActionIcon,
+  Button,
+  Checkbox,
+  Chip,
+  Collapse,
+  Group,
+  Paper,
+  Stack,
+  Text,
+  ThemeIcon,
+  Tooltip,
+} from '@mantine/core';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 
-import { ListTypeBadge } from './ListTypeBadge';
 import { Facet, KV } from '#/api';
 import sanitiseText from '#/helpers/utils/sanitiseText';
+import { ListTypeBadge } from './ListTypeBadge';
 
 import classes from './FiltersSection.module.css';
 
@@ -36,7 +36,7 @@ interface FiltersDrawerProps {
   onReset: () => void;
 }
 
-const BOOLEAN_FACETS = ['isAuthoritative', 'isSDS', 'isBIE', 'hasRegion'];
+const BOOLEAN_FACETS = ['isAuthoritative', 'isSDS', 'isBIE', 'hasRegion', 'isThreatened', 'isInvasive'];
 
 // Helper function to render the entire Checkbox with its label
 const renderCheckbox = (
@@ -157,7 +157,7 @@ export const FacetComponent = memo(
     }, [onSelect, facet.key]);
 
     return (
-      (facet.counts.length > 1 || active.some((activeItem) => activeItem.key === facet.key)) && (
+      (facet.counts.length >= 1 || active.some((activeItem) => activeItem.key === facet.key)) && (
         <Paper
           className={!isBooleanFacet ? classes.facetPaper : undefined}
           fs="sm"

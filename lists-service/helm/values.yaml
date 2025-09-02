@@ -125,9 +125,8 @@ elasticsearch:
     password: ""
     authEnabled: false
     tlsEnabled: false
-  pvc:
-    name: "elasticsearch-pvc"
-  pv:
-    name: "elasticsearch-pv"
-    size: "5Gi"
-    volumeHandle: fs-xxxxxxxxxxxxx
+  persistence:
+    enabled: true
+    storageClass: "auto-ebs-sc"
+    accessMode: ReadWriteOnce
+    size: 10Gi

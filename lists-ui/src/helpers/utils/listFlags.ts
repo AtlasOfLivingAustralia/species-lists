@@ -19,14 +19,14 @@ export default [
     label: 'Invasive',
     description: 'List taxa are invasive',
     icon: faBug,
-    admin: false,
+    admin: true,
   },
   {
     flag: 'isThreatened',
     label: 'Threatened',
     description: 'List taxa are threatened',
     icon: faExclamationCircle,
-    admin: false,
+    admin: true,
   },
   {
     flag: 'isSDS',

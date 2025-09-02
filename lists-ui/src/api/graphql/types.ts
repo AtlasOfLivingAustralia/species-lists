@@ -109,6 +109,7 @@ interface Facet {
 
 interface SpeciesListItem {
   id: string;
+  suppliedName: string;
   scientificName: string;
   vernacularName: string;
   kingdom: string;
@@ -195,22 +196,23 @@ interface SpeciesListConstraints {
 
 export type {
   Breadcrumb,
-  UploadResult,
-  IngestProgress,
-  MigrateProgress,
-  InputSpeciesList,
-  SpeciesList,
-  SpeciesListSubmit,
-  SpeciesListPage,
+  Classification,
+  Constraint,
   Facet,
   FacetCount,
   FilteredSpeciesList,
-  SpeciesListItem,
-  SpeciesListConstraints,
-  Constraint,
+  IngestProgress,
+  InputSpeciesList,
+  KV,
+  ListsUser,
+  MigrateProgress,
   Release,
   ReleasesData,
-  ListsUser,
-  Classification,
-  KV,
+  SpeciesList,
+  SpeciesListConstraints,
+  SpeciesListItem,
+  SpeciesListPage,
+  SpeciesListSubmit,
+  UploadResult
 };
+

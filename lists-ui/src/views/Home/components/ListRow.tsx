@@ -1,16 +1,13 @@
+import { SpeciesList } from '#/api';
+import { ListTypeBadge } from '#/components/ListTypeBadge';
+import { useALA } from '#/helpers/context/useALA';
+import { parseDate } from '#/helpers/utils/parseListDate';
+import { MapLayersIcon } from '@atlasoflivingaustralia/ala-mantine';
+import { faCalendar, faEye, faEyeSlash } from '@fortawesome/free-regular-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Anchor, Badge, Group, Skeleton, Space, Stack, Table, Text } from '@mantine/core';
 import { FormattedDate, FormattedMessage, FormattedNumber, IntlProvider } from 'react-intl';
 import { Link } from 'react-router';
-import { parseDate } from '#/helpers/utils/parseListDate';
-import { SpeciesList } from '#/api';
-import { MapLayersIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendar, faEye, faEyeSlash } from '@fortawesome/free-regular-svg-icons';
-import { useALA } from '#/helpers/context/useALA';
-import { faShieldHalved } from '@fortawesome/free-solid-svg-icons';
-import { faStar } from '@fortawesome/free-regular-svg-icons';
-import AlaIcon from '#/static/ala-logo-grey.svg?react';
-import { ListTypeBadge } from '#/components/ListTypeBadge';
 
 interface ListRowProps {
   list?: SpeciesList;
@@ -73,6 +70,12 @@ export function ListRow({ list, isUser }: ListRowProps) {
               )}
               { list?.isBIE && (
                 <><Space w={3} /><ListTypeBadge listTypeValue='isBIE'/></>
+              )}
+              { list?.isThreatened && (
+                <><Space w={3} /><ListTypeBadge listTypeValue='isThreatened'/></>
+              )}
+              { list?.isInvasive && (
+                <><Space w={3} /><ListTypeBadge listTypeValue='isInvasive'/></>
               )}
               { list?.region && list.region.trim() !== '' && (
                 // Not currently used as GraphQL is not reuturning this field

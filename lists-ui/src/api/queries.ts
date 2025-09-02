@@ -21,6 +21,7 @@ export const QUERY_LISTS_SEARCH = `query findList($searchQuery: String, $page: I
       isSDS
       isThreatened
       isAuthoritative
+      isInvasive
       __typename
     }
     totalPages
@@ -61,6 +62,7 @@ export const QUERY_LISTS_GET = `query loadList(
     editors
     tags
     region
+    wkt
     licence
     listType
     metadataLastUpdated
@@ -83,6 +85,7 @@ export const QUERY_LISTS_GET = `query loadList(
   ) {
     content {
       id
+      suppliedName
       scientificName
       vernacularName
       genus
@@ -114,6 +117,7 @@ export const QUERY_LISTS_GET = `query loadList(
         genusID
         rank
         rankID
+        matchType
       }
       dateCreated
       lastUpdated

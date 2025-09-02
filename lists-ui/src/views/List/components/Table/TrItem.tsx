@@ -1,7 +1,8 @@
-import { Anchor, MantineStyleProp, Table, TableTrProps } from '@mantine/core';
 import { SpeciesListItem } from '#/api';
-import find from 'lodash-es/find';
 import { getStyleForTaxon } from '#/helpers/utils/formatName';
+import { Anchor, MantineStyleProp, Table, TableTrProps } from '@mantine/core';
+import find from 'lodash-es/find';
+import { useIntl } from 'react-intl';
 
 interface TrItemProps extends TableTrProps {
   row: SpeciesListItem;
@@ -24,6 +25,9 @@ export function TrItem({
   editing,
   ...rest
 }: TrItemProps) {
+
+  const intl = useIntl();
+
   return (
     <Table.Tr
       style={{
@@ -32,7 +36,7 @@ export function TrItem({
       }}
       {...rest}
     >
-      <Table.Td width='auto'>{row.scientificName}</Table.Td>
+      <Table.Td width='auto'>{row.suppliedName || row.scientificName}</Table.Td>
       <Table.Td width='auto'>
         {row.classification?.scientificName ? (
           <Anchor
@@ -61,7 +65,9 @@ export function TrItem({
       {classification.map((key) => (
         <Table.Td key={key} style={tdStyles}>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          {(row.classification as any)?.[key]}
+          {key === "matchType" 
+            ? intl.formatMessage({ id: `classification.${(row.classification as any)?.[key]}` })
+            : (row.classification as any)?.[key]}
         </Table.Td>
       ))}
     </Table.Tr>

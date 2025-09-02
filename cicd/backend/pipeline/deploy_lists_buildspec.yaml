@@ -85,11 +85,7 @@ phases:
             username: $ELASTIC_USERNAME
             password: $ELASTIC_PASSWORD
             authEnabled: $ELASTIC_AUTH_ENABLED
-            tlsEnabled: $ELASTIC_TLS_ENABLED
-          pv:
-            name: pv-$ELASTIC_HOST
-          pvc:
-            name: pvc-$ELASTIC_HOST" > helm_values.yaml
+            tlsEnabled: $ELASTIC_TLS_ENABLED" > helm_values.yaml
       - echo helm values
       - cat helm_values.yaml
       - echo helm upgrade --install $HELM_RELEASE_NAME  . 

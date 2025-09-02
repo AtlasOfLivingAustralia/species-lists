@@ -1,7 +1,7 @@
 # List service - GraphQL and REST services for species lists
 
 This is the back end for the species-lists project.
-It is a Spring Boot application that provides REST and GraphQL web services for accessing, modifying species lists.
+It is a Spring Boot (Maven) application that provides REST and GraphQL web services for accessing, modifying species lists.
 
 ## Getting started
 

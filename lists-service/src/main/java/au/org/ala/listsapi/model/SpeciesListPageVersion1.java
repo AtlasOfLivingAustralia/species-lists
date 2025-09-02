@@ -18,30 +18,22 @@ package au.org.ala.listsapi.model;
 import java.io.Serializable;
 import java.util.List;
 
-import org.springframework.data.annotation.Id;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Model class representing a species list version for /v1 backwards compatibility.
+ * Model class representing a species list page model
  * This POJO is used for controller response serialization only.
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class QueryListItemVersion1 implements Serializable {
+public class SpeciesListPageVersion1 implements Serializable {
 
-    private static final long serialVersionUID = 1L;
-    @Id
-    private String id;
-    private String speciesListID;
-    private String dataResourceUid;
-    private String lsid; // same as guid
-    private String name;
-    private String rawScientificName;
-    private String matchedName;
-    private String commonName;
-    private List<KvpValueVersion1> kvpValues;
+    private List<SpeciesListVersion1> lists;
+    private long listCount;
+    private int offset;
+    private int max;
+    private String sort;
 }

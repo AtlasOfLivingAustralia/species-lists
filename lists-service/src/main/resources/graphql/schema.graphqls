@@ -89,6 +89,7 @@ type SpeciesListItem {
   id: ID
   version: Int
   speciesListID: String
+  suppliedName: String
   scientificName: String
   taxonID: String
   vernacularName: String
@@ -147,6 +148,7 @@ type Classification {
   genusID: String
   rank: String
   rankID: Int
+  matchType: String
 }
 
 input Filter {

@@ -65,10 +65,13 @@ public class ElasticUtils {
                     "isAuthoritative",
                     "hasRegion",
                     "isSDS",
+                    "isThreatened",
+                    "isInvasive",
                     "tags");
 
     public static final List<String> CORE_BOOL_FIELDS =
-            List.of("isBIE", "isAuthoritative", "hasRegion", "isSDS");
+            List.of("isBIE", "isAuthoritative", "hasRegion", "isSDS", 
+                    "isThreatened", "isInvasive");
 
     private static final Set<String> TOP_LEVEL_SEARCHABLE_FIELDS = Set.of(
             // Root-level fields that have a ".search" subfield
@@ -117,6 +120,7 @@ public class ElasticUtils {
         SpeciesListItem speciesListItem = new SpeciesListItem();
         speciesListItem.setId(new ObjectId(index.getId()));
         speciesListItem.setSpeciesListID(index.getSpeciesListID());
+        speciesListItem.setSuppliedName(index.getSuppliedName());
         speciesListItem.setScientificName(index.getScientificName());
         speciesListItem.setVernacularName(index.getVernacularName());
         speciesListItem.setPhylum(index.getPhylum());

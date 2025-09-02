@@ -13,6 +13,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.index.Indexed;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
@@ -35,6 +36,7 @@ public class SpeciesListItem {
     @Indexed
     private String speciesListID;
     private String taxonID;
+    private String suppliedName;
     private String scientificName;
     private String vernacularName;
     private String kingdom;
@@ -90,6 +92,8 @@ public class SpeciesListItem {
                 return this.speciesListID;
             case "taxonID":
                 return this.taxonID;
+            case "suppliedName":
+                return this.suppliedName;
             case "scientificName":
                 return this.scientificName;
             case "vernacularName":
@@ -119,5 +123,10 @@ public class SpeciesListItem {
         }
 
         return null;
+    }
+
+    @JsonProperty("class")
+    public String getClasss() {
+        return this.classs;
     }
 }

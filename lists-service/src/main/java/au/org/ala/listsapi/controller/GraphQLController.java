@@ -121,6 +121,7 @@ public class GraphQLController {
 
     public static final List<String> CORE_FIELDS = List.of(
             "id",
+            "suppliedName",
             "scientificName",
             "vernacularName",
             "taxonID",
@@ -133,6 +134,8 @@ public class GraphQLController {
             "isBIE",
             "listType",
             "isAuthoritative",
+            "isThreatened",
+            "isInvasive",
             "hasRegion",
             "isSDS",
             "tags");
@@ -634,6 +637,7 @@ public class GraphQLController {
                 speciesList.getTitle(),
                 speciesList.getListType(),
                 speciesListItem.getSpeciesListID(),
+                speciesListItem.getSuppliedName(),
                 speciesListItem.getScientificName(),
                 speciesListItem.getVernacularName(),
                 speciesListItem.getTaxonID(),
@@ -649,6 +653,8 @@ public class GraphQLController {
                 speciesList.getIsAuthoritative() != null ? speciesList.getIsAuthoritative() : false,
                 speciesList.getIsBIE() != null ? speciesList.getIsBIE() : false,
                 speciesList.getIsSDS() != null ? speciesList.getIsSDS() : false,
+                speciesList.getIsThreatened() != null ? speciesList.getIsThreatened() : false,
+                speciesList.getIsInvasive() != null ? speciesList.getIsInvasive() : false,
                 StringUtils.isNotEmpty(speciesList.getRegion()) || StringUtils.isNotEmpty(speciesList.getWkt()),
                 speciesList.getOwner(),
                 speciesList.getEditors(),
@@ -786,6 +792,8 @@ public class GraphQLController {
                     || isAuthoritative != null && !isAuthoritative.equals(toUpdate.getIsAuthoritative())
                     || isBIE != null && !isBIE.equals(toUpdate.getIsBIE())
                     || isSDS != null && !isSDS.equals(toUpdate.getIsSDS())
+                    || isInvasive != null && !isInvasive.equals(toUpdate.getIsInvasive())
+                    || isThreatened != null && !isThreatened.equals(toUpdate.getIsThreatened())
                     || wkt != null && !wkt.equals(toUpdate.getWkt())
                     || region != null && !region.equals(toUpdate.getRegion())
                     || licence != null && !licence.equals(toUpdate.getLicence())
@@ -942,6 +950,8 @@ public class GraphQLController {
         facetFields.add("isSDS");
         facetFields.add("hasRegion");
         facetFields.add("tags");
+        facetFields.add("isThreatened");
+        facetFields.add("isInvasive");
 
         // Define the name for the nested cardinality aggregation
         String distinctCountAggName = "distinct_species_list_count";
@@ -949,7 +959,7 @@ public class GraphQLController {
         String speciesListIdKeywordField = SPECIES_LIST_ID + ".keyword";
 
         // Define which of the facet fields are boolean
-        Set<String> booleanFacetFields = Set.of("isAuthoritative", "isBIE", "isSDS", "hasRegion");
+        Set<String> booleanFacetFields = Set.of("isAuthoritative", "isBIE", "isSDS", "hasRegion", "isThreatened", "isInvasive");
 
         for (String facetField : facetFields) {
             // Determine the correct field for the terms aggregation
@@ -1139,6 +1149,7 @@ public class GraphQLController {
         }
 
         // Add classification fields
+        // TODO: move to configuration
         List<String> classificationFields = new ArrayList<>();
         classificationFields.add("classification.family");
         classificationFields.add("classification.order");
@@ -1148,6 +1159,7 @@ public class GraphQLController {
         classificationFields.add("classification.speciesSubgroup");
         classificationFields.add("classification.rank");
         classificationFields.add("classification.vernacularName");
+        classificationFields.add("classification.matchType");
 
         for (String classificationField : classificationFields) {
             builder.withAggregation(

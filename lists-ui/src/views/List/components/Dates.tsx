@@ -3,13 +3,12 @@ import { SpeciesList } from '#/api';
 import { faCalendar } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  Group,
-  Paper,
   PaperProps,
   Text,
   Tooltip,
-  useMantineTheme,
+  useMantineTheme
 } from '@mantine/core';
+import { useIntl } from 'react-intl';
 
 interface DatesProps extends PaperProps {
   meta: SpeciesList;
@@ -25,30 +24,36 @@ const formatDateString = (inputDate: string) => {
 
 export function Dates({ meta, ...rest }: DatesProps) {
   const theme = useMantineTheme();
+  const intl = useIntl();
 
   return (
-    <Tooltip
-      position='top'
-      disabled={!meta.metadataLastUpdated}
-      style={{ fontSize: theme.fontSizes.sm }}
-      label={
-        <>
-          <b>Metadata</b>{' '}
-          {meta.metadataLastUpdated
-            ? formatDateString(meta.metadataLastUpdated)
-            : '?'}
-        </>
-      }
-      withArrow
-    >
-      <Paper {...rest} withBorder p='xs' radius='md'>
-        <Group gap='xs'>
-          <Text size='xs' opacity={0.75}>
-            <FontAwesomeIcon style={{ marginRight: 10 }} icon={faCalendar} />
-            <b>Updated</b> {formatDateString(meta.lastUpdated)}
-          </Text>
-        </Group>
-      </Paper>
-    </Tooltip>
+    <Text size='sm' opacity={1} pl={6}>
+      <Tooltip
+        position='bottom'
+        disabled={!meta.lastUpdated}
+        style={{ fontSize: theme.fontSizes.sm }}
+        label={ intl.formatMessage({ id: 'list.dates.tooltip', defaultMessage: 'List content last updated' }) }
+        withArrow
+      >
+        <span>
+          <FontAwesomeIcon style={{ marginRight: 6 }} icon={faCalendar} color='grey' />
+          {intl.formatMessage({ id: 'list.lastUpdated.label', defaultMessage: 'List' })}:{' '}
+          {formatDateString(meta.lastUpdated)}{' '}
+        </span>
+      </Tooltip>
+      <Tooltip
+        position='bottom'
+        disabled={!meta.metadataLastUpdated}
+        style={{ fontSize: theme.fontSizes.sm }}
+        label={ intl.formatMessage({ id: 'list.metadata.tooltip', defaultMessage: 'List metadata last updated' }) }
+        withArrow
+      >
+        <span>
+          <FontAwesomeIcon style={{ marginRight: 6, marginLeft: 8 }} icon={faCalendar} color='grey' />
+          {intl.formatMessage({ id: 'list.metadataLastUpdated.label', defaultMessage: 'Metadata' })}:{' '}
+          {formatDateString(meta.metadataLastUpdated)}
+        </span>
+        </Tooltip>
+    </Text>
   );
 }

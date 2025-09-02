@@ -59,7 +59,6 @@ import au.org.ala.listsapi.model.Classification;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListIndex;
 import au.org.ala.listsapi.model.SpeciesListItem;
-import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
@@ -68,7 +67,7 @@ import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 public class TaxonService {
 
     @Value("${namematching.url}")
-    private String namematchingQueryUrl;
+    private String nameMatchingQueryUrl;
 
     private static final Logger logger = LoggerFactory.getLogger(TaxonService.class);
     public static final String SPECIES_LIST_ID = "speciesListID";
@@ -76,8 +75,6 @@ public class TaxonService {
     protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
     @Autowired
     protected SpeciesListMongoRepository speciesListMongoRepository;
-    @Autowired
-    protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
     @Autowired
     protected ElasticsearchOperations elasticsearchOperations;
     @Autowired
@@ -195,6 +192,7 @@ public class TaxonService {
                 speciesList.getTitle(),
                 speciesList.getListType(),
                 speciesListItem.getSpeciesListID(),
+                speciesListItem.getSuppliedName(),
                 speciesListItem.getScientificName(),
                 speciesListItem.getVernacularName(),
                 speciesListItem.getTaxonID(),
@@ -210,6 +208,8 @@ public class TaxonService {
                 speciesList.getIsAuthoritative() != null ? speciesList.getIsAuthoritative() : false,
                 speciesList.getIsBIE() != null ? speciesList.getIsBIE() : false,
                 speciesList.getIsSDS() != null ? speciesList.getIsSDS() : false,
+                speciesList.getIsThreatened() != null ? speciesList.getIsThreatened() : false,
+                speciesList.getIsInvasive() != null ? speciesList.getIsInvasive() : false,
                 StringUtils.isNotEmpty(speciesList.getRegion()) || StringUtils.isNotEmpty(speciesList.getWkt()),
                 speciesList.getOwner(),
                 speciesList.getEditors(),
@@ -355,6 +355,11 @@ public class TaxonService {
         try {
             List<Classification> classification = lookupTaxa(speciesListItems);
             for (int i = 0; i < speciesListItems.size(); i++) {
+                // Update "matchType" based on classification success
+                if (classification.get(i).getSuccess() == false) {
+                    classification.get(i).setMatchType("noMatch");
+                }
+
                 speciesListItems.get(i).setClassification(classification.get(i));
             }
             // write to mongo
@@ -417,7 +422,7 @@ public class TaxonService {
             throws IOException, InterruptedException {
 
         String json = objectMapper.writeValueAsString(requestBody);
-        HttpRequest httpRequest = HttpRequest.newBuilder(URI.create(namematchingQueryUrl + endpoint))
+        HttpRequest httpRequest = HttpRequest.newBuilder(URI.create(nameMatchingQueryUrl + endpoint))
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .header("Content-Type", "application/json")
                 .build();
@@ -429,11 +434,13 @@ public class TaxonService {
             List<String> taxonIDs, String endpoint, String speciesListID, String logTag)
             throws IOException, InterruptedException {
 
+        // Ensure the encodedParams contains the same number of entries as taxonIDs,
+        // inserting empty values for nulls (nulls trigger an exception when encoded)
         String encodedParams = taxonIDs.stream()
-                .map(id -> "taxonIDs=" + URLEncoder.encode(id, StandardCharsets.UTF_8))
-                .collect(Collectors.joining("&"));
+            .map(id -> "taxonIDs=" + (id == null ? "" : URLEncoder.encode(id, StandardCharsets.UTF_8)))
+            .collect(Collectors.joining("&"));
 
-        URI uriWithParams = URI.create(namematchingQueryUrl + endpoint + encodedParams);
+        URI uriWithParams = URI.create(nameMatchingQueryUrl + endpoint + encodedParams);
 
         HttpRequest httpRequest = HttpRequest.newBuilder(uriWithParams)
                 .POST(HttpRequest.BodyPublishers.noBody()) // No body for GET

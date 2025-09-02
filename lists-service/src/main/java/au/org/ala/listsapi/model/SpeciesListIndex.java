@@ -22,6 +22,8 @@ import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Mapping;
 import org.springframework.data.elasticsearch.annotations.Setting;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,6 +33,8 @@ import lombok.experimental.SuperBuilder;
  * SpeciesListIndex is a model/bean that represents a single elastic search document and
  * each entry corresponds to a denormalised taxon row entry for a species list. Individual 
  * lists are represented by aggregating the entries for each list's taxa in the index.
+ * Note: any changes to this file will require the ElasticSearch index to be deleted, 
+ * recreated and reindexed again. Otherwise the mappings.json file is not sent to the server.
  */
 @Document(indexName = "species-lists", createIndex = true)
 @Setting(settingPath = "/elasticsearch/settings.json")
@@ -45,6 +49,7 @@ public class SpeciesListIndex {
     private String speciesListName;
     private String listType;
     private String speciesListID;
+    private String suppliedName;
     private String scientificName;
     private String vernacularName;
     private String taxonID;
@@ -60,6 +65,8 @@ public class SpeciesListIndex {
     private boolean isAuthoritative;
     private boolean isBIE;
     private boolean isSDS;
+    private boolean isThreatened;
+    private boolean isInvasive;
     private boolean hasRegion;
     private String owner;
     private List<String> editors;
@@ -67,4 +74,9 @@ public class SpeciesListIndex {
     public String dateCreated;
     public String lastUpdated;
     private String lastUpdatedBy;
+
+    @JsonProperty("class")
+    public String getClasss() {
+        return classs;
+    }
 }
