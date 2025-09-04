@@ -16,6 +16,7 @@ This consists of two components:
 * [lists-ui](lists-ui) - Web application for browsing and managing species lists
 * [lists-service](lists-service) - Spring boot REST and GraphQL web services for accessing, modifying species lists
 
+For detailed information about this project, see the DeepWiki page: [Species Lists Management System Overview](https://deepwiki.com/AtlasOfLivingAustralia/species-lists).
 
 ## Architecture
 
