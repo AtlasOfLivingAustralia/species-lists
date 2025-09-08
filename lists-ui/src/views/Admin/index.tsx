@@ -398,9 +398,9 @@ export function Component() {
               </Grid.Col>
               <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
                 <ActionCard
-                  disabled={Boolean(migrationProgress) || migrationDisabled}
+                  disabled={true}
                   title='Reboot'
-                  description='Reboot the lists application'
+                  description='Reboot the lists application - deprecated and no longer available'
                   icon={faRefresh}
                   onClick={() => handleClick('reboot', 'Reboot')}
                 />
