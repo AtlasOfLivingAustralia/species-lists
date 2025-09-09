@@ -582,14 +582,7 @@ public class GraphQLController {
 
         SpeciesList speciesList = optionalSpeciesList.get();
         SpeciesListItem speciesListItem = optionalSpeciesListItem.get();
-
-        try {
-            updateItem(inputSpeciesListItem, speciesListItem, principal);
-        } catch (Exception e) {
-            logger.error("Error updating species list item: " + speciesListItem.getId(), e);
-            logger.info("Update new value: " + inputSpeciesListItem);
-            throw new RuntimeException("Failed to update species list item", e);
-        }
+        updateItem(inputSpeciesListItem, speciesListItem, principal);
 
         // update last updated
         speciesList = updateLastUpdated(speciesList, principal);
@@ -615,7 +608,6 @@ public class GraphQLController {
 
     private SpeciesListItem updateItem(
             InputSpeciesListItem inputSpeciesListItem, SpeciesListItem speciesListItem, Principal principal) {
-        
         speciesListItem.setScientificName(inputSpeciesListItem.getScientificName());
         speciesListItem.setTaxonID(inputSpeciesListItem.getTaxonID());
         speciesListItem.setGenus(inputSpeciesListItem.getGenus());
@@ -631,15 +623,10 @@ public class GraphQLController {
                         .collect(Collectors.toList()));
         speciesListItem.setLastUpdated(new Date());
         speciesListItem.setLastUpdatedBy(principal.getName());
-
         if (speciesListItem.getSpeciesListID() == null) {
             speciesListItem.setSpeciesListID(inputSpeciesListItem.getSpeciesListID());
         }
-
-        SpeciesListItem newItem = speciesListItemMongoRepository.save(speciesListItem);
-        logger.info("Updated species list item with ID: " + newItem.getId());
-
-        return newItem;
+        return speciesListItemMongoRepository.save(speciesListItem);
     }
 
     private void reindex(SpeciesListItem speciesListItem, SpeciesList speciesList) {
