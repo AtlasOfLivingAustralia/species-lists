@@ -79,7 +79,7 @@ export function Actions({
   // Handle Biocache links
   const handleBiocacheLink = useCallback(
     (dataResourceId: string) => {
-      if (meta.isAuthoritative) {
+      if (meta.isAuthoritative && !meta.isPrivate) {
         handleAuthoritativeBiocacheLink(dataResourceId);
       } else if (!meta.isPrivate) {
         handlePublicBiocacheLink(dataResourceId);
@@ -515,7 +515,7 @@ export function Actions({
                       })}
                     </Text>
                   ),
-                  children: (meta.isAuthoritative || !meta.isPrivate) ? (
+                  children: ((meta.isAuthoritative && !meta.isPrivate) || !meta.isPrivate) ? (
                     <Text>
                       {intl.formatMessage({
                         id: 'actions.occurrenceRecords.authoritative',
