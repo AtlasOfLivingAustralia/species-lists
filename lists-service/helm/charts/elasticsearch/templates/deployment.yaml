@@ -1,3 +1,4 @@
+{{- if .Values.single_node_es }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -47,3 +48,4 @@ spec:
         - name: elasticsearch-data
           persistentVolumeClaim:
             claimName: {{ .Values.deployment.name }}-pvc
+{{- end }}

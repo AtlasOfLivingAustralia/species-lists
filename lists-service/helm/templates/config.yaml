@@ -10,16 +10,3 @@ data:
 binaryData:
   lists-service-truststore.jks: |-
 {{ .Files.Get "config/lists-service-truststore.jks" | b64enc | indent 4 }}
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: {{ include "ala-species-lists.fullname" . }}
-  labels:
-    {{- include "ala-species-lists.labels" . | nindent 4 }}
-data:
-  MONGODB_PASSWORD: {{ .Values.mongodb.password | b64enc }}
-  MONGODB_USERNAME: {{ .Values.mongodb.username | b64enc }}
-  OIDC_CLIENT_ID: {{ .Values.oidc.clientId | b64enc }}
-  WEBSERVICE_CLIENTID: {{ .Values.webservice.clientId | b64enc }}
-  WEBSERVICE_CLIENTSECRET: {{ .Values.webservice.clientSecret | b64enc }}

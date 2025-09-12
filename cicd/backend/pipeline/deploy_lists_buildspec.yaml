@@ -7,8 +7,6 @@ env:
   shell: bash
   variables:
     JAVA_TOOL_OPTIONS: -Dhttps.protocols=TLSv1.2
-  secrets-manager:
-    MONGODB_PASSWORD: $LISTS_SECRET_NAME:db-password
 
 phases:
 
@@ -21,81 +19,21 @@ phases:
 
   pre_build:
     commands:
-      - echo getting app clientID and secret
-      - aws cognito-idp describe-user-pool-client --user-pool-id $USER_POOL_ID --client-id $SERVICE_APP_CLIENT_ID --region $AWS_REGION > app_client.json
-      - export WEBSERVICE_CLIENT_ID=$(jq -r '.UserPoolClient.ClientId' app_client.json)
-      - echo WEBSERVICE_CLIENT_ID=$WEBSERVICE_CLIENT_ID
-      - export WEBSERVICE_CLIENT_SECRET=$(jq -r '.UserPoolClient.ClientSecret' app_client.json)
-      - echo WEBSERVICE_CLIENT_SECRET=${WEBSERVICE_CLIENT_SECRET:0:3}************
+      - echo Entered the pre_build phase...
 
   build:
     commands:
       - echo Build started on $(date)
       - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME
-#      - kubectl config set-context --current --namespace=$PRODUCT_NAME
-#      - printf "$(kubectl config current-context)\n"
-      # do we need to create the service account here?
-      - export ELASTIC_USERNAME=elastic
-      - export ELASTIC_PASSWORD="password"
-      - export ELASTIC_AUTH_ENABLED=false
-      - export ELASTIC_TLS_ENABLED=false
-      - export ELASTIC_ENDPOINT=$ELASTIC_HOST
-      - |  
-        if [ "$EKS_NAMESPACE" = "testing" ]; then
-          export ELASTIC_PASSWORD=$(kubectl -n elasticsearch get secret testing-cluster-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')
-          export ELASTIC_USERNAME=elastic
-          export ELASTIC_AUTH_ENABLED=true
-          export ELASTIC_TLS_ENABLED=true
-          export ELASTIC_ENDPOINT="testing-elasticsearch.elasticsearch.svc.cluster.local"
-        fi
       - cd lists-service/helm
-      - |
-        echo "mongodb:
-          host: $MONGODB_HOST
-          password: \"$MONGODB_PASSWORD\"
-          username: $MONGODB_USERNAME
-        oidc:
-          discoveryUri: $OIDC_DISCOVERY_URI
-          clientId: $OIDC_CLIENT_ID
-        webservice:
-          clientId: $WEBSERVICE_CLIENT_ID
-          clientSecret: $WEBSERVICE_CLIENT_SECRET
-        app:
-          url: "https://${UI_SUB_DOMAIN}.${HOSTED_ZONE}"
-          ws-url: $WS_SUB_DOMAIN.$HOSTED_ZONE
-        bie:
-          baseUrl: $BIE_BASE_URL
-        biocache:
-          baseUrl: $BIOCACHE_BASE_URL
-        collectory:
-          baseUrl: $COLLECTORY_BASE_URL
-        images:
-          baseUrl: $IMAGES_BASE_URL
-        namematching:
-          baseUrl: $NAMEMATCHING_BASE_URL
-        userdetails:
-          baseUrl: $USERDETAILS_BASE_URL
-        elasticsearch:
-          deployment:
-            name: $ELASTIC_HOST
-          service:
-            name: $ELASTIC_HOST
-            host: $ELASTIC_ENDPOINT
-            port: $ELASTIC_PORT
-            username: $ELASTIC_USERNAME
-            password: $ELASTIC_PASSWORD
-            authEnabled: $ELASTIC_AUTH_ENABLED
-            tlsEnabled: $ELASTIC_TLS_ENABLED" > helm_values.yaml
-      - echo helm values
-      - cat helm_values.yaml
       - echo helm upgrade --install $HELM_RELEASE_NAME  . 
                       -n $EKS_NAMESPACE 
                       --set image.repository=$ECR_REPO 
                       --set image.tag=$BUILD_TAG
                       --set ingress.hostname=$WS_SUB_DOMAIN.$HOSTED_ZONE
                       --set ingress.certificateArn=$APP_CERTIFICATE
-                      -f helm_values.yaml
-                      --set deploymentAnnotations.checksum/configs="$(md5sum helm_values.yaml | awk '{print $1}')"
+                      -f $CODEBUILD_SRC_DIR_ExportConfigArtifact/helm-values.yaml
+                      --set deploymentAnnotations.checksum/configs="$(md5sum $CODEBUILD_SRC_DIR_ExportConfigArtifact/helm-values.yaml | awk '{print $1}')"
                       --set deploymentAnnotations.commitHash=$CODEBUILD_RESOLVED_SOURCE_VERSION
       - helm upgrade --install $HELM_RELEASE_NAME . 
                       -n $EKS_NAMESPACE
@@ -103,8 +41,8 @@ phases:
                       --set image.tag=$BUILD_TAG
                       --set ingress.hostname=$WS_SUB_DOMAIN.$HOSTED_ZONE
                       --set ingress.certificateArn=$APP_CERTIFICATE
-                      -f helm_values.yaml
-                      --set deploymentAnnotations.checksum/configs="$(md5sum helm_values.yaml | awk '{print $1}')"
+                      -f $CODEBUILD_SRC_DIR_ExportConfigArtifact/helm-values.yaml
+                      --set deploymentAnnotations.checksum/configs="$(md5sum $CODEBUILD_SRC_DIR_ExportConfigArtifact/helm-values.yaml | awk '{print $1}')"
                       --set deploymentAnnotations.commitHash=$CODEBUILD_RESOLVED_SOURCE_VERSION
   post_build:
     commands:

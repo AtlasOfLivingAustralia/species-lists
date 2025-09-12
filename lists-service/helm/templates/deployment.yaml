@@ -32,9 +32,6 @@ spec:
             - "-jar"
             - "app.jar"
             - "--spring.config.location=file:/data/lists-service/config/lists-service-config.properties"
-          envFrom:
-            - secretRef:
-                name: {{ include "ala-species-lists.fullname" . }}
           volumeMounts:
             - name: config-volume
               mountPath: /data/lists-service/config/lists-service-config.properties
