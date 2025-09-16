@@ -42,6 +42,19 @@ Resources:
               - lists-${ResourceName}
               - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
       Description: !Sub Lists app ${pEnvironment} secrets
+      GenerateSecretString:
+        SecretStringTemplate: |
+          {
+            "db-password": ""
+          }
+        GenerateStringKey: db-password
+        PasswordLength: 12
+        ExcludeCharacters: "/@\" "
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - ${pProductName}-${ResourceName}
+            - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
 
   ListsAppClient:
     Type: AWS::Cognito::UserPoolClient
