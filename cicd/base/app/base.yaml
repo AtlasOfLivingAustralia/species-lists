@@ -12,6 +12,9 @@ Parameters:
   pEnvironment:
     Type: String
     Description: The AWS environment this belongs to
+  pProductName:
+    Type: String
+    Description: The product name, used in resource names
   pCognitoStackName:
     Type: String
     Description: The name of the Cognito stack
