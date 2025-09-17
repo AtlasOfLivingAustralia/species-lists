@@ -13,6 +13,7 @@ import ALAContext from './ALAContext';
 const JWT_ROLES = import.meta.env.VITE_AUTH_JWT_ROLES;
 const JWT_USERID = import.meta.env.VITE_AUTH_JWT_USERID;
 const JWT_ADMIN_ROLE = import.meta.env.VITE_AUTH_JWT_ADMIN_ROLE;
+const JWT_EDITOR_ROLE = import.meta.env.VITE_AUTH_JWT_EDITOR_ROLE;
 
 export const ALAProvider = ({ children }: PropsWithChildren) => {
   const auth = useAuth();
@@ -21,7 +22,7 @@ export const ALAProvider = ({ children }: PropsWithChildren) => {
   // Extract the user
   const userid = (auth.user?.profile[JWT_USERID] || '') as string;
   const roles = (auth.user?.profile[JWT_ROLES] || []) as string[];
-  const isAdmin = auth.isAuthenticated && roles.includes(JWT_ADMIN_ROLE);
+  const isAdmin = auth.isAuthenticated && roles.includes(JWT_ADMIN_ROLE) || roles.includes(JWT_EDITOR_ROLE);
 
   const isAuthorisedForList = (list: SpeciesList) =>
     auth.isAuthenticated && (isAdmin || list.owner === userid);

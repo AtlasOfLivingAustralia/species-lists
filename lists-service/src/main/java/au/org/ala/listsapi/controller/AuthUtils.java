@@ -18,6 +18,7 @@ package au.org.ala.listsapi.controller;
 import java.security.Principal;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
@@ -28,6 +29,7 @@ import au.org.ala.ws.security.profile.AlaUserProfile;
 
 @Component
 public class AuthUtils {
+    Logger logger = Logger.getLogger(AuthUtils.class.getName());
 
     @Value("#{'${security.admin.role}'.split(',')}")
     private List<String> adminRoles;
@@ -81,18 +83,18 @@ public class AuthUtils {
 
     public boolean isAuthorized(SpeciesList list, Principal principal) {
         // Principal needs to be one of the following:
-        // 1) ROLE_ADMIN
+        // 1) ROLE_ADMIN OR ROLE_EDITOR
         // 2) ROLE_USER and is the owner of the list
         // 3) ROLE_USER and an editor of the list
         // 4) M2M token with ala/internal scope
         AlaUserProfile profile = getUserProfile(principal);
-
+        logger.info("User profile: " + profile);
         if (profile == null) {
             return false;
         }
 
-        // Check for admin role or internal scope first (these don't require user ID)
-        if (hasAdminRole(profile) || hasInternalScope(profile)) {
+        // Check for admin role, internal scope or editor role first (these don't require user ID)
+        if (hasAdminRole(profile) || hasInternalScope(profile) || profile.getRoles().contains("ROLE_EDITOR")) {
             return true;
         }
 
