@@ -31,8 +31,11 @@ import au.org.ala.ws.security.profile.AlaUserProfile;
 public class AuthUtils {
     Logger logger = Logger.getLogger(AuthUtils.class.getName());
 
-    @Value("#{'${security.admin.role}'.split(',')}")
+    @Value("#{'${security.admin.roles:ROLE_ADMIN}'.split(',')}")
     private List<String> adminRoles;
+
+    @Value("${security.m2m.scope:ala/internal}")
+    private String internalScope = "ala/internal";
 
     public AlaUserProfile getUserProfile(Principal principal) {
         AlaUserProfile profile = null;
@@ -50,8 +53,16 @@ public class AuthUtils {
         if (profile == null || adminRoles == null)
         return false;
 
+        // check roles (users)
         for (String role : profile.getRoles()) {
             if (adminRoles.contains(role)) {
+                return true;
+            }
+        }
+
+        // check scopes (M2M tokens)
+        for (String role : profile.getRoles()) {
+            if (role.equals(internalScope)) {
                 return true;
             }
         }
@@ -65,7 +76,7 @@ public class AuthUtils {
         }
 
         Set<String> roles = profile.getRoles();
-        return roles != null && roles.contains("ala/internal");
+        return roles != null && roles.contains(internalScope);
     }
 
     public boolean isAuthenticated(Principal principal) {
@@ -94,7 +105,7 @@ public class AuthUtils {
         }
 
         // Check for admin role, internal scope or editor role first (these don't require user ID)
-        if (hasAdminRole(profile) || hasInternalScope(profile) || profile.getRoles().contains("ROLE_EDITOR")) {
+        if (hasAdminRole(profile) || hasInternalScope(profile)) {
             return true;
         }
 
