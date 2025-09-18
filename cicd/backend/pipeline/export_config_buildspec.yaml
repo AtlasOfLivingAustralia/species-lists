@@ -170,7 +170,9 @@ phases:
             apikey:
               enabled: $SECURITY_JWT_APIKEY_ENABLED
             admin:
-              role: $SECURITY_ADMIN_ROLE
+              role: $SECURITY_ADMIN_ROLES
+            m2m:
+              scope: $SECURITY_M2M_SCOPE
           webservice:
             read:
               timeout: $WEBSERVICE_READ_TIMEOUT

@@ -148,7 +148,9 @@ config:
     apikey:
       enabled: false
     admin:
-      role: "ROLE_ADMIN,ala/internal"
+      roles: "ROLE_ADMIN,ROLE_EDITOR"
+    m2m:
+      scope: "ala/internal"
   webservice:
     read:
       timeout: 600000
