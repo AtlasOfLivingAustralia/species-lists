@@ -94,7 +94,7 @@ public class AuthUtils {
 
     public boolean isAuthorized(SpeciesList list, Principal principal) {
         // Principal needs to be one of the following:
-        // 1) ROLE_ADMIN OR ROLE_EDITOR
+        // 1) "Admin" roles" (see config: security.admin.roles)
         // 2) ROLE_USER and is the owner of the list
         // 3) ROLE_USER and an editor of the list
         // 4) M2M token with ala/internal scope
