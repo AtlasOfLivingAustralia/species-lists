@@ -10,6 +10,8 @@ env:
     DEBIAN_FRONTEND: noninteractive
   secrets-manager:
     DB_PASSWORD: $LISTS_SECRET_NAME:db-password
+    CAS_CLIENT_SECRET: $LISTS_SECRET_NAME:cas-client-secret
+    CAS_S2S_SECRET: $LISTS_SECRET_NAME:cas-s2s-client-secret
   exported-variables:
     - ADMIN_USER
     - ALA_SECRETS_NAME
@@ -115,6 +117,14 @@ phases:
         SERVER_TO_SERVER_CLIENT_SECRET=$(aws cognito-idp describe-user-pool-client --user-pool-id $USER_POOL_ID \
           --client-id $SERVER_TO_SERVER_CLIENT_ID --query "UserPoolClient.ClientSecret" --output text)
       - OIDC_DISCOVERY_URI="https://cognito-idp.${AWS_REGION}.amazonaws.com/${USER_POOL_ID}/.well-known/openid-configuration"
+#      - if environment is production or staging override the client id and secret with the cas values
+      - |
+        if [[ "$ENVIRONMENT" == "production" || "$ENVIRONMENT" == "staging" ]]; then
+          CLIENT_ID=${CAS_CLIENT_ID}
+          CLIENT_SECRET=${CAS_CLIENT_SECRET}
+          SERVER_TO_SERVER_CLIENT_ID=${CAS_S2S_CLIENT_ID}
+          SERVER_TO_SERVER_CLIENT_SECRET=${CAS_S2S_SECRET}
+        fi
       - |
         if [ "$ELASTICSEARCH_AUTH_ENABLED" = "true" ]; then
           export ELASTICSEARCH_PASSWORD=$(kubectl -n elasticsearch get secret ${ENVIRONMENT}-cluster-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')

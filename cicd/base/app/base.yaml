@@ -48,7 +48,9 @@ Resources:
       GenerateSecretString:
         SecretStringTemplate: |
           {
-            "db-password": ""
+            "db-password": "",
+            "cas-client-secret": "",
+            "cas-s2s-client-secret": ""
           }
         GenerateStringKey: db-password
         PasswordLength: 12
