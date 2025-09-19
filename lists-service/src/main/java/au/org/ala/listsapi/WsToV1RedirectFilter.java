@@ -1,5 +1,11 @@
 package au.org.ala.listsapi;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -8,10 +14,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.HashMap;
 
 /**
  * Redirects legacy requests to the new API version paths.
@@ -27,6 +29,7 @@ public class WsToV1RedirectFilter extends OncePerRequestFilter {
     private final String v1Prefix;
     private final String v2Prefix;
     private final Map<String, String> preVersionPaths;
+    private static final Logger logger = LoggerFactory.getLogger(WsToV1RedirectFilter.class);
 
     public WsToV1RedirectFilter(
             @Value("${api.ws.prefix:/ws}") String wsPrefix,
@@ -46,6 +49,7 @@ public class WsToV1RedirectFilter extends OncePerRequestFilter {
         this.preVersionPaths.put(preversionUpload, preversionUpload);
         this.preVersionPaths.put(preversionIngest, preversionIngest);
         this.preVersionPaths.put(preversionDelete, preversionDelete);
+        this.preVersionPaths.put(preversionConstraints, preversionConstraints);
     }
 
     @Override
@@ -57,15 +61,25 @@ public class WsToV1RedirectFilter extends OncePerRequestFilter {
 
         // Handle old prefix redirect
         if (requestUri.startsWith(wsPrefix)) {
-            redirect(response, requestUri.replaceFirst(wsPrefix, v1Prefix));
+            String queryString = request.getQueryString();
+            String newUri = requestUri.replaceFirst(wsPrefix, v1Prefix);
+            if (queryString != null) {
+                newUri += "?" + queryString;
+            }
+            redirect(response, newUri);
             return;
         }
 
         // Handle pre-version paths (Biocollect, etc.)
         for (Map.Entry<String, String> entry : preVersionPaths.entrySet()) {
             String path = entry.getKey();
+            logger.debug("Request URI: " + requestUri + "; with path: " + path + "; with query: " + request.getQueryString());
+
             if (requestUri.startsWith(path)) {
-                redirect(response, requestUri.replaceFirst(path, v2Prefix + path));
+                String queryString = request.getQueryString();
+                String newUriWithParams = requestUri.replaceFirst(path, v2Prefix + path) + (queryString != null ? "?" + queryString : "");
+                logger.debug("Redirecting pre-version path: " + requestUri + " to " + newUriWithParams);
+                redirect(response, newUriWithParams);
                 return;
             }
         }
