@@ -8,10 +8,10 @@ env:
   git-credential-helper: yes
   variables:
     DEBIAN_FRONTEND: noninteractive
-  secrets-manager:
-    DB_PASSWORD: $LISTS_SECRET_NAME:db-password
-    CAS_CLIENT_SECRET: $LISTS_SECRET_NAME:cas-client-secret
-    CAS_S2S_SECRET: $LISTS_SECRET_NAME:cas-s2s-client-secret
+#  secrets-manager:
+#    DB_PASSWORD: $LISTS_SECRET_NAME:db-password
+#    CAS_CLIENT_SECRET: $LISTS_SECRET_NAME:cas-client-secret
+#    CAS_S2S_SECRET: $LISTS_SECRET_NAME:cas-s2s-client-secret
   exported-variables:
     - ADMIN_USER
     - ALA_SECRETS_NAME
@@ -100,6 +100,7 @@ phases:
             cicd/gen_template_config.py --template ${stack}_template_config.j2 > ${stack}_template_config.json
           done
       - echo importing stack output
+      - DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id "$LISTS_SECRET_NAME" --query 'SecretString' --output text | jq -r '.["db-password"]')
       - DB_ENDPOINT=$(aws cloudformation describe-stacks --stack-name $DATABASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='DocDbClusterEndpoint'].OutputValue" --output text)
       - DB_USERNAME=$(aws cloudformation describe-stacks --stack-name $DATABASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='DocDbUsername'].OutputValue" --output text)
       - |
