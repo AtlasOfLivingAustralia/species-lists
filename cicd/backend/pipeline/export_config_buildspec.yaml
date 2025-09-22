@@ -8,33 +8,29 @@ env:
   git-credential-helper: yes
   variables:
     DEBIAN_FRONTEND: noninteractive
+  secrets-manager:
+    DB_PASSWORD: $LISTS_SECRET_NAME:db-password
+    CAS_CLIENT_SECRET: $LISTS_SECRET_NAME:cas-client-secret
+    CAS_S2S_SECRET: $LISTS_SECRET_NAME:cas-s2s-client-secret
   exported-variables:
     - ADMIN_USER
     - ALA_SECRETS_NAME
     - APP_CERTIFICATE
     - UI_SUB_DOMAIN
-    - BIE_BASE_URL
-    - BIOCACHE_BASE_URL
     - CODEBUILD_BUILD_NUMBER
-    - COLLECTORY_BASE_URL
     - DATABASE_STACK_NAME
     - DOCKER_USERNAME
     - ECR_REPO
     - ECR_STACK_NAME
     - HELM_RELEASE_NAME
     - HOSTED_ZONE
-    - IMAGES_BASE_URL
     - IMAGE_NAME
     - IMAGE_TAG
-    - MONGODB_USERNAME
-    - NAMEMATCHING_BASE_URL
     - PRODUCT_COMPONENT
     - PRODUCT_NAME
+    - ACCESS_LOGS_S3_BUCKET_NAME
     - SLACK_ALERT_CHANNEL
     - SLACK_DEPLOY_NOTIFICATION
-    - USERDETAILS_BASE_URL
-    - ELASTIC_HOST
-    - ELASTIC_PORT
     - WS_SUB_DOMAIN
     - EKS_NAMESPACE
 
@@ -103,6 +99,122 @@ phases:
             echo Generating the template config for $stack
             cicd/gen_template_config.py --template ${stack}_template_config.j2 > ${stack}_template_config.json
           done
+      - echo importing stack output
+      - DB_ENDPOINT=$(aws cloudformation describe-stacks --stack-name $DATABASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='DocDbClusterEndpoint'].OutputValue" --output text)
+      - DB_USERNAME=$(aws cloudformation describe-stacks --stack-name $DATABASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='DocDbUsername'].OutputValue" --output text)
+      - |
+        USER_POOL_ID=$(aws cloudformation describe-stacks --stack-name $COGNITO_STACK_NAME \
+          --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" --output text)
+      - |
+        CLIENT_ID=$(aws cloudformation describe-stacks --stack-name $BASE_STACK_NAME \
+          --query "Stacks[0].Outputs[?OutputKey=='AppClientId'].OutputValue" --output text)
+      - |
+        CLIENT_SECRET=$(aws cognito-idp describe-user-pool-client --user-pool-id $USER_POOL_ID \
+          --client-id $CLIENT_ID --query "UserPoolClient.ClientSecret" --output text)
+      - |
+        SERVER_TO_SERVER_CLIENT_ID=$(aws cloudformation describe-stacks --stack-name $BASE_STACK_NAME \
+          --query "Stacks[0].Outputs[?OutputKey=='ServiceAppClientId'].OutputValue" --output text)
+      - |
+        SERVER_TO_SERVER_CLIENT_SECRET=$(aws cognito-idp describe-user-pool-client --user-pool-id $USER_POOL_ID \
+          --client-id $SERVER_TO_SERVER_CLIENT_ID --query "UserPoolClient.ClientSecret" --output text)
+      - OIDC_DISCOVERY_URI="https://cognito-idp.${AWS_REGION}.amazonaws.com/${USER_POOL_ID}/.well-known/openid-configuration"
+#      - if environment is production or staging override the client id and secret with the cas values
+      - |
+        if [[ "$ENVIRONMENT" == "production" || "$ENVIRONMENT" == "staging" ]]; then
+          CLIENT_ID=${CAS_CLIENT_ID}
+          CLIENT_SECRET=${CAS_CLIENT_SECRET}
+          SERVER_TO_SERVER_CLIENT_ID=${CAS_S2S_CLIENT_ID}
+          SERVER_TO_SERVER_CLIENT_SECRET=${CAS_S2S_SECRET}
+        fi
+      - |
+        if [ "$ELASTICSEARCH_AUTH_ENABLED" = "true" ]; then
+          export ELASTICSEARCH_PASSWORD=$(kubectl -n elasticsearch get secret ${ENVIRONMENT}-cluster-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')
+        fi
+      - ACCESS_LOGS_S3_BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name $BASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='LoadBalancerAccessLogsBucket'].OutputValue" --output text)
+      - echo generating values file for helm...
+      - | 
+        echo "config:
+          app:
+            name: $APP_NAME
+            url: $APP_URL
+          graphql:
+            enabled: $GRAPHQL_ENABLED
+            path: $GRAPHQL_PATH
+          release:
+            directory: $RELEASE_DIRECTORY
+            s3:
+              enabled: $RELEASE_S3_ENABLED
+              bucket: $RELEASE_S3_BUCKET
+          multipart:
+            maxFileSize: $MULTIPART_MAX_FILE_SIZE
+            maxRequestSize: $MULTIPART_MAX_REQUEST_SIZE
+          mongodb:
+            username: $DB_USERNAME
+            password: $DB_PASSWORD
+            host: $DB_ENDPOINT
+            port: $MONGODB_PORT
+            autoIndexCreation: $MONGODB_AUTO_INDEX_CREATION
+          namematching:
+            baseUrl: $NAMEMATCHING_BASE_URL
+          bie:
+            baseUrl: $BIE_BASE_URL
+            url: $BIE_URL
+            imagesUrl: $BIE_IMAGES_URL
+          biocache:
+            baseUrl: $BIOCACHE_BASE_URL
+          collectory:
+            baseUrl: $COLLECTORY_BASE_URL
+          images:
+            baseUrl: $IMAGES_BASE_URL
+            url: $IMAGE_URL
+          userdetails:
+            baseUrl: $USERDETAILS_BASE_URL
+          security:
+            jwt:
+              userIdClaim: $SECURITY_JWT_USER_ID_CLAIM
+              roleClaims: $SECURITY_JWT_ROLE_CLAIMS
+              requireUserInfo: $SECURITY_JWT_REQUIRE_USER_INFO
+              userProfileFromAccessToken: $SECURITY_JWT_USER_PROFILE_FROM_ACCESS_TOKEN
+              rolesFromAccessToken: $SECURITY_JWT_ROLES_FROM_ACCESS_TOKEN
+              enabled: $SECURITY_JWT_ENABLED
+              discoveryUri: $OIDC_DISCOVERY_URI
+              clientId: $CLIENT_ID
+            apikey:
+              enabled: $SECURITY_JWT_APIKEY_ENABLED
+            admin:
+              role: $SECURITY_ADMIN_ROLES
+            m2m:
+              scope: $SECURITY_M2M_SCOPE
+          webservice:
+            read:
+              timeout: $WEBSERVICE_READ_TIMEOUT
+            connect:
+              timeout: $WEBSERVICE_CONNECT_TIMEOUT
+            jwt: $WEBSERVICE_JWT
+            jwtScopes: $WEBSERVICE_JWT_SCOPES
+            clientId: $SERVER_TO_SERVER_CLIENT_ID
+            clientSecret: $SERVER_TO_SERVER_CLIENT_SECRET
+          migrate:
+            url: $MIGRATE_URL
+          oidc:
+            enabled: $OIDC_ENABLED
+            clientId: $CLIENT_ID
+            discoveryUri: $OIDC_DISCOVERY_URI
+        ingress:
+          accessLogsPrefix: "logs"
+          accessLogsBucket: "${ACCESS_LOGS_S3_BUCKET_NAME}"
+        elasticsearch:
+          deployment:
+            name: $ELASTIC_HOST
+          service:
+            name: $ELASTIC_HOST
+            host: $ELASTICSEARCH_ENDPOINT
+            port: $ELASTIC_PORT
+            username: $ELASTICSEARCH_USERNAME
+            password: $ELASTICSEARCH_PASSWORD
+            authEnabled: $ELASTICSEARCH_AUTH_ENABLED
+            tlsEnabled: $ELASTICSEARCH_TLS_ENABLED
+          single_node_es: $SINGLE_NODE_ES" > helm-values.yaml
     finally:
       - #echo This always runs
 
@@ -113,6 +225,4 @@ phases:
 
 artifacts:
   files:
-    - cicd/$PRODUCT_COMPONENT/app/*
-  name: BuildTemplateConfigArtifact
-  discard-paths: no
+    - '**/*'

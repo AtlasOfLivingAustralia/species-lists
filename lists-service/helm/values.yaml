@@ -37,6 +37,8 @@ ingress:
   className: "alb"
   certificateArn: ""
   hostname: ""
+  accessLogsBucket: ""
+  accessLogsPrefix: ""
   tls: []
 
 resources:
@@ -61,7 +63,7 @@ autoscaling:
   minReplicas: 1
   maxReplicas: 10
   targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
 
 # Additional volumes on the output Deployment definition.
 volumes: []
@@ -78,40 +80,6 @@ affinity: {}
 app:
   version: "1.0.0"
   url: ""
-
-mongodb:
-  username: ""
-  password: ""
-  host: ""
-  port: 27017
-  database: "species-lists"
-
-oidc:
-  enabled: true
-  clientId: ""
-  discoveryUri: ""
-
-webservices:
-  clientId: ""
-  clientSecret: ""
-
-bie:
-  baseUrl: ""
-
-biocache:
-  baseUrl: ""
-
-collectory:
-  baseUrl: ""
-
-images:
-  baseUrl: ""
-
-namematching:
-  baseUrl: ""
-
-userdetails:
-  baseUrl: ""
 
 elasticsearch:
   deployment:
@@ -130,3 +98,71 @@ elasticsearch:
     storageClass: "auto-ebs-sc"
     accessMode: ReadWriteOnce
     size: 10Gi
+  single_node_es: true
+
+config:
+  app:
+    name: "species-lists"
+    url: ""
+  graphql:
+    enabled: true
+    path: "/graphql"
+  release:
+    directory: "/tmp/"
+    s3:
+      enabled: false
+      bucket: s3://lists/releases
+  multipart:
+    maxFileSize: 50MB
+    maxRequestSize: 50MB
+  mongodb:
+    username: ""
+    password: ""
+    host: ""
+    port: 27017
+    database: "species-lists"
+    autoIndexCreation: true
+  namematching:
+    baseUrl: ""
+  bie:
+    baseUrl: ""
+    url: ""
+    imagesUrl: ""
+  biocache:
+    baseUrl: ""
+  collectory:
+    baseUrl: ""
+  images:
+    baseUrl: ""
+    url: ""
+  userdetails:
+    baseUrl: ""
+  security:
+    jwt:
+      userIdClaim: username
+      roleClaims: cognito:groups
+      requireUserInfo: true
+      userProfileFromAccessToken: true
+      rolesFromAccessToken: true
+      enabled: true
+      discoveryUri: ""
+      clientId: ""
+    apikey:
+      enabled: false
+    admin:
+      roles: "ROLE_ADMIN,ROLE_EDITOR"
+    m2m:
+      scope: "ala/internal"
+  webservice:
+    read:
+      timeout: 600000
+    connect:
+        timeout: 600000
+    jwt: true
+    jwtScopes: "users/read ala/attrs ala/internal"
+  migrate:
+    url: https://lists-test.ala.org.au
+  oidc:
+    enabled: true
+    clientId: ""
+    discoveryUri: ""

@@ -243,15 +243,22 @@ Resources:
               Provider: CodeBuild
             Configuration:
               ProjectName: !Ref ExportConfig
-              EnvironmentVariables: !Sub |
-                 [
-                   { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
-                   { "name":"COMMIT_ID", "value":"#{CheckoutSrcNS.CommitId}" },
-                   { "name":"ENVIRONMENT", "value":"${pEnvironment}" },
-                   { "name":"PIPELINE_FINGERPRINT", "value":"#{variables.PIPELINE_FINGERPRINT}" },
-                   { "name":"PRODUCT_COMPONENT", "value":"${pProductComponent}" },
-                   { "name":"SRC_BRANCH", "value":"${pGitHubBranch}" }
-                 ]
+              EnvironmentVariables:
+                Fn::Sub:
+                  - |
+                   [
+                     { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
+                     { "name":"COMMIT_ID", "value":"#{CheckoutSrcNS.CommitId}" },
+                     { "name":"ENVIRONMENT", "value":"${pEnvironment}" },
+                     { "name":"PIPELINE_FINGERPRINT", "value":"#{variables.PIPELINE_FINGERPRINT}" },
+                     { "name":"LISTS_SECRET_NAME","value":"${ListSecretName}" },
+                     { "name":"PRODUCT_COMPONENT", "value":"${pProductComponent}" },
+                     { "name":"AWS_REGION","value":"${AWS::Region}" },
+                     { "name":"SRC_BRANCH", "value":"${pGitHubBranch}" }
+                   ]
+                  - ListSecretName:
+                      Fn::ImportValue:
+                        Fn::Sub: "${pBaseStackName}-DocDbPasswordSecretName"
             Namespace: ExportConfigNS
             InputArtifacts:
               - Name: SourceArtifact
@@ -321,29 +328,20 @@ Resources:
                    [
                    {"name":"APP_CERTIFICATE","value":"#{ExportConfigNS.APP_CERTIFICATE}"},
                    {"name":"AWS_ACCOUNT_ID","value":"${AWS::AccountId}"},
-                   {"name":"BIE_BASE_URL","value":"#{ExportConfigNS.BIE_BASE_URL}"},
-                   {"name":"BIOCACHE_BASE_URL","value":"#{ExportConfigNS.BIOCACHE_BASE_URL}"},
-                   {"name":"COLLECTORY_BASE_URL","value":"#{ExportConfigNS.COLLECTORY_BASE_URL}"},
                    {"name":"ECR_REPO","value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}"},
                    {"name":"EKS_CLUSTER_NAME","value":"${EksClusterName}"},
                    {"name":"EKS_NAMESPACE","value":"#{ExportConfigNS.EKS_NAMESPACE}"},
                    {"name":"HELM_RELEASE_NAME","value":"#{ExportConfigNS.HELM_RELEASE_NAME}"},
                    {"name":"BUILD_TAG","value":"#{BuildListsNS.BUILD_TAG}"},
                    {"name":"HOSTED_ZONE","value":"#{ExportConfigNS.HOSTED_ZONE}"},
-                   {"name":"IMAGES_BASE_URL","value":"#{ExportConfigNS.IMAGES_BASE_URL}"},
                    {"name":"IMAGE_TAG","value":"#{ExportConfigNS.IMAGE_TAG}"},
                    {"name":"LISTS_SECRET_NAME","value":"${ListSecretName}"},
-                   {"name":"MONGODB_HOST","value":"${MongoDbHost}"},
-                   {"name":"MONGODB_USERNAME","value":"${MongoDbUsername}"},
-                   {"name":"NAMEMATCHING_BASE_URL","value":"#{ExportConfigNS.NAMEMATCHING_BASE_URL}"},
                    {"name":"OIDC_CLIENT_ID","value":"${AppClientId}"},
                    {"name":"OIDC_DISCOVERY_URI","value":"${OidcDiscoveryUrl}"},
                    {"name":"SERVICE_APP_CLIENT_ID","value":"${ServiceAppClientId}"},
+                   {"name":"ACCESS_LOGS_S3_BUCKET_NAME", "value":"#{ExportConfigNS.ACCESS_LOGS_S3_BUCKET_NAME}"},
                    {"name":"WS_SUB_DOMAIN","value":"#{ExportConfigNS.WS_SUB_DOMAIN}"},
                    {"name":"UI_SUB_DOMAIN","value":"#{ExportConfigNS.UI_SUB_DOMAIN}"},
-                   {"name":"USERDETAILS_BASE_URL","value":"#{ExportConfigNS.USERDETAILS_BASE_URL}"},
-                   {"name":"ELASTIC_HOST","value":"#{ExportConfigNS.ELASTIC_HOST}"},
-                   {"name":"ELASTIC_PORT","value":"#{ExportConfigNS.ELASTIC_PORT}"},
                    {"name":"USER_POOL_ID","value":"${UserPoolId}"}
                    ]
                   - AppClientId:
@@ -355,12 +353,6 @@ Resources:
                     ListSecretName:
                       Fn::ImportValue:
                         Fn::Sub: "${pBaseStackName}-DocDbPasswordSecretName"
-                    MongoDbHost:
-                      Fn::ImportValue:
-                        Fn::Sub: "${pDatabaseStackName}-DocDbClusterEndpoint"
-                    MongoDbUsername:
-                      Fn::ImportValue:
-                        Fn::Sub: "${pDatabaseStackName}-DocDbUsername"
                     OidcDiscoveryUrl:
                         Fn::Sub:
                           - "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}/.well-known/openid-configuration"
