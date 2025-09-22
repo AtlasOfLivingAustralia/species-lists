@@ -129,7 +129,7 @@ phases:
         fi
       - |
         if [ "$ELASTICSEARCH_AUTH_ENABLED" = "true" ]; then
-          export ELASTICSEARCH_PASSWORD=$(kubectl -n elasticsearch get secret ${ENVIRONMENT}-cluster-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')
+          export ELASTICSEARCH_PASSWORD=$(aws secretsmanager get-secret-value --secret-id "$ELASTICSEARCH_SECRET_NAME" --query 'SecretString' --output text | jq -r '.["password"]')
         fi
       - ACCESS_LOGS_S3_BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name $BASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='LoadBalancerAccessLogsBucket'].OutputValue" --output text)
       - echo generating values file for helm...
