@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
 {{- if .Values.single_node_es }}
->>>>>>> origin/develop
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
