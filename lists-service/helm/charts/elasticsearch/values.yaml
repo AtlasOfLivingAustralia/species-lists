@@ -25,3 +25,4 @@ persistence:
   storageClass: "auto-ebs-sc"
   accessMode: ReadWriteOnce
   size: 5Gi
+single_node_es: true

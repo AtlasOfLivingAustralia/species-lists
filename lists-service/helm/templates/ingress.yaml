@@ -13,6 +13,11 @@ metadata:
     alb.ingress.kubernetes.io/certificate-arn: {{ .Values.ingress.certificateArn }}
     alb.ingress.kubernetes.io/ssl-redirect: '443'
     alb.ingress.kubernetes.io/success-codes: 200,404,301,302
+    alb.ingress.kubernetes.io/load-balancer-attributes: >
+      idle_timeout.timeout_seconds=90,
+      access_logs.s3.enabled=true,
+      access_logs.s3.bucket={{ .Values.ingress.accessLogsBucket }},
+      access_logs.s3.prefix={{ .Values.ingress.accessLogsPrefix }}
     external-dns.alpha.kubernetes.io/hostname: {{ .Values.ingress.hostname }}
     {{- include "ala-species-lists.labels" . | nindent 4 }}
 spec:

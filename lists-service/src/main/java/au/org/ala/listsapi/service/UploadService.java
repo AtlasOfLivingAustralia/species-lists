@@ -430,7 +430,7 @@ public class UploadService {
                 // write to mongo
                 SpeciesListItem speciesListItem = new SpeciesListItem(
                         null,
-                        null,
+                        0,
                         speciesListID,
                         cleanField(taxonID),
                         cleanField(suppliedName),
