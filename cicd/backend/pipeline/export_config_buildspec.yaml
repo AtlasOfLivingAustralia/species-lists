@@ -28,6 +28,7 @@ env:
     - IMAGE_TAG
     - PRODUCT_COMPONENT
     - PRODUCT_NAME
+    - ACCESS_LOGS_S3_BUCKET_NAME
     - SLACK_ALERT_CHANNEL
     - SLACK_DEPLOY_NOTIFICATION
     - WS_SUB_DOMAIN
@@ -129,6 +130,7 @@ phases:
         if [ "$ELASTICSEARCH_AUTH_ENABLED" = "true" ]; then
           export ELASTICSEARCH_PASSWORD=$(kubectl -n elasticsearch get secret ${ENVIRONMENT}-cluster-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')
         fi
+      - ACCESS_LOGS_S3_BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name $BASE_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='LoadBalancerAccessLogsBucket'].OutputValue" --output text)
       - echo generating values file for helm...
       - | 
         echo "config:
@@ -198,6 +200,9 @@ phases:
             enabled: $OIDC_ENABLED
             clientId: $CLIENT_ID
             discoveryUri: $OIDC_DISCOVERY_URI
+        ingress:
+          accessLogsPrefix: "logs"
+          accessLogsBucket: "${ACCESS_LOGS_S3_BUCKET_NAME}"
         elasticsearch:
           deployment:
             name: $ELASTIC_HOST

@@ -37,6 +37,8 @@ ingress:
   className: "alb"
   certificateArn: ""
   hostname: ""
+  accessLogsBucket: ""
+  accessLogsPrefix: ""
   tls: []
 
 resources:

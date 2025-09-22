@@ -339,6 +339,7 @@ Resources:
                    {"name":"OIDC_CLIENT_ID","value":"${AppClientId}"},
                    {"name":"OIDC_DISCOVERY_URI","value":"${OidcDiscoveryUrl}"},
                    {"name":"SERVICE_APP_CLIENT_ID","value":"${ServiceAppClientId}"},
+                   {"name":"ACCESS_LOGS_S3_BUCKET_NAME", "value":"#{ExportConfigNS.ACCESS_LOGS_S3_BUCKET_NAME}"},
                    {"name":"WS_SUB_DOMAIN","value":"#{ExportConfigNS.WS_SUB_DOMAIN}"},
                    {"name":"UI_SUB_DOMAIN","value":"#{ExportConfigNS.UI_SUB_DOMAIN}"},
                    {"name":"USER_POOL_ID","value":"${UserPoolId}"}
