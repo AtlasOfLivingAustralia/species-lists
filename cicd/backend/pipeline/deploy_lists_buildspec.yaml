@@ -20,7 +20,6 @@ phases:
   pre_build:
     commands:
       - echo Entered the pre_build phase...
-      - WAF_ARN=$(aws cloudformation describe-stacks --stack-name $WAF_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='ListsWafArn'].OutputValue" --output text)
 
   build:
     commands:

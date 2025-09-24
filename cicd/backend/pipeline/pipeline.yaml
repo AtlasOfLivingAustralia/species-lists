@@ -283,9 +283,31 @@ Resources:
               StackName: '#{ExportConfigNS.ECR_STACK_NAME}'
             InputArtifacts:
               - Name: 'ExportConfigArtifact'
-            Namespace: BuildCloudFormationOutNS
+            Namespace: EcrCloudFormationOutNS
             OutputArtifacts: [ ]
             RunOrder: 2
+
+          - Name: DeployWafCFStack
+            ActionTypeId:
+              Owner: AWS
+              Category: Deploy
+              Version: 1
+              Provider: CloudFormation
+            Configuration:
+              TemplatePath: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/#{ExportConfigNS.WAF_STACK_FILE_PFIX}.yaml'
+              ActionMode: !If [ IsDev, REPLACE_ON_FAILURE, CREATE_UPDATE ]
+              TemplateConfiguration: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/#{ExportConfigNS.WAF_STACK_FILE_PFIX}_template_config.json'
+              Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
+              RoleArn:
+                   Fn::ImportValue:
+                     Fn::Sub: '${pBootstrapStackName}-CloudFormationServiceRoleArn'
+              StackName: '#{ExportConfigNS.WAF_STACK_NAME}'
+            InputArtifacts:
+              - Name: 'ExportConfigArtifact'
+            Namespace: WafCloudFormationOutNS
+            OutputArtifacts: [ ]
+            RunOrder: 2
+
 
       - Name: BuildLists
         Actions:
@@ -303,7 +325,7 @@ Resources:
                   { "name":"AWS_ACCOUNT_ID", "value":"${AWS::AccountId}" },
                   { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
                   { "name":"DOCKER_USERNAME", "value":"#{ExportConfigNS.DOCKER_USERNAME}" },
-                  { "name":"ECR_REPO", "value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}" },
+                  { "name":"ECR_REPO", "value":"#{EcrCloudFormationOutNS.ListsRepositoryUri}" },
                   { "name":"ENVIRONMENT", "value":"${pEnvironment}" },
                   { "name":"IMAGE_NAME", "value":"#{ExportConfigNS.IMAGE_NAME}" },
                   { "name":"IMAGE_TAG", "value":"#{ExportConfigNS.IMAGE_TAG}" }
@@ -326,24 +348,24 @@ Resources:
                 Fn::Sub:
                   - |
                    [
+                   {"name":"ACCESS_LOGS_S3_BUCKET_NAME", "value":"#{ExportConfigNS.ACCESS_LOGS_S3_BUCKET_NAME}"},
                    {"name":"APP_CERTIFICATE","value":"#{ExportConfigNS.APP_CERTIFICATE}"},
                    {"name":"AWS_ACCOUNT_ID","value":"${AWS::AccountId}"},
-                   {"name":"ECR_REPO","value":"#{BuildCloudFormationOutNS.ListsRepositoryUri}"},
+                   {"name":"BUILD_TAG","value":"#{BuildListsNS.BUILD_TAG}"},
+                   {"name":"ECR_REPO","value":"#{EcrCloudFormationOutNS.ListsRepositoryUri}"},
                    {"name":"EKS_CLUSTER_NAME","value":"${EksClusterName}"},
                    {"name":"EKS_NAMESPACE","value":"#{ExportConfigNS.EKS_NAMESPACE}"},
                    {"name":"HELM_RELEASE_NAME","value":"#{ExportConfigNS.HELM_RELEASE_NAME}"},
-                   {"name":"BUILD_TAG","value":"#{BuildListsNS.BUILD_TAG}"},
                    {"name":"HOSTED_ZONE","value":"#{ExportConfigNS.HOSTED_ZONE}"},
                    {"name":"IMAGE_TAG","value":"#{ExportConfigNS.IMAGE_TAG}"},
                    {"name":"LISTS_SECRET_NAME","value":"${ListSecretName}"},
                    {"name":"OIDC_CLIENT_ID","value":"${AppClientId}"},
                    {"name":"OIDC_DISCOVERY_URI","value":"${OidcDiscoveryUrl}"},
                    {"name":"SERVICE_APP_CLIENT_ID","value":"${ServiceAppClientId}"},
-                   {"name":"ACCESS_LOGS_S3_BUCKET_NAME", "value":"#{ExportConfigNS.ACCESS_LOGS_S3_BUCKET_NAME}"},
-                   {"name":"WS_SUB_DOMAIN","value":"#{ExportConfigNS.WS_SUB_DOMAIN}"},
                    {"name":"UI_SUB_DOMAIN","value":"#{ExportConfigNS.UI_SUB_DOMAIN}"},
-                   {"name":"WAF_STACK_NAME","value":"#{ExportConfigNS.WAF_STACK_NAME}"},
-                   {"name":"USER_POOL_ID","value":"${UserPoolId}"}
+                   {"name":"USER_POOL_ID","value":"${UserPoolId}"},
+                   {"name":"WAF_ARN","value":"#{WafCloudFormationOutNS.ListWafArn}"},
+                   {"name":"WS_SUB_DOMAIN","value":"#{ExportConfigNS.WS_SUB_DOMAIN}"}
                    ]
                   - AppClientId:
                       Fn::ImportValue:
@@ -446,6 +468,19 @@ Resources:
                 Fn::ImportValue:
                   Fn::Sub: '${pBootstrapStackName}-CloudFormationServiceRoleArn'
             RunOrder: 3
+          - Name: TeardownWafStack
+            ActionTypeId:
+              Owner: AWS
+              Category: Deploy
+              Version: 1
+              Provider: CloudFormation
+            Configuration:
+              ActionMode: DELETE_ONLY
+              StackName: '#{ExportConfigNS.WAF_STACK_NAME}'
+              RoleArn:
+                Fn::ImportValue:
+                  Fn::Sub: '${pBootstrapStackName}-CloudFormationServiceRoleArn'
+            RunOrder: 4
           - Name: TeardownCodePipeline
             ActionTypeId:
               Owner: AWS
@@ -458,7 +493,7 @@ Resources:
               RoleArn:
                    Fn::ImportValue:
                      Fn::Sub: '${pBootstrapStackName}-CloudFormationServiceRoleArn'
-            RunOrder: 4
+            RunOrder: 5
 
   DeployListsCodeBuildLogGroup:
     Type: AWS::Logs::LogGroup
