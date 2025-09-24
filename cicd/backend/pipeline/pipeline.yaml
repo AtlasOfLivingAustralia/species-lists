@@ -282,7 +282,7 @@ Resources:
                      Fn::Sub: '${pBootstrapStackName}-CloudFormationServiceRoleArn'
               StackName: '#{ExportConfigNS.ECR_STACK_NAME}'
             InputArtifacts:
-              - Name: 'ExportConfigArtifact'
+              - Name: ExportConfigArtifact
             Namespace: EcrCloudFormationOutNS
             OutputArtifacts: [ ]
             RunOrder: 2
@@ -344,6 +344,7 @@ Resources:
             Configuration:
               ProjectName: !Ref DeployLists
               PrimarySource: SourceArtifact
+              #     {"name":"WAF_ARN","value":"#{WafCloudFormationOutNS.ListWafArn}"},
               EnvironmentVariables:
                 Fn::Sub:
                   - |
@@ -364,7 +365,6 @@ Resources:
                    {"name":"SERVICE_APP_CLIENT_ID","value":"${ServiceAppClientId}"},
                    {"name":"UI_SUB_DOMAIN","value":"#{ExportConfigNS.UI_SUB_DOMAIN}"},
                    {"name":"USER_POOL_ID","value":"${UserPoolId}"},
-                   {"name":"WAF_ARN","value":"#{WafCloudFormationOutNS.ListWafArn}"},
                    {"name":"WS_SUB_DOMAIN","value":"#{ExportConfigNS.WS_SUB_DOMAIN}"}
                    ]
                   - AppClientId:
