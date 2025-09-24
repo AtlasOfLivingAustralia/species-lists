@@ -204,6 +204,13 @@ phases:
         ingress:
           accessLogsPrefix: "logs"
           accessLogsBucket: "${ACCESS_LOGS_S3_BUCKET_NAME}"
+        resources:
+          requests:
+            cpu: "${CPU_REQUEST}"      
+            memory: "${MEMORY_REQUEST}" 
+          limits:
+            cpu: "${CPU_LIMIT}"      
+            memory: "${MEMORY_LIMIT}"
         elasticsearch:
           deployment:
             name: $ELASTIC_HOST

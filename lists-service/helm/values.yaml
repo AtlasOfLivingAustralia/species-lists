@@ -50,13 +50,40 @@ resources:
     cpu: 2
 
 livenessProbe:
+  enabled: true
   httpGet:
-    path: /
-    port: http
+    path: /actuator/health
+    port: 8080
+    scheme: HTTP
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+
+startupProbe:
+  enabled: true
+  httpGet:
+    path: /actuator/health
+    port: 8080
+    scheme: HTTP
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 6
+
 readinessProbe:
+  enabled: true
   httpGet:
-    path: /
-    port: http
+    path: /actuator/health
+    port: 8080
+    scheme: HTTP
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
 
 autoscaling:
   enabled: true
