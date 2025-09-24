@@ -44,7 +44,7 @@ public class WsToV1RedirectFilter extends OncePerRequestFilter {
         this.v1Prefix = v1Prefix;
         this.v2Prefix = v2Prefix;
 
-        // Create a map of preversion paths for cleaner code
+        // Create a map of preversion paths 
         this.preVersionPaths = new HashMap<>();
         this.preVersionPaths.put(preversionUpload, preversionUpload);
         this.preVersionPaths.put(preversionIngest, preversionIngest);
@@ -82,6 +82,16 @@ public class WsToV1RedirectFilter extends OncePerRequestFilter {
                 redirect(response, newUriWithParams);
                 return;
             }
+        }
+
+        // Handle one-off redirects for specific endpoints
+        if (requestUri.contains("/speciesListItem/downloadList")) {
+            String queryString = request.getQueryString();
+            // Get the path variable 'listId' from the request path
+            String pathVariable = requestUri.substring(requestUri.lastIndexOf('/') + 1);
+            String newUri = v2Prefix + "/download/" + pathVariable + (queryString != null ? "?" + queryString : "");
+            redirect(response, newUri);
+            return;
         }
 
         // For non-matching requests, continue with the filter chain
