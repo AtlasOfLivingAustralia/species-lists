@@ -342,6 +342,7 @@ Resources:
                    {"name":"ACCESS_LOGS_S3_BUCKET_NAME", "value":"#{ExportConfigNS.ACCESS_LOGS_S3_BUCKET_NAME}"},
                    {"name":"WS_SUB_DOMAIN","value":"#{ExportConfigNS.WS_SUB_DOMAIN}"},
                    {"name":"UI_SUB_DOMAIN","value":"#{ExportConfigNS.UI_SUB_DOMAIN}"},
+                   {"name":"WAF_STACK_NAME","value":"#{ExportConfigNS.WAF_STACK_NAME}"},
                    {"name":"USER_POOL_ID","value":"${UserPoolId}"}
                    ]
                   - AppClientId:

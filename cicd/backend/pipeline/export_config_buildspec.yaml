@@ -33,6 +33,7 @@ env:
     - SLACK_DEPLOY_NOTIFICATION
     - WS_SUB_DOMAIN
     - EKS_NAMESPACE
+    - WAF_STACK_NAME
 
 phases:
 
