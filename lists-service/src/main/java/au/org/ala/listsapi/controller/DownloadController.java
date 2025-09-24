@@ -1,19 +1,5 @@
 package au.org.ala.listsapi.controller;
 
-import au.org.ala.listsapi.model.Classification;
-import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.model.SpeciesListItem;
-import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
-import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
-import com.opencsv.CSVWriter;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
@@ -37,6 +23,22 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import com.opencsv.CSVWriter;
+
+import au.org.ala.listsapi.model.Classification;
+import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesListItem;
+import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
+import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Controller
 public class DownloadController {
@@ -121,7 +123,7 @@ public class DownloadController {
       }
 
       List<String> csvHeaders = new ArrayList<>();
-      csvHeaders.add("Supplied name");
+      csvHeaders.add("Supplied Name");
       csvHeaders.addAll(speciesList.getFieldList());
       csvHeaders.addAll(Arrays.asList(CLASSIFICATION_HEADER_NAMES));
 
