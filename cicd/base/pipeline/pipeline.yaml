@@ -225,6 +225,27 @@ Resources:
             OutputArtifacts: [ ]
             RunOrder: 2
 
+          - Name: DeployWafCFStack
+            ActionTypeId:
+              Owner: AWS
+              Category: Deploy
+              Version: 1
+              Provider: CloudFormation
+            Configuration:
+              TemplatePath: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/#{ExportConfigNS.WAF_STACK_FILE_PFIX}.yaml'
+              ActionMode: !If [ IsDev, REPLACE_ON_FAILURE, CREATE_UPDATE ]
+              TemplateConfiguration: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/#{ExportConfigNS.WAF_STACK_FILE_PFIX}_template_config.json'
+              Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
+              RoleArn:
+                   Fn::ImportValue:
+                     Fn::Sub: '${pBootstrapStackName}-CloudFormationServiceRoleArn'
+              StackName: '#{ExportConfigNS.WAF_STACK_NAME}'
+            InputArtifacts:
+              - Name: 'ExportConfigArtifact'
+            Namespace: WafCloudFormationOutNS
+            OutputArtifacts: [ ]
+            RunOrder: 2
+
           - Name: DeployNotification
             ActionTypeId:
               Owner: AWS
