@@ -2,18 +2,21 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: Lists regional WAF resources
 
 Parameters:
-  pEnvironment:
-    Type: String
   pBuildNumber:
     Type: Number
+  pCleanBranch:
+    Type: String
+    Description: The clean branch, can be used in resource names
+  pEnvironment:
+    Type: String
 
 Conditions:
-  IsDevAccount: !Equals [!Ref AWS::AccountId, 731167336288]
-  IsProdAccount: !Equals [!Ref AWS::AccountId, 736913556139]
-  IsTestAccount: !Equals [!Ref AWS::AccountId, 748909248546]
   IsProd: !Equals
     - !Ref pEnvironment
     - production
+  IsDev: !Equals
+    - !Ref pEnvironment
+    - development
 
 
 Resources:
@@ -21,7 +24,9 @@ Resources:
   ListsDenylistIpSet:
     Type: AWS::WAFv2::IPSet
     Properties:
-      Name: !Sub ${pEnvironment}-lists-denylist-ip-set
+      Name: !Sub 
+              - lists-eks-denylist-ip-set-${ResourceName}
+              - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
       Description: List of IPs to deny for lists
       Scope: REGIONAL
       IPAddressVersion: IPV4
@@ -31,7 +36,9 @@ Resources:
   ListsAllowlistIpSet:
     Type: AWS::WAFv2::IPSet
     Properties:
-      Name: !Sub ${pEnvironment}-lists-allowlist-ip-set
+      Name: !Sub 
+              - lists-allowlist-ip-set-${ResourceName}
+              - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
       Description: List of IPs to allow
       Scope: REGIONAL
       IPAddressVersion: IPV4
@@ -43,7 +50,9 @@ Resources:
   ListsWaf:
     Type: AWS::WAFv2::WebACL
     Properties:
-      Name: !Sub ${pEnvironment}-lists-eks
+      Name: !Sub 
+              - lists-eks-${ResourceName}
+              - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
       Description: ACL for the EKS lists WAF
       Scope: REGIONAL
       DefaultAction:
