@@ -273,9 +273,9 @@ Resources:
               Version: 1
               Provider: CloudFormation
             Configuration:
-              TemplatePath: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/ecr.yaml'
+              TemplatePath: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/#{ExportConfigNS.ECR_STACK_FILE_PFIX}.yaml'
               ActionMode: !If [ IsDev, REPLACE_ON_FAILURE, CREATE_UPDATE ]
-              TemplateConfiguration: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/ecr_template_config.json'
+              TemplateConfiguration: !Sub 'ExportConfigArtifact::cicd/${pProductComponent}/app/#{ExportConfigNS.ECR_STACK_FILE_PFIX}_template_config.json'
               Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
               RoleArn:
                    Fn::ImportValue:
