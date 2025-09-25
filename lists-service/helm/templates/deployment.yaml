@@ -16,6 +16,7 @@ spec:
       annotations:
         {{- include "ala-species-lists.deploymentAnnotations" . | nindent 8 }}
     spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

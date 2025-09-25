@@ -1,7 +1,5 @@
 package au.org.ala.listsapi.service;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -13,7 +11,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.http.entity.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,8 +53,9 @@ public class MigrateService {
     TokenService tokenService;
     @Autowired
     ValidationService validationService;
+    @Autowired
+    S3Service s3Service;
 
-    String tempDir;
     String migrateUrl;
 
     private final RestTemplate restTemplate;
@@ -75,14 +73,12 @@ public class MigrateService {
             SpeciesListMongoRepository speciesListMongoRepository,
             UploadService uploadService,
             ReleaseService releaseService,
-            @Value("${temp.dir:/tmp}") String tempDir,
             @Value("${migrate.url:https://lists.ala.org.au}") String migrateUrl,
             RestTemplate restTemplate) {
 
         this.speciesListMongoRepository = speciesListMongoRepository;
         this.uploadService = uploadService;
         this.releaseService = releaseService;
-        this.tempDir = tempDir;
         this.migrateUrl = migrateUrl;
         this.restTemplate = restTemplate;
     }
@@ -233,23 +229,38 @@ public class MigrateService {
                             + "/ws/speciesListInternal/download/"
                             + speciesList.getDataResourceUid()
                             + "?fetch=%7BkvpValues%3Dselect%7";
+                    String s3Key = null;
                     try {
-                        File localFile = new File(
-                                tempDir + "/species-list-migrate-" + speciesList.getDataResourceUid() + ".csv");
+                        String filename = "species-list-migrate-" + speciesList.getDataResourceUid() + ".csv";
 
                         AccessToken token = tokenService.getAuthToken(false, null, null);
 
-                        restTemplate.execute(
+                        // Download directly to S3
+                        s3Key = restTemplate.execute(
                                 downloadUrl,
                                 HttpMethod.GET,
                                 request -> request.getHeaders().set(HttpHeaders.AUTHORIZATION,
                                         token.toAuthorizationHeader()),
                                 response -> {
                                     try (InputStream is = response.getBody()) {
-                                        FileUtils.copyInputStreamToFile(is, localFile);
-                                        return null;
+                                        // Upload stream directly to S3
+                                        long contentLength = response.getHeaders().getContentLength();
+                                        if (contentLength < 0) {
+                                            // If content length is unknown, we need to read to byte array first
+                                            byte[] data = is.readAllBytes();
+                                            return s3Service.uploadFile(
+                                                new java.io.ByteArrayInputStream(data),
+                                                filename,
+                                                "text/csv",
+                                                data.length
+                                            );
+                                        } else {
+                                            return s3Service.uploadFile(is, filename, "text/csv", contentLength);
+                                        }
                                     }
                                 });
+
+                        logger.info("File uploaded to S3: {} with key: {}", filename, s3Key);
 
                         updateLegacyUserDetails(speciesList, foundUsers);
 
@@ -257,8 +268,14 @@ public class MigrateService {
 
                         progressService.updateMigrationProgress(savedList);
 
+                        // Get S3 file stream for processing
+                        var inputStreamOptional = s3Service.getFileStream(s3Key);
+                        if (inputStreamOptional.isEmpty()) {
+                            throw new Exception("Failed to retrieve file from S3: " + s3Key);
+                        }
+
                         IngestJob ingestJob = uploadService.loadCSV(
-                                savedList.getId(), new FileInputStream(localFile), false, false, true);
+                                savedList.getId(), inputStreamOptional.get(), false, false, true);
 
                         savedList.setRowCount(ingestJob.getRowCount());
                         savedList.setFieldList(ingestJob.getFieldList());
@@ -268,10 +285,24 @@ public class MigrateService {
 
                         speciesListMongoRepository.save(savedList);
 
+                        // Clean up S3 file after processing
+                        s3Service.deleteFile(s3Key);
+                        logger.info("Cleaned up S3 file: {}", s3Key);
+
                         // releaseService.release(speciesList.getId());
                     } catch (Exception e) {
-                        logger.error("Download for " + speciesList.getDataResourceUid() + "failed");
+                        logger.error("Download for " + speciesList.getDataResourceUid() + " failed");
                         logger.error(e.getMessage(), e);
+
+                        // Clean up S3 file on error if it was created
+                        if (s3Key != null) {
+                            try {
+                                s3Service.deleteFile(s3Key);
+                                logger.info("Cleaned up S3 file after error: {}", s3Key);
+                            } catch (Exception cleanupException) {
+                                logger.warn("Failed to clean up S3 file after error: {}", s3Key, cleanupException);
+                            }
+                        }
                     }
                 });
 

@@ -25,6 +25,14 @@ phases:
     commands:
       - echo Build started on $(date)
       - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME
+      - |
+        LISTS_ROLE_ARN=$(aws cloudformation describe-stacks --stack-name $BASE_STACK_NAME \
+          --query "Stacks[0].Outputs[?OutputKey=='ListsRoleArn'].OutputValue" --output text)
+      - |
+        eksctl create iamserviceaccount --name lists-service-account-$CLEAN_BRANCH \
+          --namespace $EKS_NAMESPACE --cluster $EKS_CLUSTER_NAME --attach-role-arn $LISTS_ROLE_ARN \
+          --approve --override-existing-serviceaccounts \
+          --tags "product=lists,environment=${ENVIRONMENT},branch=${CLEAN_BRANCH}"
       - cd lists-service/helm
       - echo helm upgrade --install $HELM_RELEASE_NAME  . 
                       -n $EKS_NAMESPACE 
@@ -33,6 +41,7 @@ phases:
                       --set ingress.hostname=$WS_SUB_DOMAIN.$HOSTED_ZONE
                       --set ingress.certificateArn=$APP_CERTIFICATE
                       --set ingress.wafArn=$WAF_ARN
+                      --set serviceAccount.name=lists-service-account-$CLEAN_BRANCH
                       -f $CODEBUILD_SRC_DIR_ExportConfigArtifact/helm-values.yaml
                       --set deploymentAnnotations.checksum/configs="$(md5sum $CODEBUILD_SRC_DIR_ExportConfigArtifact/helm-values.yaml | awk '{print $1}')"
                       --set deploymentAnnotations.commitHash=$CODEBUILD_RESOLVED_SOURCE_VERSION
@@ -43,6 +52,7 @@ phases:
                       --set ingress.hostname=$WS_SUB_DOMAIN.$HOSTED_ZONE
                       --set ingress.certificateArn=$APP_CERTIFICATE
                       --set ingress.wafArn=$WAF_ARN
+                      --set serviceAccount.name=lists-service-account-$CLEAN_BRANCH
                       -f $CODEBUILD_SRC_DIR_ExportConfigArtifact/helm-values.yaml
                       --set deploymentAnnotations.checksum/configs="$(md5sum $CODEBUILD_SRC_DIR_ExportConfigArtifact/helm-values.yaml | awk '{print $1}')"
                       --set deploymentAnnotations.commitHash=$CODEBUILD_RESOLVED_SOURCE_VERSION

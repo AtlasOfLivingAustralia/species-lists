@@ -14,9 +14,6 @@ nameOverride: ""
 fullnameOverride: ""
 
 serviceAccount:
-  create: true
-  automount: true
-  annotations: {}
   name: ""
 
 deploymentAnnotations: {}
@@ -113,6 +110,11 @@ config:
     s3:
       enabled: false
       bucket: s3://lists/releases
+  aws:
+    s3:
+      tempBucket: "species-lists-temp-uploads"
+      region: "ap-southeast-2"
+      uploadExpiry: "PT1H"
   multipart:
     maxFileSize: 50MB
     maxRequestSize: 50MB
