@@ -344,7 +344,6 @@ Resources:
             Configuration:
               ProjectName: !Ref DeployLists
               PrimarySource: SourceArtifact
-              #     {"name":"WAF_ARN","value":"#{WafCloudFormationOutNS.ListWafArn}"},
               EnvironmentVariables:
                 Fn::Sub:
                   - |
@@ -365,6 +364,7 @@ Resources:
                    {"name":"SERVICE_APP_CLIENT_ID","value":"${ServiceAppClientId}"},
                    {"name":"UI_SUB_DOMAIN","value":"#{ExportConfigNS.UI_SUB_DOMAIN}"},
                    {"name":"USER_POOL_ID","value":"${UserPoolId}"},
+                   {"name":"WAF_ARN","value":"#{WafCloudFormationOutNS.ListsWafArn}"},
                    {"name":"WS_SUB_DOMAIN","value":"#{ExportConfigNS.WS_SUB_DOMAIN}"}
                    ]
                   - AppClientId:
