@@ -14,6 +14,7 @@
  */
 package au.org.ala.listsapi.controller;
 
+import java.io.File;
 import java.security.Principal;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -84,11 +85,17 @@ public class IngressController {
     protected ProgressService progressService;
     @Autowired
     protected UserdetailsService userdetailsService;
-    @Autowired
+    @Autowired(required = false)
     protected S3Service s3Service;
 
     @Autowired
     protected AuthUtils authUtils;
+
+    @Value("${aws.s3.enabled:false}")
+    private boolean s3Enabled;
+
+    @Value("${temp.dir:/tmp}")
+    private String tempDir;
 
 
     private CompletableFuture<Void> asyncTask;
@@ -246,8 +253,8 @@ public class IngressController {
 
     @SecurityRequirement(name = "JWT")
     @Operation(summary = "Upload a CSV species list", tags = "Ingress", description = "Upload a CSV species list. This is step 1 of a 2 step process. "
-            + "The file is uploaded to S3 and then ingested. "
-            + "The second step is to ingest the species list using the returned S3 key.")
+            + "The file is uploaded to temporary storage (S3 or local) and then ingested. "
+            + "The second step is to ingest the species list using the returned file identifier.")
     @PostMapping(path = "/v2/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully uploaded", content = {
@@ -264,11 +271,13 @@ public class IngressController {
         }
 
         try {
-            logger.info("Upload to S3 started...");
-            String s3Key = uploadService.uploadFileToS3(file);
-            IngestJob ingestJob = uploadService.upload(s3Key);
-
-            ingestJob.setLocalFile(s3Key);
+            if (s3Enabled) {
+                logger.info("Upload to S3 started...");
+            } else {
+                logger.info("Upload to temporary area started...");
+            }
+            String fileIdentifier = uploadService.uploadFile(file);
+            IngestJob ingestJob = uploadService.upload(fileIdentifier);
 
             return ResponseEntity.ok(ingestJob);
         } catch (Exception e) {
@@ -279,7 +288,7 @@ public class IngressController {
 
     @SecurityRequirement(name = "JWT")
     @Operation(summary = "Asynchronously ingest a species list", tags = "Ingress", description = "Asynchronously ingest a species list. This is step 2 of a 2 step process. "
-            + "The file is uploaded to S3 and then ingested. "
+            + "The file is uploaded to temporary storage (S3 or local) and then ingested. "
             + "\n\nThe first step is to upload the species list. The ID of the list being ingested will be returned, where you can then use `/ingest/{ID}/progress` to track ingestion progress."
             + "\n\nThe ingested list is validated against the constraints returned from the `/constraints` endpoint, where each key is a list property that will be validated, and the value is all of the possible values for that key.")
     @PostMapping("/v2/ingest")
@@ -291,7 +300,7 @@ public class IngressController {
                     @Content(mediaType = "text/plain") })
     })
     public ResponseEntity<Object> ingest(
-            @RequestParam("file") String s3Key,
+            @RequestParam("file") String fileIdentifier,
             InputSpeciesList speciesList,
             @AuthenticationPrincipal Principal principal) {
         try {
@@ -308,13 +317,21 @@ public class IngressController {
                         "Supplied list contains invalid properties for a controlled value (list type, license, region)");
             }
 
-            // Verify the S3 file exists
-            if (!s3Service.fileExists(s3Key)) {
-                return ResponseEntity.badRequest().body("File not found in S3. Please upload the file first.");
+            // Verify the file exists
+            if (s3Enabled) {
+                if (!s3Service.fileExists(fileIdentifier)) {
+                    return ResponseEntity.badRequest().body("File not found in S3. Please upload the file first.");
+                }
+                logger.info("Async ingestion started for S3 key: {}", fileIdentifier);
+            } else {
+                File tempFile = new File(tempDir + "/" + fileIdentifier);
+                if (!tempFile.exists()) {
+                    return ResponseEntity.badRequest().body("File not uploaded yet");
+                }
+                logger.info("Async ingestion started for local file: {}", fileIdentifier);
             }
 
-            logger.info("Async ingestion started for S3 key: {}", s3Key);
-            SpeciesList updatedSpeciesList = uploadService.ingest(alaUserProfile, speciesList, s3Key, false);
+            SpeciesList updatedSpeciesList = uploadService.ingest(alaUserProfile, speciesList, fileIdentifier, false);
 
             return ResponseEntity.ok(updatedSpeciesList);
         } catch (Exception e) {
@@ -349,7 +366,7 @@ public class IngressController {
 
     @SecurityRequirement(name = "JWT")
     @Operation(summary = "Ingest a species list that has been uploaded before", description = "Ingest a species list. This is step 2 of a 2 step process. "
-            + "The file is uploaded to S3 and then ingested. "
+            + "The file is uploaded to temporary storage (S3 or local) and then ingested. "
             + "The first step is to upload the species list.", tags = "Ingress")
     @PostMapping("/v2/ingest/{speciesListID}")
     @ApiResponses(value = {
@@ -360,7 +377,7 @@ public class IngressController {
                     @Content(mediaType = "text/plain") })
     })
     public ResponseEntity<Object> ingest(
-            @RequestParam("file") String s3Key,
+            @RequestParam("file") String fileIdentifier,
             @PathVariable("speciesListID") String speciesListID,
             @AuthenticationPrincipal Principal principal) {
         try {
@@ -371,13 +388,21 @@ public class IngressController {
                 return errorResponse;
             }
 
-            // Verify the S3 file exists
-            if (!s3Service.fileExists(s3Key)) {
-                return ResponseEntity.badRequest().body("File not found in S3. Please upload the file first.");
+            // Verify the file exists
+            if (s3Enabled) {
+                if (!s3Service.fileExists(fileIdentifier)) {
+                    return ResponseEntity.badRequest().body("File not found in S3. Please upload the file first.");
+                }
+                logger.info("Re-Ingestion started for S3 key: {}", fileIdentifier);
+            } else {
+                File tempFile = new File(tempDir + "/" + fileIdentifier);
+                if (!tempFile.exists()) {
+                    return ResponseEntity.badRequest().body("File not uploaded yet");
+                }
+                logger.info("Re-Ingestion started for local file: {}", fileIdentifier);
             }
 
-            logger.info("Re-Ingestion started for S3 key: {}", s3Key);
-            SpeciesList speciesList = uploadService.reload(speciesListID, s3Key, false);
+            SpeciesList speciesList = uploadService.reload(speciesListID, fileIdentifier, false);
             if (speciesList != null) {
                 // release current version
                 // releaseService.release(speciesListID);

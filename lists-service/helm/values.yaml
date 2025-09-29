@@ -112,9 +112,12 @@ config:
       bucket: s3://lists/releases
   aws:
     s3:
+      enabled: true
       tempBucket: "species-lists-temp-uploads"
       region: "ap-southeast-2"
       uploadExpiry: "PT1H"
+  temp:
+    dir: "/tmp"
   multipart:
     maxFileSize: 50MB
     maxRequestSize: 50MB

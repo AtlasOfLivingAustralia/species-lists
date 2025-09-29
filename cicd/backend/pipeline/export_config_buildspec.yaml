@@ -207,9 +207,12 @@ phases:
             discoveryUri: $OIDC_DISCOVERY_URI
           aws:
             s3:
+              enabled: $S3_ENABLED
               tempBucket: $UPLOADS_S3_BUCKET_NAME
               region: $AWS_REGION
               uploadExpiry: $S3_UPLOAD_EXPIRY
+          temp:
+            dir: $TEMP_DIR
         ingress:
           accessLogsPrefix: "logs"
           accessLogsBucket: "${ACCESS_LOGS_S3_BUCKET_NAME}"

@@ -1,6 +1,7 @@
 package au.org.ala.listsapi;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -14,6 +15,7 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.sts.StsClient;
 
 @Configuration
+@ConditionalOnProperty(name = "aws.s3.enabled", havingValue = "true")
 public class S3Config {
 
     @Value("${aws.s3.region:ap-southeast-2}")

@@ -15,7 +15,11 @@
 
 package au.org.ala.listsapi.service;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
@@ -78,8 +82,14 @@ public class UploadService {
     protected ProgressService progressService;
     @Autowired
     protected SearchHelperService searchHelperService;
-    @Autowired
+    @Autowired(required = false)
     protected S3Service s3Service;
+
+    @Value("${aws.s3.enabled:false}")
+    private boolean s3Enabled;
+
+    @Value("${temp.dir:/tmp}")
+    private String tempDir;
 
     private static final Set<String> NULL_VALUES = new HashSet<>();
 
@@ -124,7 +134,7 @@ public class UploadService {
     }
 
     public SpeciesList ingest(
-            AlaUserProfile user, InputSpeciesList speciesListMetadata, String s3Key, boolean dryRun)
+            AlaUserProfile user, InputSpeciesList speciesListMetadata, String fileIdentifier, boolean dryRun)
             throws Exception {
 
         // create the species list in mongo
@@ -146,14 +156,26 @@ public class UploadService {
 
         final SpeciesList ingestList = speciesList;
 
-        CompletableFuture.runAsync(
-                () -> {
-                    try {
-                        asyncIngest(ingestList, s3Key, dryRun, false);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                });
+        if (s3Enabled) {
+            CompletableFuture.runAsync(
+                    () -> {
+                        try {
+                            asyncIngestS3(ingestList, fileIdentifier, dryRun, false);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+        } else {
+            File fileToLoad = new File(tempDir + "/" + fileIdentifier);
+            CompletableFuture.runAsync(
+                    () -> {
+                        try {
+                            asyncIngest(ingestList, fileToLoad, dryRun, false);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+        }
 
         // releaseService.release(speciesList.getId());
         return speciesList;
@@ -177,12 +199,28 @@ public class UploadService {
         speciesList.setTags(speciesListMetadata.getTags());
     }
 
-    public String uploadFileToS3(MultipartFile file) throws Exception {
-        logger.debug("Uploading file to S3: {}", file.getOriginalFilename());
-        return s3Service.uploadFile(file);
+    public String uploadFile(MultipartFile file) throws Exception {
+        if (s3Enabled) {
+            logger.debug("Uploading file to S3: {}", file.getOriginalFilename());
+            return s3Service.uploadFile(file);
+        } else {
+            logger.debug("Uploading file to local temp: {}", file.getOriginalFilename());
+            File tempFile = getFileTemp(file);
+            file.transferTo(tempFile);
+            return tempFile.getName();
+        }
     }
 
-    public SpeciesList reload(String speciesListID, String s3Key, boolean dryRun) {
+    public File getFileTemp(MultipartFile file) {
+        return new File(
+                tempDir
+                        + "/upload-"
+                        + System.currentTimeMillis()
+                        + "-"
+                        + Objects.requireNonNull(file.getOriginalFilename()).replaceAll("[^a-zA-Z0-9._-]", "_"));
+    }
+
+    public SpeciesList reload(String speciesListID, String fileIdentifier, boolean dryRun) {
         if (speciesListID != null) {
             // remove any existing progress
             progressService.clearIngestProgress(speciesListID);
@@ -200,14 +238,26 @@ public class UploadService {
 
                 final SpeciesList ingestList = speciesList;
 
-                CompletableFuture.runAsync(
-                        () -> {
-                            try {
-                                asyncIngest(ingestList, s3Key, dryRun, false);
-                            } catch (Exception e) {
-                                throw new RuntimeException(e);
-                            }
-                        });
+                if (s3Enabled) {
+                    CompletableFuture.runAsync(
+                            () -> {
+                                try {
+                                    asyncIngestS3(ingestList, fileIdentifier, dryRun, false);
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
+                            });
+                } else {
+                    File fileToLoad = new File(tempDir + "/" + fileIdentifier);
+                    CompletableFuture.runAsync(
+                            () -> {
+                                try {
+                                    asyncIngest(ingestList, fileToLoad, dryRun, false);
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
+                            });
+                }
 
                 // releaseService.release(speciesList.getId());
                 return speciesList;
@@ -219,35 +269,61 @@ public class UploadService {
         }
     }
 
-    public IngestJob upload(String s3Key)
+    public IngestJob upload(String fileIdentifier)
             throws Exception {
 
         IngestJob ingestJob = null;
 
-        String contentType = s3Service.getContentType(s3Key);
-        String originalFilename = s3Service.getOriginalFilename(s3Key);
+        if (s3Enabled) {
+            String contentType = s3Service.getContentType(fileIdentifier);
+            String originalFilename = s3Service.getOriginalFilename(fileIdentifier);
 
-        // handle CSV
-        if (contentType.equals("text/csv")) {
-            // load a CSV
-            ingestJob = ingestCSV(null, s3Key, true, true);
-        }
+            // handle CSV
+            if (contentType.equals("text/csv")) {
+                // load a CSV
+                ingestJob = ingestCSVS3(null, fileIdentifier, true, true);
+            }
 
-        // handle zip file
-        if (contentType.equals("application/zip")) {
-            // load a zip file
-            ingestJob = ingestZip(null, s3Key, true, true);
-        }
+            // handle zip file
+            if (contentType.equals("application/zip")) {
+                // load a zip file
+                ingestJob = ingestZipS3(null, fileIdentifier, true, true);
+            }
 
-        if (ingestJob != null) {
-            ingestJob.setLocalFile(originalFilename);
-            return ingestJob;
+            if (ingestJob != null) {
+                ingestJob.setLocalFile(fileIdentifier);
+                return ingestJob;
+            }
+        } else {
+            File fileToLoad = new File(tempDir + "/" + fileIdentifier);
+
+            Path path = fileToLoad.toPath();
+            String mimeType = Files.probeContentType(path);
+
+            // handle CSV
+            if (mimeType.equals("text/csv")) {
+                // load a CSV
+                ingestJob = ingestCSV(null, fileToLoad, true, true);
+            }
+
+            // handle zip file
+            if (mimeType.equals("application/zip")) {
+                try (ZipFile zipFile = new ZipFile(fileToLoad)) {
+                    // load a zip file
+                    ingestJob = ingestZip(null, zipFile, true, true);
+                }
+            }
+
+            if (ingestJob != null) {
+                ingestJob.setLocalFile(fileToLoad.getName());
+                return ingestJob;
+            }
         }
 
         return null;
     }
 
-    public void asyncIngest(
+    public void asyncIngestS3(
             SpeciesList speciesList, String s3Key, boolean dryRun, boolean skipIndexing)
             throws Exception {
 
@@ -260,13 +336,13 @@ public class UploadService {
             // handle CSV
             if (contentType.equals("text/csv")) {
                 // load a CSV
-                ingestJob = ingestCSV(speciesList.getId(), s3Key, dryRun, skipIndexing);
+                ingestJob = ingestCSVS3(speciesList.getId(), s3Key, dryRun, skipIndexing);
             }
 
             // handle zip file
             if (contentType.equals("application/zip")) {
                 // load a zip file
-                ingestJob = ingestZip(speciesList.getId(), s3Key, dryRun, skipIndexing);
+                ingestJob = ingestZipS3(speciesList.getId(), s3Key, dryRun, skipIndexing);
             }
 
             if (ingestJob != null) {
@@ -281,17 +357,55 @@ public class UploadService {
 
                 speciesListMongoRepository.save(speciesList);
 
-                logger.info("Async ingestion complete... " + speciesList);
+                logger.info("Async S3 ingestion complete... " + speciesList);
             }
         } finally {
             if (!dryRun) {
-                s3Service.deleteFile(s3Key);
-                logger.info("Cleaned up S3 file: {}", s3Key);
+                logger.info("S3 file will be cleaned up by lifecycle policy: {}", s3Key);
             }
         }
     }
 
-    public IngestJob ingestCSV(String speciesListID, String s3Key, boolean dryRun, boolean skipIndexing)
+    public void asyncIngest(
+            SpeciesList speciesList, File fileToLoad, boolean dryRun, boolean skipIndexing)
+            throws Exception {
+
+        IngestJob ingestJob = null;
+
+        Path path = fileToLoad.toPath();
+        String mimeType = Files.probeContentType(path);
+
+        // handle CSV
+        if (mimeType.equals("text/csv")) {
+            // load a CSV
+            ingestJob = ingestCSV(speciesList.getId(), fileToLoad, dryRun, skipIndexing);
+        }
+
+        // handle zip file
+        if (mimeType.equals("application/zip")) {
+            try (ZipFile zipFile = new ZipFile(fileToLoad)) {
+                // load a zip file
+                ingestJob = ingestZip(speciesList.getId(), zipFile, dryRun, skipIndexing);
+            }
+        }
+
+        if (ingestJob != null) {
+            ingestJob.setLocalFile(fileToLoad.getName());
+
+            speciesList.setFacetList(ingestJob.getFacetList());
+            speciesList.setFieldList(ingestJob.getFieldList());
+            speciesList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
+            speciesList.setRowCount(ingestJob.getRowCount());
+            speciesList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
+            speciesList.setLastUpdated(new Date());
+
+            speciesListMongoRepository.save(speciesList);
+
+            logger.info("Async ingestion complete... " + speciesList);
+        }
+    }
+
+    public IngestJob ingestCSVS3(String speciesListID, String s3Key, boolean dryRun, boolean skipIndexing)
             throws Exception {
         var inputStreamOptional = s3Service.getFileStream(s3Key);
         if (inputStreamOptional.isEmpty()) {
@@ -300,7 +414,7 @@ public class UploadService {
         return loadCSV(speciesListID, inputStreamOptional.get(), dryRun, skipIndexing, false);
     }
 
-    public IngestJob ingestZip(
+    public IngestJob ingestZipS3(
             String speciesListID, String s3Key, boolean dryRun, boolean skipIndexing)
             throws Exception {
         var inputStreamOptional = s3Service.getFileStream(s3Key);
@@ -325,6 +439,25 @@ public class UploadService {
             }
         } finally {
             tempFile.delete();
+        }
+        return null;
+    }
+
+    public IngestJob ingestCSV(String speciesListID, File file, boolean dryRun, boolean skipIndexing)
+            throws Exception {
+        return loadCSV(speciesListID, new FileInputStream(file), dryRun, skipIndexing, false);
+    }
+
+    public IngestJob ingestZip(
+            String speciesListID, ZipFile zipFile, boolean dryRun, boolean skipIndexing)
+            throws Exception {
+        // get the field list
+        Enumeration<? extends ZipEntry> entries = zipFile.entries();
+        while (entries.hasMoreElements()) {
+            ZipEntry entry = entries.nextElement();
+            if (!entry.isDirectory() && entry.getName().endsWith(".csv")) {
+                return loadCSV(speciesListID, zipFile.getInputStream(entry), dryRun, skipIndexing, false);
+            }
         }
         return null;
     }
