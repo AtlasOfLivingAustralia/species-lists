@@ -36,6 +36,7 @@ ingress:
   enabled: true
   className: "alb"
   certificateArn: ""
+  wafArn: ""
   hostname: ""
   accessLogsBucket: ""
   accessLogsPrefix: ""

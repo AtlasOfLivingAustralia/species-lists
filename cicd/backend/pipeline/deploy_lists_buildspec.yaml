@@ -32,6 +32,7 @@ phases:
                       --set image.tag=$BUILD_TAG
                       --set ingress.hostname=$WS_SUB_DOMAIN.$HOSTED_ZONE
                       --set ingress.certificateArn=$APP_CERTIFICATE
+                      --set ingress.wafArn=$WAF_ARN
                       -f $CODEBUILD_SRC_DIR_ExportConfigArtifact/helm-values.yaml
                       --set deploymentAnnotations.checksum/configs="$(md5sum $CODEBUILD_SRC_DIR_ExportConfigArtifact/helm-values.yaml | awk '{print $1}')"
                       --set deploymentAnnotations.commitHash=$CODEBUILD_RESOLVED_SOURCE_VERSION
@@ -41,6 +42,7 @@ phases:
                       --set image.tag=$BUILD_TAG
                       --set ingress.hostname=$WS_SUB_DOMAIN.$HOSTED_ZONE
                       --set ingress.certificateArn=$APP_CERTIFICATE
+                      --set ingress.wafArn=$WAF_ARN
                       -f $CODEBUILD_SRC_DIR_ExportConfigArtifact/helm-values.yaml
                       --set deploymentAnnotations.checksum/configs="$(md5sum $CODEBUILD_SRC_DIR_ExportConfigArtifact/helm-values.yaml | awk '{print $1}')"
                       --set deploymentAnnotations.commitHash=$CODEBUILD_RESOLVED_SOURCE_VERSION
