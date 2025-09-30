@@ -320,75 +320,14 @@ Resources:
                - ActionToUse:
                    Count: {}
                  Name: SignalNonBrowserUserAgent
-              ScopeDownStatement:
-                ByteMatchStatement:
-                  SearchString: '/ws'
-                  FieldToMatch:
-                    UriPath: {}
-                  PositionalConstraint: STARTS_WITH
-                  TextTransformations:
-                    - Priority: 0
-                      Type: NONE
           VisibilityConfig:
             CloudWatchMetricsEnabled: true
             MetricName: !Sub ${pEnvironment}-lists-AWSManagedRulesBotControlRuleSet-ws
             SampledRequestsEnabled: true
-        - Name: AWSManagedRulesBotControlRuleSet-frontend
-          OverrideAction: 
-            None: {}
-          Priority: 10
-          Statement:
-            ManagedRuleGroupStatement:
-              Name: AWSManagedRulesBotControlRuleSet
-              ManagedRuleGroupConfigs:
-                - AWSManagedRulesBotControlRuleSet:
-                    EnableMachineLearning: TRUE
-                    InspectionLevel: TARGETED
-              VendorName: AWS
-              RuleActionOverrides: 
-               - ActionToUse:
-                   Allow: {}
-                 Name: CategoryMonitoring
-               - ActionToUse:
-                   Allow: {}
-                 Name: CategoryEmailClient
-               - ActionToUse:
-                   Allow: {}
-                 Name: CategoryLinkChecker
-               - ActionToUse:
-                   Count: {}
-                 Name: SignalNonBrowserUserAgent
-               - ActionToUse:
-                   Count: {}
-                 Name: TGT_VolumetricIpTokenAbsent
-               - ActionToUse:
-                   Count: {}
-                 Name: TGT_VolumetricSession
-               - ActionToUse:
-                   Count: {}
-                 Name: TGT_SignalAutomatedBrowser
-               - ActionToUse:
-                   Count: {}
-                 Name: TGT_SignalBrowserInconsistency
-              ScopeDownStatement:
-                NotStatement:
-                  Statement:
-                    ByteMatchStatement:
-                      SearchString: '/ws'
-                      FieldToMatch:
-                        UriPath: {}
-                      PositionalConstraint: STARTS_WITH
-                      TextTransformations:
-                        - Priority: 0
-                          Type: NONE
-          VisibilityConfig:
-            CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-AWSManagedRulesBotControlRuleSet-frontend
-            SampledRequestsEnabled: true
         - Name: ALARateLimitGoodBots
           Action:
             Block: { }
-          Priority: 11
+          Priority: 10
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
@@ -405,7 +344,7 @@ Resources:
         - Name: ALABlockDatacenterBrowsers
           Action:
             Block: {}
-          Priority: 12
+          Priority: 11
           RuleLabels:
             - Name: bot:datacenterbrowsers
           VisibilityConfig:
