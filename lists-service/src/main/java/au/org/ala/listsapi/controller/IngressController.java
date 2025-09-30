@@ -19,6 +19,7 @@ import java.security.Principal;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import au.org.ala.listsapi.service.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -45,13 +46,6 @@ import au.org.ala.listsapi.model.InputSpeciesList;
 import au.org.ala.listsapi.model.MigrateProgressItem;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
-import au.org.ala.listsapi.service.MigrateService;
-import au.org.ala.listsapi.service.ProgressService;
-import au.org.ala.listsapi.service.ReleaseService;
-import au.org.ala.listsapi.service.TaxonService;
-import au.org.ala.listsapi.service.UploadService;
-import au.org.ala.listsapi.service.UserdetailsService;
-import au.org.ala.listsapi.service.ValidationService;
 import au.org.ala.ws.security.profile.AlaUserProfile;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
@@ -91,12 +85,18 @@ public class IngressController {
     protected ProgressService progressService;
     @Autowired
     protected UserdetailsService userdetailsService;
+    @Autowired(required = false)
+    protected S3Service s3Service;
 
     @Autowired
     protected AuthUtils authUtils;
 
+    @Value("${aws.s3.enabled:false}")
+    private boolean s3Enabled;
+
     @Value("${temp.dir:/tmp}")
     private String tempDir;
+
 
     private CompletableFuture<Void> asyncTask;
     private String taskName;
@@ -253,8 +253,8 @@ public class IngressController {
 
     @SecurityRequirement(name = "JWT")
     @Operation(summary = "Upload a CSV species list", tags = "Ingress", description = "Upload a CSV species list. This is step 1 of a 2 step process. "
-            + "The file is uploaded to a temporary area and then ingested. "
-            + "The second step is to ingest the species list.")
+            + "The file is uploaded to temporary storage (S3 or local) and then ingested. "
+            + "The second step is to ingest the species list using the returned file identifier.")
     @PostMapping(path = "/v2/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully uploaded", content = {
@@ -271,10 +271,14 @@ public class IngressController {
         }
 
         try {
-            logger.info("Upload to temporary area started...");
-            File tempFile = uploadService.getFileTemp(file);
-            file.transferTo(tempFile);
-            IngestJob ingestJob = uploadService.upload(tempFile);
+            if (s3Enabled) {
+                logger.info("Upload to S3 started...");
+            } else {
+                logger.info("Upload to temporary area started...");
+            }
+            String fileIdentifier = uploadService.uploadFile(file);
+            IngestJob ingestJob = uploadService.upload(fileIdentifier);
+
             return ResponseEntity.ok(ingestJob);
         } catch (Exception e) {
             logger.error("Error while uploading the file: " + e.getMessage(), e);
@@ -284,7 +288,7 @@ public class IngressController {
 
     @SecurityRequirement(name = "JWT")
     @Operation(summary = "Asynchronously ingest a species list", tags = "Ingress", description = "Asynchronously ingest a species list. This is step 2 of a 2 step process. "
-            + "The file is uploaded to a temporary area and then ingested. "
+            + "The file is uploaded to temporary storage (S3 or local) and then ingested. "
             + "\n\nThe first step is to upload the species list. The ID of the list being ingested will be returned, where you can then use `/ingest/{ID}/progress` to track ingestion progress."
             + "\n\nThe ingested list is validated against the constraints returned from the `/constraints` endpoint, where each key is a list property that will be validated, and the value is all of the possible values for that key.")
     @PostMapping("/v2/ingest")
@@ -296,7 +300,7 @@ public class IngressController {
                     @Content(mediaType = "text/plain") })
     })
     public ResponseEntity<Object> ingest(
-            @RequestParam("file") String fileName,
+            @RequestParam("file") String fileIdentifier,
             InputSpeciesList speciesList,
             @AuthenticationPrincipal Principal principal) {
         try {
@@ -313,18 +317,26 @@ public class IngressController {
                         "Supplied list contains invalid properties for a controlled value (list type, license, region)");
             }
 
-            logger.info("Async ingestion started...");
-            File tempFile = new File(tempDir + "/" + fileName);
-            if (!tempFile.exists()) {
-                return ResponseEntity.badRequest().body("File not uploaded yet");
+            // Verify the file exists
+            if (s3Enabled) {
+                if (!s3Service.fileExists(fileIdentifier)) {
+                    return ResponseEntity.badRequest().body("File not found in S3. Please upload the file first.");
+                }
+                logger.info("Async ingestion started for S3 key: {}", fileIdentifier);
+            } else {
+                File tempFile = new File(tempDir + "/" + fileIdentifier);
+                if (!tempFile.exists()) {
+                    return ResponseEntity.badRequest().body("File not uploaded yet");
+                }
+                logger.info("Async ingestion started for local file: {}", fileIdentifier);
             }
 
-            SpeciesList updatedSpeciesList = uploadService.ingest(alaUserProfile, speciesList, tempFile, false);
+            SpeciesList updatedSpeciesList = uploadService.ingest(alaUserProfile, speciesList, fileIdentifier, false);
 
             return ResponseEntity.ok(updatedSpeciesList);
         } catch (Exception e) {
             logger.error("Error while ingesting the file: " + e.getMessage(), e);
-            return ResponseEntity.badRequest().body("Error while uploading the file: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Error while ingesting the file: " + e.getMessage());
         }
     }
 
@@ -354,7 +366,7 @@ public class IngressController {
 
     @SecurityRequirement(name = "JWT")
     @Operation(summary = "Ingest a species list that has been uploaded before", description = "Ingest a species list. This is step 2 of a 2 step process. "
-            + "The file is uploaded to a temporary area and then ingested. "
+            + "The file is uploaded to temporary storage (S3 or local) and then ingested. "
             + "The first step is to upload the species list.", tags = "Ingress")
     @PostMapping("/v2/ingest/{speciesListID}")
     @ApiResponses(value = {
@@ -365,7 +377,7 @@ public class IngressController {
                     @Content(mediaType = "text/plain") })
     })
     public ResponseEntity<Object> ingest(
-            @RequestParam("file") String fileName,
+            @RequestParam("file") String fileIdentifier,
             @PathVariable("speciesListID") String speciesListID,
             @AuthenticationPrincipal Principal principal) {
         try {
@@ -376,21 +388,30 @@ public class IngressController {
                 return errorResponse;
             }
 
-            logger.info("Re-Ingestion started...");
-            File tempFile = new File(tempDir + "/" + fileName);
-            if (!tempFile.exists()) {
-                return ResponseEntity.badRequest().body("File not uploaded yet");
+            // Verify the file exists
+            if (s3Enabled) {
+                if (!s3Service.fileExists(fileIdentifier)) {
+                    return ResponseEntity.badRequest().body("File not found in S3. Please upload the file first.");
+                }
+                logger.info("Re-Ingestion started for S3 key: {}", fileIdentifier);
+            } else {
+                File tempFile = new File(tempDir + "/" + fileIdentifier);
+                if (!tempFile.exists()) {
+                    return ResponseEntity.badRequest().body("File not uploaded yet");
+                }
+                logger.info("Re-Ingestion started for local file: {}", fileIdentifier);
             }
-            SpeciesList speciesList = uploadService.reload(speciesListID, tempFile, false);
+
+            SpeciesList speciesList = uploadService.reload(speciesListID, fileIdentifier, false);
             if (speciesList != null) {
                 // release current version
                 // releaseService.release(speciesListID);
                 return new ResponseEntity<>(speciesList, HttpStatus.OK);
             }
-            return ResponseEntity.badRequest().body("Error while uploading the file: ");
+            return ResponseEntity.badRequest().body("Error while reloading the species list");
         } catch (Exception e) {
             logger.error("Error while ingesting the file: " + e.getMessage(), e);
-            return ResponseEntity.badRequest().body("Error while uploading the file: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Error while ingesting the file: " + e.getMessage());
         }
     }
 

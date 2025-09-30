@@ -21,9 +21,15 @@ phases:
     commands:
       - echo Build started on $(date)
       - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME
+      - eksctl delete iamserviceaccount --name=lists-service-account-$CLEAN_BRANCH --namespace=$EKS_NAMESPACE --cluster=$EKS_CLUSTER_NAME
       - cd lists-service/helm
       - echo helm uninstall $HELM_RELEASE_NAME -n $EKS_NAMESPACE
-      - helm uninstall $HELM_RELEASE_NAME -n $EKS_NAMESPACE
+      - |
+        if helm list -n $EKS_NAMESPACE | grep -q $HELM_RELEASE_NAME; then
+          helm uninstall $HELM_RELEASE_NAME -n $EKS_NAMESPACE
+        else
+          echo "Release $HELM_RELEASE_NAME does not exist."
+        fi
 
   post_build:
     commands:

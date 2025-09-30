@@ -14,9 +14,6 @@ nameOverride: ""
 fullnameOverride: ""
 
 serviceAccount:
-  create: true
-  automount: true
-  annotations: {}
   name: ""
 
 deploymentAnnotations: {}
@@ -51,13 +48,40 @@ resources:
     cpu: 2
 
 livenessProbe:
+  enabled: true
   httpGet:
-    path: /
-    port: http
+    path: /actuator/health
+    port: 8080
+    scheme: HTTP
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+
+startupProbe:
+  enabled: true
+  httpGet:
+    path: /actuator/health
+    port: 8080
+    scheme: HTTP
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 18
+
 readinessProbe:
+  enabled: true
   httpGet:
-    path: /
-    port: http
+    path: /actuator/health
+    port: 8080
+    scheme: HTTP
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
 
 autoscaling:
   enabled: true
@@ -113,6 +137,13 @@ config:
     s3:
       enabled: false
       bucket: s3://lists/releases
+  aws:
+    s3:
+      enabled: true
+      tempBucket: "species-lists-temp-uploads"
+      region: "ap-southeast-2"
+  temp:
+    dir: "/tmp"
   multipart:
     maxFileSize: 50MB
     maxRequestSize: 50MB
