@@ -37,9 +37,6 @@ public class S3Service {
     @Value("${aws.s3.tempBucket}")
     private String tempBucket;
 
-    @Value("${aws.s3.uploadExpiry:PT1H}")
-    private Duration uploadExpiry;
-
     /**
      * Upload a MultipartFile to S3 and return the S3 key
      */
@@ -182,36 +179,6 @@ public class S3Service {
             logger.error("Error checking file existence in S3: {}", key, e);
             return false;
         }
-    }
-
-    /**
-     * Generate a pre-signed URL for direct upload to S3
-     */
-    public String generatePresignedUploadUrl(String filename, String contentType) {
-        String key = generateUniqueKey(filename);
-
-        logger.debug("Generating pre-signed upload URL: bucket={}, key={}", tempBucket, key);
-
-        Map<String, String> metadata = new HashMap<>();
-        metadata.put("original-filename", filename);
-        metadata.put("content-type", contentType);
-
-        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(tempBucket)
-                .key(key)
-                .contentType(contentType)
-                .metadata(metadata)
-                .build();
-
-        PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
-                .signatureDuration(uploadExpiry)
-                .putObjectRequest(putObjectRequest)
-                .build();
-
-        PresignedPutObjectRequest presignedRequest = s3Presigner.presignPutObject(presignRequest);
-
-        logger.debug("Pre-signed URL generated successfully for key: {}", key);
-        return presignedRequest.url().toString();
     }
 
     /**

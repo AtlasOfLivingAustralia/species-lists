@@ -210,12 +210,18 @@ phases:
               enabled: $S3_ENABLED
               tempBucket: $UPLOADS_S3_BUCKET_NAME
               region: $AWS_REGION
-              uploadExpiry: $S3_UPLOAD_EXPIRY
           temp:
             dir: $TEMP_DIR
         ingress:
           accessLogsPrefix: "logs"
           accessLogsBucket: "${ACCESS_LOGS_S3_BUCKET_NAME}"
+        resources:
+          requests:
+            cpu: "${CPU_REQUEST}"      
+            memory: "${MEMORY_REQUEST}" 
+          limits:
+            cpu: "${CPU_LIMIT}"      
+            memory: "${MEMORY_LIMIT}"
         elasticsearch:
           deployment:
             name: $ELASTIC_HOST
