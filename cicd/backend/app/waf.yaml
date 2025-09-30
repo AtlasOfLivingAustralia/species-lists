@@ -62,10 +62,30 @@ Resources:
         CloudWatchMetricsEnabled: true
         MetricName: !Sub ${pEnvironment}-lists-DefaultAction
       Rules:
+        - Name: ALAHostHeaderCheck
+          Priority: 0
+          Action: 
+            Block: {}
+          Statement:
+            NotStatement:
+                Statement:
+                  ByteMatchStatement:
+                    SearchString: '.ala.org.au'
+                    FieldToMatch:
+                      SingleHeader:
+                        Name: 'Host'
+                    PositionalConstraint: ENDS_WITH
+                    TextTransformations:
+                      - Priority: 0
+                        Type: NONE
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub ${pEnvironment}-biocache-ALAHostHeaderCheck
         - Name: ALAIpAllowList
           Action:
             Allow: { }
-          Priority: 0
+          Priority: 1
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
@@ -76,7 +96,7 @@ Resources:
         - Name: ALAIpDenyList
           Action:
             Block: { }
-          Priority: 1
+          Priority: 2
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
@@ -85,7 +105,7 @@ Resources:
             IPSetReferenceStatement:
               Arn: !GetAtt ListsDenylistIpSet.Arn
         - Name: ALABlockJa4Fingerprint
-          Priority: 2
+          Priority: 3
           Action: 
             Block: {}
           Statement:
@@ -149,7 +169,7 @@ Resources:
         - Name: ALABlockSpecificBots
           Action:
             Block: {}
-          Priority: 3
+          Priority: 4
           RuleLabels:
             - Name: bot:specific_blocked
           VisibilityConfig:
@@ -201,7 +221,7 @@ Resources:
         - Name: ALARateLimitJa4
           Action:
             Block: { }
-          Priority: 4
+          Priority: 5
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
@@ -223,7 +243,7 @@ Resources:
         - Name: AWSManagedRulesAmazonIpReputationList
           OverrideAction: 
             None: {}
-          Priority: 5
+          Priority: 6
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesAmazonIpReputationList
@@ -239,7 +259,7 @@ Resources:
         - Name: AWSManagedRulesAnonymousIpList
           OverrideAction: 
             None: {}
-          Priority: 6
+          Priority: 7
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesAnonymousIpList
@@ -258,7 +278,7 @@ Resources:
         - Name: AWSManagedRulesKnownBadInputsRuleSet
           OverrideAction: 
             None: {}
-          Priority: 7
+          Priority: 8
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesKnownBadInputsRuleSet
@@ -270,7 +290,7 @@ Resources:
         - Name: AWSManagedRulesCommonRuleSet
           OverrideAction: 
             None: {}
-          Priority: 8
+          Priority: 9
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesCommonRuleSet
@@ -295,7 +315,7 @@ Resources:
         - Name: AWSManagedRulesBotControlRuleSet-ws
           OverrideAction: 
             None: {}
-          Priority: 9
+          Priority: 10
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesBotControlRuleSet
@@ -336,7 +356,7 @@ Resources:
         - Name: AWSManagedRulesBotControlRuleSet-frontend
           OverrideAction: 
             None: {}
-          Priority: 10
+          Priority: 11
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesBotControlRuleSet
@@ -388,7 +408,7 @@ Resources:
         - Name: ALARateLimitGoodBots
           Action:
             Block: { }
-          Priority: 11
+          Priority: 12
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
@@ -405,7 +425,7 @@ Resources:
         - Name: ALABlockDatacenterBrowsers
           Action:
             Block: {}
-          Priority: 12
+          Priority: 13
           RuleLabels:
             - Name: bot:datacenterbrowsers
           VisibilityConfig:
