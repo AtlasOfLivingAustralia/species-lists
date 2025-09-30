@@ -515,6 +515,7 @@ export function Actions({
                       })}
                     </Text>
                   ),
+
                   children: ((meta.isAuthoritative && !meta.isPrivate) || !meta.isPrivate) ? (
                     <Text>
                       {intl.formatMessage({
