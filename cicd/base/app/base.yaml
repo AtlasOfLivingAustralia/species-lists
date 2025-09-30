@@ -295,6 +295,9 @@ Resources:
             AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 1
             Status: Enabled
+          - Id: ExpireOldObjects
+            Status: Enabled
+            ExpirationInDays: 10
       PublicAccessBlockConfiguration:
         BlockPublicAcls: TRUE
         BlockPublicPolicy: TRUE
@@ -303,7 +306,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub
-            - ${pProductName}-${ResourceName}
+            - ala-${pProductName}-${ResourceName}
             - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
 
 Outputs:
