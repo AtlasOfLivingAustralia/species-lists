@@ -56,7 +56,7 @@ public class MetadataService {
 
         if (speciesList.getDataResourceUid() == null) {
             // The dataResourceUid is returned via the location header as a URL, i.e.
-            // location = https://collections-test.ala.org.au/ws/dataResource/dr22893
+            // location = https://collections.test.ala.org.au/ws/dataResource/dr22893
             Map<String, List<String>> headers = (Map<String, List<String>>) response.get("headers");
             String location = headers.get("location").get(0);
 
