@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,8 +32,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -86,6 +91,9 @@ public class LegacyController {
     @Autowired
     protected AuthUtils authUtils;
 
+    @Autowired
+    private MongoTemplate mongoTemplate;
+
     @SecurityRequirement(name = "JWT")
     @Operation(tags = "REST v1", summary = "Get species list metadata for all lists", deprecated = true)
     @ApiResponses({
@@ -96,48 +104,127 @@ public class LegacyController {
     @GetMapping("/v1/speciesList")
     public ResponseEntity<Object> speciesListSearch(
             @Nullable @RequestParam(name = "isAuthoritative") String isAuthoritative,
-            @Nullable @RequestParam(name = "isThreatended") String isThreatended,
-            @RequestParam(name = "sort", defaultValue = "", required = false) String sort,
+            @Nullable @RequestParam(name = "isThreatened") String isThreatened,
+            @Nullable @RequestParam(name = "isInvasive") String isInvasive,
+            @Parameter(description = "Query string (q)")
+            @Nullable @RequestParam(name = "q") String query,
+            @Parameter(description = "Sort field")
+            @Schema(allowableValues = {"count", "listName", "listType", "dateCreated", "lastUpdated", "ownerFullName", "region", "category", "authority"})
+            @RequestParam(name = "sort", defaultValue = "count", required = false) String sort,
+            @Parameter(description = "Sort direction")
+            @Schema(allowableValues = {"asc", "desc"})
+            @RequestParam(name = "order", defaultValue = "asc") String order,
             @RequestParam(name = "max", defaultValue = "10", required = false) int max,
             @RequestParam(name = "offset", defaultValue = "0", required = false) int offset,
-            @AuthenticationPrincipal Principal principal) {
+            @AuthenticationPrincipal Principal principal,
+            Pageable pageable) {
         try {
             Integer page = offset / max; // zero indexed, as required by Pageable
             Pageable paging = PageRequest.of(page, max);
             RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
             speciesListQuery.setIsPrivate("false"); // Legacy version had no access to private lists
+            fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, speciesListQuery);
 
-            if (StringUtils.isNotBlank(isAuthoritative)) {
-                speciesListQuery.setIsAuthoritative(isAuthoritative.replaceAll("eq:", "")); // eq:true to true, etc.
-            }            
-            
-            if (StringUtils.isNotBlank(isThreatended)) {
-                speciesListQuery.setIsThreatened(isThreatended.replaceAll("eq:", "")); // eq:true to true, etc.
-            }
-
-            ExampleMatcher matcher = ExampleMatcher.matching()
-                    .withIgnoreCase()
-                    .withIgnoreNullValues()
-                    .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
-
-            Example<SpeciesList> example = Example.of(speciesListQuery.convertTo(), matcher);
-
-            Pageable pageable;
+            // Handle sorting and pagination
             if (StringUtils.isNotBlank(sort)) {
-                // Default to ascending if not specified, as dir param is not present in this method
-                pageable = PageRequest.of(page, max, org.springframework.data.domain.Sort.by(sort).ascending());
+                // Default to ascending if not specified
+                pageable = PageRequest.of(page, max,
+                        "asc".equalsIgnoreCase(order)
+                                ? org.springframework.data.domain.Sort.by(fixSortField(sort)).ascending()
+                                : org.springframework.data.domain.Sort.by(fixSortField(sort)).descending());
             } else {
                 pageable = paging;
             }
 
-            Page<SpeciesList> results = speciesListMongoRepository.findAll(example, pageable);
-            
+            Page<SpeciesList> results; // Declare outside the if/else
+
+            if (StringUtils.isNotBlank(query)) {
+                // Build OR criteria for title/description
+                List<Criteria> orCriteria = new ArrayList<>();
+
+                orCriteria.add(Criteria.where("title").regex(Pattern.quote(query), "i"));
+                orCriteria.add(Criteria.where("description").regex(Pattern.quote(query), "i"));
+
+                Criteria orCriteriaCombined = new Criteria().orOperator(orCriteria.toArray(new Criteria[orCriteria.size()]));
+
+                // Build criteria for other fields manually
+                SpeciesList speciesListQueryExample = speciesListQuery.convertTo();
+                
+                Query mongoQuery = Query.query(orCriteriaCombined);
+                
+                // Add other field criteria manually
+                if (speciesListQueryExample.getIsPrivate() != null) {
+                    mongoQuery.addCriteria(Criteria.where("isPrivate").is(speciesListQueryExample.getIsPrivate()));
+                }
+                if (speciesListQueryExample.getIsAuthoritative() != null) {
+                    mongoQuery.addCriteria(Criteria.where("isAuthoritative").is(speciesListQueryExample.getIsAuthoritative()));
+                }
+                if (speciesListQueryExample.getIsThreatened() != null) {
+                    mongoQuery.addCriteria(Criteria.where("isThreatened").is(speciesListQueryExample.getIsThreatened()));
+                }
+                if (speciesListQueryExample.getIsInvasive() != null) {
+                    mongoQuery.addCriteria(Criteria.where("isInvasive").is(speciesListQueryExample.getIsInvasive()));
+                }
+                
+                // Add pagination
+                mongoQuery.with(pageable);
+                
+                // Execute query
+                List<SpeciesList> resultsList = mongoTemplate.find(mongoQuery, SpeciesList.class);
+                long total = mongoTemplate.count(Query.of(mongoQuery).limit(-1).skip(-1), SpeciesList.class);
+                
+                results = new PageImpl<>(resultsList, pageable, total);
+            } else {
+                // Use Example matcher when query is empty
+                ExampleMatcher matcher = ExampleMatcher.matching()
+                        .withIgnoreCase()
+                        .withIgnoreNullValues()
+                        .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
+                
+                SpeciesList speciesListQueryExample = speciesListQuery.convertTo();
+                Example<SpeciesList> example = Example.of(speciesListQueryExample, matcher);
+                
+                results = speciesListMongoRepository.findAll(example, pageable);
+            }
+
             return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
         } catch (Exception e) {
             logger.error("Error occurred while searching species lists", e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
+    }
+
+    /**
+     * Fix the sort field to match the expected database field names.
+     * 
+     * @param sort the sort field provided by the user
+     * @return the fixed sort field
+     */
+    private String fixSortField(String sort) {
+        // Map user-provided sort fields to database field names
+        Map<String, String> sortFieldMapping = Map.of(
+            "count", "rowCount",
+            "listName", "title",
+            "ownerFullName", "ownerName"
+        );
+
+        return sortFieldMapping.getOrDefault(sort, sort); // Default to the provided field if no mapping exists
+    }
+
+    private static void fixLegacyBooleanSyntax(String isAuthoritative, String isThreatened, String isInvasive,
+            RESTSpeciesListQuery speciesListQuery) {
+        if (StringUtils.isNotBlank(isAuthoritative)) {
+            speciesListQuery.setIsAuthoritative(isAuthoritative.replaceAll("eq:", "")); // eq:true to true, etc.
+        }            
+        
+        if (StringUtils.isNotBlank(isThreatened)) {
+            speciesListQuery.setIsThreatened(isThreatened.replaceAll("eq:", "")); // eq:true to true, etc.
+        }          
+        
+        if (StringUtils.isNotBlank(isInvasive)) {
+            speciesListQuery.setIsInvasive(isInvasive.replaceAll("eq:", "")); // eq:true to true, etc.
+        }
     }
 
     /**
