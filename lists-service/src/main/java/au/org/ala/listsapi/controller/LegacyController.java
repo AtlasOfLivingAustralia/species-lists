@@ -29,8 +29,6 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Example;
-import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -60,6 +58,7 @@ import au.org.ala.listsapi.model.SpeciesListVersion1;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.SearchHelperService;
 import au.org.ala.listsapi.service.SpeciesListLegacyService;
+import au.org.ala.ws.security.profile.AlaUserProfile;
 import io.micrometer.common.util.StringUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -122,7 +121,23 @@ public class LegacyController {
             Integer page = offset / max; // zero indexed, as required by Pageable
             Pageable paging = PageRequest.of(page, max);
             RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
-            speciesListQuery.setIsPrivate("false"); // Legacy version had no access to private lists
+
+            AlaUserProfile profile = authUtils.getUserProfile(principal);
+            Boolean isAdmin = authUtils.hasAdminRole(profile);
+
+            if (profile == null) {
+                // not logged in, only show non-private lists
+                speciesListQuery.setIsPrivate("false");
+            } else if (!isAdmin) {
+                // not an admin, only show non-private lists or those owned by the user or where they are an editor
+                speciesListQuery.setOwner(profile.getUserId());
+                // speciesListQuery.setEditors(profile.getUserId());
+                speciesListQuery.setIsPrivate("false");
+            } else {
+                // admin - show all lists
+                logger.debug("Admin user - show all lists");
+            }
+            
             fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, speciesListQuery);
 
             // Handle sorting and pagination
@@ -145,6 +160,17 @@ public class LegacyController {
                 orCriteria.add(Criteria.where("title").regex(Pattern.quote(query), "i"));
                 orCriteria.add(Criteria.where("description").regex(Pattern.quote(query), "i"));
 
+                List<Criteria> andCriteria = new ArrayList<>();
+                if (StringUtils.isNotBlank(speciesListQuery.getOwner())) {
+                    andCriteria.add(Criteria.where("owner").is(speciesListQuery.getOwner()));
+                }
+                if (StringUtils.isNotBlank(speciesListQuery.getIsPrivate())) {
+                    andCriteria.add(Criteria.where("isPrivate").is(speciesListQuery.getIsPrivate()));
+                }
+                if (!andCriteria.isEmpty()) {
+                    orCriteria.add(new Criteria().andOperator(andCriteria.toArray(new Criteria[0])));
+                }
+
                 Criteria orCriteriaCombined = new Criteria().orOperator(orCriteria.toArray(new Criteria[orCriteria.size()]));
 
                 // Build criteria for other fields manually
@@ -153,9 +179,9 @@ public class LegacyController {
                 Query mongoQuery = Query.query(orCriteriaCombined);
                 
                 // Add other field criteria manually
-                if (speciesListQueryExample.getIsPrivate() != null) {
-                    mongoQuery.addCriteria(Criteria.where("isPrivate").is(speciesListQueryExample.getIsPrivate()));
-                }
+                // if (speciesListQueryExample.getIsPrivate() != null) {
+                //     mongoQuery.addCriteria(Criteria.where("isPrivate").is(speciesListQueryExample.getIsPrivate()));
+                // }
                 if (speciesListQueryExample.getIsAuthoritative() != null) {
                     mongoQuery.addCriteria(Criteria.where("isAuthoritative").is(speciesListQueryExample.getIsAuthoritative()));
                 }
@@ -175,16 +201,33 @@ public class LegacyController {
                 
                 results = new PageImpl<>(resultsList, pageable, total);
             } else {
-                // Use Example matcher when query is empty
-                ExampleMatcher matcher = ExampleMatcher.matching()
-                        .withIgnoreCase()
-                        .withIgnoreNullValues()
-                        .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
-                
-                SpeciesList speciesListQueryExample = speciesListQuery.convertTo();
-                Example<SpeciesList> example = Example.of(speciesListQueryExample, matcher);
-                
-                results = speciesListMongoRepository.findAll(example, pageable);
+                // Build criteria for empty query
+                List<Criteria> andCriteria = new ArrayList<>();
+
+                if (StringUtils.isNotBlank(speciesListQuery.getOwner())) {
+                    andCriteria.add(Criteria.where("owner").is(speciesListQuery.getOwner()));
+                }
+                if (StringUtils.isNotBlank(speciesListQuery.getIsPrivate())) {
+                    andCriteria.add(Criteria.where("isPrivate").is(speciesListQuery.getIsPrivate()));
+                }
+
+                Query mongoQuery;
+                if (!andCriteria.isEmpty()) {
+                    Criteria combinedCriteria = new Criteria().andOperator(andCriteria.toArray(new Criteria[0]));
+                    mongoQuery = Query.query(combinedCriteria);
+                } else {
+                    // No criteria, return all documents
+                    mongoQuery = new Query();
+                }
+
+                // Add pagination
+                mongoQuery.with(pageable);
+
+                // Execute query
+                List<SpeciesList> resultsList = mongoTemplate.find(mongoQuery, SpeciesList.class);
+                long total = mongoTemplate.count(Query.of(mongoQuery).limit(-1).skip(-1), SpeciesList.class);
+
+                results = new PageImpl<>(resultsList, pageable, total);
             }
 
             return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
