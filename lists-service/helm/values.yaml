@@ -47,6 +47,14 @@ resources:
     memory: 4096Mi
     cpu: 2
 
+tags:
+  branch: ""
+  component: ""
+  environment: ""
+  Name: ""
+  product: ""
+  version: ""
+
 livenessProbe:
   enabled: true
   httpGet:
