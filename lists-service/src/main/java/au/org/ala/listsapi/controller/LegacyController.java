@@ -115,7 +115,6 @@ public class LegacyController {
             fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, speciesListQuery);
             
             if (StringUtils.isNotBlank(sort)) {
-                // Default to ascending if not specified
                 paging = PageRequest.of(page, max,
                         "asc".equalsIgnoreCase(order)
                                 ? org.springframework.data.domain.Sort.by(fixSortField(sort)).ascending()
@@ -126,18 +125,18 @@ public class LegacyController {
             AlaUserProfile profile = authUtils.getUserProfile(principal);
             String userId = profile != null ? profile.getUserId() : null;
             Boolean isAdmin = authUtils.hasAdminRole(profile);
-            query = StringUtils.isNotBlank(query) ? URLDecoder.decode(query, StandardCharsets.UTF_8) : ".*";
-
+            query = StringUtils.isNotBlank(query) ? URLDecoder.decode(query, StandardCharsets.UTF_8) : ".*"; // regex for all if blank
             Page<SpeciesList> results = searchHelperService.searchDocuments(convertedSpeciesListQuery, userId, isAdmin, query, paging);
+
             return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
         } catch (Exception e) {
-            logger.error("Error occurred while searching species lists", e);
+            logger.error("Error occurred for /v1/speciesList: {}", e.getMessage(), e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     /**
-     * Fix the sort field to match the expected database field names.
+     * Fix the sort field to map from legacty API to the new field names.
      * 
      * @param sort the sort field provided by the user
      * @return the fixed sort field
@@ -156,6 +155,7 @@ public class LegacyController {
     /**
      * Fix legacy boolean syntax from the old API (eq:true, eq:false) to just true/false.
      * and add to the speciesListQuery object.
+     * 
      * @param isAuthoritative
      * @param isThreatened
      * @param isInvasive
