@@ -24,18 +24,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -90,9 +85,6 @@ public class LegacyController {
     @Autowired
     protected AuthUtils authUtils;
 
-    @Autowired
-    private MongoTemplate mongoTemplate;
-
     @SecurityRequirement(name = "JWT")
     @Operation(tags = "REST v1", summary = "Get species list metadata for all lists", deprecated = true)
     @ApiResponses({
@@ -102,155 +94,6 @@ public class LegacyController {
     })
     @GetMapping("/v1/speciesList")
     public ResponseEntity<Object> speciesListSearch(
-            @Nullable @RequestParam(name = "isAuthoritative") String isAuthoritative,
-            @Nullable @RequestParam(name = "isThreatened") String isThreatened,
-            @Nullable @RequestParam(name = "isInvasive") String isInvasive,
-            @Parameter(description = "Query string (q)")
-            @Nullable @RequestParam(name = "q") String query,
-            @Parameter(description = "Sort field")
-            @Schema(allowableValues = {"count", "listName", "listType", "dateCreated", "lastUpdated", "ownerFullName", "region", "category", "authority"})
-            @RequestParam(name = "sort", defaultValue = "count", required = false) String sort,
-            @Parameter(description = "Sort direction")
-            @Schema(allowableValues = {"asc", "desc"})
-            @RequestParam(name = "order", defaultValue = "asc") String order,
-            @RequestParam(name = "max", defaultValue = "10", required = false) int max,
-            @RequestParam(name = "offset", defaultValue = "0", required = false) int offset,
-            @AuthenticationPrincipal Principal principal,
-            Pageable pageable) {
-        try {
-            Integer page = offset / max; // zero indexed, as required by Pageable
-            Pageable paging = PageRequest.of(page, max);
-            RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
-
-            AlaUserProfile profile = authUtils.getUserProfile(principal);
-            Boolean isAdmin = authUtils.hasAdminRole(profile);
-
-            Criteria accessCriteria = null;
-            if (profile == null) {
-                // not logged in, only show non-private lists: isPrivate == false
-                accessCriteria = Criteria.where("isPrivate").is(false);
-            } else if (!isAdmin) {
-                // not an admin, show non-private lists OR those owned by the user
-                String userId = profile.getUserId();
-                accessCriteria = new Criteria().orOperator(
-                    Criteria.where("isPrivate").is(false), // Public lists
-                    Criteria.where("owner").is(userId)      // Lists owned by the user (private or not)
-                );
-            } else {
-                // admin - show all lists (no access criteria needed)
-                logger.debug("Admin user - show all lists");
-            }
-            
-            fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, speciesListQuery);
-
-            // Handle sorting and pagination
-            if (StringUtils.isNotBlank(sort)) {
-                // Default to ascending if not specified
-                pageable = PageRequest.of(page, max,
-                        "asc".equalsIgnoreCase(order)
-                                ? org.springframework.data.domain.Sort.by(fixSortField(sort)).ascending()
-                                : org.springframework.data.domain.Sort.by(fixSortField(sort)).descending());
-            } else {
-                pageable = paging;
-            }
-
-            Page<SpeciesList> results; // Declare outside the if/else
-
-            if (StringUtils.isNotBlank(query)) {
-                // Build OR criteria for title/description
-                List<Criteria> orCriteria = new ArrayList<>();
-
-                orCriteria.add(Criteria.where("title").regex(Pattern.quote(query), "i"));
-                orCriteria.add(Criteria.where("description").regex(Pattern.quote(query), "i"));
-
-                List<Criteria> searchAndAccessCriteria = new ArrayList<>();
-                if (accessCriteria != null) {
-                    searchAndAccessCriteria.add(accessCriteria); // Add the newly built access criteria
-                }
-                
-                // Add title/description OR criteria to the list of AND criteria
-                if (!orCriteria.isEmpty()) {
-                    searchAndAccessCriteria.add(new Criteria().orOperator(orCriteria.toArray(new Criteria[0])));
-                }
-                
-                Criteria combinedSearchCriteria;
-                if (!searchAndAccessCriteria.isEmpty()) {
-                    combinedSearchCriteria = new Criteria().andOperator(searchAndAccessCriteria.toArray(new Criteria[0]));
-                } else {
-                    // Only happens for admin with no query. Should be handled by the else block below, but safe-guard
-                    combinedSearchCriteria = new Criteria(); 
-                }
-
-                // Build criteria for other fields manually
-                SpeciesList speciesListQueryExample = speciesListQuery.convertTo();
-                
-                Query mongoQuery = Query.query(combinedSearchCriteria);
-                
-                // Add other field criteria manually
-                // if (speciesListQueryExample.getIsPrivate() != null) {
-                //     mongoQuery.addCriteria(Criteria.where("isPrivate").is(speciesListQueryExample.getIsPrivate()));
-                // }
-                if (speciesListQueryExample.getIsAuthoritative() != null) {
-                    mongoQuery.addCriteria(Criteria.where("isAuthoritative").is(speciesListQueryExample.getIsAuthoritative()));
-                }
-                if (speciesListQueryExample.getIsThreatened() != null) {
-                    mongoQuery.addCriteria(Criteria.where("isThreatened").is(speciesListQueryExample.getIsThreatened()));
-                }
-                if (speciesListQueryExample.getIsInvasive() != null) {
-                    mongoQuery.addCriteria(Criteria.where("isInvasive").is(speciesListQueryExample.getIsInvasive()));
-                }
-                
-                // Add pagination
-                mongoQuery.with(pageable);
-                
-                // Execute query
-                List<SpeciesList> resultsList = mongoTemplate.find(mongoQuery, SpeciesList.class);
-                long total = mongoTemplate.count(Query.of(mongoQuery).limit(-1).skip(-1), SpeciesList.class);
-                
-                results = new PageImpl<>(resultsList, pageable, total);
-            } else {
-                // Build criteria for empty query
-                List<Criteria> andCriteria = new ArrayList<>();
-
-                if (accessCriteria != null) {
-                    andCriteria.add(accessCriteria);
-                }
-
-                Query mongoQuery;
-                if (!andCriteria.isEmpty()) {
-                    Criteria combinedCriteria = new Criteria().andOperator(andCriteria.toArray(new Criteria[0]));
-                    mongoQuery = Query.query(combinedCriteria);
-                } else {
-                    // No criteria, return all documents
-                    mongoQuery = new Query();
-                }
-
-                // Add pagination
-                mongoQuery.with(pageable);
-
-                // Execute query
-                List<SpeciesList> resultsList = mongoTemplate.find(mongoQuery, SpeciesList.class);
-                long total = mongoTemplate.count(Query.of(mongoQuery).limit(-1).skip(-1), SpeciesList.class);
-
-                results = new PageImpl<>(resultsList, pageable, total);
-            }
-
-            return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
-        } catch (Exception e) {
-            logger.error("Error occurred while searching species lists", e);
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @SecurityRequirement(name = "JWT")
-    @Operation(tags = "REST v1", summary = "Get species list metadata for all lists", deprecated = true)
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species lists found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPageVersion1.class))),
-            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
-    })
-    @GetMapping("/v1/speciesList2")
-    public ResponseEntity<Object> speciesListSearch2(
             @Nullable @RequestParam(name = "isAuthoritative") String isAuthoritative,
             @Nullable @RequestParam(name = "isThreatened") String isThreatened,
             @Nullable @RequestParam(name = "isInvasive") String isInvasive,
