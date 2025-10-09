@@ -125,16 +125,19 @@ public class LegacyController {
             AlaUserProfile profile = authUtils.getUserProfile(principal);
             Boolean isAdmin = authUtils.hasAdminRole(profile);
 
+            Criteria accessCriteria = null;
             if (profile == null) {
-                // not logged in, only show non-private lists
-                speciesListQuery.setIsPrivate("false");
+                // not logged in, only show non-private lists: isPrivate == false
+                accessCriteria = Criteria.where("isPrivate").is(false);
             } else if (!isAdmin) {
-                // not an admin, only show non-private lists or those owned by the user or where they are an editor
-                speciesListQuery.setOwner(profile.getUserId());
-                // speciesListQuery.setEditors(profile.getUserId());
-                speciesListQuery.setIsPrivate("false");
+                // not an admin, show non-private lists OR those owned by the user
+                String userId = profile.getUserId();
+                accessCriteria = new Criteria().orOperator(
+                    Criteria.where("isPrivate").is(false), // Public lists
+                    Criteria.where("owner").is(userId)      // Lists owned by the user (private or not)
+                );
             } else {
-                // admin - show all lists
+                // admin - show all lists (no access criteria needed)
                 logger.debug("Admin user - show all lists");
             }
             
@@ -160,23 +163,28 @@ public class LegacyController {
                 orCriteria.add(Criteria.where("title").regex(Pattern.quote(query), "i"));
                 orCriteria.add(Criteria.where("description").regex(Pattern.quote(query), "i"));
 
-                List<Criteria> andCriteria = new ArrayList<>();
-                if (StringUtils.isNotBlank(speciesListQuery.getOwner())) {
-                    andCriteria.add(Criteria.where("owner").is(speciesListQuery.getOwner()));
+                List<Criteria> searchAndAccessCriteria = new ArrayList<>();
+                if (accessCriteria != null) {
+                    searchAndAccessCriteria.add(accessCriteria); // Add the newly built access criteria
                 }
-                if (StringUtils.isNotBlank(speciesListQuery.getIsPrivate())) {
-                    andCriteria.add(Criteria.where("isPrivate").is(speciesListQuery.getIsPrivate()));
+                
+                // Add title/description OR criteria to the list of AND criteria
+                if (!orCriteria.isEmpty()) {
+                    searchAndAccessCriteria.add(new Criteria().orOperator(orCriteria.toArray(new Criteria[0])));
                 }
-                if (!andCriteria.isEmpty()) {
-                    orCriteria.add(new Criteria().andOperator(andCriteria.toArray(new Criteria[0])));
+                
+                Criteria combinedSearchCriteria;
+                if (!searchAndAccessCriteria.isEmpty()) {
+                    combinedSearchCriteria = new Criteria().andOperator(searchAndAccessCriteria.toArray(new Criteria[0]));
+                } else {
+                    // Only happens for admin with no query. Should be handled by the else block below, but safe-guard
+                    combinedSearchCriteria = new Criteria(); 
                 }
-
-                Criteria orCriteriaCombined = new Criteria().orOperator(orCriteria.toArray(new Criteria[orCriteria.size()]));
 
                 // Build criteria for other fields manually
                 SpeciesList speciesListQueryExample = speciesListQuery.convertTo();
                 
-                Query mongoQuery = Query.query(orCriteriaCombined);
+                Query mongoQuery = Query.query(combinedSearchCriteria);
                 
                 // Add other field criteria manually
                 // if (speciesListQueryExample.getIsPrivate() != null) {
@@ -204,11 +212,8 @@ public class LegacyController {
                 // Build criteria for empty query
                 List<Criteria> andCriteria = new ArrayList<>();
 
-                if (StringUtils.isNotBlank(speciesListQuery.getOwner())) {
-                    andCriteria.add(Criteria.where("owner").is(speciesListQuery.getOwner()));
-                }
-                if (StringUtils.isNotBlank(speciesListQuery.getIsPrivate())) {
-                    andCriteria.add(Criteria.where("isPrivate").is(speciesListQuery.getIsPrivate()));
+                if (accessCriteria != null) {
+                    andCriteria.add(accessCriteria);
                 }
 
                 Query mongoQuery;
@@ -235,7 +240,57 @@ public class LegacyController {
             logger.error("Error occurred while searching species lists", e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
 
+    @SecurityRequirement(name = "JWT")
+    @Operation(tags = "REST v1", summary = "Get species list metadata for all lists", deprecated = true)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Species lists found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPageVersion1.class))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+    })
+    @GetMapping("/v1/speciesList2")
+    public ResponseEntity<Object> speciesListSearch2(
+            @Nullable @RequestParam(name = "isAuthoritative") String isAuthoritative,
+            @Nullable @RequestParam(name = "isThreatened") String isThreatened,
+            @Nullable @RequestParam(name = "isInvasive") String isInvasive,
+            @Parameter(description = "Query string (q)")
+            @Nullable @RequestParam(name = "q") String query,
+            @Parameter(description = "Sort field")
+            @Schema(allowableValues = {"count", "listName", "listType", "dateCreated", "lastUpdated", "ownerFullName", "region", "category", "authority"})
+            @RequestParam(name = "sort", defaultValue = "count", required = false) String sort,
+            @Parameter(description = "Sort direction")
+            @Schema(allowableValues = {"asc", "desc"})
+            @RequestParam(name = "order", defaultValue = "asc") String order,
+            @RequestParam(name = "max", defaultValue = "10", required = false) int max,
+            @RequestParam(name = "offset", defaultValue = "0", required = false) int offset,
+            @AuthenticationPrincipal Principal principal) {
+        try {
+            Integer page = offset / max; // zero indexed, as required by Pageable
+            Pageable paging = PageRequest.of(page, max);
+            RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
+            fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, speciesListQuery);
+            
+            if (StringUtils.isNotBlank(sort)) {
+                // Default to ascending if not specified
+                paging = PageRequest.of(page, max,
+                        "asc".equalsIgnoreCase(order)
+                                ? org.springframework.data.domain.Sort.by(fixSortField(sort)).ascending()
+                                : org.springframework.data.domain.Sort.by(fixSortField(sort)).descending());
+            }
+
+            SpeciesList convertedSpeciesListQuery = speciesListQuery.convertTo();
+            AlaUserProfile profile = authUtils.getUserProfile(principal);
+            String userId = profile != null ? profile.getUserId() : null;
+            Boolean isAdmin = authUtils.hasAdminRole(profile);
+            query = StringUtils.isNotBlank(query) ? URLDecoder.decode(query, StandardCharsets.UTF_8) : ".*";
+
+            Page<SpeciesList> results = searchHelperService.searchDocuments(convertedSpeciesListQuery, userId, isAdmin, query, paging);
+            return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
+        } catch (Exception e) {
+            logger.error("Error occurred while searching species lists", e);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     /**
@@ -255,6 +310,14 @@ public class LegacyController {
         return sortFieldMapping.getOrDefault(sort, sort); // Default to the provided field if no mapping exists
     }
 
+    /**
+     * Fix legacy boolean syntax from the old API (eq:true, eq:false) to just true/false.
+     * and add to the speciesListQuery object.
+     * @param isAuthoritative
+     * @param isThreatened
+     * @param isInvasive
+     * @param speciesListQuery
+     */
     private static void fixLegacyBooleanSyntax(String isAuthoritative, String isThreatened, String isInvasive,
             RESTSpeciesListQuery speciesListQuery) {
         if (StringUtils.isNotBlank(isAuthoritative)) {
