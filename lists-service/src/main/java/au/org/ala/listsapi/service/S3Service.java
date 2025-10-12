@@ -231,7 +231,7 @@ public class S3Service {
      * @return
      * @throws IOException
      */
-    private String detectContentType(MultipartFile file) throws IOException {
+    protected String detectContentType(MultipartFile file) throws IOException {
         // Try MultipartFile's content type first
         String contentType = file.getContentType();
         
