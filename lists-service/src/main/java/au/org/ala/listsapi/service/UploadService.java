@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.databind.MappingIterator;
@@ -269,14 +270,13 @@ public class UploadService {
         }
     }
 
-    public IngestJob upload(String fileIdentifier)
-            throws Exception {
+    public IngestJob upload(String fileIdentifier, MultipartFile file)
+            throws HttpMediaTypeNotSupportedException, Exception { 
 
         IngestJob ingestJob = null;
 
         if (s3Enabled) {
             String contentType = s3Service.getContentType(fileIdentifier);
-            String originalFilename = s3Service.getOriginalFilename(fileIdentifier);
 
             // handle CSV
             if (contentType.equals("text/csv")) {
@@ -293,6 +293,9 @@ public class UploadService {
             if (ingestJob != null) {
                 ingestJob.setLocalFile(fileIdentifier);
                 return ingestJob;
+            } else {
+                // Controller should handle this exception and return 415 status
+                throw new HttpMediaTypeNotSupportedException("Unsupported Content-Type: " + contentType);
             }
         } else {
             File fileToLoad = new File(tempDir + "/" + fileIdentifier);
@@ -317,10 +320,11 @@ public class UploadService {
             if (ingestJob != null) {
                 ingestJob.setLocalFile(fileToLoad.getName());
                 return ingestJob;
+            } else {
+                // Controller should handle this exception and return 415 status
+                throw new HttpMediaTypeNotSupportedException("Unsupported MIME type: " + mimeType);
             }
         }
-
-        return null;
     }
 
     public void asyncIngestS3(

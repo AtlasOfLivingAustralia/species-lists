@@ -1,5 +1,13 @@
 package au.org.ala.listsapi.service;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+import org.apache.tika.Tika;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,20 +15,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.*;
-import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
-import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Service
 @ConditionalOnProperty(name = "aws.s3.enabled", havingValue = "true")
@@ -31,9 +34,6 @@ public class S3Service {
     @Autowired
     private S3Client s3Client;
 
-    @Autowired
-    private S3Presigner s3Presigner;
-
     @Value("${aws.s3.tempBucket}")
     private String tempBucket;
 
@@ -42,10 +42,15 @@ public class S3Service {
      */
     public String uploadFile(MultipartFile file) throws IOException {
         String key = generateUniqueKey(file.getOriginalFilename());
+        String contentType = file.getContentType();
 
+        if (contentType == null || contentType.isEmpty()) {
+            contentType = detectContentType(file);
+        }
+        
         Map<String, String> metadata = new HashMap<>();
         metadata.put("original-filename", file.getOriginalFilename());
-        metadata.put("content-type", file.getContentType());
+        metadata.put("content-type", contentType);
         metadata.put("upload-timestamp", String.valueOf(System.currentTimeMillis()));
 
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
@@ -218,5 +223,24 @@ public class S3Service {
             }
         }
         return "application/octet-stream";
+    }
+
+    /**
+     * Detect the content type of an uploaded file using Apache Tika as a fallback.
+     * @param file
+     * @return
+     * @throws IOException
+     */
+    private String detectContentType(MultipartFile file) throws IOException {
+        // Try MultipartFile's content type first
+        String contentType = file.getContentType();
+        
+        // If null or generic, use Tika
+        if (contentType == null || contentType.equals("application/octet-stream")) {
+            Tika tika = new Tika();
+            contentType = tika.detect(file.getInputStream(), file.getOriginalFilename());
+        }
+        
+        return contentType;
     }
 }
