@@ -19,7 +19,6 @@ import java.security.Principal;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import au.org.ala.listsapi.service.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -31,6 +30,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,9 +46,18 @@ import au.org.ala.listsapi.model.InputSpeciesList;
 import au.org.ala.listsapi.model.MigrateProgressItem;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import au.org.ala.listsapi.service.MigrateService;
+import au.org.ala.listsapi.service.ProgressService;
+import au.org.ala.listsapi.service.ReleaseService;
+import au.org.ala.listsapi.service.S3Service;
+import au.org.ala.listsapi.service.TaxonService;
+import au.org.ala.listsapi.service.UploadService;
+import au.org.ala.listsapi.service.UserdetailsService;
+import au.org.ala.listsapi.service.ValidationService;
 import au.org.ala.ws.security.profile.AlaUserProfile;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -252,57 +261,99 @@ public class IngressController {
     }
 
     @SecurityRequirement(name = "JWT")
-    @Operation(summary = "Upload a CSV species list", tags = "Ingress", description = "Upload a CSV species list. This is step 1 of a 2 step process. "
+    @Operation(
+        summary = "Upload a CSV species list", 
+        tags = "Ingress", 
+        description = "Upload a CSV species list. This is step 1 of a 2 step process. "
             + "The file is uploaded to temporary storage (S3 or local) and then ingested. "
-            + "The second step is to ingest the species list using the returned file identifier.")
+            + "The second step is to `ingest` the species list. For a new list, use the `/v2/ingest` endpoint. "
+            + "For an existing list, use the `/v2/ingest/{speciesListID}` endpoint. "
+    )
     @PostMapping(path = "/v2/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully uploaded", content = {
-                    @Content(mediaType = "application/json", schema = @Schema(implementation = IngestJob.class))
-            }),
-            @ApiResponse(responseCode = "400", description = "Bad Request", content = {
-                    @Content(mediaType = "text/plain") })
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Successfully uploaded", 
+            content = @Content(
+                mediaType = "application/json", 
+                schema = @Schema(implementation = IngestJob.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400", 
+            description = "Bad Request", 
+            content = @Content(mediaType = "text/plain")
+        ),
+        @ApiResponse(
+            responseCode = "415", 
+            description = "Unsupported Media Type", 
+            content = @Content(mediaType = "text/plain")
+        )
     })
-    public ResponseEntity<Object> handleFileUpload(@RequestPart("file") MultipartFile file,
-            @AuthenticationPrincipal AlaUserProfile profile) {
+    public ResponseEntity<Object> handleFileUpload(
+        @RequestPart("file") MultipartFile file,
+        @AuthenticationPrincipal AlaUserProfile profile
+    ) {
         // check user logged in
         if (profile == null) {
             return ResponseEntity.badRequest().body("User not found");
         }
 
         try {
-            if (s3Enabled) {
-                logger.info("Upload to S3 started...");
-            } else {
-                logger.info("Upload to temporary area started...");
-            }
+            logger.info(s3Enabled 
+                ? "Upload to S3 started..." 
+                : "Upload to temporary local storage started..."
+            );
             String fileIdentifier = uploadService.uploadFile(file);
-            IngestJob ingestJob = uploadService.upload(fileIdentifier);
-
+            IngestJob ingestJob = uploadService.upload(fileIdentifier, file);
             return ResponseEntity.ok(ingestJob);
+        } catch (HttpMediaTypeNotSupportedException hmte) {
+            logger.warn("Unsupported file type: " + hmte.getMessage(), hmte);
+            return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body("Unsupported file type: " + hmte.getMessage() 
+                    + ". Accepted file types are 'text/csv' and 'application/zip'."
+                );
         } catch (Exception e) {
             logger.error("Error while uploading the file: " + e.getMessage(), e);
-            return ResponseEntity.badRequest().body("Error while uploading the file: " + e.getMessage());
+            return ResponseEntity.badRequest()
+                .body("Error while uploading the file: " + e.getMessage());
         }
     }
 
     @SecurityRequirement(name = "JWT")
-    @Operation(summary = "Asynchronously ingest a species list", tags = "Ingress", description = "Asynchronously ingest a species list. This is step 2 of a 2 step process. "
+    @Operation(
+        summary = "Asynchronously ingest a new species list", 
+        tags = "Ingress", 
+        description = "Asynchronously ingest a _new_ species list. This is step 2 of a 2 step process. "
             + "The file is uploaded to temporary storage (S3 or local) and then ingested. "
-            + "\n\nThe first step is to upload the species list. The ID of the list being ingested will be returned, where you can then use `/ingest/{ID}/progress` to track ingestion progress."
-            + "\n\nThe ingested list is validated against the constraints returned from the `/constraints` endpoint, where each key is a list property that will be validated, and the value is all of the possible values for that key.")
+            + "The first step is to upload the species list. The ID of the list being ingested will be returned, "
+            + "where you can then use `/ingest/{ID}/progress` to track ingestion progress. "
+            + "The ingested list is validated against the constraints returned from the `/constraints` endpoint, "
+            + "where each key is a list property that will be validated, and the value is all of the possible values for that key."
+    )
     @PostMapping("/v2/ingest")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully ingested", content = {
-                    @Content(mediaType = "application/json", schema = @Schema(implementation = SpeciesList.class))
-            }),
-            @ApiResponse(responseCode = "400", description = "Bad Request", content = {
-                    @Content(mediaType = "text/plain") })
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Successfully ingested", 
+            content = @Content(
+                mediaType = "application/json", 
+                schema = @Schema(implementation = SpeciesList.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400", 
+            description = "Bad Request", 
+            content = @Content(mediaType = "text/plain")
+        )
     })
     public ResponseEntity<Object> ingest(
-            @RequestParam("file") String fileIdentifier,
-            InputSpeciesList speciesList,
-            @AuthenticationPrincipal Principal principal) {
+        @Parameter(description = "Value should be the `localFile` property returned from the `/upload` endpoint")
+        @RequestParam("file") String fileIdentifier,
+        InputSpeciesList speciesList,
+        @Parameter(description = "Spceies list metadata. See the `InputSpeciesList` model for details.")
+        @AuthenticationPrincipal Principal principal
+    ) {
         try {
 
             // check user logged in
@@ -377,7 +428,9 @@ public class IngressController {
                     @Content(mediaType = "text/plain") })
     })
     public ResponseEntity<Object> ingest(
+            @Parameter(description = "Value should be the `localFile` property returned from the `/upload` endpoint")
             @RequestParam("file") String fileIdentifier,
+            @Parameter(description = "Value should be the `speciesListID` for the existing species list to be reloaded")
             @PathVariable("speciesListID") String speciesListID,
             @AuthenticationPrincipal Principal principal) {
         try {
