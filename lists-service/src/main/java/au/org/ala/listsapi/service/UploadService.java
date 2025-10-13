@@ -43,7 +43,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.databind.MappingIterator;
@@ -104,6 +103,13 @@ public class UploadService {
         NULL_VALUES.add("unspecified");
         NULL_VALUES.add("not specified");
     }
+
+    private static final Set<String> ACCEPTED_FILE_TYPES = Set.of("text/csv", "application/zip");
+
+    public static Set<String> getAcceptedFileTypes() {
+        return ACCEPTED_FILE_TYPES;
+    }
+
 
     /**
      * Returns the first non-empty string from the provided arguments.
@@ -200,6 +206,24 @@ public class UploadService {
         speciesList.setTags(speciesListMetadata.getTags());
     }
 
+    public Boolean isAcceptedFileType(MultipartFile file) {
+        try {
+            String contentType = file.getContentType();
+            if (contentType == null) {
+                Path path = file.getResource().getFile().toPath();
+                contentType = Files.probeContentType(path);
+            }
+            if (contentType != null) {
+                if (ACCEPTED_FILE_TYPES.contains(contentType)) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error determining content type", e);
+        }
+        return false;
+    }
+
     public String uploadFile(MultipartFile file) throws Exception {
         if (s3Enabled) {
             logger.debug("Uploading file to S3: {}", file.getOriginalFilename());
@@ -271,7 +295,7 @@ public class UploadService {
     }
 
     public IngestJob upload(String fileIdentifier, MultipartFile file)
-            throws HttpMediaTypeNotSupportedException, Exception { 
+            throws Exception { 
 
         IngestJob ingestJob = null;
 
@@ -294,8 +318,8 @@ public class UploadService {
                 ingestJob.setLocalFile(fileIdentifier);
                 return ingestJob;
             } else {
-                // Controller should handle this exception and return 415 status
-                throw new HttpMediaTypeNotSupportedException("Unsupported Content-Type: " + contentType);
+                // Controller should handle this exception 
+                throw new Exception("Ingest failed for file: " + fileIdentifier);
             }
         } else {
             File fileToLoad = new File(tempDir + "/" + fileIdentifier);
@@ -321,8 +345,8 @@ public class UploadService {
                 ingestJob.setLocalFile(fileToLoad.getName());
                 return ingestJob;
             } else {
-                // Controller should handle this exception and return 415 status
-                throw new HttpMediaTypeNotSupportedException("Unsupported MIME type: " + mimeType);
+                // Controller should handle this exception 
+                throw new Exception("Ingest failed for file: " + fileIdentifier);
             }
         }
     }

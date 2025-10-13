@@ -30,7 +30,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -299,6 +298,15 @@ public class IngressController {
             return ResponseEntity.badRequest().body("User not found");
         }
 
+        if (file == null || file.getSize() == 0) {
+            return ResponseEntity.badRequest().body("File is empty");
+        } else if (!uploadService.isAcceptedFileType(file)) {
+            return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                    .body("Unsupported file type. Accepted file types" 
+                        + " are " + String.join(", ", UploadService.getAcceptedFileTypes()) + "."
+                );
+        }
+
         try {
             logger.info(s3Enabled 
                 ? "Upload to S3 started..." 
@@ -307,12 +315,6 @@ public class IngressController {
             String fileIdentifier = uploadService.uploadFile(file);
             IngestJob ingestJob = uploadService.upload(fileIdentifier, file);
             return ResponseEntity.ok(ingestJob);
-        } catch (HttpMediaTypeNotSupportedException hmte) {
-            logger.warn("Unsupported file type: " + hmte.getMessage(), hmte);
-            return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                .body("Unsupported file type: " + hmte.getMessage() 
-                    + ". Accepted file types are 'text/csv' and 'application/zip'."
-                );
         } catch (Exception e) {
             logger.error("Error while uploading the file: " + e.getMessage(), e);
             return ResponseEntity.badRequest()
@@ -338,7 +340,7 @@ public class IngressController {
             description = "Successfully ingested", 
             content = @Content(
                 mediaType = "application/json", 
-                schema = @Schema(implementation = SpeciesList.class)
+                schema = @Schema(implementation = InputSpeciesList.class)
             )
         ),
         @ApiResponse(
