@@ -209,10 +209,23 @@ public class UploadService {
     public Boolean isAcceptedFileType(MultipartFile file) {
         try {
             String contentType = file.getContentType();
-            if (contentType == null) {
-                Path path = file.getResource().getFile().toPath();
-                contentType = Files.probeContentType(path);
+            if (contentType == null || contentType.equals("application/octet-stream")) {
+                String filename = file.getOriginalFilename();
+                if (filename != null && filename.contains(".")) {
+                    String ext = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
+                    switch (ext) {
+                        case "csv":
+                            contentType = "text/csv";
+                            break;
+                        case "zip":
+                            contentType = "application/zip";
+                            break;
+                        default:
+                            contentType = null;
+                    }
+                }
             }
+            
             if (contentType != null) {
                 if (ACCEPTED_FILE_TYPES.contains(contentType)) {
                     return true;

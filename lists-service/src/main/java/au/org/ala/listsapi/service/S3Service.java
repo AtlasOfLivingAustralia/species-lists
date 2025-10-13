@@ -209,10 +209,6 @@ public class S3Service {
             if (contentType != null && !contentType.isEmpty()) {
                 return contentType;
             }
-            // Fallback to metadata
-            if (metadata.get().metadata().containsKey("content-type")) {
-                return metadata.get().metadata().get("content-type");
-            }
         }
         return "application/octet-stream";
     }
