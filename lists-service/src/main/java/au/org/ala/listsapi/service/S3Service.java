@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.apache.tika.Tika;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,11 +42,6 @@ public class S3Service {
     public String uploadFile(MultipartFile file) throws IOException {
         String key = generateUniqueKey(file.getOriginalFilename());
         String contentType = file.getContentType();
-
-        if (contentType == null || contentType.isEmpty()) {
-            contentType = detectContentType(file);
-        }
-        
         Map<String, String> metadata = new HashMap<>();
         metadata.put("original-filename", file.getOriginalFilename());
         metadata.put("content-type", contentType);
@@ -77,8 +71,6 @@ public class S3Service {
 
         Map<String, String> metadata = new HashMap<>();
         metadata.put("original-filename", filename);
-        metadata.put("content-type", contentType);
-        metadata.put("upload-timestamp", String.valueOf(System.currentTimeMillis()));
 
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(tempBucket)
@@ -223,24 +215,5 @@ public class S3Service {
             }
         }
         return "application/octet-stream";
-    }
-
-    /**
-     * Detect the content type of an uploaded file using Apache Tika as a fallback.
-     * @param file
-     * @return
-     * @throws IOException
-     */
-    protected String detectContentType(MultipartFile file) throws IOException {
-        // Try MultipartFile's content type first
-        String contentType = file.getContentType();
-        
-        // If null or generic, use Tika
-        if (contentType == null || contentType.equals("application/octet-stream")) {
-            Tika tika = new Tika();
-            contentType = tika.detect(file.getInputStream(), file.getOriginalFilename());
-        }
-        
-        return contentType;
     }
 }
