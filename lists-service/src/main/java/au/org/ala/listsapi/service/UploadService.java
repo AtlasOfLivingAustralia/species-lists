@@ -123,16 +123,19 @@ public class UploadService {
         return null;
     }
 
-    public boolean deleteList(String speciesListID, AlaUserProfile userProfile) {
+    public boolean deleteList(String speciesListID, AlaUserProfile userProfile) throws Exception {
 
         Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
                 speciesListID);
         if (optionalSpeciesList.isPresent() && authUtils.isAuthorized(optionalSpeciesList.get(), userProfile)) {
-            String ID = optionalSpeciesList.get().getId();
+            SpeciesList speciesList = optionalSpeciesList.get();
+            String ID = speciesList.getId();
             logger.info("Deleting speciesListID " + speciesListID);
             speciesListIndexElasticRepository.deleteSpeciesListItemBySpeciesListID(ID);
             speciesListItemMongoRepository.deleteBySpeciesListID(ID);
             speciesListMongoRepository.deleteById(ID);
+            metadataService.deleteMeta(speciesList);
+            
             logger.info("Deleted speciesListID " + speciesListID);
             return true;
         } else {
