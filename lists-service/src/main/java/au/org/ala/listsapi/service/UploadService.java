@@ -220,20 +220,25 @@ public class UploadService {
 
     public String determineContentType(MultipartFile file) {
         String contentType = file.getContentType();
+        logger.info("Initial content type: {}", contentType);
+
         if (contentType == null || contentType.equals("application/octet-stream")) {
             String filename = file.getOriginalFilename();
+
             if (filename != null && filename.contains(".")) {
                 String ext = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
-                switch (ext) {
-                    case "csv":
-                        return "text/csv";
-                    case "zip":
-                        return "application/zip";
-                    default:
-                        return null;
+                for (String acceptedType : ACCEPTED_FILE_TYPES) {
+                    if (acceptedType.endsWith(ext)) {
+                        return acceptedType;
+                    }
                 }
+                
+                return null;
             }
         }
+
+        logger.info("Final content type: {}", contentType);
+
         return contentType;
     }
 
