@@ -219,27 +219,23 @@ public class UploadService {
     }
 
     public String determineContentType(MultipartFile file) {
-        String contentType = file.getContentType();
-        logger.info("Initial content type: {}", contentType);
+        
+        String filename = file.getOriginalFilename();
 
-        if (contentType == null || contentType.equals("application/octet-stream")) {
-            String filename = file.getOriginalFilename();
-
-            if (filename != null && filename.contains(".")) {
-                String ext = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
-                for (String acceptedType : ACCEPTED_FILE_TYPES) {
-                    if (acceptedType.endsWith(ext)) {
-                        return acceptedType;
-                    }
+        // Not all Mime types end with the file extension, but works for the accepted types
+        if (filename != null && filename.contains(".")) {
+            String ext = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
+            for (String acceptedType : ACCEPTED_FILE_TYPES) {
+                if (acceptedType.endsWith(ext)) {
+                    return acceptedType;
                 }
-                
-                return null;
             }
+            logger.warn("File extension not supported: {}", ext);
+        } else {
+            logger.warn("File has no filename or no extension: {}", filename);
         }
 
-        logger.info("Final content type: {}", contentType);
-
-        return contentType;
+        return null;
     }
 
 
