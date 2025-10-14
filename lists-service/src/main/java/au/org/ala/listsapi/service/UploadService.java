@@ -208,34 +208,36 @@ public class UploadService {
 
     public Boolean isAcceptedFileType(MultipartFile file) {
         try {
-            String contentType = file.getContentType();
-            if (contentType == null || contentType.equals("application/octet-stream")) {
-                String filename = file.getOriginalFilename();
-                if (filename != null && filename.contains(".")) {
-                    String ext = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
-                    switch (ext) {
-                        case "csv":
-                            contentType = "text/csv";
-                            break;
-                        case "zip":
-                            contentType = "application/zip";
-                            break;
-                        default:
-                            contentType = null;
-                    }
-                }
-            }
-            
-            if (contentType != null) {
-                if (ACCEPTED_FILE_TYPES.contains(contentType)) {
-                    return true;
-                }
+            String contentType = determineContentType(file);
+            if (contentType != null && ACCEPTED_FILE_TYPES.contains(contentType)) {
+                return true;
             }
         } catch (Exception e) {
             logger.error("Error determining content type", e);
         }
         return false;
     }
+
+    public String determineContentType(MultipartFile file) {
+        String contentType = file.getContentType();
+        if (contentType == null || contentType.equals("application/octet-stream")) {
+            String filename = file.getOriginalFilename();
+            if (filename != null && filename.contains(".")) {
+                String ext = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
+                switch (ext) {
+                    case "csv":
+                        return "text/csv";
+                    case "zip":
+                        return "application/zip";
+                    default:
+                        return null;
+                }
+            }
+        }
+        return contentType;
+    }
+
+
 
     public String uploadFile(MultipartFile file) throws Exception {
         if (s3Enabled) {
@@ -313,7 +315,7 @@ public class UploadService {
         IngestJob ingestJob = null;
 
         if (s3Enabled) {
-            String contentType = s3Service.getContentType(fileIdentifier);
+            String contentType = determineContentType(file);
 
             // handle CSV
             if (contentType.equals("text/csv")) {
