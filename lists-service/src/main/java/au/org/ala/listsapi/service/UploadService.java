@@ -218,10 +218,7 @@ public class UploadService {
         return false;
     }
 
-    public String determineContentType(MultipartFile file) {
-        
-        String filename = file.getOriginalFilename();
-
+    private String determineContentTypeByFilename(String filename) {
         // Not all Mime types end with the file extension, but works for the accepted types
         if (filename != null && filename.contains(".")) {
             String ext = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
@@ -234,8 +231,15 @@ public class UploadService {
         } else {
             logger.warn("File has no filename or no extension: {}", filename);
         }
-
         return null;
+    }
+
+    public String determineContentType(String s3Key) {
+        return determineContentTypeByFilename(s3Key);
+    }
+
+    public String determineContentType(MultipartFile file) {
+        return determineContentTypeByFilename(file.getOriginalFilename());
     }
 
 
@@ -373,7 +377,7 @@ public class UploadService {
 
         IngestJob ingestJob = null;
 
-        String contentType = s3Service.getContentType(s3Key);
+        String contentType = determineContentType(s3Key);
         String originalFilename = s3Service.getOriginalFilename(s3Key);
 
         try {
@@ -402,6 +406,8 @@ public class UploadService {
                 speciesListMongoRepository.save(speciesList);
 
                 logger.info("Async S3 ingestion complete... " + speciesList);
+            } else {
+                throw new RuntimeException("File did not have a valid content type: " + s3Key);
             }
         } finally {
             if (!dryRun) {
