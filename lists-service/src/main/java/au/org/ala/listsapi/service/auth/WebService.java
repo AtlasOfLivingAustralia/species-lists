@@ -1,21 +1,11 @@
 package au.org.ala.listsapi.service.auth;
 
-import au.org.ala.ws.security.TokenService;
-import au.org.ala.web.UserDetails;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.net.HttpHeaders;
-import com.nimbusds.oauth2.sdk.token.AccessToken;
-import jakarta.servlet.http.HttpServletResponse;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpStatus;
-import org.apache.http.entity.ContentType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpMethod;
-import org.springframework.stereotype.Service;
+import static org.apache.http.HttpHeaders.CONNECTION;
+import static org.springframework.http.HttpHeaders.CONTENT_DISPOSITION;
+import static org.springframework.http.HttpMethod.DELETE;
+import static org.springframework.http.HttpMethod.GET;
+import static org.springframework.http.HttpMethod.POST;
+import static org.springframework.http.HttpMethod.PUT;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -29,9 +19,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.http.HttpHeaders.CONNECTION;
-import static org.springframework.http.HttpHeaders.CONTENT_DISPOSITION;
-import static org.springframework.http.HttpMethod.*;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpStatus;
+import org.apache.http.entity.ContentType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
+import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.net.HttpHeaders;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
+
+import au.org.ala.web.UserDetails;
+import au.org.ala.ws.security.TokenService;
+import jakarta.servlet.http.HttpServletResponse;
 
 // TODO: move this and related classes into ala-security-project
 @Service
@@ -208,7 +213,7 @@ public class WebService {
      * @param customHeaders Map of [headerName:value] for any extra HTTP headers to be sent with the request. Default = [:].
      * @return [statusCode: int, resp: [:]] on success, or [statusCode: int, error: string] on error
      */
-    Map delete(String url, Map params, ContentType contentType, boolean includeApiKey, boolean includeUser, Map customHeaders) {
+    public Map delete(String url, Map params, ContentType contentType, boolean includeApiKey, boolean includeUser, Map customHeaders) {
         return send(DELETE, url, params, contentType, null, null, includeApiKey, includeUser, customHeaders);
     }
 
