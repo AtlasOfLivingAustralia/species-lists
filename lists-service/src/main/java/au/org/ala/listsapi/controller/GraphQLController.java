@@ -232,7 +232,7 @@ public class GraphQLController {
                 SPECIES_LIST_ID,
                 Aggregation.of(a -> a.terms(ta -> ta.field(SPECIES_LIST_ID + ".keyword").size(MAX_LIST_ENTRIES))
                         .aggregations("max_score", Aggregation
-                                .of(ma -> ma.max(m -> m.script(s -> s.inline(si -> si.source("_score"))))))));
+                                .of(ma -> ma.max(m -> m.script(s -> s.source("_score")))))));
 
         Query aggQuery = builder.build();
 
