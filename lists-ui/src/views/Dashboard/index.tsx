@@ -61,6 +61,7 @@ function Dashboard() {
         }
         fullWidth 
         compact
+        myProfileUrl={import.meta.env.VITE_ALA_USER_PROFILE || ''}
       />
       <Divider />
       <Outlet />
