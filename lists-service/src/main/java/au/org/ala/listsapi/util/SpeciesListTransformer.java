@@ -133,7 +133,7 @@ public class SpeciesListTransformer {
         listItemVersion1.setLsid(speciesListItem.getClassification().getTaxonConceptID());
         listItemVersion1.setScientificName(speciesListItem.getClassification().getScientificName());
         listItemVersion1.setCommonName(speciesListItem.getVernacularName() == null ? speciesListItem.getClassification().getVernacularName() : speciesListItem.getVernacularName());
-        listItemVersion1.setName(speciesListItem.getScientificName());
+        listItemVersion1.setName(speciesListItem.getScientificName() != null ? speciesListItem.getScientificName() : speciesListItem.getSuppliedName());
         listItemVersion1.setDataResourceUid(speciesListID); // fallback - attempt to set actual DataResourceUid further down
 
         // Get list details via MongoDB
