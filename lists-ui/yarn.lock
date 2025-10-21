@@ -10,10 +10,10 @@
     "@jridgewell/gen-mapping" "^0.3.5"
     "@jridgewell/trace-mapping" "^0.3.24"
 
-"@atlasoflivingaustralia/ala-mantine@^0.1.9":
-  version "0.1.9"
-  resolved "https://registry.npmjs.org/@atlasoflivingaustralia/ala-mantine/-/ala-mantine-0.1.9.tgz"
-  integrity sha512-uVaSQL5W8XhWFJvnaCY6XAQHC0FSu+YfCfpZo87OU4m5HJzKCLPywaHh2M0q942us/f1BqHRFX3E2DWAgbji1Q==
+"@atlasoflivingaustralia/ala-mantine@^0.1.12":
+  version "0.1.12"
+  resolved "https://registry.yarnpkg.com/@atlasoflivingaustralia/ala-mantine/-/ala-mantine-0.1.12.tgz#cabcccacd5dfb7044b7de9a1723ca51cf4aa6f2e"
+  integrity sha512-FqqbMBdgZy9ghfYYgtbWbtZd4MvEuruNIZYtB3kNciTAkX4P7TZUeEI54FQmC9BRHg6vinpCZp19obiSZlekGQ==
 
 "@axe-core/react@^4.10.0":
   version "4.10.1"
@@ -2282,10 +2282,10 @@ vite-plugin-svgr@^4.3.0:
     "@svgr/core" "^8.1.0"
     "@svgr/plugin-jsx" "^8.1.0"
 
-vite@^6.3.6:
-  version "6.3.6"
-  resolved "https://registry.yarnpkg.com/vite/-/vite-6.3.6.tgz#69a976b64930750d40219fbc68c5200874d315c1"
-  integrity sha512-0msEVHJEScQbhkbVTb/4iHZdJ6SXp/AvxL2sjwYQFfBqleHtnCqv1J3sa9zbWz/6kW1m9Tfzn92vW+kZ1WV6QA==
+vite@^6.4.1:
+  version "6.4.1"
+  resolved "https://registry.yarnpkg.com/vite/-/vite-6.4.1.tgz#afbe14518cdd6887e240a4b0221ab6d0ce733f96"
+  integrity sha512-+Oxm7q9hDoLMyJOYfUYBuHQo+dkAloi33apOPP56pzj+vsdJDzr+j1NISE5pyaAuKL4A3UD34qd0lx5+kfKp2g==
   dependencies:
     esbuild "^0.25.0"
     fdir "^6.4.4"
