@@ -28,8 +28,6 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Example;
-import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -55,6 +53,7 @@ import au.org.ala.listsapi.model.SpeciesListVersion1;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.SearchHelperService;
 import au.org.ala.listsapi.service.SpeciesListLegacyService;
+import au.org.ala.ws.security.profile.AlaUserProfile;
 import io.micrometer.common.util.StringUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -96,8 +95,16 @@ public class LegacyController {
     @GetMapping("/v1/speciesList")
     public ResponseEntity<Object> speciesListSearch(
             @Nullable @RequestParam(name = "isAuthoritative") String isAuthoritative,
-            @Nullable @RequestParam(name = "isThreatended") String isThreatended,
-            @RequestParam(name = "sort", defaultValue = "", required = false) String sort,
+            @Nullable @RequestParam(name = "isThreatened") String isThreatened,
+            @Nullable @RequestParam(name = "isInvasive") String isInvasive,
+            @Parameter(description = "Query string (q)")
+            @Nullable @RequestParam(name = "q") String query,
+            @Parameter(description = "Sort field")
+            @Schema(allowableValues = {"count", "listName", "listType", "dateCreated", "lastUpdated", "ownerFullName", "region", "category", "authority"})
+            @RequestParam(name = "sort", defaultValue = "count", required = false) String sort,
+            @Parameter(description = "Sort direction")
+            @Schema(allowableValues = {"asc", "desc"})
+            @RequestParam(name = "order", defaultValue = "asc") String order,
             @RequestParam(name = "max", defaultValue = "10", required = false) int max,
             @RequestParam(name = "offset", defaultValue = "0", required = false) int offset,
             @AuthenticationPrincipal Principal principal) {
@@ -105,39 +112,68 @@ public class LegacyController {
             Integer page = offset / max; // zero indexed, as required by Pageable
             Pageable paging = PageRequest.of(page, max);
             RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
-            speciesListQuery.setIsPrivate("false"); // Legacy version had no access to private lists
-
-            if (StringUtils.isNotBlank(isAuthoritative)) {
-                speciesListQuery.setIsAuthoritative(isAuthoritative.replaceAll("eq:", "")); // eq:true to true, etc.
-            }            
+            fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, speciesListQuery);
             
-            if (StringUtils.isNotBlank(isThreatended)) {
-                speciesListQuery.setIsThreatened(isThreatended.replaceAll("eq:", "")); // eq:true to true, etc.
-            }
-
-            ExampleMatcher matcher = ExampleMatcher.matching()
-                    .withIgnoreCase()
-                    .withIgnoreNullValues()
-                    .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
-
-            Example<SpeciesList> example = Example.of(speciesListQuery.convertTo(), matcher);
-
-            Pageable pageable;
             if (StringUtils.isNotBlank(sort)) {
-                // Default to ascending if not specified, as dir param is not present in this method
-                pageable = PageRequest.of(page, max, org.springframework.data.domain.Sort.by(sort).ascending());
-            } else {
-                pageable = paging;
+                paging = PageRequest.of(page, max,
+                        "asc".equalsIgnoreCase(order)
+                                ? org.springframework.data.domain.Sort.by(fixSortField(sort)).ascending()
+                                : org.springframework.data.domain.Sort.by(fixSortField(sort)).descending());
             }
 
-            Page<SpeciesList> results = speciesListMongoRepository.findAll(example, pageable);
-            
+            SpeciesList convertedSpeciesListQuery = speciesListQuery.convertTo();
+            AlaUserProfile profile = authUtils.getUserProfile(principal);
+            String userId = profile != null ? profile.getUserId() : null;
+            Boolean isAdmin = authUtils.hasAdminRole(profile);
+            query = StringUtils.isNotBlank(query) ? URLDecoder.decode(query, StandardCharsets.UTF_8) : ".*"; // regex for all if blank
+            Page<SpeciesList> results = searchHelperService.searchDocuments(convertedSpeciesListQuery, userId, isAdmin, query, paging);
+
             return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
         } catch (Exception e) {
-            logger.error("Error occurred while searching species lists", e);
+            logger.error("Error occurred for /v1/speciesList: {}", e.getMessage(), e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
 
+    /**
+     * Fix the sort field to map from legacty API to the new field names.
+     * 
+     * @param sort the sort field provided by the user
+     * @return the fixed sort field
+     */
+    private String fixSortField(String sort) {
+        // Map user-provided sort fields to database field names
+        Map<String, String> sortFieldMapping = Map.of(
+            "count", "rowCount",
+            "listName", "title",
+            "ownerFullName", "ownerName"
+        );
+
+        return sortFieldMapping.getOrDefault(sort, sort); // Default to the provided field if no mapping exists
+    }
+
+    /**
+     * Fix legacy boolean syntax from the old API (eq:true, eq:false) to just true/false.
+     * and add to the speciesListQuery object.
+     * 
+     * @param isAuthoritative
+     * @param isThreatened
+     * @param isInvasive
+     * @param speciesListQuery
+     */
+    private static void fixLegacyBooleanSyntax(String isAuthoritative, String isThreatened, String isInvasive,
+            RESTSpeciesListQuery speciesListQuery) {
+        if (StringUtils.isNotBlank(isAuthoritative)) {
+            speciesListQuery.setIsAuthoritative(isAuthoritative.replaceAll("eq:", "")); // eq:true to true, etc.
+        }            
+        
+        if (StringUtils.isNotBlank(isThreatened)) {
+            speciesListQuery.setIsThreatened(isThreatened.replaceAll("eq:", "")); // eq:true to true, etc.
+        }          
+        
+        if (StringUtils.isNotBlank(isInvasive)) {
+            speciesListQuery.setIsInvasive(isInvasive.replaceAll("eq:", "")); // eq:true to true, etc.
+        }
     }
 
     /**

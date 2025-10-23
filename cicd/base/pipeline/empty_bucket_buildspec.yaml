@@ -11,3 +11,5 @@ phases:
     commands:
       - echo The load balancer access logs bucket is $LOAD_BALANCER_ACCESS_LOGS_BUCKET, deleting all objects
       - aws s3 rm s3://$LOAD_BALANCER_ACCESS_LOGS_BUCKET --recursive
+      - echo The lists uploads bucket is $LISTS_UPLOADS_BUCKET, deleting all objects
+      - aws s3 rm s3://$LISTS_UPLOADS_BUCKET --recursive

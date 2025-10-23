@@ -272,7 +272,8 @@ Resources:
               ProjectName: !Ref EmptyBucket
               EnvironmentVariables: |
                 [
-                  { "name":"LOAD_BALANCER_ACCESS_LOGS_BUCKET", "value":"#{BaseCloudFormationOutNS.LoadBalancerAccessLogsBucket}" }
+                  { "name":"LOAD_BALANCER_ACCESS_LOGS_BUCKET", "value":"#{BaseCloudFormationOutNS.LoadBalancerAccessLogsBucket}" },
+                  { "name":"LISTS_UPLOADS_BUCKET", "value":"#{BaseCloudFormationOutNS.ListsUploadsBucket}" }
                 ]
             Namespace: EmptyBucketNS
             InputArtifacts:

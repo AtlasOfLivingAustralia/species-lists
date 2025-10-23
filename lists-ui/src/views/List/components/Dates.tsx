@@ -15,6 +15,9 @@ interface DatesProps extends PaperProps {
 }
 
 const formatDateString = (inputDate: string) => {
+  if (!inputDate) {
+    return '[Unknown]';
+  }
   const parts = inputDate.split(' ');
   parts.splice(3, 2);
   const date = new Date(parts.join(' '));

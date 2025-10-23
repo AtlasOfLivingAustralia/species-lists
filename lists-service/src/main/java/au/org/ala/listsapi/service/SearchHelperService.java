@@ -27,6 +27,8 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
@@ -290,5 +292,82 @@ public class SearchHelperService {
         }
 
         return common;
+    }
+
+    /**
+     * Searches SpeciesList documents based on various criteria including user access rights.
+     * Documents can be filtered by attributes such as isAuthoritative, isThreatened, and isInvasive.
+     * The search also respects user roles, ensuring that private lists are only visible to their owners
+     * or to users with admin privileges.
+     * @param speciesListQuery
+     * @param userId
+     * @param isAdmin
+     * @param searchTerm
+     * @param pageable
+     * @return
+     */
+    public Page<SpeciesList> searchDocuments(SpeciesList speciesListQuery, String userId, Boolean isAdmin, String searchTerm, Pageable pageable) {
+        // Your search criteria
+        Criteria searchCriteria = new Criteria().orOperator(
+            Criteria.where("title").regex(searchTerm, "i"),
+            Criteria.where("description").regex(searchTerm, "i")
+        );
+        
+        // Build query with access control
+        Criteria finalCriteria = buildDocumentAccessCriteria(userId, isAdmin, searchCriteria);
+        Query query = new Query(finalCriteria);
+
+        if (speciesListQuery.getIsAuthoritative() != null) {
+            query.addCriteria(Criteria.where("isAuthoritative").is(speciesListQuery.getIsAuthoritative()));
+        }
+        if (speciesListQuery.getIsThreatened() != null) {
+            query.addCriteria(Criteria.where("isThreatened").is(speciesListQuery.getIsThreatened()));
+        }
+        if (speciesListQuery.getIsInvasive() != null) {
+            query.addCriteria(Criteria.where("isInvasive").is(speciesListQuery.getIsInvasive()));
+        }
+        
+        // Add paging
+        query.with(pageable);
+        
+        // Execute query
+        List<SpeciesList> speciesLists = mongoTemplate.find(query, SpeciesList.class);
+        
+        // Get total count for pagination
+        long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), SpeciesList.class);
+        
+        return new PageImpl<>(speciesLists, pageable, total);
+    }
+    /**
+     * Builds a Criteria object that enforces document access based on user roles and additional search criteria.
+     * @param userId
+     * @param isAdmin
+     * @param additionalCriteria
+     * @return
+     */
+    private Criteria buildDocumentAccessCriteria(String userId, Boolean isAdmin, Criteria additionalCriteria) {
+        Criteria accessCriteria;
+        
+        if (userId != null && !userId.isEmpty() && (isAdmin == null || !isAdmin)) {
+            // Authenticated user: show all their documents (private or public) 
+            // OR public documents from others
+            accessCriteria = new Criteria().orOperator(
+                Criteria.where("owner").is(userId),  // All documents owned by user
+                Criteria.where("isPrivate").is(false)   // Public documents from anyone
+            );
+        } else if (isAdmin != null && isAdmin) {
+            // Admin: show all documents
+            accessCriteria = new Criteria();
+        } else {
+            // Unauthenticated: only show public documents
+            accessCriteria = Criteria.where("isPrivate").is(false);
+        }
+        
+        // Combine with any additional search criteria
+        if (additionalCriteria != null) {
+            return new Criteria().andOperator(accessCriteria, additionalCriteria);
+        }
+        
+        return accessCriteria;
     }
 }

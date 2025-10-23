@@ -56,8 +56,15 @@ public class MigrateService {
     TokenService tokenService;
     @Autowired
     ValidationService validationService;
+    @Autowired(required = false)
+    S3Service s3Service;
 
-    String tempDir;
+    @Value("${aws.s3.enabled:false}")
+    private boolean s3Enabled;
+
+    @Value("${temp.dir:/tmp}")
+    private String tempDir;
+
     String migrateUrl;
 
     private final RestTemplate restTemplate;
@@ -233,45 +240,120 @@ public class MigrateService {
                             + "/ws/speciesListInternal/download/"
                             + speciesList.getDataResourceUid()
                             + "?fetch=%7BkvpValues%3Dselect%7";
-                    try {
-                        File localFile = new File(
-                                tempDir + "/species-list-migrate-" + speciesList.getDataResourceUid() + ".csv");
 
-                        AccessToken token = tokenService.getAuthToken(false, null, null);
+                    if (s3Enabled) {
+                        String s3Key = null;
+                        try {
+                            String filename = "species-list-migrate-" + speciesList.getDataResourceUid() + ".csv";
 
-                        restTemplate.execute(
-                                downloadUrl,
-                                HttpMethod.GET,
-                                request -> request.getHeaders().set(HttpHeaders.AUTHORIZATION,
-                                        token.toAuthorizationHeader()),
-                                response -> {
-                                    try (InputStream is = response.getBody()) {
-                                        FileUtils.copyInputStreamToFile(is, localFile);
-                                        return null;
-                                    }
-                                });
+                            AccessToken token = tokenService.getAuthToken(false, null, null);
 
-                        updateLegacyUserDetails(speciesList, foundUsers);
+                            // Download directly to S3
+                            s3Key = restTemplate.execute(
+                                    downloadUrl,
+                                    HttpMethod.GET,
+                                    request -> request.getHeaders().set(HttpHeaders.AUTHORIZATION,
+                                            token.toAuthorizationHeader()),
+                                    response -> {
+                                        try (InputStream is = response.getBody()) {
+                                            // Upload stream directly to S3
+                                            long contentLength = response.getHeaders().getContentLength();
+                                            if (contentLength < 0) {
+                                                // If content length is unknown, we need to read to byte array first
+                                                byte[] data = is.readAllBytes();
+                                                return s3Service.uploadFile(
+                                                    new java.io.ByteArrayInputStream(data),
+                                                    filename,
+                                                    "text/csv",
+                                                    data.length
+                                                );
+                                            } else {
+                                                return s3Service.uploadFile(is, filename, "text/csv", contentLength);
+                                            }
+                                        }
+                                    });
 
-                        SpeciesList savedList = speciesListMongoRepository.save(speciesList);
+                            logger.info("File uploaded to S3: {} with key: {}", filename, s3Key);
 
-                        progressService.updateMigrationProgress(savedList);
+                            updateLegacyUserDetails(speciesList, foundUsers);
 
-                        IngestJob ingestJob = uploadService.loadCSV(
-                                savedList.getId(), new FileInputStream(localFile), false, false, true);
+                            SpeciesList savedList = speciesListMongoRepository.save(speciesList);
 
-                        savedList.setRowCount(ingestJob.getRowCount());
-                        savedList.setFieldList(ingestJob.getFieldList());
-                        savedList.setFacetList(ingestJob.getFacetList());
-                        savedList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
-                        savedList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
+                            progressService.updateMigrationProgress(savedList);
 
-                        speciesListMongoRepository.save(savedList);
+                            // Get S3 file stream for processing
+                            var inputStreamOptional = s3Service.getFileStream(s3Key);
+                            if (inputStreamOptional.isEmpty()) {
+                                throw new Exception("Failed to retrieve file from S3: " + s3Key);
+                            }
 
-                        // releaseService.release(speciesList.getId());
-                    } catch (Exception e) {
-                        logger.error("Download for " + speciesList.getDataResourceUid() + "failed");
-                        logger.error(e.getMessage(), e);
+                            IngestJob ingestJob = uploadService.loadCSV(
+                                    savedList.getId(), inputStreamOptional.get(), false, false, true);
+
+                            savedList.setRowCount(ingestJob.getRowCount());
+                            savedList.setFieldList(ingestJob.getFieldList());
+                            savedList.setFacetList(ingestJob.getFacetList());
+                            savedList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
+                            savedList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
+
+                            speciesListMongoRepository.save(savedList);
+
+                            // releaseService.release(speciesList.getId());
+                        } catch (Exception e) {
+                            logger.error("Download for " + speciesList.getDataResourceUid() + " failed");
+                            logger.error(e.getMessage(), e);
+
+                            if (s3Key != null) {
+                                logger.info("S3 file will be cleaned up by lifecycle policy after error: {}", s3Key);
+                            }
+                        }
+                    } else {
+                        try {
+                            File localFile = new File(
+                                    tempDir + "/species-list-migrate-" + speciesList.getDataResourceUid() + ".csv");
+
+                            AccessToken token = tokenService.getAuthToken(false, null, null);
+
+                            restTemplate.execute(
+                                    downloadUrl,
+                                    HttpMethod.GET,
+                                    request -> request.getHeaders().set(HttpHeaders.AUTHORIZATION,
+                                            token.toAuthorizationHeader()),
+                                    response -> {
+                                        try (InputStream is = response.getBody()) {
+                                            FileUtils.copyInputStreamToFile(is, localFile);
+                                            return null;
+                                        }
+                                    });
+
+                            updateLegacyUserDetails(speciesList, foundUsers);
+
+                            SpeciesList savedList = speciesListMongoRepository.save(speciesList);
+
+                            progressService.updateMigrationProgress(savedList);
+
+                            IngestJob ingestJob = uploadService.loadCSV(
+                                    savedList.getId(), new FileInputStream(localFile), false, false, true);
+
+                            savedList.setRowCount(ingestJob.getRowCount());
+                            savedList.setFieldList(ingestJob.getFieldList());
+                            savedList.setFacetList(ingestJob.getFacetList());
+                            savedList.setOriginalFieldList(ingestJob.getOriginalFieldNames());
+                            savedList.setDistinctMatchCount(ingestJob.getDistinctMatchCount());
+
+                            speciesListMongoRepository.save(savedList);
+
+                            // Clean up local file after processing
+                            if (localFile.exists()) {
+                                localFile.delete();
+                                logger.info("Cleaned up local file: {}", localFile.getName());
+                            }
+
+                            // releaseService.release(speciesList.getId());
+                        } catch (Exception e) {
+                            logger.error("Download for " + speciesList.getDataResourceUid() + " failed");
+                            logger.error(e.getMessage(), e);
+                        }
                     }
                 });
 

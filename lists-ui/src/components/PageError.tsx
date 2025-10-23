@@ -1,18 +1,19 @@
-import { Message } from './Message';
 import { getErrorMessage } from '#/helpers';
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { isRouteErrorResponse, useNavigate, useRouteError } from 'react-router';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFile } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { isRouteErrorResponse, useLocation, useNavigate, useRouteError } from 'react-router';
+import { Message } from './Message';
 
 export default function PageError() {
   const navigate = useNavigate();
   const error = useRouteError();
+  const location = useLocation();
 
   return isRouteErrorResponse(error) && error.status === 404 ? (
     <Message
       title='Not found'
-      subtitle="The requested page can't be found"
+      subtitle={`The requested page '${location.pathname}' can't be found`}
       icon={<FontAwesomeIcon icon={faFile} fontSize={18} />}
       action='Go home'
       onAction={() => navigate('/')}

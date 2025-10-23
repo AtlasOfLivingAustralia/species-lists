@@ -1,7 +1,8 @@
 package au.org.ala.listsapi.service;
 
-import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.service.auth.WebService;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.http.entity.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,8 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Map;
+import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.service.auth.WebService;
 
 @Service
 public class MetadataService {
@@ -56,7 +57,7 @@ public class MetadataService {
 
         if (speciesList.getDataResourceUid() == null) {
             // The dataResourceUid is returned via the location header as a URL, i.e.
-            // location = https://collections-test.ala.org.au/ws/dataResource/dr22893
+            // location = https://collections.test.ala.org.au/ws/dataResource/dr22893
             Map<String, List<String>> headers = (Map<String, List<String>>) response.get("headers");
             String location = headers.get("location").get(0);
 
@@ -67,5 +68,29 @@ public class MetadataService {
         }
 
         logger.info(response.get("resp").toString());
+    }
+
+    public void deleteMeta(SpeciesList speciesList) throws Exception {
+        String dataResourceUid = speciesList.getDataResourceUid();
+        if (dataResourceUid == null || dataResourceUid.isEmpty()) {
+            return;
+        }
+
+        Map response = webService.delete(
+                collectoryUrl + "/ws/dataResource/" + dataResourceUid,
+                null,
+                ContentType.APPLICATION_JSON,
+                true,
+                false,
+                null
+        );
+
+        int statusCode = (int)response.get("statusCode");
+        if (statusCode < 200 || statusCode > 299) {
+            logger.error(response.get("error").toString());
+            throw new Exception("Failed to delete metadata entry for species list");
+        }
+
+        logger.info("collections DELETE: " + response.get("resp").toString());
     }
 }

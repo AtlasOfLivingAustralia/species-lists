@@ -354,6 +354,9 @@ Resources:
                    {"name":"BUILD_TAG","value":"#{BuildListsNS.BUILD_TAG}"},
                    {"name":"ECR_REPO","value":"#{EcrCloudFormationOutNS.ListsRepositoryUri}"},
                    {"name":"EKS_CLUSTER_NAME","value":"${EksClusterName}"},
+                   {"name":"ENVIRONMENT","value":"${pEnvironment}"},
+                   {"name":"CLEAN_BRANCH","value":"${pCleanBranch}"},
+                   {"name":"BASE_STACK_NAME","value":"${pBaseStackName}"},
                    {"name":"EKS_NAMESPACE","value":"#{ExportConfigNS.EKS_NAMESPACE}"},
                    {"name":"HELM_RELEASE_NAME","value":"#{ExportConfigNS.HELM_RELEASE_NAME}"},
                    {"name":"HOSTED_ZONE","value":"#{ExportConfigNS.HOSTED_ZONE}"},
@@ -446,6 +449,7 @@ Resources:
                 - |
                   [
                     { "name":"EKS_CLUSTER_NAME", "value":"${EksClusterName}" },
+                    { "name":"CLEAN_BRANCH", "value":"${pCleanBranch}" },
                     { "name":"EKS_NAMESPACE", "value":"#{ExportConfigNS.EKS_NAMESPACE}" },
                     { "name":"HELM_RELEASE_NAME", "value":"#{ExportConfigNS.HELM_RELEASE_NAME}" }
                   ]

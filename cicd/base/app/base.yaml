@@ -24,6 +24,15 @@ Parameters:
   pAppClientServiceHost:
     Type: String
     Description: The host for the app client for the service
+  pOidcConnectProvider:
+    Type: String
+    Description: The OIDC connect provider
+  pClusterOidcIssuerUrl:
+    Type: String
+    Description: The OIDC issuer URL for the cluster
+  pEksNamespace:
+    Type: String
+    Description: The EKS namespace for the service account
 
 Conditions:
 
@@ -54,7 +63,7 @@ Resources:
           }
         GenerateStringKey: db-password
         PasswordLength: 12
-        ExcludeCharacters: "/@\" "
+        ExcludeCharacters: "/@\"\\#<> "
       Tags:
         - Key: Name
           Value: !Sub
@@ -202,6 +211,104 @@ Resources:
             Action: "s3:PutObject"
             Resource: !Sub "arn:aws:s3:::${LoadBalancerAccessLogsBucket}/logs/AWSLogs/${AWS::AccountId}/*"
 
+  ListsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: !Sub |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+              {
+                  "Effect": "Allow",
+                  "Principal": {
+                      "Federated": "${pOidcConnectProvider}"
+                  },
+                  "Action": "sts:AssumeRoleWithWebIdentity",
+                  "Condition": {
+                      "StringEquals": {
+                                        "${pClusterOidcIssuerUrl}:sub": "system:serviceaccount:${pEksNamespace}:lists-service-account-${pCleanBranch}",
+                                        "${pClusterOidcIssuerUrl}:aud": "sts.amazonaws.com"
+                      }
+                  }
+              },
+              {
+                "Effect": "Allow",
+                "Principal": {
+                  "Service":  "ec2.amazonaws.com"
+        
+                },
+                "Action": "sts:AssumeRole"
+              }
+          ]
+        }
+      Description: !Sub 'IAM role for lists uploads bucket access ${AWS::StackName} ${pEnvironment} build ${pBuild}'
+      ManagedPolicyArns:
+        - !Sub arn:aws:iam::${AWS::AccountId}:policy/cpt/cptSSMInstanceCoreCloudWatchPatch
+      Policies:
+        - PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:DeleteObject
+                  - s3:DeleteObjectVersion
+                  - s3:GetBucketLocation
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:PutObject
+                Resource:
+                  - !Sub arn:aws:s3:::${ListsUploadsBucket}
+                  - !Sub arn:aws:s3:::${ListsUploadsBucket}/*
+          PolicyName: lists-uploads-bucket
+      RoleName: !Sub
+        - ${pProductName}-${ResourceName}
+        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - ${pProductName}-${ResourceName}
+            - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+
+  ListsInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub
+        - ${pProductName}-${ResourceName}
+        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      Roles:
+        - !Ref ListsRole
+
+  ListsUploadsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      BucketName: !Sub
+        - ala-${pProductName}-${ResourceName}
+        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      LifecycleConfiguration:
+        Rules:
+          - Id: delete
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+            Status: Enabled
+          - Id: ExpireOldObjects
+            Status: Enabled
+            ExpirationInDays: 10
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: TRUE
+        BlockPublicPolicy: TRUE
+        IgnorePublicAcls: TRUE
+        RestrictPublicBuckets: TRUE
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - ala-${pProductName}-${ResourceName}
+            - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+
 Outputs:
 
   AppClientId:
@@ -227,3 +334,11 @@ Outputs:
   LoadBalancerAccessLogsBucket:
     Description: The S3 bucket for the Load Balancer access logs
     Value: !Ref LoadBalancerAccessLogsBucket
+
+  ListsUploadsBucket:
+    Description: The S3 bucket for the Lists uploads service
+    Value: !Ref ListsUploadsBucket
+
+  ListsRoleArn:
+    Description: The role ARN for the Lists service
+    Value: !GetAtt ListsRole.Arn

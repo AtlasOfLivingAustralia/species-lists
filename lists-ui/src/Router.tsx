@@ -1,14 +1,14 @@
+import { jwtDecode } from 'jwt-decode';
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, redirect } from 'react-router';
-import { jwtDecode } from 'jwt-decode';
 
 // Views
 import Dashboard from './views/Dashboard';
 import Home from './views/Home';
 
 // Page loader & error components
-import PageLoader from './components/PageLoader';
 import PageError from './components/PageError';
+import PageLoader from './components/PageLoader';
 
 import { getAccessToken } from './helpers/utils/getAccessToken';
 
@@ -41,6 +41,9 @@ const ProtectedReingest = () => (
   </ProtectedRoute>
 );
 
+const notFoundLoader = () => {
+  throw new Response('Not Found', { status: 404 });
+};
 const router = createBrowserRouter([
   {
     path: '',
@@ -102,11 +105,16 @@ const router = createBrowserRouter([
         errorElement: <PageError />,
       },
       {
-        path: '*',
+        path: '/iconic-species',
         loader: () => {
-          return redirect('/');
+          return redirect(import.meta.env.VITE_ALA_ICONIC_SPECIES_PAGE || '/');
         },
       },
+      {
+        path: '*',
+        loader: notFoundLoader,
+        errorElement: <PageError />,
+      }
     ],
   },
 ]);

@@ -56,10 +56,12 @@ function Dashboard() {
             auth.signinRedirect();
           }
         }}
+        homeUrl={import.meta.env.VITE_ALA_HOME_PAGE || ''}
         onSearchClick={() => (window.location.href = 'https://bie.ala.org.au')
         }
         fullWidth 
         compact
+        myProfileUrl={import.meta.env.VITE_ALA_USER_PROFILE || ''}
       />
       <Divider />
       <Outlet />
