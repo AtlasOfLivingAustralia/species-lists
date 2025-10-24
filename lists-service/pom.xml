@@ -5,18 +5,16 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.2.0</version>
+    <version>3.5.6</version>
     <relativePath/>
   </parent>
   <groupId>au.org.ala</groupId>
   <artifactId>lists-service</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.0.2-SNAPSHOT</version>
   <name>lists-service</name>
   <description>REST and GraphQL APIs for managing and searching species lists</description>
   <properties>
     <java.version>21</java.version>
-    <spotless-maven-plugin.version>2.22.8</spotless-maven-plugin.version>
-    <spring-boot-maven-plugin.version>3.1.6</spring-boot-maven-plugin.version>
   </properties>
 
   <repositories>
@@ -35,12 +33,10 @@
   </repositories>
 
   <dependencies>
-
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
-
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
@@ -66,7 +62,6 @@
     <dependency>
       <groupId>com.fasterxml.jackson.module</groupId>
       <artifactId>jackson-module-kotlin</artifactId>
-      <version>2.15.1</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -85,7 +80,6 @@
     <dependency>
       <groupId>com.fasterxml.jackson.dataformat</groupId>
       <artifactId>jackson-dataformat-csv</artifactId>
-      <version>2.14.2</version>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
@@ -113,11 +107,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.elasticsearch.client</groupId>
-      <artifactId>elasticsearch-rest-high-level-client</artifactId>
-      <version>7.17.8</version>
-    </dependency>
-    <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
     </dependency>
@@ -129,14 +118,8 @@
     <dependency>
       <groupId>org.springdoc</groupId>
       <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-      <version>2.3.0</version>
+      <version>2.8.13</version>
     </dependency>
-    <!-- name matching client has issues with Java 19 -->
-    <!--    <dependency>-->
-    <!--      <groupId>au.org.ala.names</groupId>-->
-    <!--      <artifactId>ala-namematching-client</artifactId>-->
-    <!--      <version>${ala-namematching-service.version}</version>-->
-    <!--    </dependency>-->
     <dependency>
       <groupId>com.opencsv</groupId>
       <artifactId>opencsv</artifactId>
@@ -146,18 +129,13 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.apache.tika</groupId>
-      <artifactId>tika-core</artifactId>
-      <version>2.7.0</version>
-    </dependency>
   </dependencies>
   <build>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.11.0</version>
+        <version>3.12.1</version>
         <configuration>
           <source>21</source>
           <target>21</target>
@@ -165,7 +143,7 @@
             <path>
               <groupId>org.projectlombok</groupId>
               <artifactId>lombok</artifactId>
-              <version>1.18.30</version>
+              <version>1.18.34</version>
             </path>
           </annotationProcessorPaths>
         </configuration>
@@ -173,12 +151,11 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
-        <version>${spring-boot-maven-plugin.version}</version>
       </plugin>
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
-        <version>${spotless-maven-plugin.version}</version>
+        <version>2.22.8</version>
         <configuration combine.self="override">
           <java>
             <googleJavaFormat>
