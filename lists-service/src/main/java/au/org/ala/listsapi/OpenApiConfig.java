@@ -1,12 +1,5 @@
 package au.org.ala.listsapi;
 
-import io.swagger.v3.oas.models.ExternalDocumentation;
-import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.info.Contact;
-import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.info.License;
-import io.swagger.v3.oas.models.tags.Tag;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -16,8 +9,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.i18n.LocaleContextHolder;
+
+import io.swagger.v3.oas.models.ExternalDocumentation;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.tags.Tag;
 
 /**
  * OpenAPI configuration for the Lists API.
@@ -54,7 +53,8 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title(messageSource.getMessage("openapi.info.title", new Object[]{appUrl}, locale))
                         .description(messageSource.getMessage("openapi.info.description", null, locale))
-                        .version(apiVersion)
+                        // .version(apiVersion)
+                        .version(getClass().getPackage().getImplementationVersion())
                         .contact(new Contact()
                                 .name(messageSource.getMessage("openapi.info.institution.name", null, locale))
                                 .email(messageSource.getMessage("openapi.info.institution.email", null, locale))
