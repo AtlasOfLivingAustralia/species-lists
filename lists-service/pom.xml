@@ -171,6 +171,14 @@
         <directory>src/main/resources</directory>
         <filtering>true</filtering>
       </resource>
+      <resource>
+        <directory>cicd/helm/ala-species-lists</directory>
+        <filtering>true</filtering>
+        <includes>
+            <include>Chart.yaml</include>
+        </includes>
+        <targetPath>cicd/helm/ala-species-lists</targetPath>
+      </resource>
     </resources>
   </build>
 </project>
