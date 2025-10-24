@@ -171,6 +171,10 @@
         <directory>src/main/resources</directory>
         <filtering>true</filtering>
       </resource>
+      <resource>
+        <directory>/data/lists-service/config</directory>
+        <filtering>true</filtering>
+      </resource>
     </resources>
   </build>
 </project>
