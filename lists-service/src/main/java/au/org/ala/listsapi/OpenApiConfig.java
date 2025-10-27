@@ -31,8 +31,11 @@ public class OpenApiConfig {
     @Value("${app.url}")
     private String appUrl;
 
+    @Value("${springdoc.api-info.version:unknown}")
+    private String apiVersion;
+
     @Bean
-    public OpenAPI customOpenAPI(VersionProvider versionProvider) {
+    public OpenAPI customOpenAPI() {
         // Sections of the API documentation
         // are ordered by the order in which they are added to this list.
         List<Tag> orderedTags = new ArrayList<>();
@@ -49,7 +52,7 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title(messageSource.getMessage("openapi.info.title", new Object[]{appUrl}, locale))
                         .description(messageSource.getMessage("openapi.info.description", null, locale))
-                        .version(versionProvider.getVersion())
+                        .version(apiVersion)
                         .contact(new Contact()
                                 .name(messageSource.getMessage("openapi.info.institution.name", null, locale))
                                 .email(messageSource.getMessage("openapi.info.institution.email", null, locale))
