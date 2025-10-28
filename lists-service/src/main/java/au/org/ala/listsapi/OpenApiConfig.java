@@ -36,6 +36,9 @@ public class OpenApiConfig {
 
     @Bean
     public OpenAPI customOpenAPI() {
+        String version = getClass().getPackage().getImplementationVersion();
+        if (version == null) version = apiVersion;
+
         // Sections of the API documentation
         // are ordered by the order in which they are added to this list.
         List<Tag> orderedTags = new ArrayList<>();
@@ -52,7 +55,7 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title(messageSource.getMessage("openapi.info.title", new Object[]{appUrl}, locale))
                         .description(messageSource.getMessage("openapi.info.description", null, locale))
-                        .version(apiVersion)
+                        .version(version)
                         .contact(new Contact()
                                 .name(messageSource.getMessage("openapi.info.institution.name", null, locale))
                                 .email(messageSource.getMessage("openapi.info.institution.email", null, locale))
