@@ -222,6 +222,7 @@ phases:
           branch: "${CLEAN_BRANCH}"
           version: "${COMMIT_ID}"
           Name: "${HELM_RELEASE_NAME}"
+        environment: "${ENVIRONMENT}"
         resources:
           requests:
             cpu: "${CPU_REQUEST}"      
