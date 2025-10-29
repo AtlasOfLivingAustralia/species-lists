@@ -465,6 +465,8 @@ public class TaxonService {
             });
         } else {
             logger.error("Classification lookup failed for {}: Status code {}", logTag, response.statusCode());
+            logger.debug("Request URL: {}; method: {}; params: {}", httpRequest.uri(), httpRequest.method(), httpRequest.bodyPublisher().orElse(null));
+            logger.error("Classification lookup response body: {}", response.body());
             return new ArrayList<>();
         }
     }

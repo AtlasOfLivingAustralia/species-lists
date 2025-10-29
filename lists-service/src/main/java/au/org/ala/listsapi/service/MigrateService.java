@@ -96,6 +96,7 @@ public class MigrateService {
 
     private List<SpeciesList> fetchLegacyLists(int offset) {
         try {
+            logger.info("Fetching legacy species lists from {}", migrateUrl);
             Map params = Map.of("offset", String.valueOf(offset), "max", "1000", "includePrivate", "true");
             Map request = webService.get(
                     migrateUrl + "/ws/speciesListInternal",
@@ -112,7 +113,7 @@ public class MigrateService {
                 return lists.stream().map(this::mapListToSpeciesList).filter(Objects::nonNull).toList();
             }
 
-            throw new Error("Got non-success response from legacy lists API call.");
+            throw new Error("Got non-success response from legacy lists API call using URL " + migrateUrl + "/ws/speciesListInternal.");
 
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
