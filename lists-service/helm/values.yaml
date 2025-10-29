@@ -47,6 +47,8 @@ resources:
     memory: 4096Mi
     cpu: 2
 
+environment: ""
+
 tags:
   branch: ""
   component: ""

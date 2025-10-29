@@ -39,4 +39,16 @@ spec:
               name: svc-{{ include "ala-species-lists.fullname" . }}
               port:
                 number: {{ .Values.service.port }}
+    {{- if eq .Values.environment "testing" }}
+    - host: lists-test.ala.org.au
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: svc-{{ include "ala-species-lists.fullname" . }}
+                port:
+                  number: {{ .Values.service.port }}
+    {{- end }}
 {{- end }}
