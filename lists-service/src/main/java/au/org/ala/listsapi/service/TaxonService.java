@@ -105,7 +105,7 @@ public class TaxonService {
                                 reindex(speciesList.getId());
                                 datasetsIndex.getAndIncrement();
                             } catch (Exception e) {
-                                logger.error(e.getMessage(), e);
+                                logger.error("reindex() exception: {}", e.getMessage(), e);
                             }
                         });
             } else {
@@ -140,7 +140,7 @@ public class TaxonService {
                                 speciesList.setDistinctMatchCount(distinctMatchCount);
                                 speciesListMongoRepository.save(speciesList);
                             } catch (Exception e) {
-                                logger.error(e.getMessage(), e);
+                                logger.error("taxonMatchDatasets() error: {}", e.getMessage(), e);
                             }
                         });
             } else {
@@ -262,7 +262,7 @@ public class TaxonService {
                     bulkIndexSafe(updateList, speciesList);
                     updateList.clear();
                 } catch (Exception e) {
-                    logger.error(e.getMessage(), e);
+                    logger.error("reindex({}) exception: {}", speciesListID, e.getMessage(), e);
                 }
 
                 lastId = speciesListItems.get(speciesListItems.size() - 1).getId();
@@ -294,7 +294,7 @@ public class TaxonService {
         logger.info("[{}|taxonMatch] Reset ingest progress {}ms", speciesListID, resetProgressElapsed);
         logger.info("[{}|taxonMatch] Started taxon matching", speciesListID);
 
-        int batchSize = 200;
+        int batchSize = 50;
         ObjectId lastId = null;
 
         Set<String> distinctTaxa = new HashSet<>();
@@ -340,7 +340,7 @@ public class TaxonService {
                     lastId = items.get(items.size() - 1).getId();
 
                 } catch (Exception e) {
-                    logger.error(e.getMessage(), e);
+                    logger.error("taxonMatchDataset() exception: {}", e.getMessage(), e);
                 }
             }
         }
@@ -364,7 +364,7 @@ public class TaxonService {
             }
             // write to mongo
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            logger.error("updateClassifications() exception: {}", e.getMessage(), e);
         }
     }
 
