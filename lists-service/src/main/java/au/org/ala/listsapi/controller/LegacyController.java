@@ -110,7 +110,7 @@ public class LegacyController {
             @Schema(allowableValues = {"asc", "desc"})
             @RequestParam(name = "order", defaultValue = "asc") String order,
             @RequestParam(name = "max", defaultValue = "25", required = false) @Max(10000) int max,
-            @RequestParam(name = "offset", defaultValue = "0", required = false) @Max(1000) int offset,
+            @RequestParam(name = "offset", defaultValue = "0", required = false) @Max(9990) int offset,
             @AuthenticationPrincipal Principal principal) {
         try {
             Integer page = offset / max; // zero indexed, as required by Pageable
@@ -301,7 +301,7 @@ public class LegacyController {
             @RequestParam(name = "includeKVP", defaultValue = "false") Boolean _includeKVP,
             @Nullable @RequestParam(name = "q") String searchQuery,
             @Nullable @RequestParam(name = "fields") String fields,
-            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(1000) Integer offset,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(9990) Integer offset,
             @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
@@ -345,7 +345,7 @@ public class LegacyController {
             @RequestParam(name = "includeKVP", defaultValue = "false") Boolean _includeKVP,
             @Nullable @RequestParam(name = "q") String searchQuery,
             @Nullable @RequestParam(name = "fields") String fields,
-            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(1000) Integer offset,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(9990) Integer offset,
             @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
@@ -532,7 +532,7 @@ public class LegacyController {
                     schema = @Schema(type = "string")
             )
             @Nullable @RequestParam(name = "speciesListIDs") String speciesListIDs,
-            @Nullable @RequestParam(name = "page", defaultValue = "1") @Max(1000) Integer page,
+            @Nullable @RequestParam(name = "page", defaultValue = "1") @Max(9990) Integer page,
             @Nullable @RequestParam(name = "pageSize", defaultValue = "9999") @Max(10000) Integer pageSize,
             @AuthenticationPrincipal Principal principal,
             HttpServletRequest request) {
@@ -611,7 +611,7 @@ public class LegacyController {
             @Nullable @RequestParam(name = "fields") String fields,
             @Nullable @RequestParam(name = "includeKVP", defaultValue = "true") Boolean includeKVP,
             @Nullable @RequestParam(name = "nonulls", defaultValue = "false") Boolean nonulls,
-            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(1000) Integer offset,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(9990) Integer offset,
             @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "order", defaultValue="asc") String order,
