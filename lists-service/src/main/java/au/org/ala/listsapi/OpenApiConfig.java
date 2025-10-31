@@ -3,7 +3,9 @@ package au.org.ala.listsapi;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
+import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
@@ -13,6 +15,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 
 import io.swagger.v3.oas.models.ExternalDocumentation;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
@@ -33,6 +36,27 @@ public class OpenApiConfig {
 
     @Value("${springdoc.api-info.version:unknown}")
     private String apiVersion;
+
+    /**
+     * Customiser to remove trailing slashes from OpenAPI paths.
+     * Mostly used for legacy v1 endpoints which should be accessible
+     * with or without a trailing slash.
+     * @return
+     */
+    @Bean
+    public OpenApiCustomizer trailingSlashRemovalCustomiser() {
+        return openApi -> {
+            Paths paths = openApi.getPaths();
+            if (paths != null) {
+                List<String> pathsToRemove = paths.keySet().stream()
+                    .filter(path -> path.endsWith("/") && 
+                            paths.containsKey(path.substring(0, path.length() - 1)))
+                    .collect(Collectors.toList());
+                
+                pathsToRemove.forEach(paths::remove);
+            }
+        };
+    }
 
     @Bean
     public OpenAPI customOpenAPI() {
