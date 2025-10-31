@@ -96,7 +96,7 @@ public class LegacyController {
             @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
     })
-    @GetMapping("/v1/speciesList")
+    @GetMapping({"/v1/speciesList", "/v1/speciesList/"})
     public ResponseEntity<Object> speciesListSearch(
             @Nullable @RequestParam(name = "isAuthoritative") String isAuthoritative,
             @Nullable @RequestParam(name = "isThreatened") String isThreatened,
@@ -205,7 +205,7 @@ public class LegacyController {
             @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
     })
-    @GetMapping("/v1/speciesList/{speciesListID}")
+    @GetMapping({"/v1/speciesList/{speciesListID}", "/v1/speciesList/{speciesListID}/"})
     public ResponseEntity<Object> speciesList(
             @PathVariable("speciesListID") String speciesListID,
             @AuthenticationPrincipal Principal principal) {
@@ -219,7 +219,7 @@ public class LegacyController {
             @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
     })
-    @GetMapping("/v1/speciesListInternal/{speciesListID}")
+    @GetMapping({"/v1/speciesListInternal/{speciesListID}", "/v1/speciesListInternal/{speciesListID}/"})
     public ResponseEntity<Object> speciesListInternal(
             @PathVariable("speciesListID") String speciesListID, 
             @AuthenticationPrincipal Principal principal) {
@@ -283,7 +283,7 @@ public class LegacyController {
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
 
     })
-    @GetMapping("/v1/speciesListItems/{druid}")
+    @GetMapping({"/v1/speciesListItems/{druid}", "/v1/speciesListItems/{druid}/"})
     public ResponseEntity<Object> speciesListItems(
             @Parameter(
                     name = "druid",
@@ -327,7 +327,7 @@ public class LegacyController {
 
     })
     @SecurityRequirement(name = "JWT")
-    @GetMapping("/v1/speciesListItemsInternal/{druid}")
+    @GetMapping({"/v1/speciesListItemsInternal/{druid}", "/v1/speciesListItemsInternal/{druid}/"})
     public ResponseEntity<Object> speciesListInternal(
             @Parameter(
                     name = "druid",
@@ -437,7 +437,7 @@ public class LegacyController {
                     )
             )
     })
-    @GetMapping("/v1/listCommonKeys/{speciesListIDs}")
+    @GetMapping({"/v1/listCommonKeys/{speciesListIDs}", "/v1/listCommonKeys/{speciesListIDs}/"})
     public ResponseEntity<Object> speciesListCommonKeys(
             @Parameter(
                     name = "speciesListIDs",
@@ -602,7 +602,7 @@ public class LegacyController {
                     )
             )
     })
-    @GetMapping("/v1/queryListItemOrKVP")
+    @GetMapping({"/v1/queryListItemOrKVP", "/v1/queryListItemOrKVP/"})
     public ResponseEntity<Object> queryListItemOrKVP(
             @RequestParam(name = "druid") String druid,
             @Nullable @RequestParam(name = "q") String q,
