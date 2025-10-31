@@ -105,11 +105,11 @@ public class LegacyController {
             @Nullable @RequestParam(name = "q") String query,
             @Parameter(description = "Sort field")
             @Schema(allowableValues = {"count", "listName", "listType", "dateCreated", "lastUpdated", "ownerFullName", "region", "category", "authority"})
-            @RequestParam(name = "sort", defaultValue = "count", required = false) String sort,
+            @RequestParam(name = "sort", defaultValue = "listName", required = false) String sort,
             @Parameter(description = "Sort direction")
             @Schema(allowableValues = {"asc", "desc"})
             @RequestParam(name = "order", defaultValue = "asc") String order,
-            @RequestParam(name = "max", defaultValue = "10", required = false) @Max(10000) int max,
+            @RequestParam(name = "max", defaultValue = "25", required = false) @Max(10000) int max,
             @RequestParam(name = "offset", defaultValue = "0", required = false) @Max(1000) int offset,
             @AuthenticationPrincipal Principal principal) {
         try {
@@ -131,8 +131,10 @@ public class LegacyController {
             Boolean isAdmin = authUtils.hasAdminRole(profile);
             query = StringUtils.isNotBlank(query) ? URLDecoder.decode(query, StandardCharsets.UTF_8) : ".*"; // regex for all if blank
             Page<SpeciesList> results = searchHelperService.searchDocuments(convertedSpeciesListQuery, userId, isAdmin, query, paging);
-
-            return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
+            SpeciesListPageVersion1 legacyFormat = getLegacyFormatModel(results);
+            legacyFormat.setSort(sort);
+            legacyFormat.setOrder(order);
+            return new ResponseEntity<>(legacyFormat, HttpStatus.OK);
         } catch (Exception e) {
             logger.error("Error occurred for /v1/speciesList: {}", e.getMessage(), e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
