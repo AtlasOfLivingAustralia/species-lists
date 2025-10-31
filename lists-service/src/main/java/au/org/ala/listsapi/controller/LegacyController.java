@@ -36,6 +36,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -63,11 +64,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.Max;
 
 /**
  * Controller for legacy API endpoints (/v1/**), that are deprecated.
  */
 @CrossOrigin(origins = "*", maxAge = 3600)
+@Validated
 @RestController
 public class LegacyController {
 
@@ -89,6 +92,7 @@ public class LegacyController {
     @Operation(tags = "REST v1", summary = "Get species list metadata for all lists", deprecated = true)
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Species lists found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPageVersion1.class))),
+            @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
     })
@@ -105,8 +109,8 @@ public class LegacyController {
             @Parameter(description = "Sort direction")
             @Schema(allowableValues = {"asc", "desc"})
             @RequestParam(name = "order", defaultValue = "asc") String order,
-            @RequestParam(name = "max", defaultValue = "10", required = false) int max,
-            @RequestParam(name = "offset", defaultValue = "0", required = false) int offset,
+            @RequestParam(name = "max", defaultValue = "10", required = false) @Max(10000) int max,
+            @RequestParam(name = "offset", defaultValue = "0", required = false) @Max(1000) int offset,
             @AuthenticationPrincipal Principal principal) {
         try {
             Integer page = offset / max; // zero indexed, as required by Pageable
@@ -274,6 +278,8 @@ public class LegacyController {
                             schema = @Schema(implementation = SpeciesListItemVersion1.class)
                     )
             ),
+            @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
 
     })
@@ -293,8 +299,8 @@ public class LegacyController {
             @RequestParam(name = "includeKVP", defaultValue = "false") Boolean _includeKVP,
             @Nullable @RequestParam(name = "q") String searchQuery,
             @Nullable @RequestParam(name = "fields") String fields,
-            @Nullable @RequestParam(name = "offset", defaultValue = "0") Integer offset,
-            @Nullable @RequestParam(name = "max", defaultValue = "10") Integer max,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(1000) Integer offset,
+            @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
             @AuthenticationPrincipal Principal principal) {
@@ -315,6 +321,7 @@ public class LegacyController {
                             schema = @Schema(implementation = SpeciesListItemVersion1.class)
                     )
             ),
+            @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
 
@@ -336,8 +343,8 @@ public class LegacyController {
             @RequestParam(name = "includeKVP", defaultValue = "false") Boolean _includeKVP,
             @Nullable @RequestParam(name = "q") String searchQuery,
             @Nullable @RequestParam(name = "fields") String fields,
-            @Nullable @RequestParam(name = "offset", defaultValue = "0") Integer offset,
-            @Nullable @RequestParam(name = "max", defaultValue = "10") Integer max,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(1000) Integer offset,
+            @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
             @AuthenticationPrincipal Principal principal) {
@@ -374,7 +381,18 @@ public class LegacyController {
         int[] pageAndSize = calculatePageAndSize(offset, max);
         int page = pageAndSize[0];
         int pageSize = pageAndSize[1];
-        List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs, searchQuery, fields, page, pageSize, sort, dir, principal);
+        logger.info("Fetching legacy species list items for speciesListIDs: {} with offset: {}, max: {}", speciesListIDs, offset, max);
+        logger.info("Calculated page and pageSize: {} with page: {}, pageSize: {}", speciesListIDs, page, pageSize);
+        List<SpeciesListItem> speciesListItems;
+        
+        try {
+            speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs, searchQuery, fields, page, pageSize, sort, dir, principal);
+        } catch (Exception e) {
+            logger.error("Error fetching species list items: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new ErrorResponse(HttpStatus.BAD_REQUEST.name(), e.getMessage(), HttpStatus.BAD_REQUEST.value()));
+        }
 
         if (speciesListItems.isEmpty()) {
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND.name(), "Species list not found for id: " + speciesListIDs, HttpStatus.NOT_FOUND.value());
@@ -388,7 +406,11 @@ public class LegacyController {
         return new ResponseEntity<>(legacySpeciesListItems, HttpStatus.OK);
     }
 
-    @Operation(tags = "REST v1", summary = "Get a list of keys from KVP common across a list multiple species lists", deprecated = true)
+    @Operation(
+            tags = "REST v1",
+            summary = "Get a list of keys from KVP common across a list multiple species lists",
+            deprecated = true
+    )
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -396,6 +418,22 @@ public class LegacyController {
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = List.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Bad Request - Invalid parameters",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Species list not found",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ErrorResponse.class)
                     )
             )
     })
@@ -410,11 +448,13 @@ public class LegacyController {
             @AuthenticationPrincipal Principal principal) {
         try {
             List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
-            List<SpeciesList> speciesLists = speciesListMongoRepository.findAllByDataResourceUidIsInOrIdIsIn(IDs, IDs);
+            List<SpeciesList> speciesLists = speciesListMongoRepository
+                    .findAllByDataResourceUidIsInOrIdIsIn(IDs, IDs);
 
             if (!speciesLists.isEmpty()) {
                 List<SpeciesList> validLists = speciesLists.stream()
-                        .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal)).toList();
+                        .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal))
+                        .toList();
 
                 if (validLists.isEmpty()) {
                     return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
@@ -450,6 +490,30 @@ public class LegacyController {
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = SpeciesListItemVersion1.class)
                     )
+            ),
+            @ApiResponse(
+                    responseCode = "400", 
+                    description = "Bad Request - Invalid parameters", 
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Forbidden - user is not authorized to view this species list",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Species list not found",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
             )
     })
     @GetMapping("/v1/species/**")
@@ -466,8 +530,8 @@ public class LegacyController {
                     schema = @Schema(type = "string")
             )
             @Nullable @RequestParam(name = "speciesListIDs") String speciesListIDs,
-            @Nullable @RequestParam(name = "page", defaultValue = "1") Integer page,
-            @Nullable @RequestParam(name = "pageSize", defaultValue = "9999") Integer pageSize,
+            @Nullable @RequestParam(name = "page", defaultValue = "1") @Max(1000) Integer page,
+            @Nullable @RequestParam(name = "pageSize", defaultValue = "9999") @Max(10000) Integer pageSize,
             @AuthenticationPrincipal Principal principal,
             HttpServletRequest request) {
         String fullUrl = request.getRequestURL().toString();
@@ -512,6 +576,30 @@ public class LegacyController {
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = QueryListItemVersion1.class)
                     )
+            ),
+            @ApiResponse(
+                    responseCode = "400", 
+                    description = "Bad Request - Invalid parameters", 
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Forbidden - user is not authorized to view this species list",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Species list not found",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
             )
     })
     @GetMapping("/v1/queryListItemOrKVP")
@@ -521,8 +609,8 @@ public class LegacyController {
             @Nullable @RequestParam(name = "fields") String fields,
             @Nullable @RequestParam(name = "includeKVP", defaultValue = "true") Boolean includeKVP,
             @Nullable @RequestParam(name = "nonulls", defaultValue = "false") Boolean nonulls,
-            @Nullable @RequestParam(name = "offset", defaultValue = "0") Integer offset,
-            @Nullable @RequestParam(name = "max", defaultValue = "10") Integer max,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(1000) Integer offset,
+            @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "order", defaultValue="asc") String order,
             @AuthenticationPrincipal Principal principal
@@ -556,6 +644,7 @@ public class LegacyController {
     private static int[] calculatePageAndSize(@Nullable Integer offset, @Nullable Integer max) {
         int page = ((offset != null ? offset : 0) / (max != null ? max : 10)) + 1;
         int pageSize = (max != null ? max : 10);
+        logger.info("Calculated page and pageSize: page: {}, pageSize: {}", page, pageSize);
         return new int[]{page, pageSize};
     }
 }

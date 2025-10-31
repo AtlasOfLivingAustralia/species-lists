@@ -42,6 +42,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -64,9 +65,11 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.constraints.Max;
 
 /** Services added for backwards compatibility with the legacy lists API */
 @CrossOrigin(origins = "*", maxAge = 3600)
+@Validated
 @org.springframework.web.bind.annotation.RestController
 public class RESTController {
 
@@ -121,13 +124,16 @@ public class RESTController {
 
     @Operation(tags = "REST v2", summary = "Get a list of species lists matching the query")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class)))
-    })
+            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
+            @ApiResponse(responseCode = "400", description = "Bad Request - invalid query parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Cannot query private lists without a user ID"))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view private species lists", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "You must be authenticated to query private lists"))),
+            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found")))
+        })
     @GetMapping("/v2/speciesList")
     public ResponseEntity<Object> speciesLists(
             RESTSpeciesListQuery speciesList,
-            @RequestParam(name = "page", defaultValue = "1", required = false) int page,
-            @RequestParam(name = "pageSize", defaultValue = "10", required = false) int pageSize,
+            @RequestParam(name = "page", defaultValue = "1", required = false) @Max(10000) int page,
+            @RequestParam(name = "pageSize", defaultValue = "10", required = false) @Max(1000) int pageSize,
             @AuthenticationPrincipal Principal principal) {
         try {
             Pageable paging = PageRequest.of(page - 1, pageSize);
@@ -197,13 +203,16 @@ public class RESTController {
 
     @Operation(tags = "REST v2", summary = "Get a list of species lists that contain the specified taxon GUID")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class)))
+            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
+            @ApiResponse(responseCode = "400", description = "Bad Request - invalid query parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Cannot query private lists without a user ID"))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view private species lists", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "You must be authenticated to query private lists"))),
+            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found")))
     })
     @GetMapping("/v2/speciesList/byGuid")
     public ResponseEntity<Object> speciesListsByGuid(
             @RequestParam(name = "guid") String guid,
-            @RequestParam(name = "page", defaultValue = "1", required = false) int page,
-            @RequestParam(name = "pageSize", defaultValue = "10", required = false) int pageSize,
+            @RequestParam(name = "page", defaultValue = "1", required = false) @Max(10000) int page,
+            @RequestParam(name = "pageSize", defaultValue = "10", required = false) @Max(1000) int pageSize,
             @AuthenticationPrincipal Principal principal) {
         try {
             AlaUserProfile profile = authUtils.getUserProfile(principal);
@@ -305,15 +314,18 @@ public class RESTController {
 
     @Operation(tags = "REST v2", summary = "Get species lists items for a list. List IDs can be a single value, or comma separated IDs.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species list item found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListItem.class)))
+            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
+            @ApiResponse(responseCode = "400", description = "Bad Request - invalid query parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Cannot query private lists without a user ID"))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view private species lists", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "You must be authenticated to query private lists"))),
+            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found")))
     })
     @GetMapping("/v2/speciesListItems/{speciesListIDs}")
     public ResponseEntity<Object> speciesListItems(
             @PathVariable("speciesListIDs") String speciesListIDs,
             @Nullable @RequestParam(name = "q") String searchQuery,
             @Nullable @RequestParam(name = "fields") String fields,
-            @Nullable @RequestParam(name = "page", defaultValue = "1") Integer page,
-            @Nullable @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
+            @Nullable @RequestParam(name = "page", defaultValue = "1") @Max(10000) Integer page,
+            @Nullable @RequestParam(name = "pageSize", defaultValue = "10") @Max(1000) Integer pageSize,
             @Nullable @RequestParam(name = "sort", defaultValue = "scientificName") String sort,
             @Nullable @RequestParam(name = "dir", defaultValue = "asc") String dir,
             @AuthenticationPrincipal Principal principal) {
@@ -333,14 +345,17 @@ public class RESTController {
 
     @Operation(tags = "REST v2", summary = "Get details of species list items i.e species for a list of guid(s)")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species list items found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListItem.class)))
+            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
+            @ApiResponse(responseCode = "400", description = "Bad Request - invalid query parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Cannot query private lists without a user ID"))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view private species lists", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "You must be authenticated to query private lists"))),
+            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found")))
     })
     @GetMapping("/v2/species")
     public ResponseEntity<Object> species(
             @RequestParam(name = "guids") String guids,
             @Nullable @RequestParam(name = "speciesListIDs") String speciesListIDs,
-            @Nullable @RequestParam(name = "page", defaultValue = "1") Integer page,
-            @Nullable @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
+            @Nullable @RequestParam(name = "page", defaultValue = "1") @Max(10000) Integer page,
+            @Nullable @RequestParam(name = "pageSize", defaultValue = "10") @Max(1000) Integer pageSize,
             @AuthenticationPrincipal Principal principal) {
         try {
             List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(guids, speciesListIDs,
@@ -354,7 +369,8 @@ public class RESTController {
 
     @Operation(tags = "REST v2", summary = "Get a SOLR query PID for a list")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesList.class)))
+            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
+            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found")))
     })
     @GetMapping("/v2/speciesListQid/{speciesListID}")
     public ResponseEntity<Object> speciesListPid(
@@ -377,7 +393,9 @@ public class RESTController {
 
     @Operation(tags = "REST v2", summary = "Get a list of keys from KVP common across a list multiple species lists")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesList.class)))
+            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view private species lists", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "You must be authenticated to query private lists"))),
+            @ApiResponse(responseCode = "404", description = "Species lists not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found")))
     })
     @GetMapping("/v2/listCommonKeys/{speciesListIDs}")
     public ResponseEntity<Object> listCommonKeys(
