@@ -602,7 +602,7 @@ public class LegacyController {
                     )
             )
     })
-    @GetMapping({"/v1/queryListItemOrKVP/{druid}", "/v1/queryListItemOrKVP/{druid}/"})
+    @GetMapping({"/v1/queryListItemOrKVP", "/v1/queryListItemOrKVP/"})
     public ResponseEntity<Object> queryListItemOrKVP(
             @RequestParam(name = "druid") String druid,
             @Nullable @RequestParam(name = "q") String q,
