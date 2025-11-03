@@ -105,12 +105,12 @@ public class LegacyController {
             @Nullable @RequestParam(name = "q") String query,
             @Parameter(description = "Sort field")
             @Schema(allowableValues = {"count", "listName", "listType", "dateCreated", "lastUpdated", "ownerFullName", "region", "category", "authority"})
-            @RequestParam(name = "sort", defaultValue = "count", required = false) String sort,
+            @RequestParam(name = "sort", defaultValue = "listName", required = false) String sort,
             @Parameter(description = "Sort direction")
             @Schema(allowableValues = {"asc", "desc"})
             @RequestParam(name = "order", defaultValue = "asc") String order,
-            @RequestParam(name = "max", defaultValue = "10", required = false) @Max(10000) int max,
-            @RequestParam(name = "offset", defaultValue = "0", required = false) @Max(1000) int offset,
+            @RequestParam(name = "max", defaultValue = "25", required = false) @Max(10000) int max,
+            @RequestParam(name = "offset", defaultValue = "0", required = false) @Max(9990) int offset,
             @AuthenticationPrincipal Principal principal) {
         try {
             Integer page = offset / max; // zero indexed, as required by Pageable
@@ -131,8 +131,10 @@ public class LegacyController {
             Boolean isAdmin = authUtils.hasAdminRole(profile);
             query = StringUtils.isNotBlank(query) ? URLDecoder.decode(query, StandardCharsets.UTF_8) : ".*"; // regex for all if blank
             Page<SpeciesList> results = searchHelperService.searchDocuments(convertedSpeciesListQuery, userId, isAdmin, query, paging);
-
-            return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
+            SpeciesListPageVersion1 legacyFormat = getLegacyFormatModel(results);
+            legacyFormat.setSort(sort);
+            legacyFormat.setOrder(order);
+            return new ResponseEntity<>(legacyFormat, HttpStatus.OK);
         } catch (Exception e) {
             logger.error("Error occurred for /v1/speciesList: {}", e.getMessage(), e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -299,7 +301,7 @@ public class LegacyController {
             @RequestParam(name = "includeKVP", defaultValue = "false") Boolean _includeKVP,
             @Nullable @RequestParam(name = "q") String searchQuery,
             @Nullable @RequestParam(name = "fields") String fields,
-            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(1000) Integer offset,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(9990) Integer offset,
             @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
@@ -343,7 +345,7 @@ public class LegacyController {
             @RequestParam(name = "includeKVP", defaultValue = "false") Boolean _includeKVP,
             @Nullable @RequestParam(name = "q") String searchQuery,
             @Nullable @RequestParam(name = "fields") String fields,
-            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(1000) Integer offset,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(9990) Integer offset,
             @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
@@ -381,8 +383,8 @@ public class LegacyController {
         int[] pageAndSize = calculatePageAndSize(offset, max);
         int page = pageAndSize[0];
         int pageSize = pageAndSize[1];
-        logger.info("Fetching legacy species list items for speciesListIDs: {} with offset: {}, max: {}", speciesListIDs, offset, max);
-        logger.info("Calculated page and pageSize: {} with page: {}, pageSize: {}", speciesListIDs, page, pageSize);
+        logger.debug("Fetching legacy species list items for speciesListIDs: {} with offset: {}, max: {}", speciesListIDs, offset, max);
+        logger.debug("Calculated page and pageSize: {} with page: {}, pageSize: {}", speciesListIDs, page, pageSize);
         List<SpeciesListItem> speciesListItems;
         
         try {
@@ -395,10 +397,8 @@ public class LegacyController {
         }
 
         if (speciesListItems.isEmpty()) {
-            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND.name(), "Species list not found for id: " + speciesListIDs, HttpStatus.NOT_FOUND.value());
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(errorResponse); 
+                // Return 200 with empty array for legacy compatibility
+                return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
         }
 
         List<SpeciesListItemVersion1> legacySpeciesListItems = legacyService.convertListItemToVersion1(speciesListItems);
@@ -475,7 +475,8 @@ public class LegacyController {
                 return new ResponseEntity<>(renamedCommonKeys, HttpStatus.OK);
             }
 
-            return ResponseEntity.status(404).body("Species list(s) not found: " + speciesListIDs);
+            // Return 200 with empty array for legacy compatibility
+            return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -530,7 +531,7 @@ public class LegacyController {
                     schema = @Schema(type = "string")
             )
             @Nullable @RequestParam(name = "speciesListIDs") String speciesListIDs,
-            @Nullable @RequestParam(name = "page", defaultValue = "1") @Max(1000) Integer page,
+            @Nullable @RequestParam(name = "page", defaultValue = "1") @Max(9990) Integer page,
             @Nullable @RequestParam(name = "pageSize", defaultValue = "9999") @Max(10000) Integer pageSize,
             @AuthenticationPrincipal Principal principal,
             HttpServletRequest request) {
@@ -609,7 +610,7 @@ public class LegacyController {
             @Nullable @RequestParam(name = "fields") String fields,
             @Nullable @RequestParam(name = "includeKVP", defaultValue = "true") Boolean includeKVP,
             @Nullable @RequestParam(name = "nonulls", defaultValue = "false") Boolean nonulls,
-            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(1000) Integer offset,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(9990) Integer offset,
             @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "order", defaultValue="asc") String order,

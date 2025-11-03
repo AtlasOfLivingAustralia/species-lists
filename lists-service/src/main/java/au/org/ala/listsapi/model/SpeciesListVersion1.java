@@ -21,6 +21,7 @@ import java.util.Date;
 import org.springframework.data.annotation.Id;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -37,6 +38,7 @@ public class SpeciesListVersion1 implements Serializable {
 
     private static final long serialVersionUID = 1L;
     @Id
+    @JsonIgnore
     private String id;
     private String dataResourceUid;
 
@@ -52,6 +54,7 @@ public class SpeciesListVersion1 implements Serializable {
     private String listName;
     private String description;
     private String listType;
+    private String category;
     private String username;
     private String fullName;
     private String authority; 

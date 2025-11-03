@@ -35,5 +35,6 @@ public class SpeciesListPageVersion1 implements Serializable {
     private long listCount;
     private int offset;
     private int max;
-    private String sort;
+    private String sort = "listName";
+    private String order = "asc";
 }

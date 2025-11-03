@@ -216,7 +216,8 @@ public class SearchHelperService {
                     .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal))
                     .map(list -> FieldValue.of(list.getId())).toList();
 
-            if ((page * pageSize) > 10000 ) {
+            // Enforce ElasticSearch limit of 10,000 documents
+            if ((page - 1) * pageSize + pageSize > 10000) {
                 throw new IllegalArgumentException("Page size exceeds ElasticSearch limit of 10,000 documents.");
             }
             

@@ -130,9 +130,9 @@ public class SpeciesListTransformer {
         String speciesListID = speciesListItem.getSpeciesListID();
         int fakeId = speciesListItem.getId().getTimestamp() + index; // just needs to be unique and is not referenced anywhere
         listItemVersion1.setId((long) fakeId);
-        listItemVersion1.setLsid(speciesListItem.getClassification().getTaxonConceptID());
-        listItemVersion1.setScientificName(speciesListItem.getClassification().getScientificName());
-        listItemVersion1.setCommonName(speciesListItem.getVernacularName() == null ? speciesListItem.getClassification().getVernacularName() : speciesListItem.getVernacularName());
+        listItemVersion1.setLsid(speciesListItem.getClassification() != null ? speciesListItem.getClassification().getTaxonConceptID() : null);
+        listItemVersion1.setScientificName(speciesListItem.getClassification() != null ? speciesListItem.getClassification().getScientificName() : speciesListItem.getScientificName());
+        listItemVersion1.setCommonName(speciesListItem.getVernacularName() != null ? speciesListItem.getVernacularName() : speciesListItem.getClassification() != null ? speciesListItem.getClassification().getVernacularName() : null);
         listItemVersion1.setName(speciesListItem.getScientificName() != null ? speciesListItem.getScientificName() : speciesListItem.getSuppliedName());
         listItemVersion1.setDataResourceUid(speciesListID); // fallback - attempt to set actual DataResourceUid further down
 
@@ -178,10 +178,10 @@ public class SpeciesListTransformer {
         queryListItemV1.setId(speciesListItem.getId().toString());
         queryListItemV1.setSpeciesListID(speciesListID);
         queryListItemV1.setDataResourceUid(speciesListID); // fallback - attempt to set actual DataResourceUid via lookup, below
-        queryListItemV1.setLsid(speciesListItem.getClassification().getTaxonConceptID());
-        queryListItemV1.setMatchedName(speciesListItem.getClassification().getScientificName());
+        queryListItemV1.setLsid(speciesListItem.getClassification() != null ? speciesListItem.getClassification().getTaxonConceptID() : null);
+        queryListItemV1.setMatchedName(speciesListItem.getClassification() != null ? speciesListItem.getClassification().getScientificName() : null);
         queryListItemV1.setRawScientificName(speciesListItem.getScientificName());
-        queryListItemV1.setCommonName(speciesListItem.getVernacularName() == null ? speciesListItem.getClassification().getVernacularName() : speciesListItem.getVernacularName());
+        queryListItemV1.setCommonName(speciesListItem.getVernacularName() != null ? speciesListItem.getVernacularName() : speciesListItem.getClassification() != null ? speciesListItem.getClassification().getVernacularName() : null);
 
         // Get extra details via MongoDB lookup
         Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
