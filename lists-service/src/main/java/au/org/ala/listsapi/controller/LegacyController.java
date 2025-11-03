@@ -302,7 +302,7 @@ public class LegacyController {
             @Nullable @RequestParam(name = "q") String searchQuery,
             @Nullable @RequestParam(name = "fields") String fields,
             @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(9990) Integer offset,
-            @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
+            @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10001) Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
             @AuthenticationPrincipal Principal principal) {
@@ -346,7 +346,7 @@ public class LegacyController {
             @Nullable @RequestParam(name = "q") String searchQuery,
             @Nullable @RequestParam(name = "fields") String fields,
             @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(9990) Integer offset,
-            @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
+            @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10001) Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
             @AuthenticationPrincipal Principal principal) {
