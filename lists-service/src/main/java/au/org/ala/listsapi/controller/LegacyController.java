@@ -383,8 +383,8 @@ public class LegacyController {
         int[] pageAndSize = calculatePageAndSize(offset, max);
         int page = pageAndSize[0];
         int pageSize = pageAndSize[1];
-        logger.info("Fetching legacy species list items for speciesListIDs: {} with offset: {}, max: {}", speciesListIDs, offset, max);
-        logger.info("Calculated page and pageSize: {} with page: {}, pageSize: {}", speciesListIDs, page, pageSize);
+        logger.debug("Fetching legacy species list items for speciesListIDs: {} with offset: {}, max: {}", speciesListIDs, offset, max);
+        logger.debug("Calculated page and pageSize: {} with page: {}, pageSize: {}", speciesListIDs, page, pageSize);
         List<SpeciesListItem> speciesListItems;
         
         try {
@@ -397,10 +397,8 @@ public class LegacyController {
         }
 
         if (speciesListItems.isEmpty()) {
-            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND.name(), "Species list not found for id: " + speciesListIDs, HttpStatus.NOT_FOUND.value());
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(errorResponse); 
+                // Return 200 with empty array for legacy compatibility
+                return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
         }
 
         List<SpeciesListItemVersion1> legacySpeciesListItems = legacyService.convertListItemToVersion1(speciesListItems);
@@ -477,7 +475,8 @@ public class LegacyController {
                 return new ResponseEntity<>(renamedCommonKeys, HttpStatus.OK);
             }
 
-            return ResponseEntity.status(404).body("Species list(s) not found: " + speciesListIDs);
+            // Return 200 with empty array for legacy compatibility
+            return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
