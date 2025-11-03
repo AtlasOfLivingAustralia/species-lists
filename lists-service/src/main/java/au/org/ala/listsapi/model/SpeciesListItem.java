@@ -59,11 +59,19 @@ public class SpeciesListItem {
         taxon.put("taxonID", this.taxonID);
         taxon.put("scientificName", this.scientificName);
         taxon.put("vernacularName", this.vernacularName);
-        taxon.put("kingdom", this.kingdom);
+        taxon.put("kingdom", this.kingdom != null ? this.kingdom : this.properties != null ? this.properties.stream()
+                .filter(kv -> "rawkingdom".equals(kv.getKey()))
+                .map(KeyValue::getValue)
+                .findFirst()
+                .orElse(null) : null);
         taxon.put("phylum", this.phylum);
         taxon.put("class", this.classs);
         taxon.put("order", this.order);
-        taxon.put("family", this.family);
+        taxon.put("family", this.family != null ? this.family : this.properties != null ? this.properties.stream()
+                .filter(kv -> "rawfamily".equals(kv.getKey()))
+                .map(KeyValue::getValue)
+                .findFirst()
+                .orElse(null) : null);
         taxon.put("genus", this.genus);
         return taxon;
     }
