@@ -154,10 +154,24 @@ public class SpeciesListTransformer {
 
         List<KvpValueVersion1> kvps = new ArrayList<>();
         speciesListItem.getProperties()
-                .forEach(kvpValue -> kvps.add(new KvpValueVersion1(kvpValue.getKey(), kvpValue.getValue())));
+                .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue())));
         listItemVersion1.setKvpValues(kvps);
 
         return listItemVersion1;
+    }
+
+    private static String fixLegacyKeys(String key) {
+        // Fix known legacy key names, for backward compatibility
+        switch (key) {
+            case "CommonNames":
+                return "common name";
+            case "VernacularName":
+                return "vernacular name";
+            case "group":
+                return "Group";
+            default:
+                return key;
+        }
     }
 
     /**

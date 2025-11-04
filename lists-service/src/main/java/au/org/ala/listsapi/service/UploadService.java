@@ -477,7 +477,7 @@ public class UploadService {
 
         java.io.File tempFile = java.io.File.createTempFile("temp-zip", ".zip");
         try (InputStream s3Stream = inputStreamOptional.get();
-             java.io.FileOutputStream fos = new java.io.FileOutputStream(tempFile)) {
+                java.io.FileOutputStream fos = new java.io.FileOutputStream(tempFile)) {
             s3Stream.transferTo(fos);
         }
 
@@ -727,9 +727,9 @@ public class UploadService {
                     .replaceAll(" ", "_")
                     .trim();
             Term term = TermFactory.instance().findTerm(cleanedName);
-            return (term != null) ? term.simpleName() : cleanedName;
+            return (term != null) ? term.simpleName() : keyName;
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            logger.warn("CleanKey error: {}", e.getMessage());
             return keyName;
         }
     }
