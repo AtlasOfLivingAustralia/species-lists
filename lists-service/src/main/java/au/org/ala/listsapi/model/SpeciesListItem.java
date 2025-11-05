@@ -73,6 +73,11 @@ public class SpeciesListItem {
                 .findFirst()
                 .orElse(null) : null);
         taxon.put("genus", this.genus);
+        taxon.put("rank", this.properties != null ? this.properties.stream()
+            .filter(kv -> "taxonRank".equals(kv.getKey()))
+            .map(KeyValue::getValue)
+            .findFirst()
+            .orElse(null) : this.classification != null ? this.classification.getRank() : null);
         return taxon;
     }
 
