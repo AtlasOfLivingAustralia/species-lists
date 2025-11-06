@@ -101,6 +101,9 @@ public class LegacyController {
             @Nullable @RequestParam(name = "isAuthoritative") String isAuthoritative,
             @Nullable @RequestParam(name = "isThreatened") String isThreatened,
             @Nullable @RequestParam(name = "isInvasive") String isInvasive,
+            @Nullable @RequestParam(name = "isSDS") String isSDS,
+            @Nullable @RequestParam(name = "isBIE") String isBIE,
+            @Nullable @RequestParam(name = "druid") String druid,
             @Parameter(description = "Query string (q)")
             @Nullable @RequestParam(name = "q") String query,
             @Parameter(description = "Sort field")
@@ -116,7 +119,7 @@ public class LegacyController {
             Integer page = offset / max; // zero indexed, as required by Pageable
             Pageable paging = PageRequest.of(page, max);
             RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
-            fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, speciesListQuery);
+            fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, isSDS, isBIE, druid, speciesListQuery);
             
             if (StringUtils.isNotBlank(sort)) {
                 paging = PageRequest.of(page, max,
@@ -168,7 +171,7 @@ public class LegacyController {
      * @param speciesListQuery
      */
     private static void fixLegacyBooleanSyntax(String isAuthoritative, String isThreatened, String isInvasive,
-            RESTSpeciesListQuery speciesListQuery) {
+            String isSDS, String isBIE, String druid, RESTSpeciesListQuery speciesListQuery) {
         if (StringUtils.isNotBlank(isAuthoritative)) {
             speciesListQuery.setIsAuthoritative(isAuthoritative.replaceAll("eq:", "")); // eq:true to true, etc.
         }            
@@ -179,6 +182,18 @@ public class LegacyController {
         
         if (StringUtils.isNotBlank(isInvasive)) {
             speciesListQuery.setIsInvasive(isInvasive.replaceAll("eq:", "")); // eq:true to true, etc.
+        }
+
+        if (StringUtils.isNotBlank(isSDS)) {
+            speciesListQuery.setIsSDS(isSDS.replaceAll("eq:", "")); // eq:true to true, etc.
+        }
+
+        if (StringUtils.isNotBlank(isBIE)) {
+            speciesListQuery.setIsBIE(isBIE.replaceAll("eq:", "")); // eq:true to true, etc.
+        }
+
+        if (StringUtils.isNotBlank(druid)) {
+            speciesListQuery.setDataResourceUid(druid); 
         }
     }
 
