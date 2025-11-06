@@ -126,6 +126,8 @@ phases:
 #      - if environment is production or staging override the client id and secret with the cas values
       - |
         if [[ "$ENVIRONMENT" == "production" || "$ENVIRONMENT" == "staging" ]]; then
+          CAS_CLIENT_SECRET=$(aws secretsmanager get-secret-value --secret-id "$LISTS_SECRET_NAME" --query 'SecretString' --output text | jq -r '.["cas-client-secret"]')
+          CAS_S2S_SECRET=$(aws secretsmanager get-secret-value --secret-id "$LISTS_SECRET_NAME" --query 'SecretString' --output text | jq -r '.["cas-s2s-client-secret"]')
           CLIENT_ID=${CAS_CLIENT_ID}
           CLIENT_SECRET=${CAS_CLIENT_SECRET}
           SERVER_TO_SERVER_CLIENT_ID=${CAS_S2S_CLIENT_ID}
