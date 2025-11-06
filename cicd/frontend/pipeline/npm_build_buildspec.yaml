@@ -15,7 +15,10 @@ phases:
       - echo injecting app client config
       - |
         if [[ "$ENVIRONMENT" == "production" || "$ENVIRONMENT" == "staging" ]]; then
-          VITE_AUTH_CLIENT_ID=$PROD_VITE_AUTH_CLIENT_ID
+          export VITE_AUTH_CLIENT_ID=$PROD_VITE_AUTH_CLIENT_ID
+          export VITE_AUTH_AUTHORITY="https://auth.ala.org.au/cas/oidc/.well-known"
+          export VITE_AUTH_REDIRECT_URI=$VITE_AUTH_REDIRECT_URI
+          export VITE_AUTH_END_SESSION_URI="https://auth.ala.org.au/cas/logout"
         fi
       - sed -i "s/VITE_AUTH_CLIENT_ID=.*$/VITE_AUTH_CLIENT_ID=$VITE_AUTH_CLIENT_ID/g" lists-ui/config/.env.$ENVIRONMENT
       - cat lists-ui/config/.env.$ENVIRONMENT
