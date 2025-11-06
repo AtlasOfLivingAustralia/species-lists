@@ -217,7 +217,11 @@ public class SearchHelperService {
                     .map(list -> FieldValue.of(list.getId())).toList();
 
             // Enforce ElasticSearch limit of 10,000 documents
-            if ((page - 1) * pageSize + pageSize > 10000) {
+            if ((page - 1) * pageSize + pageSize > 10000 && pageSize > 0) {
+                // throw new IllegalArgumentException("Page size exceeds ElasticSearch limit of 10,000 documents.");
+                // Reverted to returning empty list to avoid breaking existing clients (biocache-service, etc)
+                return new ArrayList<>();
+            } else if ((page - 1) * pageSize + pageSize > 10000) {
                 throw new IllegalArgumentException("Page size exceeds ElasticSearch limit of 10,000 documents.");
             }
             

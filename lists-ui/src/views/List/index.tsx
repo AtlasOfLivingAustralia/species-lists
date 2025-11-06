@@ -438,7 +438,18 @@ export function List() {
   }
 
   if (error) {
-    return <Message title={intl.formatMessage({ id: 'list.error.title', defaultMessage: 'An error occurred' })}  subtitle={getErrorMessage(error)} />;
+    return (
+      <>
+        <Container fluid className={classes.speciesHeader}>
+          <Grid>
+            <Grid.Col span={12}>
+              <Breadcrumbs listTitle={pageTitle ?? 'Error'} />
+            </Grid.Col>
+          </Grid>
+        </Container>
+        <Message title={intl.formatMessage({ id: 'list.error.title', defaultMessage: 'An error occurred' })}  subtitle={getErrorMessage(error)} />
+      </>
+    );
   }
 
   const hasError = Boolean(error);
