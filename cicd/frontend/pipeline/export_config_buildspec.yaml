@@ -30,6 +30,7 @@ env:
     - VITE_AUTH_AUTHORITY
     - VITE_AUTH_END_SESSION_URI
     - VITE_AUTH_REDIRECT_URI
+    - PROD_VITE_AUTH_CLIENT_ID
 
 phases:
   install:
