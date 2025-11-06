@@ -342,7 +342,12 @@ public class SearchHelperService {
             query.addCriteria(Criteria.where("isSDS").is(speciesListQuery.getIsSDS()));
         }
         if (speciesListQuery.getDataResourceUid() != null) {
-            query.addCriteria(Criteria.where("dataResourceUid").is(speciesListQuery.getDataResourceUid()));
+            if (speciesListQuery.getDataResourceUid().contains(",")) {
+                List<String> dataResourceUids = Arrays.asList(speciesListQuery.getDataResourceUid().split(","));
+                query.addCriteria(Criteria.where("dataResourceUid").in(dataResourceUids));
+            } else {
+                query.addCriteria(Criteria.where("dataResourceUid").is(speciesListQuery.getDataResourceUid()));
+            }
         }
         
         // Add paging
