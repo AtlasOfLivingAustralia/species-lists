@@ -313,7 +313,8 @@ Resources:
                         { "name":"VITE_AUTH_AUTHORITY", "value":"${OidcDiscoveryUrl}" },
                         { "name":"VITE_AUTH_CLIENT_ID", "value":"${OidcClientId}" },
                         { "name":"VITE_AUTH_END_SESSION_URI", "value":"#{ExportConfigNS.VITE_AUTH_END_SESSION_URI}"},
-                        { "name":"VITE_AUTH_REDIRECT_URI", "value":"#{ExportConfigNS.VITE_AUTH_REDIRECT_URI}"}
+                        { "name":"VITE_AUTH_REDIRECT_URI", "value":"#{ExportConfigNS.VITE_AUTH_REDIRECT_URI}"},
+                        { "name":"PROD_VITE_AUTH_CLIENT_ID", "value":"#{ExportConfigNS.PROD_VITE_AUTH_CLIENT_ID}" }
                       ]
                     - OidcClientId:
                         Fn::ImportValue:

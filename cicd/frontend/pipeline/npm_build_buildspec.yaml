@@ -13,6 +13,10 @@ phases:
     commands:
       - cp lists-ui/vite.properties lists-ui/.env
       - echo injecting app client config
+      - |
+        if [[ "$ENVIRONMENT" == "production" || "$ENVIRONMENT" == "staging" ]]; then
+          VITE_AUTH_CLIENT_ID=$PROD_VITE_AUTH_CLIENT_ID
+        fi
       - sed -i "s/VITE_AUTH_CLIENT_ID=.*$/VITE_AUTH_CLIENT_ID=$VITE_AUTH_CLIENT_ID/g" lists-ui/config/.env.$ENVIRONMENT
       - cat lists-ui/config/.env.$ENVIRONMENT
       - cd lists-ui
