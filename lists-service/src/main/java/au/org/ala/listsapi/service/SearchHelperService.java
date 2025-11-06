@@ -335,6 +335,15 @@ public class SearchHelperService {
         if (speciesListQuery.getIsInvasive() != null) {
             query.addCriteria(Criteria.where("isInvasive").is(speciesListQuery.getIsInvasive()));
         }
+        if (speciesListQuery.getIsBIE() != null) {
+            query.addCriteria(Criteria.where("isBIE").is(speciesListQuery.getIsBIE()));
+        }
+        if (speciesListQuery.getIsSDS() != null) {
+            query.addCriteria(Criteria.where("isSDS").is(speciesListQuery.getIsSDS()));
+        }
+        if (speciesListQuery.getDataResourceUid() != null) {
+            query.addCriteria(Criteria.where("dataResourceUid").is(speciesListQuery.getDataResourceUid()));
+        }
         
         // Add paging
         query.with(pageable);
