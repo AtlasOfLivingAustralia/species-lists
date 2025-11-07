@@ -242,7 +242,7 @@ public class LegacyController {
             @Schema(allowableValues = {"asc", "desc"})
             @RequestParam(name = "order", defaultValue = "asc") String order,
             @RequestParam(name = "max", defaultValue = "25", required = false) @Max(10000) int max,
-            @RequestParam(name = "offset", defaultValue = "0", required = false) @Max(9990) int offset,
+            @RequestParam(name = "offset", defaultValue = "0", required = false) @Max(10000) int offset,
             @AuthenticationPrincipal Principal principal) {
         try {
             Integer page = offset / max; // zero indexed, as required by Pageable
