@@ -158,7 +158,8 @@ public class LegacyController {
             "listName", "title",
             "ownerFullName", "ownerName",
             "guid", "classification.taxonConceptID",
-            "region", "hasRegion"
+            "region", "hasRegion",
+            "rawScientificName", "suppliedName"
         );
 
         return sortFieldMapping.getOrDefault(sort, sort); // Default to the provided field if no mapping exists
@@ -236,7 +237,7 @@ public class LegacyController {
             @Parameter(description = "Query string (q)")
             @Nullable @RequestParam(name = "q") String query,
             @Parameter(description = "Sort field")
-            @Schema(allowableValues = {"speciesListName", "speciesListID", "listType", "dateCreated", "lastUpdated", "owner", "scientificName", "guid"})
+            @Schema(allowableValues = {"speciesListName", "speciesListID", "listType", "dateCreated", "lastUpdated", "owner", "scientificName","rawScientificName", "guid"})
             @RequestParam(name = "sort", defaultValue = "speciesListID", required = false) String sort,
             @Parameter(description = "Sort direction")
             @Schema(allowableValues = {"asc", "desc"})
