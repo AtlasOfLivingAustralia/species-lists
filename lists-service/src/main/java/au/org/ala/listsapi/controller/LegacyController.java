@@ -67,7 +67,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Max;
 
 /**
- * Controller for legacy API endpoints (/v1/**), that are deprecated.
+ * Controller for legacy API endpoints (/v1/**), that are deprecated but still supported for backwards compatibility.
+ * @author dos009@csiro.au
  */
 @CrossOrigin(origins = "*", maxAge = 3600)
 @Validated
@@ -213,6 +214,92 @@ public class LegacyController {
         legacyFormat.setMax(results.getPageable().getPageSize());
         legacyFormat.setLists(legacyService.convertListToVersion1(results.getContent()));
         return legacyFormat;
+    }
+
+    @SecurityRequirement(name = "JWT")
+    @Operation(tags = "REST v1", summary = "Search for species list items", deprecated = true)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Species lists items found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = List.class))),
+            @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            // @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+    })
+    @GetMapping("/v1/speciesListItems")
+    public ResponseEntity<Object> speciesListItemsSearch(
+            @Nullable @RequestParam(name = "isAuthoritative") String isAuthoritative,
+            @Nullable @RequestParam(name = "isThreatened") String isThreatened,
+            @Nullable @RequestParam(name = "isInvasive") String isInvasive,
+            @Nullable @RequestParam(name = "isSDS") String isSDS,
+            @Nullable @RequestParam(name = "isBIE") String isBIE,
+            @Nullable @RequestParam(name = "druid") String druid,
+            @Parameter(description = "Query string (q)")
+            @Nullable @RequestParam(name = "q") String query,
+            @Parameter(description = "Sort field")
+            @Schema(allowableValues = {"count", "listName", "listType", "dateCreated", "lastUpdated", "ownerFullName", "region", "category", "authority", "guid"})
+            @RequestParam(name = "sort", defaultValue = "listName", required = false) String sort,
+            @Parameter(description = "Sort direction")
+            @Schema(allowableValues = {"asc", "desc"})
+            @RequestParam(name = "order", defaultValue = "asc") String order,
+            @RequestParam(name = "max", defaultValue = "25", required = false) @Max(10000) int max,
+            @RequestParam(name = "offset", defaultValue = "0", required = false) @Max(9990) int offset,
+            @AuthenticationPrincipal Principal principal) {
+        try {
+            Integer page = offset / max; // zero indexed, as required by Pageable
+            Pageable paging = PageRequest.of(page, max);
+            RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
+            fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, isSDS, isBIE, druid, speciesListQuery);
+            
+            if (StringUtils.isNotBlank(sort)) {
+                paging = PageRequest.of(page, max,
+                        "asc".equalsIgnoreCase(order)
+                                ? org.springframework.data.domain.Sort.by(fixSortField(sort)).ascending()
+                                : org.springframework.data.domain.Sort.by(fixSortField(sort)).descending());
+            }
+
+            SpeciesList convertedSpeciesListQuery = speciesListQuery.convertTo();
+            AlaUserProfile profile = authUtils.getUserProfile(principal);
+            String userId = profile != null ? profile.getUserId() : null;
+            Boolean isAdmin = authUtils.hasAdminRole(profile);
+            query = StringUtils.isNotBlank(query) ? URLDecoder.decode(query, StandardCharsets.UTF_8) : null; // regex for all if blank
+            
+            // First, get the matching species lists
+            Page<SpeciesList> speciesLists = searchHelperService.searchDocuments(convertedSpeciesListQuery, userId, isAdmin, query ? query : ".*", paging);
+            
+            if (speciesLists.isEmpty()) {
+                return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+            }
+            
+            // Extract the list IDs (data resource UIDs)
+            String speciesListIDs = speciesLists.getContent().stream()
+                    .map(list -> list.getDataResourceUid() != null ? list.getDataResourceUid() : list.getId())
+                    .collect(java.util.stream.Collectors.joining(","));
+            
+            // Map sort field for items - use guid if sorting by guid, otherwise use speciesListID
+            String itemSort = "guid".equals(sort) ? "guid" : "speciesListID";
+            
+            // Fetch all items from the matching lists
+            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(
+                    speciesListIDs, 
+                    query != null ? query : null,  // no additional search query on items
+                    null,  // no field filtering
+                    page + 1,  // searchHelperService uses 1-based pagination
+                    max, 
+                    itemSort,  // use item-appropriate sort field
+                    order, 
+                    principal);
+            
+            if (speciesListItems.isEmpty()) {
+                return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+            }
+            
+            // Convert to legacy format
+            List<SpeciesListItemVersion1> legacySpeciesListItems = legacyService.convertListItemToVersion1(speciesListItems);
+            
+            return new ResponseEntity<>(legacySpeciesListItems, HttpStatus.OK);
+        } catch (Exception e) {
+            logger.error("Error occurred for /v1/speciesListItems: {}", e.getMessage(), e);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @SecurityRequirement(name = "JWT")
