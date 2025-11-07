@@ -156,7 +156,9 @@ public class LegacyController {
         Map<String, String> sortFieldMapping = Map.of(
             "count", "rowCount",
             "listName", "title",
-            "ownerFullName", "ownerName"
+            "ownerFullName", "ownerName",
+            "guid", "taxonID",
+            "region", "hasRegion"
         );
 
         return sortFieldMapping.getOrDefault(sort, sort); // Default to the provided field if no mapping exists
@@ -235,8 +237,8 @@ public class LegacyController {
             @Parameter(description = "Query string (q)")
             @Nullable @RequestParam(name = "q") String query,
             @Parameter(description = "Sort field")
-            @Schema(allowableValues = {"count", "listName", "listType", "dateCreated", "lastUpdated", "ownerFullName", "region", "category", "authority", "guid"})
-            @RequestParam(name = "sort", defaultValue = "listName", required = false) String sort,
+            @Schema(allowableValues = {"count", "speciesListName", "speciesListID", "listType", "dateCreated", "lastUpdated", "owner", "region", "category", "authority", "guid"})
+            @RequestParam(name = "sort", defaultValue = "speciesListID", required = false) String sort,
             @Parameter(description = "Sort direction")
             @Schema(allowableValues = {"asc", "desc"})
             @RequestParam(name = "order", defaultValue = "asc") String order,
@@ -245,25 +247,18 @@ public class LegacyController {
             @AuthenticationPrincipal Principal principal) {
         try {
             Integer page = offset / max; // zero indexed, as required by Pageable
-            Pageable paging = PageRequest.of(page, max);
+            Pageable paging = PageRequest.of(0, 10000); // we want all matching lists, paging will be applied to items later
             RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
             fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, isSDS, isBIE, druid, speciesListQuery);
-            
-            if (StringUtils.isNotBlank(sort)) {
-                paging = PageRequest.of(page, max,
-                        "asc".equalsIgnoreCase(order)
-                                ? org.springframework.data.domain.Sort.by(fixSortField(sort)).ascending()
-                                : org.springframework.data.domain.Sort.by(fixSortField(sort)).descending());
-            }
 
             SpeciesList convertedSpeciesListQuery = speciesListQuery.convertTo();
             AlaUserProfile profile = authUtils.getUserProfile(principal);
             String userId = profile != null ? profile.getUserId() : null;
             Boolean isAdmin = authUtils.hasAdminRole(profile);
-            query = StringUtils.isNotBlank(query) ? URLDecoder.decode(query, StandardCharsets.UTF_8) : null; // regex for all if blank
+            query = StringUtils.isNotBlank(query) ? URLDecoder.decode(query, StandardCharsets.UTF_8) : ""; // regex for all if blank
             
             // First, get the matching species lists
-            Page<SpeciesList> speciesLists = searchHelperService.searchDocuments(convertedSpeciesListQuery, userId, isAdmin, query ? query : ".*", paging);
+            Page<SpeciesList> speciesLists = searchHelperService.searchDocuments(convertedSpeciesListQuery, userId, isAdmin, query, paging);
             
             if (speciesLists.isEmpty()) {
                 return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
@@ -274,8 +269,8 @@ public class LegacyController {
                     .map(list -> list.getDataResourceUid() != null ? list.getDataResourceUid() : list.getId())
                     .collect(java.util.stream.Collectors.joining(","));
             
-            // Map sort field for items - use guid if sorting by guid, otherwise use speciesListID
-            String itemSort = "guid".equals(sort) ? "guid" : "speciesListID";
+            // Map sort field for items (fix for lergacy sort fields)
+            String itemSort = sort != null ? fixSortField(sort) : "speciesListID";
             
             // Fetch all items from the matching lists
             List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(

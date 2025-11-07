@@ -169,6 +169,10 @@ public class SpeciesListTransformer {
                 return "vernacular name";
             case "group":
                 return "Group";
+            case "rawkingdom":
+                return "kingdom";
+            case "rawfamily":
+                return "family";
             default:
                 return key;
         }
