@@ -30,6 +30,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -233,11 +234,11 @@ public class SearchHelperService {
             String sortDir = (dir != null && !dir.isBlank()) ? dir : "asc";
             
             // Create Spring Data Sort
-            org.springframework.data.domain.Sort springSort = 
-                org.springframework.data.domain.Sort.by(
+            Sort springSort = 
+                Sort.by(
                     "asc".equalsIgnoreCase(sortDir) 
-                        ? org.springframework.data.domain.Sort.Direction.ASC 
-                        : org.springframework.data.domain.Sort.Direction.DESC,
+                        ? Sort.Direction.ASC 
+                        : Sort.Direction.DESC,
                     sortField
                 );
 
