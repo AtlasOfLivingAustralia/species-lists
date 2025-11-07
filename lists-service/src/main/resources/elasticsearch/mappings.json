@@ -5,6 +5,38 @@
       "type": "text",
       "analyzer": "partial_binomial_analyzer"
     },
+    "suppliedName": {
+      "type": "keyword",
+      "copy_to": [
+        "all"
+      ],
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        },
+        "search": {
+          "type": "text",
+          "analyzer": "partial_binomial_analyzer"
+        }
+      }
+    },
+    "vernacularName": {
+      "type": "keyword",
+      "copy_to": [
+        "all"
+      ],
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        },
+        "search": {
+          "type": "text",
+          "analyzer": "partial_binomial_analyzer"
+        }
+      }
+    },
     "classification": {
       "properties": {
         "classID": {

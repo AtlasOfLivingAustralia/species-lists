@@ -13,101 +13,100 @@ import lombok.extern.jackson.Jacksonized;
 @Jacksonized
 public class RESTSpeciesListQuery {
 
-  private String id;
-  private String dataResourceUid;
-  private String title;
-  private String description;
-  private String listType;
-  private String licence;
-  private String doi;
-  private String category;
-  private String region;
-  private String owner;
-  String isVersioned;
-  String isAuthoritative;
-  String isPrivate;
-  String isInvasive;
-  String isThreatened;
-  String isBIE;
-  String isSDS;
+    private String id;
+    private String dataResourceUid;
+    private String title;
+    private String description;
+    private String listType;
+    private String licence;
+    private String doi;
+    private String category;
+    private String region;
+    private String owner;
+    String isVersioned;
+    String isAuthoritative;
+    String isPrivate;
+    String isInvasive;
+    String isThreatened;
+    String isBIE;
+    String isSDS;
 
-  public boolean isEmpty() {
-    if ((id != null && !id.isEmpty())
-        || (dataResourceUid != null && !dataResourceUid.isEmpty())
-        || (title != null && !title.isEmpty())
-        || (description != null && !description.isEmpty())
-        || (listType != null && !listType.isEmpty())
-        || (licence != null && !licence.isEmpty())
-        || (doi != null && !doi.isEmpty())
-        || (category != null && !category.isEmpty())
-        || (region != null && !region.isEmpty())
-        || (owner != null && !owner.isEmpty())
-        || (isVersioned != null && !isVersioned.isEmpty())
-        || (isAuthoritative != null && !isAuthoritative.isEmpty())
-        || (isPrivate != null && !isPrivate.isEmpty())
-        || (isInvasive != null && !isInvasive.isEmpty())
-        || (isThreatened != null && !isThreatened.isEmpty())
-        || (isBIE != null && !isBIE.isEmpty())
-        || (isSDS != null && !isSDS.isEmpty())) {
-      return false;
+    public boolean isEmpty() {
+        if ((id != null && !id.isEmpty())
+                || (dataResourceUid != null && !dataResourceUid.isEmpty())
+                || (title != null && !title.isEmpty())
+                || (description != null && !description.isEmpty())
+                || (listType != null && !listType.isEmpty())
+                || (licence != null && !licence.isEmpty())
+                || (doi != null && !doi.isEmpty())
+                || (category != null && !category.isEmpty())
+                || (region != null && !region.isEmpty())
+                || (owner != null && !owner.isEmpty())
+                || (isVersioned != null && !isVersioned.isEmpty())
+                || (isAuthoritative != null && !isAuthoritative.isEmpty())
+                || (isPrivate != null && !isPrivate.isEmpty())
+                || (isInvasive != null && !isInvasive.isEmpty())
+                || (isThreatened != null && !isThreatened.isEmpty())
+                || (isBIE != null && !isBIE.isEmpty())
+                || (isSDS != null && !isSDS.isEmpty())) {
+            return false;
+        }
+        return true;
     }
-    return true;
-  }
 
-  public SpeciesList convertTo() {
-    SpeciesList s = new SpeciesList();
-    s.setIsPrivate(parseBoolean(removeQueryExpr(this.isPrivate)));
-    s.setIsAuthoritative(parseBoolean(removeQueryExpr(this.isAuthoritative)));
-    s.setIsInvasive(parseBoolean(removeQueryExpr(this.isInvasive)));
-    s.setIsThreatened(parseBoolean(removeQueryExpr(this.isThreatened)));
-    s.setIsBIE(parseBoolean(removeQueryExpr(this.isBIE)));
-    s.setIsSDS(parseBoolean(removeQueryExpr(this.isSDS)));
-    s.setOwner(this.owner);
-    s.setCategory(this.category);
-    s.setRegion(this.region);
-    s.setLicence(this.licence);
-    s.setDoi(this.doi);
-    s.setDescription(this.description);
-    s.setTitle(this.title);
-    s.setDataResourceUid(this.dataResourceUid);
-    s.setListType(this.listType);
-    s.setId(this.id);
-    return s;
-  }
-
-  public static Boolean parseBoolean(String s) {
-    if (s == null) {
-      return null;
+    public SpeciesList convertTo() {
+        SpeciesList s = new SpeciesList();
+        s.setIsPrivate(parseBoolean(removeQueryExpr(this.isPrivate)));
+        s.setIsAuthoritative(parseBoolean(removeQueryExpr(this.isAuthoritative)));
+        s.setIsInvasive(parseBoolean(removeQueryExpr(this.isInvasive)));
+        s.setIsThreatened(parseBoolean(removeQueryExpr(this.isThreatened)));
+        s.setIsBIE(parseBoolean(removeQueryExpr(this.isBIE)));
+        s.setIsSDS(parseBoolean(removeQueryExpr(this.isSDS)));
+        s.setOwner(this.owner);
+        s.setCategory(this.category);
+        s.setRegion(this.region);
+        s.setLicence(this.licence);
+        s.setDoi(this.doi);
+        s.setDescription(this.description);
+        s.setTitle(this.title);
+        s.setDataResourceUid(this.dataResourceUid);
+        s.setListType(this.listType);
+        s.setId(this.id);
+        return s;
     }
-    return Boolean.parseBoolean(s);
-  }
 
-  public static String removeQueryExpr(String s) {
-    if (s != null && s.startsWith("eq:")) {
-      return s.substring(3);
+    public static Boolean parseBoolean(String s) {
+        if (s == null) {
+            return null;
+        }
+        return Boolean.parseBoolean(s);
     }
-    return s;
-  }
 
-  public RESTSpeciesListQuery copy() {
-    return new RESTSpeciesListQuery(
-            this.id,
-            this.dataResourceUid,
-            this.title,
-            this.description,
-            this.listType,
-            this.licence,
-            this.doi,
-            this.category,
-            this.region,
-            this.owner,
-            this.isVersioned,
-            this.isAuthoritative,
-            this.isPrivate,
-            this.isInvasive,
-            this.isThreatened,
-            this.isBIE,
-            this.isSDS
-    );
-  }
+    public static String removeQueryExpr(String s) {
+        if (s != null && s.startsWith("eq:")) {
+            return s.substring(3);
+        }
+        return s;
+    }
+
+    public RESTSpeciesListQuery copy() {
+        return new RESTSpeciesListQuery(
+                this.id,
+                this.dataResourceUid,
+                this.title,
+                this.description,
+                this.listType,
+                this.licence,
+                this.doi,
+                this.category,
+                this.region,
+                this.owner,
+                this.isVersioned,
+                this.isAuthoritative,
+                this.isPrivate,
+                this.isInvasive,
+                this.isThreatened,
+                this.isBIE,
+                this.isSDS);
+    }
 }

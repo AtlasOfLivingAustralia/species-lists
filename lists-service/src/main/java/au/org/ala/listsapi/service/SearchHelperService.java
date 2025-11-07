@@ -25,12 +25,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -55,9 +55,7 @@ import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.util.ElasticUtils;
 import au.org.ala.ws.security.profile.AlaUserProfile;
-import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.FieldValue;
-import co.elastic.clients.elasticsearch._types.SortOrder;
 
 /**
  * A helper service for performing search-related operations on species lists.
@@ -231,7 +229,21 @@ public class SearchHelperService {
 
             Boolean isAdmin = principal != null ? (authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal))) : false;
             ArrayList<Filter> tempFilters = new ArrayList<>();
-            Pageable pageableRequest = PageRequest.of(page - 1, pageSize);
+
+            String sortField = (sort != null && !sort.isBlank()) ? sort : "scientificName";
+            String sortDir = (dir != null && !dir.isBlank()) ? dir : "asc";
+            
+            // Create Spring Data Sort
+            Sort springSort = 
+                Sort.by(
+                    "asc".equalsIgnoreCase(sortDir) 
+                        ? Sort.Direction.ASC 
+                        : Sort.Direction.DESC,
+                    sortField
+                );
+
+            // Create Pageable with Sort
+            Pageable pageableRequest = PageRequest.of(page - 1, pageSize, springSort);
             NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
             builder.withQuery(
                     q -> q.bool(
@@ -241,18 +253,15 @@ public class SearchHelperService {
                                 return bq;
                             }));
 
-            builder.withSort(
-                    s -> s.field(
-                            new FieldSort.Builder()
-                                    .field(emptyDefault(sort, "scientificName"))
-                                    .order(emptyDefault(dir, "asc").equals("asc") ? SortOrder.Asc : SortOrder.Desc)
-                                    .build()));
-
             NativeQuery query = builder.build();
-            query.setPageable(pageableRequest);
             SearchHits<SpeciesListIndex> results =
                     elasticsearchOperations.search(
                             query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
+                    
+            if (!results.isEmpty()) {
+                SpeciesListIndex firstItem = results.getSearchHit(0).getContent();
+                logger.debug("First item: " + firstItem);
+            }
 
             List<SpeciesListItem> speciesListItems =
                     ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
@@ -261,10 +270,6 @@ public class SearchHelperService {
         }
 
         return new ArrayList<>();
-    }
-
-    private String emptyDefault(String value, String defaultValue) {
-        return StringUtils.isNotEmpty(value) ? value : defaultValue;
     }
 
     /**
@@ -334,6 +339,20 @@ public class SearchHelperService {
         }
         if (speciesListQuery.getIsInvasive() != null) {
             query.addCriteria(Criteria.where("isInvasive").is(speciesListQuery.getIsInvasive()));
+        }
+        if (speciesListQuery.getIsBIE() != null) {
+            query.addCriteria(Criteria.where("isBIE").is(speciesListQuery.getIsBIE()));
+        }
+        if (speciesListQuery.getIsSDS() != null) {
+            query.addCriteria(Criteria.where("isSDS").is(speciesListQuery.getIsSDS()));
+        }
+        if (speciesListQuery.getDataResourceUid() != null) {
+            if (speciesListQuery.getDataResourceUid().contains(",")) {
+                List<String> dataResourceUids = Arrays.asList(speciesListQuery.getDataResourceUid().split(","));
+                query.addCriteria(Criteria.where("dataResourceUid").in(dataResourceUids));
+            } else {
+                query.addCriteria(Criteria.where("dataResourceUid").is(speciesListQuery.getDataResourceUid()));
+            }
         }
         
         // Add paging
