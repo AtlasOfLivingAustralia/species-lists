@@ -224,7 +224,6 @@ public class LegacyController {
             @ApiResponse(responseCode = "200", description = "Species lists items found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = List.class))),
             @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
-            // @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
     })
     @GetMapping("/v1/speciesListItems")
     public ResponseEntity<Object> speciesListItemsSearch(
@@ -237,7 +236,7 @@ public class LegacyController {
             @Parameter(description = "Query string (q)")
             @Nullable @RequestParam(name = "q") String query,
             @Parameter(description = "Sort field")
-            @Schema(allowableValues = {"count", "speciesListName", "speciesListID", "listType", "dateCreated", "lastUpdated", "owner", "scientificName", "guid"})
+            @Schema(allowableValues = {"speciesListName", "speciesListID", "listType", "dateCreated", "lastUpdated", "owner", "scientificName", "guid"})
             @RequestParam(name = "sort", defaultValue = "speciesListID", required = false) String sort,
             @Parameter(description = "Sort direction")
             @Schema(allowableValues = {"asc", "desc"})
