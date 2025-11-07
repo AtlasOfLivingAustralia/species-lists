@@ -157,7 +157,7 @@ public class LegacyController {
             "count", "rowCount",
             "listName", "title",
             "ownerFullName", "ownerName",
-            "guid", "taxonID",
+            "guid", "classification.taxonConceptID",
             "region", "hasRegion"
         );
 
@@ -237,7 +237,7 @@ public class LegacyController {
             @Parameter(description = "Query string (q)")
             @Nullable @RequestParam(name = "q") String query,
             @Parameter(description = "Sort field")
-            @Schema(allowableValues = {"count", "speciesListName", "speciesListID", "listType", "dateCreated", "lastUpdated", "owner", "region", "category", "authority", "guid"})
+            @Schema(allowableValues = {"count", "speciesListName", "speciesListID", "listType", "dateCreated", "lastUpdated", "owner", "scientificName", "guid"})
             @RequestParam(name = "sort", defaultValue = "speciesListID", required = false) String sort,
             @Parameter(description = "Sort direction")
             @Schema(allowableValues = {"asc", "desc"})
