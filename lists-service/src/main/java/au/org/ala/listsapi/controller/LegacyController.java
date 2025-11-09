@@ -742,7 +742,7 @@ public class LegacyController {
     private static int[] calculatePageAndSize(@Nullable Integer offset, @Nullable Integer max) {
         int page = ((offset != null ? offset : 0) / (max != null ? max : 10)) + 1;
         int pageSize = (max != null ? max : 10);
-        logger.info("Calculated page and pageSize: page: {}, pageSize: {}", page, pageSize);
+        logger.debug("Calculated page and pageSize: page: {}, pageSize: {}", page, pageSize);
         return new int[]{page, pageSize};
     }
 }
