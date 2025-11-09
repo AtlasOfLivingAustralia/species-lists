@@ -106,7 +106,7 @@ public class GraphQLController {
     private static final Logger logger = LoggerFactory.getLogger(GraphQLController.class);
 
     @Value("${elastic.maximumDocuments}")
-    public static final int MAX_LIST_ENTRIES = 10000;
+    public final int MAX_LIST_ENTRIES = 10000;
 
     private static final boolean ES_DEBUG = false;
 
