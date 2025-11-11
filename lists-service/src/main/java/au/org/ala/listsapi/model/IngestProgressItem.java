@@ -1,15 +1,15 @@
 package au.org.ala.listsapi.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
-import lombok.extern.jackson.Jacksonized;
+import java.util.Date;
+
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 
-import java.util.Date;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
+import lombok.extern.jackson.Jacksonized;
 
 @NoArgsConstructor
 @Data
@@ -19,6 +19,7 @@ import java.util.Date;
 @org.springframework.data.mongodb.core.mapping.Document(collection = "ingestionProgress")
 public class IngestProgressItem {
     @Id private String id;
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true)
     private String speciesListID;
     private long rowCount;
     private long mongoTotal = 0;

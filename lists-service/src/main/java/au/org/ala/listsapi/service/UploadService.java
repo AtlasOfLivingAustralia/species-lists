@@ -568,7 +568,7 @@ public class UploadService {
             String scientificName = values.remove(DwcTerm.scientificName.simpleName());
             String taxonID = values.remove(DwcTerm.taxonID.simpleName());
             String taxonConceptID = values.remove(DwcTerm.taxonConceptID.simpleName());
-            String vernacularName = values.remove(DwcTerm.vernacularName.simpleName());
+            String vernacularName = values.get(DwcTerm.vernacularName.simpleName()); // vernacularName added to KVP, as per legacy behaviour
 
             String suppliedName = values.remove("Supplied Name");
 
@@ -589,7 +589,7 @@ public class UploadService {
             String phylum = values.remove(DwcTerm.phylum.simpleName());
             String classs = values.remove(DwcTerm.class_.simpleName());
             String order = values.remove(DwcTerm.order.simpleName());
-            String family = values.remove(DwcTerm.family.simpleName());
+            String family = values.get(DwcTerm.family.simpleName()); // family added to KVP, as per legacy behaviour
             String genus = values.remove(DwcTerm.genus.simpleName());
 
             // process remaining fields (user supplied KVP data)
