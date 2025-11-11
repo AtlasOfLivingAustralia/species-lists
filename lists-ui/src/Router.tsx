@@ -45,6 +45,31 @@ const notFoundLoader = () => {
   throw new Response('Not Found', { status: 404 });
 };
 const router = createBrowserRouter([
+  // Redirect legacy SDS URL to new filter format
+  {
+    path: 'public/speciesLists',
+    loader: ({ request }) => {
+      const url = new URL(request.url);
+      const filters: string[] = [];
+      
+      // Handle all filter params: isSDS, isBIE, isAuthoritative, isThreatened, isInvasive
+      const filterParams = ['isSDS', 'isBIE', 'isAuthoritative', 'isThreatened', 'isInvasive'];
+      
+      filterParams.forEach((param) => {
+        const value = url.searchParams.get(param);
+        if (value === 'eq:true') {
+          filters.push(`${param}:true`);
+        }
+      });
+      
+      if (filters.length > 0) {
+        return redirect(`/?filters=${filters.join(',')}`);
+      }
+      
+      // Redirect to home if no matching filters
+      return redirect('/');
+    },
+  },
   {
     path: '',
     element: <Dashboard />,
