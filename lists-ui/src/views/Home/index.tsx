@@ -105,7 +105,7 @@ function Home() {
   );
   const [sort, setSort] = useQueryState<string>(
     'sort',
-    parseAsString.withDefault('lastUpdated_desc') // Default to newest
+    parseAsString.withDefault('lastUpdated') // Default to newest
   );
   const [dir, setDir] = useQueryState<string>(
     'dir',
@@ -183,7 +183,7 @@ function Home() {
   const handleRetry = useCallback(() => {
     setPage(0);
     setSize(10);
-    setSort('relevance_desc');
+    setSort('relevance');
     setDir('desc');
     setSearch('');
     setView('public');
@@ -334,13 +334,13 @@ function Home() {
                   const newValue = event.currentTarget.value;
                   setSearch(newValue);
                   // If user types in search, set sort to relevance unless already set
-                  if (newValue && sort !== 'relevance_desc') {
-                    setSort('relevance_desc');
+                  if (newValue && `${sort}_${dir}` !== 'relevance_desc') {
+                    setSort('relevance');
                     setDir('desc');
                   }
                   // If search is cleared, reset to newest
-                  if (!newValue && sort === 'relevance_desc') {
-                    setSort('lastUpdated_desc');
+                  if (!newValue && `${sort}_${dir}` === 'relevance_desc') {
+                    setSort('lastUpdated');
                     setDir('desc');
                   }
                 }}
