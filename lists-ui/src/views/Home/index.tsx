@@ -105,7 +105,7 @@ function Home() {
   );
   const [sort, setSort] = useQueryState<string>(
     'sort',
-    parseAsString.withDefault('relevance')
+    parseAsString.withDefault('lastUpdated_desc') // Default to newest
   );
   const [dir, setDir] = useQueryState<string>(
     'dir',
@@ -331,7 +331,18 @@ function Home() {
                 value={search}
                 onChange={(event) => {
                   setPage(0); // Reset 'page' when search is changed
-                  setSearch(event.currentTarget.value);
+                  const newValue = event.currentTarget.value;
+                  setSearch(newValue);
+                  // If user types in search, set sort to relevance unless already set
+                  if (newValue && sort !== 'relevance_desc') {
+                    setSort('relevance_desc');
+                    setDir('desc');
+                  }
+                  // If search is cleared, reset to newest
+                  if (!newValue && sort === 'relevance_desc') {
+                    setSort('lastUpdated_desc');
+                    setDir('desc');
+                  }
                 }}
                 placeholder={intl.formatMessage({
                   id: 'search.input.placeholder',
