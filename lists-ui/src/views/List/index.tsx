@@ -612,7 +612,7 @@ export function List() {
                       <FormattedMessage id='results.showing' defaultMessage='Showing' /> {' '}
                         {startPage}-{endPage} of {' '}
                       <FormattedNumber value={totalEntries || 0} /> {' '}
-                      <FormattedMessage id='results.records' defaultMessage='records' /> {' '}
+                      <FormattedMessage id='results.records' defaultMessage='taxa' /> {' '}
                       { meta?.distinctMatchCount &&
                         <>
                           {'('}

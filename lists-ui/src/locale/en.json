@@ -126,8 +126,8 @@
   "openapi.button.title": "Open API documentation for Species Lists API REST services",
 
   "results.showing": "Showing",
-  "results.records": "records",
-  "results.noRecords": "No records found",
+  "results.records": "taxa",
+  "results.noRecords": "No taxa found",
   "results.for": "for",
 
   "reingest.error.list.notFount": "List not found",
