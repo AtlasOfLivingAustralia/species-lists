@@ -166,6 +166,7 @@ export function List() {
           {
             speciesListID: id,
             size,
+            filters,
           },
           token
         );
