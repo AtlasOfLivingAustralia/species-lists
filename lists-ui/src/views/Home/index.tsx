@@ -135,6 +135,22 @@ function Home() {
   );
   const toggleFilters = () => setHideFilters((o) => !o);
 
+  // Handle search value changes and sort logic
+  const handleSearchChange = useCallback((newValue: string) => {
+    setPage(0); // Reset 'page' when search is changed
+    setSearch(newValue);
+    // If user types in search, set sort to relevance unless already set
+    if (newValue && `${sort}_${dir}` !== 'relevance_desc') {
+      setSort('relevance');
+      setDir('desc');
+    }
+    // If search is cleared, reset to newest
+    if (!newValue && `${sort}_${dir}` === 'relevance_desc') {
+      setSort('lastUpdated');
+      setDir('desc');
+    }
+  }, [sort, dir, setPage, setSearch, setSort, setDir]);
+
   const ala = useALA();
   const { data, error, loading, update } = useGQLQuery<HomeQuery>(
     queries.QUERY_LISTS_SEARCH,
@@ -330,19 +346,8 @@ function Home() {
                 disabled={!data || hasError}
                 value={search}
                 onChange={(event) => {
-                  setPage(0); // Reset 'page' when search is changed
                   const newValue = event.currentTarget.value;
-                  setSearch(newValue);
-                  // If user types in search, set sort to relevance unless already set
-                  if (newValue && `${sort}_${dir}` !== 'relevance_desc') {
-                    setSort('relevance');
-                    setDir('desc');
-                  }
-                  // If search is cleared, reset to newest
-                  if (!newValue && `${sort}_${dir}` === 'relevance_desc') {
-                    setSort('lastUpdated');
-                    setDir('desc');
-                  }
+                  handleSearchChange(newValue);
                 }}
                 placeholder={intl.formatMessage({
                   id: 'search.input.placeholder',
@@ -370,7 +375,7 @@ function Home() {
                       defaultMessage: 'Clear search',
                     })}
                     disabled={search.length === 0}
-                    onClick={() => setSearch('')}
+                    onClick={() => handleSearchChange('')}
                     style={{ marginLeft: 5, marginRight: 10 }}
                   >
                     <FontAwesomeIcon icon={faXmark} fontSize={20} />
