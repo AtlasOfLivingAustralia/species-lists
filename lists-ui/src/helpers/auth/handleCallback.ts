@@ -1,19 +1,7 @@
-import { hasAuthParams } from 'react-oidc-context';
+import { AuthContextProps } from 'react-oidc-context';
 
-export default function handleCallback() {
-  const params = new URLSearchParams(window.location.search);
-
-  if (hasAuthParams(window.location)) {
-    params.delete('code');
-    params.delete('state');
-
-    // Remove the auth code & state variables from the history
-    window.history.replaceState(
-      null,
-      '',
-      window.location.origin + window.location.pathname + params.toString()
-    );
-  } else {
-    console.log('[Main] onSigninCallback', 'No auth params in location!');
-  }
+export default async function handleCallback(auth: AuthContextProps) {
+  await auth.signoutRedirect({  
+    post_logout_redirect_uri: import.meta.env.VITE_AUTH_REDIRECT_URI  
+  });  
 }
