@@ -514,7 +514,7 @@ function Home() {
                           )}{' '}
                           of <FormattedNumber value={totalElements || 0} />{' '}
                           <FormattedMessage
-                            id='results.records'
+                            id='home.results.records'
                             defaultMessage='records'
                           />
                           {filters && filters.length > 0 && (
