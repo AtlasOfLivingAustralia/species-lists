@@ -11,6 +11,7 @@ export const QUERY_LISTS_SEARCH = `query findList($searchQuery: String, $page: I
   ) {
     content {
       id
+      dataResourceUid
       title
       rowCount
       dateCreated

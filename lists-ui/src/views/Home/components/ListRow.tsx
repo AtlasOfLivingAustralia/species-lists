@@ -4,8 +4,9 @@ import { useALA } from '#/helpers/context/useALA';
 import { parseDate } from '#/helpers/utils/parseListDate';
 import { MapLayersIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { faCalendar, faEye, faEyeSlash } from '@fortawesome/free-regular-svg-icons';
+import { faHashtag } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Anchor, Badge, Group, Skeleton, Space, Stack, Table, Text } from '@mantine/core';
+import { Anchor, Badge, Box, Group, Skeleton, Space, Stack, Table, Text } from '@mantine/core';
 import { FormattedDate, FormattedMessage, FormattedNumber, IntlProvider } from 'react-intl';
 import { Link } from 'react-router';
 
@@ -81,6 +82,15 @@ export function ListRow({ list, isUser }: ListRowProps) {
                 // Not currently used as GraphQL is not reuturning this field
                 <><Space w={3} /><ListTypeBadge listTypeValue='hasRegion'/></>
               )}
+              { !list?.isPrivate && (
+                  <>
+                    <Space w={3} />
+                    <Box style={{ display: 'flex', alignItems: 'center', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+                      <FontAwesomeIcon icon={faHashtag} fontSize={15} color='grey'/>
+                      <Text size='sm' pl={3} fw='400'>{list?.dataResourceUid}</Text>
+                    </Box>
+                  </>
+                )}
             </Group>
           </Skeleton>
         </Stack>
