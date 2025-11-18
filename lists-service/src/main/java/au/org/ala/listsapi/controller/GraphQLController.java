@@ -887,7 +887,7 @@ public class GraphQLController {
         builder.withQuery(
                 q -> q.bool(
                         bq -> {
-                            ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), ID, null, isAdmin, null, filters, bq);
+                            ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), ID, userId, isAdmin, null, filters, bq);
                             return bq;
                         }));
 
@@ -958,6 +958,7 @@ public class GraphQLController {
         facetFields.add("tags");
         facetFields.add("isThreatened");
         facetFields.add("isInvasive");
+        facetFields.add("licence");
 
         // Define the name for the nested cardinality aggregation
         String distinctCountAggName = "distinct_species_list_count";
@@ -1346,10 +1347,7 @@ public class GraphQLController {
     }
 
     private static String getPropertiesFacetField(String filter) {
-        if (CORE_FIELDS.contains(filter)) {
-            return filter + ".keyword";
-        }
-        if (filter.startsWith("classification.")) {
+        if (CORE_FIELDS.contains(filter) || filter.startsWith("classification.") || filter.startsWith("licence")) {
             return filter + ".keyword";
         }
         return "properties." + filter + ".keyword";

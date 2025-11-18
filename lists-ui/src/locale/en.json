@@ -452,9 +452,11 @@
   "region.ZW": "Zimbabwe",
   "region.AX": "Åland",
 
-  "licence.CC0": "Creative Commons Zero",
+  "licence.CC0": "Creative Commons Zero (Public Domain)",
   "licence.CC-BY": "Creative Commons By Attribution",
   "licence.CC-BY-NC": "Creative Commons Attribution-Noncommercial",
-
+  "licence.CC-BY-NC-ND": "Creative Commons Attribution-Noncommercial-No Derivative Works",
+  "licence.CC-BY-NC-SA": "Creative Commons Attribution-Noncommercial-Share Alike",
+  "licence.CC-BY-SA": "Creative Commons Attribution-Share Alike",
   "summary.listtype.notFound": "Undefined list type"
 }

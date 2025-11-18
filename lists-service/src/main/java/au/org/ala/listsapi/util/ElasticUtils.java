@@ -53,6 +53,7 @@ public class ElasticUtils {
                     "id",
                     "scientificName",
                     "vernacularName",
+                    "licence",
                     "taxonID",
                     "kingdom",
                     "phylum",
@@ -297,10 +298,7 @@ public class ElasticUtils {
         if (CORE_BOOL_FIELDS.contains(filter)) {
             return filter;
         }
-        if (CORE_FIELDS.contains(filter)) {
-            return filter + ".keyword";
-        }
-        if (filter.startsWith("classification.")) {
+        if (CORE_FIELDS.contains(filter) || filter.startsWith("classification.")) {
             return filter + ".keyword";
         }
         return "properties." + filter + ".keyword";

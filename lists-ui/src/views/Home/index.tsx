@@ -463,6 +463,7 @@ function Home() {
                     setFilters([]);
                     setPage(0);
                   }}
+                  showExpand={false}
                 />
               </Collapse>
             </Grid.Col>
