@@ -637,6 +637,8 @@ public class GraphQLController {
                 speciesList.getTitle(),
                 speciesList.getListType(),
                 speciesListItem.getSpeciesListID(),
+                speciesList.getDescription(),
+                speciesList.getLicence(),
                 speciesListItem.getSuppliedName(),
                 speciesListItem.getScientificName(),
                 speciesListItem.getVernacularName(),
@@ -817,8 +819,12 @@ public class GraphQLController {
             toUpdate.setLastUpdatedBy(principal.getName());
             toUpdate.setTags(tags);
 
-            if (!toUpdate.getIsPrivate() || toUpdate.getIsAuthoritative()) {
-                metadataService.setMeta(toUpdate);
+            try {
+                if (!toUpdate.getIsPrivate() || toUpdate.getIsAuthoritative()) {
+                    metadataService.setMeta(toUpdate);
+                }
+            } catch (Exception e) {
+                logger.error("Error while setting metadata for species list: " + id, e);
             }
 
             // If the visibility has changed, update the visibility of the list items
@@ -881,7 +887,7 @@ public class GraphQLController {
         builder.withQuery(
                 q -> q.bool(
                         bq -> {
-                            ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), ID, null, isAdmin, null, filters, bq);
+                            ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), ID, userId, isAdmin, null, filters, bq);
                             return bq;
                         }));
 
@@ -952,6 +958,7 @@ public class GraphQLController {
         facetFields.add("tags");
         facetFields.add("isThreatened");
         facetFields.add("isInvasive");
+        facetFields.add("licence");
 
         // Define the name for the nested cardinality aggregation
         String distinctCountAggName = "distinct_species_list_count";
@@ -1340,10 +1347,7 @@ public class GraphQLController {
     }
 
     private static String getPropertiesFacetField(String filter) {
-        if (CORE_FIELDS.contains(filter)) {
-            return filter + ".keyword";
-        }
-        if (filter.startsWith("classification.")) {
+        if (CORE_FIELDS.contains(filter) || filter.startsWith("classification.") || filter.startsWith("licence")) {
             return filter + ".keyword";
         }
         return "properties." + filter + ".keyword";

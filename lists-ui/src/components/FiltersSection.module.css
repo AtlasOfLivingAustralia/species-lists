@@ -26,6 +26,7 @@
 
 .facetHeader {
   display: inline-block;
+  text-transform: capitalize;
   font-size: var(--mantine-font-size-sm);
   font-weight: bold;
   opacity: 0.8;
