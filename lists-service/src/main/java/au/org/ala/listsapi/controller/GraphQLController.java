@@ -637,6 +637,8 @@ public class GraphQLController {
                 speciesList.getTitle(),
                 speciesList.getListType(),
                 speciesListItem.getSpeciesListID(),
+                speciesList.getDescription(),
+                speciesList.getLicence(),
                 speciesListItem.getSuppliedName(),
                 speciesListItem.getScientificName(),
                 speciesListItem.getVernacularName(),
@@ -817,8 +819,12 @@ public class GraphQLController {
             toUpdate.setLastUpdatedBy(principal.getName());
             toUpdate.setTags(tags);
 
-            if (!toUpdate.getIsPrivate() || toUpdate.getIsAuthoritative()) {
-                metadataService.setMeta(toUpdate);
+            try {
+                if (!toUpdate.getIsPrivate() || toUpdate.getIsAuthoritative()) {
+                    metadataService.setMeta(toUpdate);
+                }
+            } catch (Exception e) {
+                logger.error("Error while setting metadata for species list: " + id, e);
             }
 
             // If the visibility has changed, update the visibility of the list items

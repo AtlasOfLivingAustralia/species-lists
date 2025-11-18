@@ -373,14 +373,16 @@
     },
     "dataResourceUid": {
       "type": "keyword",
+      "copy_to": [
+        "all"
+      ],
       "fields": {
         "keyword": {
           "type": "keyword",
           "ignore_above": 256
         },
         "search": {
-          "type": "text",
-          "analyzer": "partial_binomial_analyzer"
+          "type": "keyword"
         }
       }
     },
@@ -539,7 +541,7 @@
         }
       }
     },
-    "speciesListName": {
+    "description": {
       "type": "keyword",
       "copy_to": [
         "all"
@@ -550,8 +552,22 @@
           "ignore_above": 256
         },
         "search": {
-          "type": "text",
-          "analyzer": "partial_binomial_analyzer"
+          "type": "text"
+        }
+      }
+    },
+    "licence": {
+      "type": "keyword",
+      "copy_to": [
+        "all"
+      ],
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        },
+        "search": {
+          "type": "keyword"
         }
       }
     },
