@@ -882,12 +882,11 @@ public class GraphQLController {
         Pageable pageableRequest = PageRequest.of(page, size);
         NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
         AlaUserProfile profile = authUtils.getUserProfile(principal);
-        String userId = profile != null ? profile.getUserId() : null;
         Boolean isAdmin = authUtils.hasAdminRole(profile) || authUtils.hasInternalScope(profile);
         builder.withQuery(
                 q -> q.bool(
                         bq -> {
-                            ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), ID, userId, isAdmin, null, filters, bq);
+                            ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), ID, null, isAdmin, null, filters, bq);
                             return bq;
                         }));
 
