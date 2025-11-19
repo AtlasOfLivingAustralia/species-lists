@@ -109,8 +109,8 @@
   "date.created": "Created",
 
   "facet.flag.label": "List flags",
-  "filters.nonBoolean.tooltip":"An entry can only have one value for this filter. Selecting mulitple options will result in values being OR'ed together",
-  "filters.boolean.tooltip":"An entry can have multiple flags. Selecting mulitple options will result in values being AND'ed together",
+  "filters.or.tooltip":"An entry can only have one value for this filter. Selecting mulitple options will result in values being OR'ed together",
+  "filters.and.tooltip":"An entry can have multiple flags. Selecting mulitple options will result in values being AND'ed together",
   "filter.key.missing": "[No value provided]",
   "filters.toggle.label": "Toggle filters",
   "filters.title": "Refine results",

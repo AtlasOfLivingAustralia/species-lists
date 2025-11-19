@@ -127,6 +127,7 @@ export const FacetComponent = memo(
     isShowFlagLabel: boolean;
     showExpand?: boolean;
   }) => {
+    const isTag = facet.key === 'tags';
     const handleToggle = useCallback(() => {
       handleFacetToggle(facet.key);
     }, [handleFacetToggle, facet.key]);
@@ -174,12 +175,12 @@ export const FacetComponent = memo(
           radius={0}
         > 
         {/* Render header only for non-boolean facets */}
-        {!isBooleanFacet && (
+        {!(isBooleanFacet || isTag) && (
           <Group justify='space-between' className={classes.facetGroup}>
             <Text size='md' className={classes.facetHeader} span>
               <FormattedMessage id={facet.key || 'filter.key.missing'} defaultMessage={removeFilterPrefix(facet.key)}
               />{' '}
-              <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.nonBoolean.tooltip', defaultMessage: '' })} />
+              <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.or.tooltip', defaultMessage: '' })} />
             </Text>
             {showExpand && (
               <ActionIcon
@@ -195,10 +196,10 @@ export const FacetComponent = memo(
             )}
           </Group>
         )}
-        { isBooleanFacet && isShowFlagLabel && (
-            <Text size='md' span className={classes.facetHeader + ' ' + classes.facetHeaderBoolean} >
+        { ((isBooleanFacet && isShowFlagLabel) || isTag) && (
+            <Text size='md' span className={classes.facetHeader + ' ' + (isBooleanFacet ? classes.facetHeaderBoolean : classes.facetHeaderTags)} >
               <FormattedMessage id='facet.flag.label' defaultMessage='List flags' />{' '}
-              <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.boolean.tooltip', defaultMessage: '' })} />
+              <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.and.tooltip', defaultMessage: '' })} />
             </Text>
         )}
         {/* Render checkboxes using the helper */}
