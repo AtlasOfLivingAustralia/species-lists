@@ -389,11 +389,9 @@ export function Actions({
         </Menu.Dropdown>
       </Menu>
       <Box className={classes.desktop}>
-        <Stack gap='xs'>
+        <Group gap='xs'>
           {authorisedForList && (
-          <>
-            <Paper
-              // miw={authorisedForList ? 285 : undefined}
+            <Paper 
               py={8}
               px='sm'
               shadow='sm'
@@ -485,9 +483,8 @@ export function Actions({
                 )}
                 </Stack>
             </Paper>
-          </>
           )}
-          <Paper withBorder radius='lg'>
+          <Paper withBorder radius='lg' my={0} px={0} shadow='sm'>
             <Button
               onClick={handleDownload}
               fullWidth
@@ -499,6 +496,7 @@ export function Actions({
                 borderRadius: 0,
                 borderTopLeftRadius: 14,
                 borderTopRightRadius: 14,
+                margin: '1px 0px',
               }}
             >
               Download list
@@ -563,6 +561,7 @@ export function Actions({
                 borderRadius: 0,
                 borderTopLeftRadius: 0,
                 borderTopRightRadius: 0,
+                margin: '1px 0px',
               }}
             >
               View occurrence records
@@ -582,12 +581,13 @@ export function Actions({
                 borderRadius: 0,
                 borderBottomLeftRadius: 14,
                 borderBottomRightRadius: 14,
+                margin: '1px 0px',
               }}
             >
               View in spatial portal
             </Button>
           </Paper>
-        </Stack>
+        </Group>
       </Box>
     </>
   );
