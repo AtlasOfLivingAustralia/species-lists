@@ -394,7 +394,6 @@ export function Actions({
             <Paper 
               py={8}
               px='sm'
-              shadow='sm'
               radius='lg'
               withBorder
             >
@@ -484,7 +483,7 @@ export function Actions({
                 </Stack>
             </Paper>
           )}
-          <Paper withBorder radius='lg' my={0} px={0} shadow='sm'>
+          <Paper withBorder radius='lg' my={0} px={0}>
             <Button
               onClick={handleDownload}
               fullWidth
