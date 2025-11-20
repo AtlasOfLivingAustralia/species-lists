@@ -398,7 +398,7 @@ export function Actions({
               radius='lg'
               withBorder
             >
-              <Group gap='xs'>
+              <Group gap='xs' justify="space-between">
                 <Tooltip label={intl.formatMessage({ id: 'actions.editMetadata', defaultMessage: 'Edit metadata' })} withArrow position='bottom'>
                   <ActionIcon
                     onClick={handleMetaEdit}
