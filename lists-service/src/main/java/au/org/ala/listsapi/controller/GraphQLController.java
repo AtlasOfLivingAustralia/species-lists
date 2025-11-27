@@ -803,6 +803,7 @@ public class GraphQLController {
                 reindexRequired = true;
             }
 
+            boolean previousIsPrivate = toUpdate.getIsPrivate() != null ? toUpdate.getIsPrivate() : false;
             toUpdate.setTitle(title);
             toUpdate.setDescription(description);
             toUpdate.setLicence(licence);
@@ -820,11 +821,14 @@ public class GraphQLController {
             toUpdate.setTags(tags);
 
             try {
-                if (!toUpdate.getIsPrivate() || toUpdate.getIsAuthoritative()) {
+                if (Boolean.FALSE.equals(toUpdate.getIsPrivate()) // saved list is public
+                        || Boolean.TRUE.equals(toUpdate.getIsAuthoritative()) // saved list is authoritative (private or public)
+                        || (!previousIsPrivate && Boolean.TRUE.equals(isPrivate)) // was public, now private
+                ) {
                     metadataService.setMeta(toUpdate);
                 }
             } catch (Exception e) {
-                logger.error("Error while setting metadata for species list: " + id, e);
+                logger.error("Error while setting metadata for species list: " + id + " - " + e.getMessage(), e);
             }
 
             // If the visibility has changed, update the visibility of the list items

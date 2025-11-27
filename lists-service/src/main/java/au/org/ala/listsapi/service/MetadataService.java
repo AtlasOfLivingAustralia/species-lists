@@ -27,21 +27,24 @@ public class MetadataService {
 
     private Map listToDataResourceJSON(SpeciesList speciesList) {
         return Map.of(
-                "name", speciesList.getTitle(),
-                "pubDescription", speciesList.getDescription(),
-                "licenseType", speciesList.getLicence(),
-                "websiteUrl", appUrl + "/list/" + speciesList.getId(),
-                "resourceType", "species-list"
+            "name", speciesList.getTitle(),
+            "pubDescription", speciesList.getDescription(),
+            "licenseType", speciesList.getLicence(),
+            "websiteUrl", appUrl + "/list/" + speciesList.getId(),
+            "isPrivate", speciesList.getIsPrivate() != null && speciesList.getIsPrivate() == true ? "true" : "", // Collectory expects "true" or "" (Groovy truth bug)
+            "resourceType", "species-list"
         );
     }
 
     public void setMeta(SpeciesList speciesList) throws Exception {
+        logger.info("Setting metadata in Collectory for species list: " + speciesList.getId());
         String dataResourceUid = speciesList.getDataResourceUid();
         String entityUid = dataResourceUid != null ? "/" + dataResourceUid : "";
+        Map metaDataJsonMap = listToDataResourceJSON(speciesList);
 
         Map response = webService.post(
                 collectoryUrl + "/ws/dataResource" + entityUid,
-                listToDataResourceJSON(speciesList),
+                metaDataJsonMap,
                 null,
                 ContentType.APPLICATION_JSON,
                 true,
