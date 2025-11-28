@@ -11,6 +11,9 @@
   "OTHER": "Other",
   "SPATIAL_PORTAL": "Spatial Portal",
 
+  "breadcrumb.home": "Home",
+  "breadcrumb.my-lists": "My Lists",
+
   "classification.kingdom": "Kingdom",
   "classification.phylum": "Phylum",
   "classification.classs": "Class",
@@ -40,7 +43,8 @@
   "false": "no",
   "taxon": "taxon",
   "taxa": "taxa",
-  "lists.title": "Species Lists",
+  "lists.home.title": "Species Lists",
+  "lists.myLists.title": "My Species Lists",
   "lists.subtitle": "Discover, create and manage species lists with custom attributes like traits, geographic extent, conservation status, sensitivity, invasiveness, etc.",
   "list.title.prefix": "List details",
   "relevance_desc": "Relevance",

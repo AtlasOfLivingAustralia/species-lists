@@ -5,7 +5,6 @@ import {
   Box,
   Button,
   Center,
-  Checkbox,
   Collapse,
   Container,
   em,
@@ -22,7 +21,7 @@ import {
   Text,
   TextInput,
   Title,
-  Tooltip,
+  Tooltip
 } from '@mantine/core';
 import {
   useDebouncedValue,
@@ -82,10 +81,12 @@ const sortField = [
   'rowCount_asc',
 ];
 
-function Home() {
+const Home = ({ routeId }: { routeId: string }) => {
   useDocumentTitle('ALA Species Lists');
   const isMobile = useMediaQuery(`(max-width: ${em(750)})`) || false;
   const intl = useIntl();
+  const ala = useALA();
+  const [isMyListsPage, setIsMyListsPage] = useState<boolean>(false);
 
   // Search
   const [search, setSearch] = useQueryState<string>(
@@ -116,10 +117,7 @@ function Home() {
     parseAsString.withDefault('public')
   );
   // Shows the user's lists (my lists) when true
-  const [isUser, setIsUser] = useQueryState<boolean>(
-    'isUser',
-    parseAsBoolean.withDefault(false)
-  );
+  const [isUser, setIsUser] = useState<boolean>(isMyListsPage);
   const [filters, setFilters] = useQueryState<KV[]>(
     'filters',
     parseAsFilters // Note: adding `.withDefault([])` causes infinite loop (bug in nuqs v2.4.1 ??)
@@ -151,7 +149,6 @@ function Home() {
     }
   }, [sort, dir, setPage, setSearch, setSort, setDir]);
 
-  const ala = useALA();
   const { data, error, loading, update } = useGQLQuery<HomeQuery>(
     queries.QUERY_LISTS_SEARCH,
     {
@@ -166,6 +163,11 @@ function Home() {
     },
     { clearDataOnUpdate: false, token: ala.token }
   );
+
+  useEffect(() => {
+    setIsMyListsPage(routeId === 'my-lists');
+    setIsUser(routeId === 'my-lists');
+  }, [routeId]);
 
   // Destructure results & calculate the real page offset
   const { totalElements, totalPages, content } = data?.lists || {};
@@ -285,10 +287,17 @@ function Home() {
           </Grid.Col>
           <Grid.Col span={12}>
             <Title order={3} classNames={{ root: classes.title }}>
+              {isMyListsPage ? (
               <FormattedMessage
-                id='lists.title'
+                id='lists.myLists.title'
+                defaultMessage='My Species Lists'
+              />
+              ) : (
+              <FormattedMessage
+                id='lists.home.title'
                 defaultMessage='Species Lists'
               />
+              )}
             </Title>
           </Grid.Col>
           <Grid.Col span={9}>
@@ -382,7 +391,7 @@ function Home() {
                   </ActionIcon>
                 }
               />
-              {ala.isAuthenticated && (
+              {ala.isAuthenticated && ( 
                 <>
                   <SegmentedControl
                     disabled={!data || hasError}
@@ -391,18 +400,25 @@ function Home() {
                     radius='md'
                     data={labels}
                   />
-                  <Checkbox
-                    label={
-                      <FormattedMessage
-                        id='myLists.label'
-                        defaultMessage='My Lists'
-                      />
-                    }
-                    checked={isUser}
-                    size='sm'
-                    onChange={(e) => setIsUser(e.currentTarget.checked)}
-                    classNames={{ label: classes.myListsLabel }}
-                  />
+                  {/* <Button
+                    component={Link}
+                    to='/my-lists'
+                    variant='default'
+                    radius='md'
+                    title={intl.formatMessage({
+                      id: 'myLists.label',
+                      defaultMessage: 'My Lists',
+                    })}
+                    aria-label={intl.formatMessage({
+                      id: 'myLists.label',
+                      defaultMessage: 'My Lists',
+                    })}
+                  >
+                    <FormattedMessage
+                      id='myLists.label'
+                      defaultMessage='My Lists'
+                    />
+                  </Button> */}
                 </>
               )}
               <Select
