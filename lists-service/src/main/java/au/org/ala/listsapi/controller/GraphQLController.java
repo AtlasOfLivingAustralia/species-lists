@@ -136,6 +136,7 @@ public class GraphQLController {
             "isAuthoritative",
             "isThreatened",
             "isInvasive",
+            "isPrivate",
             "hasRegion",
             "isSDS",
             "tags");
@@ -197,10 +198,10 @@ public class GraphQLController {
 
         // if searching private lists, check user is authorized
         // String userIdToCheck = userId;
-        if (isPrivate) {
+        if (isPrivate != null && isPrivate || filters != null && filters.stream().anyMatch(f -> f.getKey().equals("isPrivate") && f.getValue().equals("true"))) {
             AlaUserProfile profile = authUtils.getUserProfile(principal);
             if (profile == null) {
-                logger.info("User not authorized to private access lists");
+                logger.info("User not authorized to private access lists" + (userId != null ? " for user: " + userId : ""));
                 throw new AccessDeniedException("You must be logged in to view private lists");
             }
         }
@@ -957,6 +958,7 @@ public class GraphQLController {
         facetFields.add("listType");
         facetFields.add("isBIE");
         facetFields.add("isSDS");
+        facetFields.add("isPrivate");
         facetFields.add("hasRegion");
         facetFields.add("tags");
         facetFields.add("isThreatened");
@@ -969,7 +971,7 @@ public class GraphQLController {
         String speciesListIdKeywordField = SPECIES_LIST_ID + ".keyword";
 
         // Define which of the facet fields are boolean
-        Set<String> booleanFacetFields = Set.of("isAuthoritative", "isBIE", "isSDS", "hasRegion", "isThreatened", "isInvasive");
+        Set<String> booleanFacetFields = Set.of("isAuthoritative", "isBIE", "isSDS", "hasRegion", "isThreatened", "isInvasive", "isPrivate"); // , "isPrivate"
 
         for (String facetField : facetFields) {
             // Determine the correct field for the terms aggregation
@@ -1018,6 +1020,7 @@ public class GraphQLController {
                             .get();
 
                     if (agg1.aggregation().getAggregate().isSterms()) {
+                        // String terms aggregation
                         List<StringTermsBucket> array = agg1.aggregation().getAggregate().sterms().buckets().array();
                         Facet facet = new Facet();
                         facet.setCounts(new ArrayList<>());
@@ -1041,6 +1044,7 @@ public class GraphQLController {
                                 });
                         facets.add(facet);
                     } else if (agg1.aggregation().getAggregate().isLterms()) {
+                        // Long terms aggregation (for boolean fields)
                         List<LongTermsBucket> array = agg1.aggregation().getAggregate().lterms().buckets().array();
                         Facet facet = new Facet();
                         facet.setCounts(new ArrayList<>());

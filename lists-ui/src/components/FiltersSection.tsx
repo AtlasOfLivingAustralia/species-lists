@@ -42,6 +42,7 @@ const CORE_FACETS = ['listType'];
 
 // Helper function to render the entire Checkbox with its label
 const renderCheckbox = (
+  facetName: string,
   key: string,
   countItem: { value: string; count: number } | undefined,
   isChecked: boolean,
@@ -50,7 +51,13 @@ const renderCheckbox = (
 ) => {
   if (!countItem) return null; // Handle case where countItem might be undefined
   const intl = useIntl();
-  const licenseKey = 'licence.' + key;
+  // const licenseKey = 'licence.' + key;
+
+  // Determine the correct message ID with fallback (needed for isPrivate facet)
+  const primaryKey = `facet.${facetName}.${key}`; // isPrivate values only
+  const fallbackKey = key; // all other facets (so its backwards compatible)
+  const messages = intl.messages; // load all messages into an object
+  const messageId = messages[primaryKey] ? primaryKey : fallbackKey; // check if primaryKey exists, else use fallbackKey
 
   return (
     <Checkbox
@@ -71,7 +78,7 @@ const renderCheckbox = (
           <ListTypeBadge 
             listTypeValue={key} 
             iconSide='right' 
-            titleText={intl.formatMessage({ id: licenseKey, defaultMessage: '.' })} 
+            titleText={intl.formatMessage({ id: messageId, defaultMessage: key })} 
           />
           <Chip
             size="xs"
@@ -144,8 +151,9 @@ export const FacetComponent = memo(
 
     // Determine if it's a boolean facet
     const isBooleanFacet = itemCount <= 2 &&
-        (sortedCounts[0]?.value === 'true' || sortedCounts[0]?.value === 'false');
-
+        (sortedCounts[0]?.value === 'true' || sortedCounts[0]?.value === 'false')
+        && BOOLEAN_FACETS.includes(facet.key);
+    
     // Helper to check if a value is active
     const isValueActive = useCallback((value: string | undefined) => {
       if (value === undefined) return false;
@@ -209,6 +217,7 @@ export const FacetComponent = memo(
             const booleanItem = sortedCounts[1];
             const isChecked = isValueActive(booleanItem?.value);
             return renderCheckbox(
+              facet.key, // Pass the facet key for proper labeling
               facet.key, // Key for the single boolean checkbox
               booleanItem,
               isChecked,
@@ -222,6 +231,7 @@ export const FacetComponent = memo(
             {sortedCounts.map((item) => {
               const isChecked = isValueActive(item.value);
               return renderCheckbox(
+                facet.key, // Key for the checkbox group
                 item.value, // Key is the item value
                 item,
                 isChecked,

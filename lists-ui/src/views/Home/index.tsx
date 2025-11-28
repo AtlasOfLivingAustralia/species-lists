@@ -158,7 +158,7 @@ const Home = ({ routeId }: { routeId: string }) => {
       dir,
       size: size,
       filters,
-      isPrivate: view === 'private',
+      //isPrivate: view === 'private',
       ...(isUser ? { userId: ala.userid } : {}),
     },
     { clearDataOnUpdate: false, token: ala.token }
@@ -182,7 +182,7 @@ const Home = ({ routeId }: { routeId: string }) => {
       dir,
       size,
       filters,
-      isPrivate: view === 'private',
+      // isPrivate: view === 'private',
       ...(isUser ? { userId: ala.userid } : {}),
     });
   }, [page, size, searchDebounced, sort, dir, filters, refresh, view, isUser]);
