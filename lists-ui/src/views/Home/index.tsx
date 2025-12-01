@@ -12,7 +12,6 @@ import {
   Group,
   Pagination,
   Paper,
-  SegmentedControl,
   Select,
   Skeleton,
   Space,
@@ -44,7 +43,7 @@ import {
   faEye,
   faEyeSlash,
   faMagnifyingGlass,
-  faXmark,
+  faXmark
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
@@ -298,6 +297,15 @@ const Home = ({ routeId }: { routeId: string }) => {
                 defaultMessage='Species Lists'
               />
               )}
+              {ala.isAdmin && (
+                <Text component='span' inherit opacity={0.7}>
+                  {' '}
+                  <FormattedMessage
+                    id='lists.home.admin.title'
+                    defaultMessage='(Admin view)'
+                  />
+                </Text>
+              )}
             </Title>
           </Grid.Col>
           <Grid.Col span={9}>
@@ -393,13 +401,13 @@ const Home = ({ routeId }: { routeId: string }) => {
               />
               {ala.isAuthenticated && ( 
                 <>
-                  <SegmentedControl
+                  {/* <SegmentedControl
                     disabled={!data || hasError}
                     value={view}
                     onChange={setView}
                     radius='md'
                     data={labels}
-                  />
+                  /> */}
                   {/* <Button
                     component={Link}
                     to='/my-lists'

@@ -68,11 +68,12 @@ public class ElasticUtils {
                     "isSDS",
                     "isThreatened",
                     "isInvasive",
+                    "isPrivate",
                     "tags");
 
     public static final List<String> CORE_BOOL_FIELDS =
             List.of("isBIE", "isAuthoritative", "hasRegion", "isSDS", 
-                    "isThreatened", "isInvasive");
+                    "isThreatened", "isInvasive", "isPrivate");
 
     private static final Set<String> TOP_LEVEL_SEARCHABLE_FIELDS = Set.of(
             // Root-level fields that have a ".search" subfield
@@ -284,14 +285,18 @@ public class ElasticUtils {
             bq.minimumShouldMatch("1");
         }
 
-        // Add userId filter for non-admin users and private lists
-        if (userId != null || (!isAdmin && isPrivate != null && isPrivate)) {
-            bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
-        }
+        if (userId == null) {
+            bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
+        } else {
+            // Add userId filter for non-admin users and private lists
+            if (!isAdmin && isPrivate != null && isPrivate) {
+                bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
+            }
 
-        // Add isPrivate filter
-        if (isPrivate != null) {
-            bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
+            // Add isPrivate filter -> filters used now
+            // if (isPrivate != null) {
+            //     bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
+            // }
         }
     }
 

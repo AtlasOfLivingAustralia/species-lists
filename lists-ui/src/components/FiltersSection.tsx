@@ -381,7 +381,7 @@ export const ActiveFilters = memo((
         >
           <Text component='div' fs='xs' className={classes.activeFiltersText}>
             <FormattedMessage id={sanitiseText(filter.key) || 'filter.key.missing'} defaultMessage={removeFilterPrefix(filter.key)}/>
-            { filter.value && filter.value !== 'true' && filter.value !== 'false' && (
+            { !BOOLEAN_FACETS.includes(filter.key) && (
               <>
                 :{' '}
                 <FormattedMessage id={sanitiseText(filter.value) || 'filter.value.missing'} defaultMessage={sanitiseText(filter.value)}/>

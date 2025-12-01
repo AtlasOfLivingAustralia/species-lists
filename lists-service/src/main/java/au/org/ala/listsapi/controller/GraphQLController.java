@@ -94,6 +94,7 @@ import graphql.ErrorType;
 import graphql.GraphQLError;
 import graphql.schema.DataFetchingEnvironment;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Nullable;
 
 /**
  * GraphQL API for lists
@@ -198,7 +199,14 @@ public class GraphQLController {
 
         // if searching private lists, check user is authorized
         // String userIdToCheck = userId;
-        if (isPrivate != null && isPrivate || filters != null && filters.stream().anyMatch(f -> f.getKey().equals("isPrivate") && f.getValue().equals("true"))) {
+        if (
+                (isPrivate != null && isPrivate) 
+                || (
+                    filters != null 
+                    && filters.stream().anyMatch(f -> f.getKey().equals("isPrivate") 
+                    && f.getValue().equals("true"))
+                )
+        ) {
             AlaUserProfile profile = authUtils.getUserProfile(principal);
             if (profile == null) {
                 logger.info("User not authorized to private access lists" + (userId != null ? " for user: " + userId : ""));
@@ -208,20 +216,22 @@ public class GraphQLController {
 
         NativeQueryBuilder builder = NativeQuery.builder().withPageable(PageRequest.of(1, 1));
         Boolean isAdmin = principal != null ? (authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal))) : false;
-        String finalUserId = getUserIdBasedOnRole(isPrivate, userId, principal, isAdmin);
+        
+        final Boolean finalIsPrivate = isPrivateFilterApplied(filters, isPrivate, isAdmin);
+        final String finalUserId = getUserIdBasedOnRole(finalIsPrivate, userId, principal, isAdmin);
 
         if ("relevance".equalsIgnoreCase(sort) && StringUtils.isNotBlank(searchQuery)) {
             // Use the new list search query for better relevance scoring
             builder.withQuery(
                     q -> q.bool(
                             bq -> ElasticUtils.buildListSearchQuery(ElasticUtils.cleanRawQuery(searchQuery),
-                                    finalUserId, isAdmin, isPrivate, filters, bq)));
+                                    finalUserId, isAdmin, finalIsPrivate, filters, bq)));
         } else {
             // Use existing query for non-relevance sorts
             builder.withQuery(
                     q -> q.bool(
                             bq -> ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null,
-                                    finalUserId, isAdmin, isPrivate, filters, bq)));
+                                    finalUserId, isAdmin, finalIsPrivate, filters, bq)));
         }
 
         builder.withAggregation(
@@ -296,9 +306,60 @@ public class GraphQLController {
     }
 
     /**
-     * Creates a comparator for sorting `SpeciesList` objects based on the given
-     * sort field and direction.
+     * Determines the userId to be used for filtering based on the user's role and privacy settings.
+     * @param filters
+     * @param isPrivate
+     * @return Boolean indicating if the isPrivate filter is applied, null if no filtering
+     */
+    @NotNull
+    private Boolean getPrivateFilterOrFlag(List<Filter> filters, Boolean isPrivate) {
+        if (filters == null && isPrivate == null) {
+            return null;
+        }
+        
+        boolean hasPrivateFilter = filters != null && filters.stream()
+            .anyMatch(f -> f.getKey().equals("isPrivate") && f.getValue().equals("true"));
+        
+        return hasPrivateFilter || (isPrivate != null && isPrivate);
+    }
+    
+    /**
+     * Determines if the isPrivate filter is applied based on the provided filters and isPrivate argument.
+     * <p>
+     * <b>Special logic for admins:</b> If the user is an admin and no private filter or flag is set,
+     * this method returns {@code null}. This signals downstream queries (such as Elasticsearch queries)
+     * to not filter on the {@code isPrivate} field at all, allowing admins to see both private and public lists.
+     * For non-admins, or if a private filter/flag is set, this method returns {@code true} if a private filter or flag is set,
+     * or {@code false} otherwise. This ensures that non-admin users are always subject to privacy filtering,
+     * while admins have unrestricted access unless a filter is explicitly applied.
+     * <p>
+     * <b>Downstream effect:</b> Returning {@code null} for admins means that the query will not include any
+     * constraint on the {@code isPrivate} field, so all lists (public and private) are visible to admins.
      *
+     * @param filters   List of filters applied to the query.
+     * @param isPrivate Boolean flag indicating if private lists are requested.
+     * @param isAdmin   Boolean indicating if the current user is an admin.
+     * @return {@code true} if the isPrivate filter is applied, {@code false} if not, or {@code null} for admins with no private filter (no filtering).
+     */
+    @Nullable
+    private Boolean isPrivateFilterApplied(List<Filter> filters, Boolean isPrivate, Boolean isAdmin) {
+        boolean defaultValue = false;
+        Boolean hasPrivateFilterOrFlag = getPrivateFilterOrFlag(filters, isPrivate); // can be null, true or false
+        // boolean isPrivateSpecified = isPrivate != null && isPrivate;
+        boolean isAdminSpecified = isAdmin != null && isAdmin;
+        // If the user is an admin and no private filter or flag is set, return null (no filtering on isPrivate).
+        // Otherwise, return true if a private filter or flag is set, or the default value (false).
+        Boolean returnValue;
+        if (isAdminSpecified && hasPrivateFilterOrFlag == null) {
+            returnValue = null;
+        } else {
+            returnValue = hasPrivateFilterOrFlag || defaultValue;
+        }
+
+        return returnValue;
+    }
+    
+    /**
      * @param sort The field to sort by.
      * @param dir  The direction of the sort ("asc" or "desc").
      * @return A `Comparator<SpeciesList>` that can be used to sort a list of
@@ -944,12 +1005,14 @@ public class GraphQLController {
         // ElasticUtils.cleanRawQuery will handle a null searchQuery, typically
         // returning an empty string.
         Boolean isAdmin = authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal));
-        String finalUserId = getUserIdBasedOnRole(isPrivate, userId, principal, isAdmin);
+        final Boolean finalIsPrivate = isPrivateFilterApplied(filters, isPrivate, isAdmin);
+        final String finalUserId = getUserIdBasedOnRole(finalIsPrivate, userId, principal, isAdmin);
+
 
         builder.withQuery(
                 q -> q.bool(bq -> {
                     ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null,
-                            finalUserId, isAdmin, isPrivate, filters, bq);
+                            finalUserId, isAdmin, finalIsPrivate, filters, bq);
                     return bq;
                 }));
 
