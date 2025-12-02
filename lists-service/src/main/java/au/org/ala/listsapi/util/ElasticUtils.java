@@ -231,9 +231,8 @@ public class ElasticUtils {
     private static void addCommonQueryLogic(String searchQuery, String userId, Boolean isAdmin, Boolean isPrivate,
             BoolQuery.Builder bq) {
         // Add search query logic
-        // bq.should(m -> m.matchPhrase(mq -> mq.field("all").query(searchQuery.toLowerCase() + "*").boost(2.0f)));
         if (StringUtils.isNotBlank(searchQuery)) {
-            // bq.should(m -> m.wildcard(wq -> wq.field("all").value(searchQuery.toLowerCase() + "*").boost(2.0f)));
+            // Prioritize phrase prefix matches in the 'all' field
             bq.should(m -> m.matchPhrasePrefix(mpq -> mpq.field("all").query(searchQuery.toLowerCase()).boost(2.0f)));
         } else {
             bq.must(m -> m.matchAll(ma -> ma));

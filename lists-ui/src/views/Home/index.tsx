@@ -390,15 +390,10 @@ const Home = ({ routeId }: { routeId: string }) => {
                   onKeyDown={handleKeyDown}
                   value={inputSearchValue}
                   onChange={(event) => setSearchInputValue(event.currentTarget.value)}
-                  // onChange={(event) => {
-                  //   const newValue = event.currentTarget.value;
-                  //   handleSearchChange(newValue);
-                  // }}
                   placeholder={intl.formatMessage({
                     id: 'search.input.placeholder',
                     defaultMessage: 'Search lists by name or taxa',
                   })}
-                  w={200}
                   leftSection={
                     <FontAwesomeIcon
                       icon={faMagnifyingGlass}
@@ -431,23 +426,27 @@ const Home = ({ routeId }: { routeId: string }) => {
                   }
                 />
                 <Button
-                  // Make the button match the height of the input
-                  // h='var(--input-height)' 
-                  variant="filled"
+                  variant="light"
                   styles={{
-                  root: {
-                  // Remove left border radius
-                  borderTopLeftRadius: 0, 
-                  borderBottomLeftRadius: 0,
-                  },
+                    root: {
+                      // Remove left border radius
+                      borderTopLeftRadius: 0, //'var(--mantine-color-rust-filled-hover)',
+                      borderBottomLeftRadius: 0,
+                      borderColor: 'var(--mantine-color-default-border)',
+                    },
                   }}
+                  style={{
+                    '--button-hover': 'var(--mantine-color-rust-filled-hover)',
+                    '--button-hover-color': 'white',
+                  }}
+                  // opacity={1}
                   radius="md"
                   onClick={(event) => {
                     event.preventDefault(); 
                     handleSearchChange(inputSearchValue);
                   }}
                 >
-                  Search
+                  <FormattedMessage id='search.button.label' defaultMessage='Search' />
                 </Button>
               </Group>
             </Group>

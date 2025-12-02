@@ -149,6 +149,8 @@
   "search.input.placeholder": "Search lists by name or species",
   "search.input.label": "Search input",
   "search.clear.label": "Clear search",
+  "search.button.label": "Search",
+
   "list.page.size.label": "Select number of results",
 
   "wkt": "Geographic coordinates (Well Known Text format)",
