@@ -102,9 +102,14 @@ const router = createBrowserRouter([
         ],
       },
       {
-        // Legacy lists redirect
+        // Legacy list with ID redirect
         path: 'speciesListItem/list/:id',
         loader: ({ params }) => redirect(`/list/${params.id}`),
+      },
+      {
+        // Legacy my lists redirect
+        path: 'speciesList/list',
+        loader: () => redirect(`/my-lists`),
       },
       {
         path: '/upload',
