@@ -215,7 +215,7 @@ public class GraphQLController {
         }
 
         NativeQueryBuilder builder = NativeQuery.builder().withPageable(PageRequest.of(1, 1));
-        Boolean isAdmin = principal != null ? (authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal))) : false;
+        Boolean isAdmin = authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal));
         
         final Boolean finalIsPrivate = isPrivateFilterApplied(filters, isPrivate, isAdmin);
         final String finalUserId = getUserIdBasedOnRole(finalIsPrivate, userId, principal, isAdmin);
@@ -313,7 +313,7 @@ public class GraphQLController {
      */
     @NotNull
     private Boolean getPrivateFilterOrFlag(List<Filter> filters, Boolean isPrivate) {
-        if (filters == null && isPrivate == null) {
+        if ((filters == null || filters.isEmpty()) && isPrivate == null) {
             return null;
         }
         

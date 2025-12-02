@@ -118,10 +118,27 @@ const Home = ({ routeId }: { routeId: string }) => {
   );
   // Shows the user's lists (my lists) when true
   const [isUser, setIsUser] = useState<boolean>(isMyListsPage);
-  const [filters, setFilters] = useQueryState<KV[]>(
+  // const [filters, setFilters] = useQueryState<KV[]>(
+  //   'filters',
+  //   parseAsFilters // Note: adding `.withDefault([])` causes infinite loop (bug in nuqs v2.4.1 ??)
+  // );
+  const [filtersRaw, setFiltersRaw] = useQueryState<KV[]>(
     'filters',
-    parseAsFilters // Note: adding `.withDefault([])` causes infinite loop (bug in nuqs v2.4.1 ??)
+    parseAsFilters
   );
+
+  // Normalize filters to always be an array
+  const filters = useMemo(() => filtersRaw || [], [filtersRaw]);
+  const setFilters = useCallback((value: KV[] | ((prev: KV[] | null) => KV[] | null)) => {
+    if (typeof value === 'function') {
+      setFiltersRaw((prev) => {
+        const result = value(prev);
+        return result && result.length > 0 ? result : null;
+      });
+    } else {
+      setFiltersRaw(value && value.length > 0 ? value : null);
+    }
+  }, [setFiltersRaw]);
 
   // Internal state (not driven by search params)
   const [refresh, setRefresh] = useState<boolean>(false);
@@ -176,6 +193,7 @@ const Home = ({ routeId }: { routeId: string }) => {
   // Destructure results & calculate the real page offset
   const { totalElements, totalPages, content } = data?.lists || {};
   const realPage = page + 1;
+  const filtersKey = JSON.stringify(filters);
 
   // Update the search query
   useEffect(() => {
@@ -185,11 +203,11 @@ const Home = ({ routeId }: { routeId: string }) => {
       sort,
       dir,
       size,
-      filters,
-      // isPrivate: view === 'private',
+      filters: filters.length > 0 ? filters : [], // Always pass an array
       ...(isUser ? { userId: ala.userid } : {}),
     });
-  }, [page, size, searchDebounced, sort, dir, filters, refresh, view, isUser]);
+  }, [page, size, searchDebounced, sort, dir, filtersKey, refresh, view, isUser]);
+  // Note: using filtersKey instead of filters in dependencies
 
   // Keep the current page in check
   useEffect(() => {

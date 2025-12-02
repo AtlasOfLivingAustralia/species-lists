@@ -242,14 +242,19 @@ public class ElasticUtils {
             bq.minimumShouldMatch("1");
         }
 
-        // Add userId filter for non-admin users and private lists
+        // Add userId filter for my-lists view
         if (userId != null || (!isAdmin && isPrivate != null && isPrivate)) {
             bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
         }
 
         // Add isPrivate filter
-        if (isPrivate != null) {
-            bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
+        if (userId == null && !isAdmin) {
+            bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
+        } else {
+            // Add isPrivate filter -> filters used now
+            if (isPrivate != null) {
+                bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
+            }
         }
     }
 
@@ -289,18 +294,18 @@ public class ElasticUtils {
             bq.minimumShouldMatch("1");
         }
 
-        if (userId == null) {
+        // Add userId filter for my-lists view
+        if (userId != null || (!isAdmin && isPrivate != null && isPrivate)) {
+            bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
+        }
+
+        if (userId == null && !isAdmin) {
             bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
         } else {
-            // Add userId filter for non-admin users and private lists
-            if (!isAdmin && isPrivate != null && isPrivate) {
-                bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
-            }
-
             // Add isPrivate filter -> filters used now
-            // if (isPrivate != null) {
-            //     bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
-            // }
+            if (isPrivate != null) {
+                bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
+            }
         }
     }
 
