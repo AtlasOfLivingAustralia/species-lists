@@ -86,6 +86,7 @@ const Home = ({ routeId }: { routeId: string }) => {
   const intl = useIntl();
   const ala = useALA();
   const [isMyListsPage, setIsMyListsPage] = useState<boolean>(false);
+  const [inputSearchValue, setSearchInputValue] = useState('');
 
   // Search
   const [search, setSearch] = useQueryState<string>(
@@ -168,6 +169,10 @@ const Home = ({ routeId }: { routeId: string }) => {
     setIsUser(routeId === 'my-lists');
   }, [routeId]);
 
+  useEffect(() => {
+    setSearchInputValue(search);
+  }, [search]);
+
   // Destructure results & calculate the real page offset
   const { totalElements, totalPages, content } = data?.lists || {};
   const realPage = page + 1;
@@ -247,6 +252,18 @@ const Home = ({ routeId }: { routeId: string }) => {
     setFilters([]);
   }, [filters]);
 
+  // Handler for the Enter key press
+  interface KeyDownEvent extends React.KeyboardEvent<HTMLInputElement> {}
+
+  const handleKeyDown = (event: KeyDownEvent): void => {
+    // Check if the key pressed is the Enter key
+    if (event.key === 'Enter') {
+      // Prevent the default form submission behavior (if the input is inside a form)
+      event.preventDefault(); 
+      handleSearchChange(inputSearchValue);
+    }
+  };
+
   const labels = useMemo(
     () => [
       {
@@ -297,8 +314,8 @@ const Home = ({ routeId }: { routeId: string }) => {
                 defaultMessage='Species Lists'
               />
               )}
-              {ala.isAdmin && (
-                <Text component='span' inherit opacity={0.7}>
+              {ala.isAdmin && !isMyListsPage && (
+                <Text component='span' inherit opacity={0.7} c='flamingo'>
                   {' '}
                   <FormattedMessage
                     id='lists.home.admin.title'
@@ -350,7 +367,7 @@ const Home = ({ routeId }: { routeId: string }) => {
       </Container>
       <Container fluid mt='lg'>
         <Grid>
-          <Grid.Col span={12}>
+          <Grid.Col span={7}>
             <Group>
               {!isMobile && (
                 <ToggleFiltersButton
@@ -358,77 +375,85 @@ const Home = ({ routeId }: { routeId: string }) => {
                   hidefilters={hidefilters}
                 />
               )}
-              <TextInput
-                style={{ flexGrow: 1 }}
-                disabled={!data || hasError}
-                value={search}
-                onChange={(event) => {
-                  const newValue = event.currentTarget.value;
-                  handleSearchChange(newValue);
-                }}
-                placeholder={intl.formatMessage({
-                  id: 'search.input.placeholder',
-                  defaultMessage: 'Search lists by name or taxa',
-                })}
-                w={200}
-                leftSection={
-                  <FontAwesomeIcon
-                    icon={faMagnifyingGlass}
-                    fontSize={16}
-                    stroke='2'
-                  />
-                }
-                rightSection={
-                  <ActionIcon
-                    radius='sm'
-                    variant='transparent'
-                    size='xs'
-                    title={intl.formatMessage({
-                      id: 'search.clear.label',
-                      defaultMessage: 'Clear search',
-                    })}
-                    aria-label={intl.formatMessage({
-                      id: 'search.clear.label',
-                      defaultMessage: 'Clear search',
-                    })}
-                    disabled={search.length === 0}
-                    onClick={() => handleSearchChange('')}
-                    style={{ marginLeft: 5, marginRight: 10 }}
-                  >
-                    <FontAwesomeIcon icon={faXmark} fontSize={20} />
-                  </ActionIcon>
-                }
-              />
-              {ala.isAuthenticated && ( 
-                <>
-                  {/* <SegmentedControl
-                    disabled={!data || hasError}
-                    value={view}
-                    onChange={setView}
-                    radius='md'
-                    data={labels}
-                  /> */}
-                  {/* <Button
-                    component={Link}
-                    to='/my-lists'
-                    variant='default'
-                    radius='md'
-                    title={intl.formatMessage({
-                      id: 'myLists.label',
-                      defaultMessage: 'My Lists',
-                    })}
-                    aria-label={intl.formatMessage({
-                      id: 'myLists.label',
-                      defaultMessage: 'My Lists',
-                    })}
-                  >
-                    <FormattedMessage
-                      id='myLists.label'
-                      defaultMessage='My Lists'
+              <Group gap={0} wrap="nowrap" style={{ flexGrow: 1 }}>
+                <TextInput
+                  style={{ flex: 1 }}
+                  styles={{ 
+                    input: { 
+                      // Remove right border radius and border
+                      borderTopRightRadius: 0, 
+                      borderBottomRightRadius: 0,
+                      borderRight: 'none', 
+                    } 
+                  }}
+                  disabled={!data || hasError}
+                  onKeyDown={handleKeyDown}
+                  value={inputSearchValue}
+                  onChange={(event) => setSearchInputValue(event.currentTarget.value)}
+                  // onChange={(event) => {
+                  //   const newValue = event.currentTarget.value;
+                  //   handleSearchChange(newValue);
+                  // }}
+                  placeholder={intl.formatMessage({
+                    id: 'search.input.placeholder',
+                    defaultMessage: 'Search lists by name or taxa',
+                  })}
+                  w={200}
+                  leftSection={
+                    <FontAwesomeIcon
+                      icon={faMagnifyingGlass}
+                      fontSize={16}
+                      stroke='2'
                     />
-                  </Button> */}
-                </>
-              )}
+                  }
+                  rightSection={
+                    <ActionIcon
+                      radius='sm'
+                      variant='transparent'
+                      size='xs'
+                      title={intl.formatMessage({
+                        id: 'search.clear.label',
+                        defaultMessage: 'Clear search',
+                      })}
+                      aria-label={intl.formatMessage({
+                        id: 'search.clear.label',
+                        defaultMessage: 'Clear search',
+                      })}
+                      disabled={search.length === 0}
+                      onClick={() => {
+                        handleSearchChange('')
+                        setSearchInputValue('');
+                      }}
+                      style={{ marginLeft: 5, marginRight: 10 }}
+                    >
+                      <FontAwesomeIcon icon={faXmark} fontSize={20} />
+                    </ActionIcon>
+                  }
+                />
+                <Button
+                  // Make the button match the height of the input
+                  // h='var(--input-height)' 
+                  variant="filled"
+                  styles={{
+                  root: {
+                  // Remove left border radius
+                  borderTopLeftRadius: 0, 
+                  borderBottomLeftRadius: 0,
+                  },
+                  }}
+                  radius="md"
+                  onClick={(event) => {
+                    event.preventDefault(); 
+                    handleSearchChange(inputSearchValue);
+                  }}
+                >
+                  Search
+                </Button>
+              </Group>
+            </Group>
+          </Grid.Col>
+          <Grid.Col span={5}>
+            <Group justify='flex-end' gap={5}>
               <Select
                 w={235}
                 value={`${sort}_${dir}`}
@@ -477,9 +502,20 @@ const Home = ({ routeId }: { routeId: string }) => {
           </Grid.Col>
           {!hidefilters && (
             <Grid.Col span={{ base: 12, sm: 4, md: 3, lg: 2 }} mt={16}>
-              <Collapse in={!hidefilters}>
-                {/* Filters appear here */}
-                <FiltersSection
+                <Collapse in={!hidefilters}>
+                {loading ? (
+                  <Stack gap={6}>
+                    <Skeleton height={24} width="60%" radius="md" />
+                  {Array.from({ length: 3 }).map((_, _index) => (
+                    <>
+                      <Skeleton height={1} width="90%" radius="md" />
+                      <Skeleton height={24} width="50%" radius="md" />
+                      <Skeleton height={250} width="90%" radius="md" />
+                    </>
+                  ))}
+                  </Stack>
+                ) : (
+                  <FiltersSection
                   facets={data?.facets || []}
                   active={filters || []}
                   onSelect={handleFilterClick}
@@ -488,8 +524,9 @@ const Home = ({ routeId }: { routeId: string }) => {
                     setPage(0);
                   }}
                   showExpand={false}
-                />
-              </Collapse>
+                  />
+                )}
+                </Collapse>
             </Grid.Col>
           )}
           <Grid.Col

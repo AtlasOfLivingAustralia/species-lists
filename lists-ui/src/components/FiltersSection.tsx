@@ -18,7 +18,7 @@ import {
   Stack,
   Text,
   ThemeIcon,
-  Tooltip,
+  Tooltip
 } from '@mantine/core';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
@@ -55,7 +55,7 @@ const renderCheckbox = (
 
   // Determine the correct message ID with fallback (needed for isPrivate facet)
   const primaryKey = `facet.${facetName}.${key}`; // isPrivate values only
-  const fallbackKey = key; // all other facets (so its backwards compatible)
+  const fallbackKey = key || 'filter.key.missing'; // all other facets (so its backwards compatible)
   const messages = intl.messages; // load all messages into an object
   const messageId = messages[primaryKey] ? primaryKey : fallbackKey; // check if primaryKey exists, else use fallbackKey
 

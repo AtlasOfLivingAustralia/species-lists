@@ -29,17 +29,25 @@ function useGQLQuery<T>(
       try {
         if (controller.current)
           controller.current.abort('New GraphQL request invoked');
-
         setLoading(true);
+        setData(null);
+        console.log('GraphQL Query - loading:', loading);
         controller.current = new AbortController();
-
+        // set a timer here to measure query performance
+        const startTime = performance.now();
         const queryData = await performGQLQuery<T>(
           query,
           variables,
           options.token,
           controller.current.signal
         );
-
+        const endTime = performance.now();
+        console.log(
+          `GraphQL Query - completed in ${(endTime - startTime).toFixed(
+            2
+          )} ms`
+        );
+        
         setLoading(false);
         controller.current = null;
 

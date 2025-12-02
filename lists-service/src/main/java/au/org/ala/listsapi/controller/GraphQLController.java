@@ -353,7 +353,7 @@ public class GraphQLController {
         if (isAdminSpecified && hasPrivateFilterOrFlag == null) {
             returnValue = null;
         } else {
-            returnValue = hasPrivateFilterOrFlag || defaultValue;
+            returnValue = hasPrivateFilterOrFlag != null && hasPrivateFilterOrFlag || defaultValue;
         }
 
         return returnValue;
@@ -1034,7 +1034,7 @@ public class GraphQLController {
         String speciesListIdKeywordField = SPECIES_LIST_ID + ".keyword";
 
         // Define which of the facet fields are boolean
-        Set<String> booleanFacetFields = Set.of("isAuthoritative", "isBIE", "isSDS", "hasRegion", "isThreatened", "isInvasive", "isPrivate"); // , "isPrivate"
+        Set<String> booleanFacetFields = Set.of("isAuthoritative", "isBIE", "isSDS", "hasRegion", "isThreatened", "isInvasive", "isPrivate"); 
 
         for (String facetField : facetFields) {
             // Determine the correct field for the terms aggregation

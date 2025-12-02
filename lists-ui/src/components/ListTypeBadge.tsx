@@ -29,7 +29,7 @@ export function ListTypeBadge({
   // sanitise the listTypeValue to prevent XSS attacks
   const sanitisedListTypeValue = sanitiseText(listTypeValue);
   const message = <FormattedMessage id={sanitisedListTypeValue || 'filter.key.missing'} defaultMessage={sanitisedListTypeValue}/>;
-  const tooltipText = intl.formatMessage({ id: `licence.${titleText}`, defaultMessage: titleText || '' });
+  const tooltipText = intl.formatMessage({ id: `licence.${titleText ? sanitiseText(titleText) : 'none'}`, defaultMessage: titleText || '' });
 
   return (
     <Box style={{ display: 'flex', alignItems: 'center', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100%' }}>

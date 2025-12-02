@@ -466,5 +466,7 @@
   "licence.CC-BY-NC-ND": "Creative Commons Attribution-Noncommercial-No Derivative Works",
   "licence.CC-BY-NC-SA": "Creative Commons Attribution-Noncommercial-Share Alike",
   "licence.CC-BY-SA": "Creative Commons Attribution-Share Alike",
+  "licence.none": ".",
+
   "summary.listtype.notFound": "Undefined list type"
 }
