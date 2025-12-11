@@ -215,10 +215,21 @@ public class GraphQLController {
         }
 
         NativeQueryBuilder builder = NativeQuery.builder().withPageable(PageRequest.of(1, 1));
-        Boolean isAdmin = authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal));
-        
-        final Boolean finalIsPrivate = isPrivateFilterApplied(filters, isPrivate, isAdmin);
-        final String finalUserId = getUserIdBasedOnRole(finalIsPrivate, userId, principal, isAdmin);
+        // Boolean isAdmin = authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal));
+        Boolean isAdmin = principal != null ? (authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal))) : false;
+        String finalUserId;
+
+        if (principal != null) {
+            AlaUserProfile profile = authUtils.getUserProfile(principal);
+            finalUserId = profile != null ? profile.getUserId() : null;
+        } else {
+            finalUserId = null;
+        }
+
+        Boolean isMySpeciesList = (userId != null && finalUserId != null && userId.equals(finalUserId));
+
+        final Boolean finalIsPrivate = isPrivateFilterApplied(filters, isPrivate, isAdmin, isMySpeciesList);
+        // final String finalUserId = getUserIdBasedOnRole(finalIsPrivate, userId, principal, isAdmin);
 
         if ("relevance".equalsIgnoreCase(sort) && StringUtils.isNotBlank(searchQuery)) {
             // Use the new list search query for better relevance scoring
@@ -342,7 +353,7 @@ public class GraphQLController {
      * @return {@code true} if the isPrivate filter is applied, {@code false} if not, or {@code null} for admins with no private filter (no filtering).
      */
     @Nullable
-    private Boolean isPrivateFilterApplied(List<Filter> filters, Boolean isPrivate, Boolean isAdmin) {
+    private Boolean isPrivateFilterApplied(List<Filter> filters, Boolean isPrivate, Boolean isAdmin, Boolean isMySpeciesList) {
         boolean defaultValue = false;
         Boolean hasPrivateFilterOrFlag = getPrivateFilterOrFlag(filters, isPrivate); // can be null, true or false
         // boolean isPrivateSpecified = isPrivate != null && isPrivate;
@@ -350,7 +361,7 @@ public class GraphQLController {
         // If the user is an admin and no private filter or flag is set, return null (no filtering on isPrivate).
         // Otherwise, return true if a private filter or flag is set, or the default value (false).
         Boolean returnValue;
-        if (isAdminSpecified && hasPrivateFilterOrFlag == null) {
+        if ((isAdminSpecified || isMySpeciesList) && hasPrivateFilterOrFlag == null) {
             returnValue = null;
         } else {
             returnValue = hasPrivateFilterOrFlag != null && hasPrivateFilterOrFlag || defaultValue;
@@ -949,10 +960,18 @@ public class GraphQLController {
         NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
         AlaUserProfile profile = authUtils.getUserProfile(principal);
         Boolean isAdmin = authUtils.hasAdminRole(profile) || authUtils.hasInternalScope(profile);
+        String finalUserId;
+
+        if (profile != null) {
+            finalUserId = profile != null ? profile.getUserId() : null;
+        } else {
+            finalUserId = null;
+        }
+
         builder.withQuery(
                 q -> q.bool(
                         bq -> {
-                            ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), ID, null, isAdmin, null, filters, bq);
+                            ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), ID, finalUserId, isAdmin, null, filters, bq);
                             return bq;
                         }));
 
@@ -1004,9 +1023,19 @@ public class GraphQLController {
         // applied.
         // ElasticUtils.cleanRawQuery will handle a null searchQuery, typically
         // returning an empty string.
-        Boolean isAdmin = authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal));
-        final Boolean finalIsPrivate = isPrivateFilterApplied(filters, isPrivate, isAdmin);
-        final String finalUserId = getUserIdBasedOnRole(finalIsPrivate, userId, principal, isAdmin);
+        // Boolean isAdmin = authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal));
+        Boolean isAdmin = principal != null ? (authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal))) : false;
+        String finalUserId;
+
+        if (principal != null) {
+            AlaUserProfile profile = authUtils.getUserProfile(principal);
+            finalUserId = profile != null ? profile.getUserId() : null;
+        } else {
+            finalUserId = null;
+        }
+        Boolean isMySpeciesList = (userId != null && finalUserId != null && userId.equals(finalUserId));
+        final Boolean finalIsPrivate = isPrivateFilterApplied(filters, isPrivate, isAdmin, isMySpeciesList);
+        // final String finalUserId = getUserIdBasedOnRole(finalIsPrivate, userId, principal, isAdmin);
 
 
         builder.withQuery(
