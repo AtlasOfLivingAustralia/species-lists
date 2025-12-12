@@ -1,12 +1,14 @@
 version: '3.7'
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.3-arm64
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.26-arm64
     container_name: species-lists-elastic
+    # user: "502:20"
     environment:
       - node.name=elasticsearch
       - xpack.security.enabled=false
       - discovery.type=single-node
+      - ingest.geoip.downloader.enabled=false
     ulimits:
       memlock:
         soft: -1
@@ -17,7 +19,7 @@ services:
     cap_add:
       - IPC_LOCK
     volumes:
-      - /Users/<replace-with-local-user>/dev/species-lists/elastic:/usr/share/elasticsearch/data
+      - /Users/dos009/dev/species-lists/elastic:/usr/share/elasticsearch/data
     restart: on-failure
     ports:
       - "9200:9200"
@@ -30,11 +32,12 @@ services:
   mongodb:
     image: mongo:6.0
     container_name: species-lists-mongo
+    # user: "502:20"
     restart: on-failure
     ports:
       - "27017:27017"
     volumes:
-      - /Users/<replace-with-local-user>/dev/species-lists/mongo/db:/data/db
+      - /Users/dos009/dev/species-lists/mongo/db:/data/db
   namematching:
     image: atlasoflivingaustralia/ala-namematching-service:v20210811-3
     container_name: species-lists-namematching

@@ -50,19 +50,15 @@ export function ListRow({ list, isUser }: ListRowProps) {
               >
                 <FormattedMessage id={list?.listType || 'OTHER'} />
               </Badge>
-              {ala.isAuthenticated && (isUser || ala.isAdmin) && (
-                <>
-                  <Space w={3} />
-                  <FontAwesomeIcon fontSize={15} color='grey' icon={list?.isPrivate ? faEyeSlash : faEye} />
-                  <Text size='sm' fw='400'>
-                  {list?.isPrivate ? (
-                    <FormattedMessage id="access.private" defaultMessage="Private" />
-                  ) : (
-                    <FormattedMessage id="access.public" defaultMessage="Public" />
-                  )}
-                  </Text>
-                </>
+              <Space w={3} />
+              <FontAwesomeIcon fontSize={15} color='grey' icon={list?.isPrivate ? faEyeSlash : faEye} />
+              <Text size='sm' fw='400'>
+              {list?.isPrivate ? (
+                <FormattedMessage id="access.private" defaultMessage="Private" />
+              ) : (
+                <FormattedMessage id="access.public" defaultMessage="Public" />
               )}
+              </Text>
               { list?.isAuthoritative && (
                 <><Space w={3} /><ListTypeBadge listTypeValue='isAuthoritative'/></>
               )}
