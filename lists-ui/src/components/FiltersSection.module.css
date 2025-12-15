@@ -31,6 +31,7 @@
   font-weight: bold;
   opacity: 0.8;
   padding-top: 4px;
+  margin-top: 3px;
 }
 
 .facetHeaderBoolean {
@@ -94,7 +95,7 @@
 }
 
 .facetPaper {
-  padding: 5px 2px 2px 0px;
+  padding: 2px 2px 2px 0px;
 }
 
 .resultsSummary {

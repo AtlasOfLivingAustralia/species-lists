@@ -1,10 +1,10 @@
 import {
+  faAngleDown,
+  faAngleUp,
   faClose,
   faDeleteLeft,
   faInfoCircle,
-  faMinus,
-  faPlus,
-  faSliders,
+  faSliders
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -192,6 +192,7 @@ export const FacetComponent = memo(
             </Text>
             {showExpand && (
               <ActionIcon
+                mt={5}
                 variant='subtle'
                 color='dark'
                 size='sm'
@@ -199,7 +200,7 @@ export const FacetComponent = memo(
                 title={`${intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Toggle filters for' })} ${intl.formatMessage({ id: facet.key || 'filter.key.missing', defaultMessage: facet.key })}`}
                 aria-label={`${intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Toggle filters for' })} ${intl.formatMessage({ id: facet.key || 'filter.key.missing', defaultMessage: facet.key })}`}
               >
-                <FontAwesomeIcon icon={isExpanded ? faMinus : faPlus} />
+                <FontAwesomeIcon icon={isExpanded ? faAngleUp : faAngleDown} />
               </ActionIcon>
             )}
           </Group>
