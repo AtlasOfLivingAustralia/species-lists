@@ -14,7 +14,7 @@
  */
 package au.org.ala.listsapi.controller;
 
-import java.net.URL;
+import java.net.URI;
 import java.security.Principal;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -91,8 +91,6 @@ public class GraphQLController {
 
     @Value("${elastic.maximumDocuments}")
     public static final int MAX_LIST_ENTRIES = 10000;
-
-    private static final boolean ES_DEBUG = false;
 
     @Value("${image.url}")
     private String imageTemplateUrl;
@@ -982,7 +980,7 @@ public class GraphQLController {
         // get taxon image from BIE
         ObjectMapper objectMapper = new ObjectMapper();
         String url = String.format(bieImagesTemplateUrl, taxonID, size, page * size);
-        JsonNode jsonNode = objectMapper.readTree(new URL(url));
+        JsonNode jsonNode = objectMapper.readTree(new URI(url).toURL());
         JsonNode results = jsonNode.at("/searchResults/results");
         List<Image> images = new ArrayList<>();
         Iterator<JsonNode> iter = results.elements();
@@ -995,6 +993,6 @@ public class GraphQLController {
 
     public Map<String, Object> loadJson(String url) throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.readValue(new URL(url), objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class));
+        return objectMapper.readValue(new URI(url).toURL(), objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class));
     }
 }
