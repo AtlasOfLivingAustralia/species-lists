@@ -1,3 +1,17 @@
+/*
+ * Copyright (C) 2025 Atlas of Living Australia
+ * All Rights Reserved.
+ *
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ */
 package au.org.ala.listsapi.service;
 
 import java.io.File;
@@ -97,8 +111,8 @@ public class MigrateService {
     private List<SpeciesList> fetchLegacyLists(int offset) {
         try {
             logger.info("Fetching legacy species lists from {}", migrateUrl);
-            Map params = Map.of("offset", String.valueOf(offset), "max", "1000", "includePrivate", "true");
-            Map request = webService.get(
+            Map<String, Object> params = Map.of("offset", String.valueOf(offset), "max", "1000", "includePrivate", "true");
+            Map<String, Object> request = webService.get(
                     migrateUrl + "/ws/speciesListInternal",
                     params,
                     ContentType.APPLICATION_JSON,
