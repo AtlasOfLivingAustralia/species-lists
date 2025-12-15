@@ -165,12 +165,13 @@ public class GraphQLController {
             @Argument Integer size,
             @Argument String userId,
             @Argument String sort,
+            @Argument Boolean isPrivate,
             @Argument String dir,
             @AuthenticationPrincipal Principal principal) {
 
         // Build search context with permission checks
         ListSearchContext searchContext = buildSearchContext(
-            searchQuery, filters, userId, sort, dir, principal
+            searchQuery, isPrivate, filters, userId, sort, dir, principal
         );
         
         // Delegate to service for the actual search
@@ -188,13 +189,14 @@ public class GraphQLController {
             @Argument String searchQuery,
             @Argument List<Filter> filters,
             @Argument String userId,
+            @Argument Boolean isPrivate,
             @Argument Integer page,
             @Argument Integer size,
             @AuthenticationPrincipal Principal principal) {
 
         // Build search context with permission checks
         ListSearchContext searchContext = buildSearchContext(
-            searchQuery, filters, userId, null, null, principal
+            searchQuery, isPrivate, filters, userId, null, null, principal
         );
         
         // Delegate to service for facet aggregation
@@ -206,6 +208,7 @@ public class GraphQLController {
      */
     private ListSearchContext buildSearchContext(
             String searchQuery,
+            Boolean isPrivate,
             List<Filter> filters,
             String userId,
             String sort,
@@ -214,6 +217,12 @@ public class GraphQLController {
         
         AlaUserProfile profile = authUtils.getUserProfile(principal);
         PermissionContext permissions = determinePermissions(userId, filters, profile);
+        // if isPrivate is requested, add a filter for it
+        Boolean isMySpeciesList = permissions.isViewingOwnLists();
+        Boolean hasPrivateFilter = isPrivateFilterApplied(filters, isPrivate, permissions.isAdmin(), isMySpeciesList);
+        if (hasPrivateFilter != null) {
+            filters = ElasticUtils.addOrUpdateFilter(filters, new Filter("isPrivate", hasPrivateFilter.toString()));
+        }
         
         return ListSearchContext.builder()
             .searchQuery(ElasticUtils.cleanRawQuery(searchQuery))

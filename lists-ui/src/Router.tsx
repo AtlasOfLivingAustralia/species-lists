@@ -84,6 +84,10 @@ const router = createBrowserRouter([
         element: <Home routeId="my-lists"/>,
       },
       {
+        path: 'admin-lists',
+        element: <Home routeId="admin-lists"/>,
+      },
+      {
         path: 'list/:id',
         id: 'list',
         element: (

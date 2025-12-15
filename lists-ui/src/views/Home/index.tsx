@@ -86,6 +86,7 @@ const Home = ({ routeId }: { routeId: string }) => {
   const intl = useIntl();
   const ala = useALA();
   const [isMyListsPage, setIsMyListsPage] = useState<boolean>(false);
+  const [isAdminListPage, setIsAdminListPage] = useState<boolean>(false);
   const [inputSearchValue, setSearchInputValue] = useState('');
 
   // Search
@@ -175,7 +176,7 @@ const Home = ({ routeId }: { routeId: string }) => {
       dir,
       size: size,
       filters,
-      //isPrivate: view === 'private',
+      isPrivate: isMyListsPage || isAdminListPage ? undefined : view === 'private',
       ...(isUser ? { userId: ala.userid } : {}),
     },
     { clearDataOnUpdate: false, token: ala.token }
@@ -183,6 +184,7 @@ const Home = ({ routeId }: { routeId: string }) => {
 
   useEffect(() => {
     setIsMyListsPage(routeId === 'my-lists');
+    setIsAdminListPage(routeId === 'admin-lists');
     setIsUser(routeId === 'my-lists');
   }, [routeId]);
 
@@ -203,10 +205,11 @@ const Home = ({ routeId }: { routeId: string }) => {
       sort,
       dir,
       size,
+      isPrivate: isMyListsPage || isAdminListPage ? undefined : view === 'private',
       filters: filters.length > 0 ? filters : [], // Always pass an array
       ...(isUser ? { userId: ala.userid } : {}),
     });
-  }, [page, size, searchDebounced, sort, dir, filtersKey, refresh, view, isUser]);
+  }, [page, size, searchDebounced, sort, dir, filtersKey, refresh, view, isUser, isMyListsPage, isAdminListPage]);
   // Note: using filtersKey instead of filters in dependencies
 
   // Keep the current page in check
@@ -332,7 +335,7 @@ const Home = ({ routeId }: { routeId: string }) => {
                 defaultMessage='Species Lists'
               />
               )}
-              {ala.isAdmin && !isMyListsPage && (
+              {ala.isAdmin && !isMyListsPage && isAdminListPage && (
                 <Text component='span' inherit opacity={0.7} c='flamingo'>
                   {' '}
                   <FormattedMessage

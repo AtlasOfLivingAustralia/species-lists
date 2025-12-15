@@ -1,7 +1,7 @@
 import { useALA } from '#/helpers/context/useALA';
-import { faCog, faFloppyDisk, faUpload } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faCog, faFloppyDisk, faList, faTools, faUpload } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Group, Tooltip } from '@mantine/core';
+import { Button, Group, Menu, Tooltip } from '@mantine/core';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { Link, useLocation } from 'react-router';
 
@@ -48,15 +48,40 @@ export function ActionButtons() {
         </Button>
       </Tooltip>
       {ala.isAdmin && (
-        <Button
-          variant='default'
-          radius='xl'
-          component={Link}
-          to='/admin'
-          leftSection={<FontAwesomeIcon icon={faCog} />}
-        >
-          Admin
-        </Button>
+        <Menu shadow="md" width={200}>
+          {/* 1. Menu Target (The visible button) */}
+          <Menu.Target>
+            <Button
+              variant='default'
+              radius='xl'
+              leftSection={<FontAwesomeIcon icon={faCog} />}
+              rightSection={<FontAwesomeIcon icon={faChevronDown} size="xs" />}
+            >
+              Admin Menu
+            </Button>
+          </Menu.Target>
+
+          {/* 2. Menu Dropdown (The panel that opens) */}
+          <Menu.Dropdown>
+            {/* First Menu Item: "View all lists" */}
+            <Menu.Item
+              component={Link} // Use Link for navigation
+              to="/admin-lists"
+              leftSection={<FontAwesomeIcon icon={faList} />}
+            >
+              View all lists
+            </Menu.Item>
+
+            {/* Second Menu Item: "Admin tasks" */}
+            <Menu.Item
+              component={Link} // Use Link for navigation
+              to="/admin"
+              leftSection={<FontAwesomeIcon icon={faTools} />}
+            >
+              Admin tasks
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
       )}
     </Group>
   );

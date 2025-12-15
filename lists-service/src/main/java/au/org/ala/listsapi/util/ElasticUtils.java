@@ -16,6 +16,7 @@
 package au.org.ala.listsapi.util;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -256,6 +257,27 @@ public class ElasticUtils {
                 bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
             }
         }
+    }
+
+    /**
+    * Adds a new filter or updates an existing filter with the same key
+    * 
+    * @param filters The list of filters to modify
+    * @param newFilter The filter to add or update
+    * @return The updated list of filters
+    */
+    public static List<Filter> addOrUpdateFilter(List<Filter> filters, Filter newFilter) {
+        if (filters == null) {
+            filters = new ArrayList<>();
+        }
+        
+        // Remove any existing filter with the same key
+        filters.removeIf(f -> f.getKey().equals(newFilter.getKey()));
+        
+        // Add the new filter
+        filters.add(newFilter);
+        
+        return filters;
     }
 
     /**
