@@ -45,8 +45,8 @@ const notFoundLoader = () => {
   throw new Response('Not Found', { status: 404 });
 };
 const router = createBrowserRouter([
-  // Redirect legacy SDS URL to new filter format
   {
+    // Redirect legacy SDS URL to new filter format
     path: 'public/speciesLists',
     loader: ({ request }) => {
       const url = new URL(request.url);
@@ -77,7 +77,15 @@ const router = createBrowserRouter([
     children: [
       {
         path: '',
-        element: <Home />,
+        element: <Home routeId="home"/>,
+      },
+      {
+        path: 'my-lists',
+        element: <Home routeId="my-lists"/>,
+      },
+      {
+        path: 'admin-lists',
+        element: <Home routeId="admin-lists"/>,
       },
       {
         path: 'list/:id',
@@ -98,9 +106,14 @@ const router = createBrowserRouter([
         ],
       },
       {
-        // Legacy lists redirect
+        // Legacy list with ID redirect
         path: 'speciesListItem/list/:id',
         loader: ({ params }) => redirect(`/list/${params.id}`),
+      },
+      {
+        // Legacy my lists redirect
+        path: 'speciesList/list',
+        loader: () => redirect(`/my-lists`),
       },
       {
         path: '/upload',

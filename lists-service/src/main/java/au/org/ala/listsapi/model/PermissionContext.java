@@ -14,23 +14,18 @@
  */
 package au.org.ala.listsapi.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
-import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-import lombok.experimental.SuperBuilder;
-import lombok.extern.jackson.Jacksonized;
 
-@NoArgsConstructor
+/**
+ * Permission context for access control (Controller internal use)
+ */
 @Data
-@SuperBuilder
-@AllArgsConstructor
-@Jacksonized
-@ToString
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class AsyncTaskStatus {
-    String name;
-    boolean running = false;
+@Builder
+public class PermissionContext {
+    private boolean isAuthenticated;
+    private boolean isAdmin;
+    private String currentUserId;
+    private String effectiveUserId;
+    private boolean isViewingOwnLists;
 }

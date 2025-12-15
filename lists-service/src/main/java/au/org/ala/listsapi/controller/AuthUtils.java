@@ -40,6 +40,10 @@ public class AuthUtils {
     public AlaUserProfile getUserProfile(Principal principal) {
         AlaUserProfile profile = null;
 
+        if (principal == null) {
+            return null;
+        }
+
         if (principal instanceof PreAuthenticatedAuthenticationToken) {
             profile = (AlaUserProfile) ((PreAuthenticatedAuthenticationToken) principal).getPrincipal();
         } else if (principal instanceof AlaUserProfile) {

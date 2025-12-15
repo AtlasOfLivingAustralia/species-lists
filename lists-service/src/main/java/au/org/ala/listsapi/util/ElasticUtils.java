@@ -16,6 +16,7 @@
 package au.org.ala.listsapi.util;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -68,11 +69,12 @@ public class ElasticUtils {
                     "isSDS",
                     "isThreatened",
                     "isInvasive",
+                    "isPrivate",
                     "tags");
 
     public static final List<String> CORE_BOOL_FIELDS =
             List.of("isBIE", "isAuthoritative", "hasRegion", "isSDS", 
-                    "isThreatened", "isInvasive");
+                    "isThreatened", "isInvasive", "isPrivate");
 
     private static final Set<String> TOP_LEVEL_SEARCHABLE_FIELDS = Set.of(
             // Root-level fields that have a ".search" subfield
@@ -230,21 +232,52 @@ public class ElasticUtils {
     private static void addCommonQueryLogic(String searchQuery, String userId, Boolean isAdmin, Boolean isPrivate,
             BoolQuery.Builder bq) {
         // Add search query logic
-        bq.should(m -> m.matchPhrase(mq -> mq.field("all").query(searchQuery.toLowerCase() + "*").boost(2.0f)));
+        if (StringUtils.isNotBlank(searchQuery)) {
+            // Prioritize phrase prefix matches in the 'all' field
+            bq.should(m -> m.matchPhrasePrefix(mpq -> mpq.field("all").query(searchQuery.toLowerCase()).boost(2.0f)));
+        } else {
+            bq.must(m -> m.matchAll(ma -> ma));
+        }
 
         if (StringUtils.trimToNull(searchQuery) != null && searchQuery.length() > 1) {
             bq.minimumShouldMatch("1");
         }
 
-        // Add userId filter for non-admin users and private lists
+        // Add userId filter for my-lists view
         if (userId != null || (!isAdmin && isPrivate != null && isPrivate)) {
             bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
         }
 
         // Add isPrivate filter
-        if (isPrivate != null) {
-            bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
+        if (userId == null && !isAdmin) {
+            bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
+        } else {
+            // Add isPrivate filter -> filters used now
+            if (isPrivate != null) {
+                bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
+            }
         }
+    }
+
+    /**
+    * Adds a new filter or updates an existing filter with the same key
+    * 
+    * @param filters The list of filters to modify
+    * @param newFilter The filter to add or update
+    * @return The updated list of filters
+    */
+    public static List<Filter> addOrUpdateFilter(List<Filter> filters, Filter newFilter) {
+        if (filters == null) {
+            filters = new ArrayList<>();
+        }
+        
+        // Remove any existing filter with the same key
+        filters.removeIf(f -> f.getKey().equals(newFilter.getKey()));
+        
+        // Add the new filter
+        filters.add(newFilter);
+        
+        return filters;
     }
 
     /**
@@ -283,14 +316,18 @@ public class ElasticUtils {
             bq.minimumShouldMatch("1");
         }
 
-        // Add userId filter for non-admin users and private lists
+        // Add userId filter for my-lists view
         if (userId != null || (!isAdmin && isPrivate != null && isPrivate)) {
             bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
         }
 
-        // Add isPrivate filter
-        if (isPrivate != null) {
-            bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
+        if (userId == null && !isAdmin) {
+            bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
+        } else {
+            // Add isPrivate filter -> filters used now
+            if (isPrivate != null) {
+                bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
+            }
         }
     }
 

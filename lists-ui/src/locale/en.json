@@ -11,6 +11,9 @@
   "OTHER": "Other",
   "SPATIAL_PORTAL": "Spatial Portal",
 
+  "breadcrumb.home": "Home",
+  "breadcrumb.my-lists": "My Lists",
+
   "classification.kingdom": "Kingdom",
   "classification.phylum": "Phylum",
   "classification.classs": "Class",
@@ -36,11 +39,14 @@
   "isInvasive": "Invasive",
   "tags": "Tags",
   "hasRegion": "Region specific",
-  "true": "yes",
-  "false": "no",
+  "facet.isPrivate.true": "Private lists",
+  "facet.isPrivate.false": "Public lists",
+  "true": "private",
+  "false": "public",
   "taxon": "taxon",
   "taxa": "taxa",
-  "lists.title": "Species Lists",
+  "lists.home.title": "Species Lists",
+  "lists.myLists.title": "My Species Lists",
   "lists.subtitle": "Discover, create and manage species lists with custom attributes like traits, geographic extent, conservation status, sensitivity, invasiveness, etc.",
   "list.title.prefix": "List details",
   "relevance_desc": "Relevance",
@@ -143,6 +149,8 @@
   "search.input.placeholder": "Search lists by name or species",
   "search.input.label": "Search input",
   "search.clear.label": "Clear search",
+  "search.button.label": "Search",
+
   "list.page.size.label": "Select number of results",
 
   "wkt": "Geographic coordinates (Well Known Text format)",
@@ -172,10 +180,12 @@
   "listmeta.visibility.label": "Visibility",
   "listmeta.wkt.label": "Geo Coordinates",
   "listmeta.wkt.placeholder": "Enter geo coordinates",
+  "listmeta.isPrivate.label": "Private",
+  "listmeta.isPrivate.placeholder": "List privacy",
   "listmeta.button.update.label": "Update",
   "listmeta.button.create.label": "Create",
   "listmeta.button.cancel.label": "Cancel",
-
+  "isPrivate": "Visibility",
   "summary.list.label": "list",
   "summary.dataResourceUid.tooltip": "View data resource details",
   "summary.listType.tooltip": "List type",
@@ -458,5 +468,7 @@
   "licence.CC-BY-NC-ND": "Creative Commons Attribution-Noncommercial-No Derivative Works",
   "licence.CC-BY-NC-SA": "Creative Commons Attribution-Noncommercial-Share Alike",
   "licence.CC-BY-SA": "Creative Commons Attribution-Share Alike",
+  "licence.none": ".",
+
   "summary.listtype.notFound": "Undefined list type"
 }

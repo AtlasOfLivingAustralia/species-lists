@@ -14,18 +14,15 @@
  */
 package au.org.ala.listsapi.controller;
 
-import java.net.URL;
+import java.net.URI;
 import java.security.Principal;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -36,18 +33,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregation;
-import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregations;
-import org.springframework.data.elasticsearch.client.elc.NativeQuery;
-import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.data.elasticsearch.core.SearchHitSupport;
-import org.springframework.data.elasticsearch.core.SearchHits;
-import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
-import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.GraphQlExceptionHandler;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -64,12 +52,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import au.org.ala.listsapi.model.Classification;
 import au.org.ala.listsapi.model.ConstraintType;
 import au.org.ala.listsapi.model.Facet;
-import au.org.ala.listsapi.model.FacetCount;
 import au.org.ala.listsapi.model.Filter;
 import au.org.ala.listsapi.model.Image;
 import au.org.ala.listsapi.model.InputSpeciesListItem;
 import au.org.ala.listsapi.model.KeyValue;
+import au.org.ala.listsapi.model.ListSearchContext;
+import au.org.ala.listsapi.model.PermissionContext;
 import au.org.ala.listsapi.model.Release;
+import au.org.ala.listsapi.model.SingleListSearchContext;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListIndex;
 import au.org.ala.listsapi.model.SpeciesListItem;
@@ -83,17 +73,11 @@ import au.org.ala.listsapi.service.TaxonService;
 import au.org.ala.listsapi.service.ValidationService;
 import au.org.ala.listsapi.util.ElasticUtils;
 import au.org.ala.ws.security.profile.AlaUserProfile;
-import co.elastic.clients.elasticsearch._types.FieldSort;
-import co.elastic.clients.elasticsearch._types.SortOrder;
-import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
-import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
-import co.elastic.clients.elasticsearch._types.aggregations.LongTermsBucket;
-import co.elastic.clients.elasticsearch._types.aggregations.MultiBucketBase;
-import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import graphql.ErrorType;
 import graphql.GraphQLError;
 import graphql.schema.DataFetchingEnvironment;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Nullable;
 
 /**
  * GraphQL API for lists
@@ -107,8 +91,6 @@ public class GraphQLController {
 
     @Value("${elastic.maximumDocuments}")
     public static final int MAX_LIST_ENTRIES = 10000;
-
-    private static final boolean ES_DEBUG = false;
 
     @Value("${image.url}")
     private String imageTemplateUrl;
@@ -136,6 +118,7 @@ public class GraphQLController {
             "isAuthoritative",
             "isThreatened",
             "isInvasive",
+            "isPrivate",
             "hasRegion",
             "isSDS",
             "tags");
@@ -172,16 +155,7 @@ public class GraphQLController {
     }
 
     /**
-     * Search across lists
-     *
-     * @param searchQuery
-     * @param page
-     * @param size
-     * @param userId
-     * @param isPrivate
-     * @param sort
-     * @param dir
-     * @return Page of SpeciesList
+     * Browse & search across lists with proper permission handling
      */
     @QueryMapping
     public Page<SpeciesList> lists(
@@ -190,171 +164,174 @@ public class GraphQLController {
             @Argument Integer page,
             @Argument Integer size,
             @Argument String userId,
-            @Argument Boolean isPrivate,
             @Argument String sort,
+            @Argument Boolean isPrivate,
             @Argument String dir,
             @AuthenticationPrincipal Principal principal) {
 
-        // if searching private lists, check user is authorized
-        // String userIdToCheck = userId;
-        if (isPrivate) {
-            AlaUserProfile profile = authUtils.getUserProfile(principal);
-            if (profile == null) {
-                logger.info("User not authorized to private access lists");
-                throw new AccessDeniedException("You must be logged in to view private lists");
-            }
-        }
-
-        NativeQueryBuilder builder = NativeQuery.builder().withPageable(PageRequest.of(1, 1));
-        Boolean isAdmin = principal != null ? (authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal))) : false;
-        String finalUserId = getUserIdBasedOnRole(isPrivate, userId, principal, isAdmin);
-
-        if ("relevance".equalsIgnoreCase(sort) && StringUtils.isNotBlank(searchQuery)) {
-            // Use the new list search query for better relevance scoring
-            builder.withQuery(
-                    q -> q.bool(
-                            bq -> ElasticUtils.buildListSearchQuery(ElasticUtils.cleanRawQuery(searchQuery),
-                                    finalUserId, isAdmin, isPrivate, filters, bq)));
-        } else {
-            // Use existing query for non-relevance sorts
-            builder.withQuery(
-                    q -> q.bool(
-                            bq -> ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null,
-                                    finalUserId, isAdmin, isPrivate, filters, bq)));
-        }
-
-        builder.withAggregation(
-                "types_count",
-                Aggregation.of(a -> a.cardinality(ca -> ca.field(SPECIES_LIST_ID + ".keyword"))));
-
-        // aggregation on species list ID, also capture the maximum score per species list
-        builder.withAggregation(
-                SPECIES_LIST_ID,
-                Aggregation.of(a -> a.terms(ta -> ta.field(SPECIES_LIST_ID + ".keyword").size(MAX_LIST_ENTRIES))
-                        .aggregations("max_score", Aggregation
-                                .of(ma -> ma.max(m -> m.script(s -> s.source("_score")))))));
-
-        Query aggQuery = builder.build();
-
-        SearchHits<SpeciesListIndex> results = elasticsearchOperations.search(aggQuery, SpeciesListIndex.class);
-
-        ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
-
-        assert agg != null;
-        ElasticsearchAggregation cardinality = agg.aggregations().get(0);
-        long noOfLists = cardinality.aggregation().getAggregate().cardinality().value();
-
-        ElasticsearchAggregation agg1 = agg.aggregations().get(1);
-        List<StringTermsBucket> array = agg1.aggregation().getAggregate().sterms().buckets().array();
-
-        Map<String, Long> speciesListIDs = array.stream()
-                .collect(
-                        Collectors.toMap(
-                                bucket -> bucket.key().stringValue(), MultiBucketBase::docCount));
-
-        // Extract scores for relevance sorting if applicable
-        Map<String, Double> speciesListScores = new HashMap<>();
-        for (StringTermsBucket bucket : array) {
-            String listId = bucket.key().stringValue();
-            // Extract the max score from the aggregation
-            if (bucket.aggregations().containsKey("max_score")) {
-                Double maxScore = bucket.aggregations().get("max_score").max().value();
-                if (maxScore != null && !maxScore.isInfinite() && !maxScore.isNaN()) {
-                    speciesListScores.put(listId, maxScore);
-                }
-            }
-        }
-
-        // lookup species list metadata
-        Iterable<SpeciesList> speciesLists = speciesListMongoRepository.findAllById(speciesListIDs.keySet());
-
-        // Add row count
-        for (SpeciesList speciesList : speciesLists) {
-            speciesList.setRowCount(speciesListIDs.get(speciesList.getId()).intValue());
-        }
-
-        List<SpeciesList> result = new ArrayList<>();
-        speciesLists.forEach(result::add);
-
-        // Sort the list using the provided sort and dir parameters
-        if (StringUtils.isNotEmpty(sort)) {
-            String sortDirection = StringUtils.isNotEmpty(dir) ? dir : "desc"; // Default direction
-            result.sort(getSpeciesListComparator(sort, sortDirection, speciesListScores));
-        } else {
-            // Default sort - use relevance
-            result.sort(getSpeciesListComparator("relevance", "desc", speciesListScores));
-        }
-
-        // Apply pagination after sorting.
-        List<SpeciesList> paginatedResult = result.stream()
-                .skip((long) page * size)
-                .limit(size)
-                .collect(Collectors.toList());
-
-        return new PageImpl<>(paginatedResult, PageRequest.of(page, size), noOfLists);
+        // Build search context with permission checks
+        ListSearchContext searchContext = buildSearchContext(
+            searchQuery, isPrivate, filters, userId, sort, dir, principal
+        );
+        
+        // Delegate to service for the actual search
+        return searchHelperService.searchSpeciesLists(
+            searchContext, 
+            PageRequest.of(page, size)
+        );
     }
 
     /**
-     * Creates a comparator for sorting `SpeciesList` objects based on the given
-     * sort field and direction.
-     *
-     * @param sort The field to sort by.
-     * @param dir  The direction of the sort ("asc" or "desc").
-     * @return A `Comparator<SpeciesList>` that can be used to sort a list of
-     *         `SpeciesList` objects.
+     * Get facets for species lists with proper permission handling
      */
-    private Comparator<SpeciesList> getSpeciesListComparator(String sort, String dir, Map<String, Double> speciesListScores) {
-        Comparator<SpeciesList> comparator;
-        boolean ascending = "asc".equalsIgnoreCase(dir);
+    @QueryMapping
+    public List<Facet> facetSpeciesLists(
+            @Argument String searchQuery,
+            @Argument List<Filter> filters,
+            @Argument String userId,
+            @Argument Boolean isPrivate,
+            @Argument Integer page,
+            @Argument Integer size,
+            @AuthenticationPrincipal Principal principal) {
 
-        switch (sort) {
-            case "relevance":
-                comparator = (list1, list2) -> {
-                    Double score1 = speciesListScores.getOrDefault(list1.getId(), 0.0);
-                    Double score2 = speciesListScores.getOrDefault(list2.getId(), 0.0);
+        // Build search context with permission checks
+        ListSearchContext searchContext = buildSearchContext(
+            searchQuery, isPrivate, filters, userId, null, null, principal
+        );
+        
+        // Delegate to service for facet aggregation
+        return searchHelperService.getFacetsForSpeciesLists(searchContext);
+    }
 
-                    // Primary sort by score
-                    int scoreComparison = Double.compare(score1, score2);
+    /**
+     * Builds a search context with proper permission validation
+     */
+    private ListSearchContext buildSearchContext(
+            String searchQuery,
+            Boolean isPrivate,
+            List<Filter> filters,
+            String userId,
+            String sort,
+            String dir,
+            Principal principal) {
+        
+        AlaUserProfile profile = authUtils.getUserProfile(principal);
+        PermissionContext permissions = determinePermissions(userId, filters, profile);
+        // if isPrivate is requested, add a filter for it
+        Boolean isMySpeciesList = permissions.isViewingOwnLists();
+        Boolean hasPrivateFilter = isPrivateFilterApplied(filters, isPrivate, permissions.isAdmin(), isMySpeciesList);
+        if (hasPrivateFilter != null) {
+            filters = ElasticUtils.addOrUpdateFilter(filters, new Filter("isPrivate", hasPrivateFilter.toString()));
+        }
+        
+        return ListSearchContext.builder()
+            .searchQuery(ElasticUtils.cleanRawQuery(searchQuery))
+            .filters(filters != null ? filters : new ArrayList<>())
+            .userId(permissions.getEffectiveUserId())
+            .sort(StringUtils.defaultIfBlank(sort, "relevance"))
+            .dir(StringUtils.defaultIfBlank(dir, "desc"))
+            .isAdmin(permissions.isAdmin())
+            .isAuthenticated(permissions.isAuthenticated())
+            .isViewingOwnLists(permissions.isViewingOwnLists())
+            .build();
+    }
 
-                    // Secondary sort by title for stable sorting when scores are equal
-                    if (scoreComparison == 0) {
-                        String title1 = list1.getTitle() != null ? list1.getTitle() : "";
-                        String title2 = list2.getTitle() != null ? list2.getTitle() : "";
-                        return title1.compareToIgnoreCase(title2);
-                    }
+    /**
+     * Determines user permissions and validates access
+     */
+    private PermissionContext determinePermissions(
+            String userId, 
+            List<Filter> filters, 
+            AlaUserProfile profile) {
+        boolean isAuthenticated = profile != null;
+        boolean isAdmin = isAuthenticated && 
+            (authUtils.hasAdminRole(profile) || authUtils.hasInternalScope(profile));
+        
+        String currentUserId = isAuthenticated && profile != null ? profile.getUserId() : null;
+        boolean isViewingOwnLists = userId != null && userId.equals(currentUserId);
+        
+        // Validate access when userId is specified
+        if (userId != null && !isAdmin && !isViewingOwnLists) {
+            logger.warn("User {} attempted to access lists for user {}", currentUserId, userId);
+            throw new AccessDeniedException("You can only view your own lists");
+        }
+        
+        // Check for private filter
+        boolean requestingPrivate = hasPrivateFilter(filters);
+        if (requestingPrivate && !isAuthenticated) {
+            throw new AccessDeniedException("You must be logged in to view private lists");
+        }
+        
+        return PermissionContext.builder()
+            .isAuthenticated(isAuthenticated)
+            .isAdmin(isAdmin)
+            .currentUserId(currentUserId)
+            .effectiveUserId(userId)
+            .isViewingOwnLists(isViewingOwnLists)
+            .build();
+    }
 
-                    return scoreComparison;
-                };
-                if (ascending) comparator = comparator.reversed();
-                break;
-            case "title":
-                comparator = Comparator.comparing(SpeciesList::getTitle, String.CASE_INSENSITIVE_ORDER);
-                break;
-            case "listType":
-                // listType contains null values, so we need to handle nulls separately so they
-                // always appear at the end
-                // noting that order is reversed when descending
-                comparator = ascending
-                        ? Comparator.comparing(SpeciesList::getListType,
-                                Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
-                        : Comparator.comparing(SpeciesList::getListType,
-                                Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER));
-                break;
-            case "rowCount":
-                comparator = Comparator.comparing(SpeciesList::getRowCount, Integer::compareTo);
-                break;
-            case "lastUpdated":
-            default:
-                comparator = Comparator.comparing(SpeciesList::getLastUpdated, Date::compareTo);
-                break;
+    /**
+     * Checks if filters contain a private list request
+     */
+    private boolean hasPrivateFilter(List<Filter> filters) {
+        if (filters == null) return false;
+        return filters.stream()
+            .anyMatch(f -> "isPrivate".equals(f.getKey()) && "true".equals(f.getValue()));
+    }
+
+    /**
+     * Determines the userId to be used for filtering based on the user's role and privacy settings.
+     * @param filters
+     * @param isPrivate
+     * @return Boolean indicating if the isPrivate filter is applied, null if no filtering
+     */
+    @NotNull
+    private Boolean getPrivateFilterOrFlag(List<Filter> filters, Boolean isPrivate) {
+        if ((filters == null || filters.isEmpty()) && isPrivate == null) {
+            return null;
+        }
+        
+        boolean hasPrivateFilter = filters != null && filters.stream()
+            .anyMatch(f -> f.getKey().equals("isPrivate") && f.getValue().equals("true"));
+        
+        return hasPrivateFilter || (isPrivate != null && isPrivate);
+    }
+    
+    /**
+     * Determines if the isPrivate filter is applied based on the provided filters and isPrivate argument.
+     * <p>
+     * <b>Special logic for admins:</b> If the user is an admin and no private filter or flag is set,
+     * this method returns {@code null}. This signals downstream queries (such as Elasticsearch queries)
+     * to not filter on the {@code isPrivate} field at all, allowing admins to see both private and public lists.
+     * For non-admins, or if a private filter/flag is set, this method returns {@code true} if a private filter or flag is set,
+     * or {@code false} otherwise. This ensures that non-admin users are always subject to privacy filtering,
+     * while admins have unrestricted access unless a filter is explicitly applied.
+     * <p>
+     * <b>Downstream effect:</b> Returning {@code null} for admins means that the query will not include any
+     * constraint on the {@code isPrivate} field, so all lists (public and private) are visible to admins.
+     *
+     * @param filters   List of filters applied to the query.
+     * @param isPrivate Boolean flag indicating if private lists are requested.
+     * @param isAdmin   Boolean indicating if the current user is an admin.
+     * @return {@code true} if the isPrivate filter is applied, {@code false} if not, or {@code null} for admins with no private filter (no filtering).
+     */
+    @Nullable
+    private Boolean isPrivateFilterApplied(List<Filter> filters, Boolean isPrivate, Boolean isAdmin, Boolean isMySpeciesList) {
+        boolean defaultValue = false;
+        Boolean hasPrivateFilterOrFlag = getPrivateFilterOrFlag(filters, isPrivate); // can be null, true or false
+        // boolean isPrivateSpecified = isPrivate != null && isPrivate;
+        boolean isAdminSpecified = isAdmin != null && isAdmin;
+        // If the user is an admin and no private filter or flag is set, return null (no filtering on isPrivate).
+        // Otherwise, return true if a private filter or flag is set, or the default value (false).
+        Boolean returnValue;
+        if ((isAdminSpecified || isMySpeciesList) && hasPrivateFilterOrFlag == null) {
+            returnValue = null;
+        } else {
+            returnValue = hasPrivateFilterOrFlag != null && hasPrivateFilterOrFlag || defaultValue;
         }
 
-        // Apply null handling based on direction
-        if (!ascending) {
-            comparator = comparator.reversed();
-        }
-
-        return comparator;
+        return returnValue;
     }
 
     @GraphQlExceptionHandler
@@ -394,16 +371,6 @@ public class GraphQLController {
         }
 
         return null;
-    }
-
-    @QueryMapping
-    public Page<SpeciesListItem> getSpeciesList(
-            @Argument String speciesListID,
-            @Argument Integer page,
-            @Argument Integer size,
-            @AuthenticationPrincipal Principal principal) {
-        return filterSpeciesList(
-                speciesListID, null, new ArrayList<>(), page, size, null, null, principal);
     }
 
     @SchemaMapping(typeName = "Mutation", field = "addField")
@@ -835,6 +802,8 @@ public class GraphQLController {
             // in elasticsearch and mongo
             SpeciesList updatedList = speciesListMongoRepository.save(toUpdate);
             if (reindexRequired) {
+                logger.debug("Reindexing list {} after metadata update. isPrivate changed to: {}", 
+                        updatedList.getId(), updatedList.getIsPrivate());
                 taxonService.reindex(updatedList.getId());
             }
 
@@ -844,6 +813,23 @@ public class GraphQLController {
         }
     }
 
+    /**
+     * Get species list items with filtering and pagination
+     */
+    @QueryMapping
+    public Page<SpeciesListItem> getSpeciesList(
+            @Argument String speciesListID,
+            @Argument Integer page,
+            @Argument Integer size,
+            @AuthenticationPrincipal Principal principal) {
+        return filterSpeciesList(
+            speciesListID, null, new ArrayList<>(), page, size, null, null, principal
+        );
+    }
+
+    /**
+     * Filter species list items with search query and filters
+     */
     @QueryMapping
     public Page<SpeciesListItem> filterSpeciesList(
             @Argument String speciesListID,
@@ -855,225 +841,32 @@ public class GraphQLController {
             @Argument String dir,
             @AuthenticationPrincipal Principal principal) {
 
-        String ID;
-        final SpeciesList speciesList;
-
-        if (speciesListID != null) {
-            Optional<SpeciesList> speciesListOptional = speciesListMongoRepository
-                    .findByIdOrDataResourceUid(speciesListID, speciesListID);
-
-            if (speciesListOptional.isEmpty()) {
-                return null;
-            }
-
-            final SpeciesList speciesListFinal = speciesListOptional.get();
-            speciesList = new SpeciesList(speciesListFinal);
-
-            if (speciesList.getIsPrivate()) {
-                // private list, check user is authorized
-                if (!authUtils.isAuthorized(speciesList, principal)) {
-                    logger.info("User not authorized to private access list: " + speciesListID);
-                    throw new AccessDeniedException("You dont have access to this list");
-                }
-            }
-
-            ID = speciesList.getId();
-        } else {
-            speciesList = null;
-            ID = null;
+        // Validate and authorize access to the list
+        SpeciesList speciesList = validateAndAuthorizeListAccess(speciesListID, principal);
+        if (speciesList == null) {
+            return null;
         }
 
-        Pageable pageableRequest = PageRequest.of(page, size);
-        NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
-        AlaUserProfile profile = authUtils.getUserProfile(principal);
-        Boolean isAdmin = authUtils.hasAdminRole(profile) || authUtils.hasInternalScope(profile);
-        builder.withQuery(
-                q -> q.bool(
-                        bq -> {
-                            ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), ID, null, isAdmin, null, filters, bq);
-                            return bq;
-                        }));
+        // Build search context for the specific list
+        SingleListSearchContext searchContext = buildSingleListSearchContext(
+            speciesList,
+            searchQuery,
+            filters,
+            sort,
+            dir,
+            principal
+        );
 
-        builder.withSort(
-                s -> s.field(
-                        new FieldSort.Builder()
-                                .field(sort)
-                                .order(dir.equals("asc") ? SortOrder.Asc : SortOrder.Desc)
-                                .build()));
-
-        Query query = builder.build();
-        query.setPageable(pageableRequest);
-        SearchHits<SpeciesListIndex> results = elasticsearchOperations.search(
-                query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
-
-        Object unwrappedResults = SearchHitSupport.unwrapSearchHits(results);
-
-        if (!(unwrappedResults instanceof List)) {
-            throw new IllegalStateException("unwrapSearchHits did not return a List");
-        }
-
-        @SuppressWarnings("unchecked")
-        List<SpeciesListIndex> speciesListIndexes = (List<SpeciesListIndex>) unwrappedResults;
-        List<SpeciesListItem> speciesLists = ElasticUtils.convertList(speciesListIndexes);
-
-        return new PageImpl<>(speciesLists, pageableRequest, results.getTotalHits());
+        // Delegate to service for the actual search
+        return searchHelperService.searchSingleSpeciesList(
+            searchContext,
+            PageRequest.of(page, size)
+        );
     }
 
-    @NotNull
-    private static String cleanRawQuery(String searchQuery) {
-        if (searchQuery != null)
-            return searchQuery.trim().replace("\"", "\\\"");
-        return "";
-    }
-
-    @QueryMapping
-    public List<Facet> facetSpeciesLists(
-            @Argument String searchQuery,
-            @Argument List<Filter> filters,
-            @Argument String userId,
-            @Argument Boolean isPrivate,
-            @Argument Integer page,
-            @Argument Integer size,
-            @AuthenticationPrincipal Principal principal) {
-
-        // retrieve field list from species_list
-        NativeQueryBuilder builder = NativeQuery.builder();
-        // Always build the query to ensure default filters (like isPrivate) are
-        // applied.
-        // ElasticUtils.cleanRawQuery will handle a null searchQuery, typically
-        // returning an empty string.
-        Boolean isAdmin = authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal));
-        String finalUserId = getUserIdBasedOnRole(isPrivate, userId, principal, isAdmin);
-
-        builder.withQuery(
-                q -> q.bool(bq -> {
-                    ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), (String) null,
-                            finalUserId, isAdmin, isPrivate, filters, bq);
-                    return bq;
-                }));
-
-        List<String> facetFields = new ArrayList<>();
-        facetFields.add("isAuthoritative");
-        facetFields.add("listType");
-        facetFields.add("isBIE");
-        facetFields.add("isSDS");
-        facetFields.add("hasRegion");
-        facetFields.add("tags");
-        facetFields.add("isThreatened");
-        facetFields.add("isInvasive");
-        facetFields.add("licence");
-
-        // Define the name for the nested cardinality aggregation
-        String distinctCountAggName = "distinct_species_list_count";
-        // Ensure you use the .keyword field for exact matching and cardinality
-        String speciesListIdKeywordField = SPECIES_LIST_ID + ".keyword";
-
-        // Define which of the facet fields are boolean
-        Set<String> booleanFacetFields = Set.of("isAuthoritative", "isBIE", "isSDS", "hasRegion", "isThreatened", "isInvasive");
-
-        for (String facetField : facetFields) {
-            // Determine the correct field for the terms aggregation
-            String esTermsField;
-            if (booleanFacetFields.contains(facetField)) {
-                // Use the base field name for boolean types
-                esTermsField = facetField;
-            } else if (facetField.equals("tags")) {
-                // Tags is often multi-value keyword, use .keyword if mapped that way
-                esTermsField = facetField + ".keyword"; // Assuming tags is keyword
-            } else {
-                // Use the helper for others (assuming it correctly adds .keyword where needed)
-                // Or explicitly handle listType.keyword etc.
-                esTermsField = getPropertiesFacetField(facetField); // Make sure this handles listType correctly
-            }
-
-            builder.withAggregation(
-                    facetField, // Name of the outer terms aggregation
-                    Aggregation.of(a -> a // 'a' is the Aggregation.Builder
-                            .terms(ta -> ta // Configure the terms aggregation
-                                    .field(esTermsField) // Use the correctly determined field name
-                                    .size(50) // Set your desired size
-                            )
-                            .aggregations( // Add sub-aggregations to the parent builder 'a'
-                                    distinctCountAggName, // Name for the nested aggregation
-                                    sa -> sa // 'sa' is the Aggregation.Builder for the sub-aggregation
-                                            .cardinality(ca -> ca // Configure the cardinality aggregation
-                                                    .field(speciesListIdKeywordField)
-                                            // Cardinality still on speciesListID
-                                            ))));
-        }
-
-        Query aggQuery = builder.build();
-        SearchHits<SpeciesListIndex> results = elasticsearchOperations.search(aggQuery, SpeciesListIndex.class);
-
-        ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
-
-        List<Facet> facets = new ArrayList<>();
-        facetFields.forEach(
-                facetField -> {
-                    ElasticsearchAggregation agg1 = agg.aggregations().stream()
-                            .filter(
-                                    elasticsearchAggregation -> elasticsearchAggregation.aggregation().getName()
-                                            .equals(facetField))
-                            .findFirst()
-                            .get();
-
-                    if (agg1.aggregation().getAggregate().isSterms()) {
-                        List<StringTermsBucket> array = agg1.aggregation().getAggregate().sterms().buckets().array();
-                        Facet facet = new Facet();
-                        facet.setCounts(new ArrayList<>());
-                        facet.setKey(facetField);
-
-                        array.forEach(
-                                bucket -> {
-                                    // Get the nested cardinality aggregation result by its name
-                                    Aggregate distinctCountAggResult = bucket.aggregations().get(distinctCountAggName);
-
-                                    // Extract the distinct count value
-                                    long distinctListCount = distinctCountAggResult.cardinality().value();
-
-                                    // Create the FacetCount with the distinct count
-                                    facet.getCounts().add(
-                                            new FacetCount(
-                                                    bucket.key().stringValue(),
-                                                    // Or bucket.keyAsString() for LongTermsBucket
-                                                    distinctListCount // Use the distinct count here
-                                    ));
-                                });
-                        facets.add(facet);
-                    } else if (agg1.aggregation().getAggregate().isLterms()) {
-                        List<LongTermsBucket> array = agg1.aggregation().getAggregate().lterms().buckets().array();
-                        Facet facet = new Facet();
-                        facet.setCounts(new ArrayList<>());
-                        facet.setKey(facetField); // Keep the original facet field name (e.g., "isAuthoritative")
-                        array.forEach(
-                                bucket -> {
-                                    // Get the nested cardinality aggregation result by its name
-                                    Aggregate distinctCountAggResult = bucket.aggregations().get(distinctCountAggName);
-
-                                    // Extract the distinct count value
-                                    long distinctListCount = distinctCountAggResult.cardinality().value();
-
-                                    // Convert the long key (0 or 1) to a boolean string ("false" or "true")
-                                    long keyAsLong = bucket.key();
-                                    String keyAsString = (keyAsLong == 1) ? "true" : "false";
-
-                                    // Create the FacetCount with the distinct count and the "true"/"false" key
-                                    facet.getCounts().add(
-                                            new FacetCount(
-                                                    keyAsString, // Use the converted "true" or "false" string
-                                                    distinctListCount // Use the distinct count here
-                                    ));
-                                });
-                        // Add the facet only if it has counts (optional but good practice)
-                        if (!facet.getCounts().isEmpty()) {
-                            facets.add(facet);
-                        }
-                    }
-                }); // End of facetFields.forEach
-
-        return facets;
-    }
-
+    /**
+     * Get facets for a single species list
+     */
     @QueryMapping
     public List<Facet> facetSpeciesList(
             @Argument String speciesListID,
@@ -1084,230 +877,93 @@ public class GraphQLController {
             @Argument Integer size,
             @AuthenticationPrincipal Principal principal) {
 
-        Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
-                speciesListID);
+        // Validate and authorize access to the list
+        SpeciesList speciesList = validateAndAuthorizeListAccess(speciesListID, principal);
+        if (speciesList == null) {
+            return null;
+        }
+
+        // Build search context for the specific list
+        SingleListSearchContext searchContext = buildSingleListSearchContext(
+            speciesList,
+            searchQuery,
+            filters,
+            null,
+            null,
+            principal
+        );
+
+        // Use provided facet fields or default to list's configured facets
+        List<String> effectiveFacetFields = (facetFields != null && !facetFields.isEmpty())
+            ? facetFields
+            : speciesList.getFacetList();
+
+        // Delegate to service for facet aggregation
+        return searchHelperService.getFacetsForSingleSpeciesList(
+            searchContext,
+            effectiveFacetFields
+        );
+    }
+
+    /**
+     * Validates list exists and user has permission to access it
+     */
+    private SpeciesList validateAndAuthorizeListAccess(
+            String speciesListID,
+            Principal principal) {
+        
+        Optional<SpeciesList> optionalSpeciesList = 
+            speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+        
         if (optionalSpeciesList.isEmpty()) {
+            logger.warn("Species list not found: {}", speciesListID);
             return null;
         }
 
         SpeciesList speciesList = optionalSpeciesList.get();
 
-        // private list, check user is authorized
-        if (speciesList.getIsPrivate()) {
-            if (!authUtils.isAuthorized(speciesList, principal)) {
-                logger.info("User not authorized to private access list: " + speciesListID);
-                throw new AccessDeniedException("You dont have access to this list");
-            }
+        // Check if user has access to private list
+        if (speciesList.getIsPrivate() && !authUtils.isAuthorized(speciesList, principal)) {
+            logger.info("User not authorized to access private list: {}", speciesListID);
+            throw new AccessDeniedException("You don't have access to this list");
         }
 
-        Boolean isAdmin = principal != null ? (authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal))) : false;
-        String finalUserId;
+        return speciesList;
+    }
 
-        if (principal != null) {
-            AlaUserProfile profile = authUtils.getUserProfile(principal);
-            finalUserId = profile != null ? profile.getUserId() : null;
-        } else {
-            finalUserId = null;
-        }
+    /**
+     * Builds search context for a specific list with permission validation
+     */
+    private SingleListSearchContext buildSingleListSearchContext(
+            SpeciesList speciesList,
+            String searchQuery,
+            List<Filter> filters,
+            String sort,
+            String dir,
+            Principal principal) {
+        
+        AlaUserProfile profile = authUtils.getUserProfile(principal);
+        boolean isAdmin = profile != null && 
+            (authUtils.hasAdminRole(profile) || authUtils.hasInternalScope(profile));
+        String userId = profile != null ? profile.getUserId() : null;
 
-        // get facet fields unique to this list
-        if (facetFields == null || facetFields.isEmpty()) {
-            facetFields = speciesList.getFacetList();
-        }
+        return SingleListSearchContext.builder()
+            .speciesListId(speciesList.getId())
+            .speciesList(speciesList)
+            .searchQuery(ElasticUtils.cleanRawQuery(searchQuery))
+            .filters(filters != null ? filters : new ArrayList<>())
+            .userId(userId)
+            .sort(StringUtils.defaultIfBlank(sort, "scientificName"))
+            .dir(StringUtils.defaultIfBlank(dir, "asc"))
+            .isAdmin(isAdmin)
+            .build();
+    }
 
-        // Create the NativeQueryBuilder
-        NativeQueryBuilder builder = NativeQuery.builder();
-
-        // Build a query that only filters by speciesList ID and searchQuery
-        // (not applying the additional filters for aggregations)
-        builder.withQuery(
-                q -> q.bool(
-                        bq -> {
-                            // Build a query that only includes speciesListID and searchQuery constraints
-                            // but NOT the additional filters - this is used for aggregations
-                            if (speciesList.getId() != null) {
-                                bq.must(m -> m.term(t -> t.field(SPECIES_LIST_ID).value(speciesList.getId())));
-                            }
-
-                            if (StringUtils.isNotEmpty(searchQuery)) {
-                                bq.must(m -> m.queryString(qs -> qs.query(ElasticUtils.cleanRawQuery(searchQuery))));
-                            }
-
-                            return bq;
-                        }));
-
-        // Now add a post filter that includes ALL constraints
-        // This will filter the results but not affect the aggregations
-        if (filters != null && !filters.isEmpty()) {
-            builder.withFilter(
-                    q -> q.bool(
-                            bq -> {
-                                ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery),
-                                        speciesList.getId(), finalUserId, isAdmin, null, filters, bq);
-                                return bq;
-                            }));
-        }
-
-        // Add aggregations for the facet fields
-        if (facetFields != null) {
-            for (String facetField : facetFields) {
-                builder.withAggregation(
-                        facetField,
-                        Aggregation.of(
-                                a -> a.terms(ta -> ta.field(getPropertiesFacetField(facetField)).size(30))));
-            }
-        }
-
-        // Add classification fields
-        // TODO: move to configuration
-        List<String> classificationFields = new ArrayList<>();
-        classificationFields.add("classification.family");
-        classificationFields.add("classification.order");
-        classificationFields.add("classification.class");
-        classificationFields.add("classification.phylum");
-        classificationFields.add("classification.kingdom");
-        classificationFields.add("classification.speciesSubgroup");
-        classificationFields.add("classification.rank");
-        classificationFields.add("classification.vernacularName");
-        classificationFields.add("classification.matchType");
-
-        for (String classificationField : classificationFields) {
-            builder.withAggregation(
-                    classificationField,
-                    Aggregation.of(a -> a.terms(ta -> ta.field(classificationField + ".keyword").size(500))));
-        }
-
-        // Add properties.key aggregation for property facets
-        builder.withAggregation(
-                "properties_keys",
-                Aggregation.of(a -> a.nested(na -> na.path("properties"))
-                        .aggregations("key_counts",
-                                sa -> sa.terms(ta -> ta.field("properties.key.keyword").size(100)))));
-
-        Query aggQuery = builder.build();
-        SearchHits<SpeciesListIndex> results = elasticsearchOperations.search(aggQuery, SpeciesListIndex.class);
-
-        ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
-
-        // Process aggregations for facets
-        List<Facet> facets = new ArrayList<>();
-        if (facetFields != null) {
-            facetFields.addAll(classificationFields);
-            facetFields.forEach(
-                    facetField -> {
-                        ElasticsearchAggregation agg1 = agg.aggregations().stream()
-                                .filter(
-                                        elasticsearchAggregation -> elasticsearchAggregation.aggregation().getName()
-                                                .equals(facetField))
-                                .findFirst()
-                                .orElse(null);
-
-                        if (agg1 != null && agg1.aggregation().getAggregate().isSterms()) {
-                            List<StringTermsBucket> array = agg1.aggregation().getAggregate().sterms().buckets()
-                                    .array();
-                            Facet facet = new Facet();
-                            facet.setCounts(new ArrayList<>());
-                            facet.setKey(facetField);
-                            array.forEach(
-                                    bucket -> {
-                                        facet
-                                                .getCounts()
-                                                .add(new FacetCount(bucket.key().stringValue(), bucket.docCount()));
-                                    });
-                            facets.add(facet);
-                        }
-                    });
-        }
-
-        // First identify all keys from the properties_keys aggregation
-        List<String> propertyKeys = new ArrayList<>();
-        ElasticsearchAggregation propertiesAgg = agg.aggregations().stream()
-                .filter(elasticsearchAggregation -> elasticsearchAggregation.aggregation().getName()
-                        .equals("properties_keys"))
-                .findFirst()
-                .orElse(null);
-
-        if (propertiesAgg != null) {
-            Aggregate nestedAgg = propertiesAgg.aggregation().getAggregate();
-            if (nestedAgg.isNested()) {
-                Aggregate keyCountsAgg = nestedAgg.nested().aggregations().get("key_counts");
-                if (keyCountsAgg != null && keyCountsAgg.isSterms()) {
-                    List<StringTermsBucket> keyBuckets = keyCountsAgg.sterms().buckets().array();
-                    keyBuckets.forEach(bucket -> {
-                        propertyKeys.add(bucket.key().stringValue());
-                    });
-                }
-            }
-        }
-
-        // For each property key, create a new facet with key.value pairs
-        for (String propertyKey : propertyKeys) {
-            // Create an aggregation for this specific key
-            NativeQueryBuilder keyValueBuilder = NativeQuery.builder();
-
-            // Copy the main query constraints
-            keyValueBuilder.withQuery(
-                    q -> q.bool(bq -> {
-                        if (speciesList.getId() != null) {
-                            bq.must(m -> m.term(t -> t.field(SPECIES_LIST_ID).value(speciesList.getId())));
-                        }
-                        if (StringUtils.isNotEmpty(searchQuery)) {
-                            bq.must(m -> m.queryString(qs -> qs.query(ElasticUtils.cleanRawQuery(searchQuery))));
-                        }
-                        return bq;
-                    }));
-
-            // Add nested aggregation for this specific property key's values
-            keyValueBuilder.withAggregation(
-                    propertyKey + "_values",
-                    Aggregation.of(a -> a.nested(na -> na.path("properties"))
-                            .aggregations("filtered_values", sa -> sa
-                                    .filter(f -> f.term(t -> t.field("properties.key.keyword").value(propertyKey)))
-                                    .aggregations("value_counts",
-                                            va -> va.terms(ta -> ta.field("properties.value.keyword").size(100))))));
-
-            // Execute the query for this key
-            Query keyValueQuery = keyValueBuilder.build();
-            SearchHits<SpeciesListIndex> keyValueResults = elasticsearchOperations.search(keyValueQuery,
-                    SpeciesListIndex.class);
-
-            ElasticsearchAggregations keyValueAggs = (ElasticsearchAggregations) keyValueResults.getAggregations();
-            if (keyValueAggs != null) {
-                ElasticsearchAggregation keyValueAgg = keyValueAggs.aggregations().stream()
-                        .filter(a -> a.aggregation().getName().equals(propertyKey + "_values"))
-                        .findFirst()
-                        .orElse(null);
-
-                if (keyValueAgg != null) {
-                    Aggregate nestedKeyValueAgg = keyValueAgg.aggregation().getAggregate();
-                    if (nestedKeyValueAgg.isNested()) {
-                        Aggregate filteredValuesAgg = nestedKeyValueAgg.nested().aggregations().get("filtered_values");
-                        if (filteredValuesAgg != null && filteredValuesAgg.isFilter()) {
-                            Aggregate valueCountsAgg = filteredValuesAgg.filter().aggregations().get("value_counts");
-                            if (valueCountsAgg != null && valueCountsAgg.isSterms()) {
-                                List<StringTermsBucket> valueBuckets = valueCountsAgg.sterms().buckets().array();
-                                if (!valueBuckets.isEmpty()) {
-                                    Facet propertyValueFacet = new Facet();
-                                    propertyValueFacet.setKey("properties." + propertyKey);
-                                    propertyValueFacet.setCounts(new ArrayList<>());
-
-                                    valueBuckets.forEach(bucket -> {
-                                        propertyValueFacet.getCounts().add(
-                                                new FacetCount(
-                                                        bucket.key().stringValue(),
-                                                        bucket.docCount()));
-                                    });
-
-                                    facets.add(propertyValueFacet);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return facets;
+    @NotNull
+    private static String cleanRawQuery(String searchQuery) {
+        if (searchQuery != null)
+            return searchQuery.trim().replace("\"", "\\\"");
+        return "";
     }
 
     @QueryMapping
@@ -1333,7 +989,7 @@ public class GraphQLController {
         // get taxon image from BIE
         ObjectMapper objectMapper = new ObjectMapper();
         String url = String.format(bieImagesTemplateUrl, taxonID, size, page * size);
-        JsonNode jsonNode = objectMapper.readTree(new URL(url));
+        JsonNode jsonNode = objectMapper.readTree(new URI(url).toURL());
         JsonNode results = jsonNode.at("/searchResults/results");
         List<Image> images = new ArrayList<>();
         Iterator<JsonNode> iter = results.elements();
@@ -1346,56 +1002,6 @@ public class GraphQLController {
 
     public Map<String, Object> loadJson(String url) throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.readValue(new URL(url), objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class));
-    }
-
-    private static String getPropertiesFacetField(String filter) {
-        if (CORE_FIELDS.contains(filter) || filter.startsWith("classification.") || filter.startsWith("licence")) {
-            return filter + ".keyword";
-        }
-        return "properties." + filter + ".keyword";
-    }
-
-    /**
-     * Determine the (final) userId based on isPrivate, userId and the
-     * principal's role. The logic is quite complicated, due to non-admin users
-     * being able to see their own private lists, but admins being able to see all
-     * private lists. UserId is a proxy for "my lists" but is also used for private
-     * lists, so has a double role here.
-     * 
-     * @param isPrivate
-     * @param userId
-     * @param principal
-     * @param isAdmin
-     * @return
-     */
-    private String getUserIdBasedOnRole(Boolean isPrivate, String userId, Principal principal,
-            Boolean isAdmin) {
-        String finalUserId;
-
-        if (isPrivate != null && isPrivate) {
-            // Viewing private lists - non-admin users should only see their own private lists
-            // so include userId to enforce this (but not for admins).
-            if (userId != null) {
-                // If userId is provided and the user is not an admin, use the provided userId
-                // to filter the results. Noting admins can see all private lists.
-                finalUserId = userId;
-            } else if (userId == null && principal != null && !isAdmin) {
-                AlaUserProfile profile = authUtils.getUserProfile(principal);
-                finalUserId = profile != null ? profile.getUserId() : null;
-            } else {
-                finalUserId = null;
-            }
-        } else if ((isPrivate == null || !isPrivate) && userId != null && isAdmin) {
-            finalUserId = userId;
-        } else if ((isPrivate == null || !isPrivate) && userId == null && isAdmin) {
-            // admin and no userId passed in and not viewing private lists, so don't filter by userId
-            finalUserId = null;
-        } else {
-            // pass the userId through
-            finalUserId = userId;
-        }
-
-        return finalUserId;
+        return objectMapper.readValue(new URI(url).toURL(), objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class));
     }
 }

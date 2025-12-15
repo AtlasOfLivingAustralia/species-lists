@@ -1,14 +1,15 @@
+import { ChevronRightIcon } from '@atlasoflivingaustralia/ala-mantine';
 import {
   Anchor,
   Breadcrumbs as Base,
-  Text,
   Group,
+  Text,
 } from '@mantine/core';
-import { Link, useLocation } from 'react-router'; 
-import { ChevronRightIcon } from '@atlasoflivingaustralia/ala-mantine';
+import { Link, useLocation } from 'react-router';
 
-import classes from './Breadcrumbs.module.css';
 import { ActionButtons } from '#/components/ActionButtons';
+import { FormattedMessage } from 'react-intl';
+import classes from './Breadcrumbs.module.css';
 
 // Helper function to capitalize the first letter of a string
 const capitalize = (input?: string) =>
@@ -27,6 +28,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
   // Define the structure for breadcrumb items
   interface BreadcrumbItem {
     label: string;
+    id?: string;
     href?: string; // Use href for external links or simple anchors
     to?: string; // Use to for react-router Link
     isText?: boolean; // Flag to indicate if it should be a Text component
@@ -67,6 +69,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
       if (listTitle) {
         items.push({
           label: listTitle,
+          id: part,
           to: isLast ? undefined : currentPath, // Link unless it's the last item
           isText: isLast, // Text if it's the last item (the list details page itself)
         });
@@ -74,6 +77,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
         // Fallback to using the list ID if no title is provided
         items.push({
           label: part,
+          id: part,
           to: isLast ? undefined : currentPath, // Link unless it's the last item
           isText: isLast, // Text if it's the last item
         });
@@ -82,6 +86,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
       // Handle all other parts
       items.push({
         label: capitalize(part),
+        id: part,
         to: isLast ? undefined : currentPath, // Link unless it's the last item
         isText: isLast, // Text if it's the last item
       });
@@ -108,7 +113,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
     if (item.isText) {
       return (
         <Text size='sm' truncate='end' key={index}>
-          {item.label}
+          <FormattedMessage id={`breadcrumb.${item.id}`} defaultMessage={item.label}/>
         </Text>
       );
     } else if (item.href) {
@@ -128,7 +133,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
       }
       return (
         <Anchor component={Link} to={item.to} className={classes.link} size='sm' key={index}>
-          {item.label}
+          <FormattedMessage id={`breadcrumb.${item.label}`} defaultMessage={item.label}/>
         </Anchor>
       );
     }

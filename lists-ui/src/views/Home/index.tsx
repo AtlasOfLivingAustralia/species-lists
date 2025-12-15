@@ -5,7 +5,6 @@ import {
   Box,
   Button,
   Center,
-  Checkbox,
   Collapse,
   Container,
   em,
@@ -13,7 +12,6 @@ import {
   Group,
   Pagination,
   Paper,
-  SegmentedControl,
   Select,
   Skeleton,
   Space,
@@ -22,7 +20,7 @@ import {
   Text,
   TextInput,
   Title,
-  Tooltip,
+  Tooltip
 } from '@mantine/core';
 import {
   useDebouncedValue,
@@ -45,7 +43,7 @@ import {
   faEye,
   faEyeSlash,
   faMagnifyingGlass,
-  faXmark,
+  faXmark
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
@@ -82,10 +80,14 @@ const sortField = [
   'rowCount_asc',
 ];
 
-function Home() {
+const Home = ({ routeId }: { routeId: string }) => {
   useDocumentTitle('ALA Species Lists');
   const isMobile = useMediaQuery(`(max-width: ${em(750)})`) || false;
   const intl = useIntl();
+  const ala = useALA();
+  const [isMyListsPage, setIsMyListsPage] = useState<boolean>(false);
+  const [isAdminListPage, setIsAdminListPage] = useState<boolean>(false);
+  const [inputSearchValue, setSearchInputValue] = useState('');
 
   // Search
   const [search, setSearch] = useQueryState<string>(
@@ -116,14 +118,28 @@ function Home() {
     parseAsString.withDefault('public')
   );
   // Shows the user's lists (my lists) when true
-  const [isUser, setIsUser] = useQueryState<boolean>(
-    'isUser',
-    parseAsBoolean.withDefault(false)
-  );
-  const [filters, setFilters] = useQueryState<KV[]>(
+  const [isUser, setIsUser] = useState<boolean>(isMyListsPage);
+  // const [filters, setFilters] = useQueryState<KV[]>(
+  //   'filters',
+  //   parseAsFilters // Note: adding `.withDefault([])` causes infinite loop (bug in nuqs v2.4.1 ??)
+  // );
+  const [filtersRaw, setFiltersRaw] = useQueryState<KV[]>(
     'filters',
-    parseAsFilters // Note: adding `.withDefault([])` causes infinite loop (bug in nuqs v2.4.1 ??)
+    parseAsFilters
   );
+
+  // Normalize filters to always be an array
+  const filters = useMemo(() => filtersRaw || [], [filtersRaw]);
+  const setFilters = useCallback((value: KV[] | ((prev: KV[] | null) => KV[] | null)) => {
+    if (typeof value === 'function') {
+      setFiltersRaw((prev) => {
+        const result = value(prev);
+        return result && result.length > 0 ? result : null;
+      });
+    } else {
+      setFiltersRaw(value && value.length > 0 ? value : null);
+    }
+  }, [setFiltersRaw]);
 
   // Internal state (not driven by search params)
   const [refresh, setRefresh] = useState<boolean>(false);
@@ -151,7 +167,6 @@ function Home() {
     }
   }, [sort, dir, setPage, setSearch, setSort, setDir]);
 
-  const ala = useALA();
   const { data, error, loading, update } = useGQLQuery<HomeQuery>(
     queries.QUERY_LISTS_SEARCH,
     {
@@ -161,15 +176,26 @@ function Home() {
       dir,
       size: size,
       filters,
-      isPrivate: view === 'private',
+      isPrivate: isMyListsPage || isAdminListPage ? undefined : view === 'private',
       ...(isUser ? { userId: ala.userid } : {}),
     },
     { clearDataOnUpdate: false, token: ala.token }
   );
 
+  useEffect(() => {
+    setIsMyListsPage(routeId === 'my-lists');
+    setIsAdminListPage(routeId === 'admin-lists');
+    setIsUser(routeId === 'my-lists');
+  }, [routeId]);
+
+  useEffect(() => {
+    setSearchInputValue(search);
+  }, [search]);
+
   // Destructure results & calculate the real page offset
   const { totalElements, totalPages, content } = data?.lists || {};
   const realPage = page + 1;
+  const filtersKey = JSON.stringify(filters);
 
   // Update the search query
   useEffect(() => {
@@ -179,11 +205,12 @@ function Home() {
       sort,
       dir,
       size,
-      filters,
-      isPrivate: view === 'private',
+      isPrivate: isMyListsPage || isAdminListPage ? undefined : view === 'private',
+      filters: filters.length > 0 ? filters : [], // Always pass an array
       ...(isUser ? { userId: ala.userid } : {}),
     });
-  }, [page, size, searchDebounced, sort, dir, filters, refresh, view, isUser]);
+  }, [page, size, searchDebounced, sort, dir, filtersKey, refresh, view, isUser, isMyListsPage, isAdminListPage]);
+  // Note: using filtersKey instead of filters in dependencies
 
   // Keep the current page in check
   useEffect(() => {
@@ -246,6 +273,18 @@ function Home() {
     setFilters([]);
   }, [filters]);
 
+  // Handler for the Enter key press
+  interface KeyDownEvent extends React.KeyboardEvent<HTMLInputElement> {}
+
+  const handleKeyDown = (event: KeyDownEvent): void => {
+    // Check if the key pressed is the Enter key
+    if (event.key === 'Enter') {
+      // Prevent the default form submission behavior (if the input is inside a form)
+      event.preventDefault(); 
+      handleSearchChange(inputSearchValue);
+    }
+  };
+
   const labels = useMemo(
     () => [
       {
@@ -285,10 +324,26 @@ function Home() {
           </Grid.Col>
           <Grid.Col span={12}>
             <Title order={3} classNames={{ root: classes.title }}>
+              {isMyListsPage ? (
               <FormattedMessage
-                id='lists.title'
+                id='lists.myLists.title'
+                defaultMessage='My Species Lists'
+              />
+              ) : (
+              <FormattedMessage
+                id='lists.home.title'
                 defaultMessage='Species Lists'
               />
+              )}
+              {ala.isAdmin && !isMyListsPage && isAdminListPage && (
+                <Text component='span' inherit opacity={0.7} c='flamingo'>
+                  {' '}
+                  <FormattedMessage
+                    id='lists.home.admin.title'
+                    defaultMessage='(Admin view)'
+                  />
+                </Text>
+              )}
             </Title>
           </Grid.Col>
           <Grid.Col span={9}>
@@ -333,7 +388,7 @@ function Home() {
       </Container>
       <Container fluid mt='lg'>
         <Grid>
-          <Grid.Col span={12}>
+          <Grid.Col span={7}>
             <Group>
               {!isMobile && (
                 <ToggleFiltersButton
@@ -341,70 +396,84 @@ function Home() {
                   hidefilters={hidefilters}
                 />
               )}
-              <TextInput
-                style={{ flexGrow: 1 }}
-                disabled={!data || hasError}
-                value={search}
-                onChange={(event) => {
-                  const newValue = event.currentTarget.value;
-                  handleSearchChange(newValue);
-                }}
-                placeholder={intl.formatMessage({
-                  id: 'search.input.placeholder',
-                  defaultMessage: 'Search lists by name or taxa',
-                })}
-                w={200}
-                leftSection={
-                  <FontAwesomeIcon
-                    icon={faMagnifyingGlass}
-                    fontSize={16}
-                    stroke='2'
-                  />
-                }
-                rightSection={
-                  <ActionIcon
-                    radius='sm'
-                    variant='transparent'
-                    size='xs'
-                    title={intl.formatMessage({
-                      id: 'search.clear.label',
-                      defaultMessage: 'Clear search',
-                    })}
-                    aria-label={intl.formatMessage({
-                      id: 'search.clear.label',
-                      defaultMessage: 'Clear search',
-                    })}
-                    disabled={search.length === 0}
-                    onClick={() => handleSearchChange('')}
-                    style={{ marginLeft: 5, marginRight: 10 }}
-                  >
-                    <FontAwesomeIcon icon={faXmark} fontSize={20} />
-                  </ActionIcon>
-                }
-              />
-              {ala.isAuthenticated && (
-                <>
-                  <SegmentedControl
-                    disabled={!data || hasError}
-                    value={view}
-                    onChange={setView}
-                    radius='md'
-                    data={labels}
-                  />
-                  <Checkbox
-                    label={
-                      <FormattedMessage
-                        id='myLists.label'
-                        defaultMessage='My Lists'
-                      />
-                    }
-                    checked={isUser}
-                    size='sm'
-                    onChange={(e) => setIsUser(e.currentTarget.checked)}
-                    classNames={{ label: classes.myListsLabel }}
-                  />
-                </>
-              )}
+              <Group gap={0} wrap="nowrap" style={{ flexGrow: 1 }}>
+                <TextInput
+                  style={{ flex: 1 }}
+                  styles={{ 
+                    input: { 
+                      // Remove right border radius and border
+                      borderTopRightRadius: 0, 
+                      borderBottomRightRadius: 0,
+                      borderRight: 'none', 
+                    } 
+                  }}
+                  disabled={!data || hasError}
+                  onKeyDown={handleKeyDown}
+                  value={inputSearchValue}
+                  onChange={(event) => setSearchInputValue(event.currentTarget.value)}
+                  placeholder={intl.formatMessage({
+                    id: 'search.input.placeholder',
+                    defaultMessage: 'Search lists by name or taxa',
+                  })}
+                  leftSection={
+                    <FontAwesomeIcon
+                      icon={faMagnifyingGlass}
+                      fontSize={16}
+                      stroke='2'
+                    />
+                  }
+                  rightSection={
+                    <ActionIcon
+                      radius='sm'
+                      variant='transparent'
+                      size='xs'
+                      title={intl.formatMessage({
+                        id: 'search.clear.label',
+                        defaultMessage: 'Clear search',
+                      })}
+                      aria-label={intl.formatMessage({
+                        id: 'search.clear.label',
+                        defaultMessage: 'Clear search',
+                      })}
+                      disabled={search.length === 0}
+                      onClick={() => {
+                        handleSearchChange('')
+                        setSearchInputValue('');
+                      }}
+                      style={{ marginLeft: 5, marginRight: 10 }}
+                    >
+                      <FontAwesomeIcon icon={faXmark} fontSize={20} />
+                    </ActionIcon>
+                  }
+                />
+                <Button
+                  variant="light"
+                  styles={{
+                    root: {
+                      // Remove left border radius
+                      borderTopLeftRadius: 0, //'var(--mantine-color-rust-filled-hover)',
+                      borderBottomLeftRadius: 0,
+                      borderColor: 'var(--mantine-color-default-border)',
+                    },
+                  }}
+                  style={{
+                    '--button-hover': 'var(--mantine-color-rust-filled-hover)',
+                    '--button-hover-color': 'white',
+                  }}
+                  // opacity={1}
+                  radius="md"
+                  onClick={(event) => {
+                    event.preventDefault(); 
+                    handleSearchChange(inputSearchValue);
+                  }}
+                >
+                  <FormattedMessage id='search.button.label' defaultMessage='Search' />
+                </Button>
+              </Group>
+            </Group>
+          </Grid.Col>
+          <Grid.Col span={5}>
+            <Group justify='flex-end' gap={5}>
               <Select
                 w={235}
                 value={`${sort}_${dir}`}
@@ -453,9 +522,20 @@ function Home() {
           </Grid.Col>
           {!hidefilters && (
             <Grid.Col span={{ base: 12, sm: 4, md: 3, lg: 2 }} mt={16}>
-              <Collapse in={!hidefilters}>
-                {/* Filters appear here */}
-                <FiltersSection
+                <Collapse in={!hidefilters}>
+                {loading ? (
+                  <Stack gap={6}>
+                    <Skeleton height={24} width="60%" radius="md" />
+                  {Array.from({ length: 3 }).map((_, _index) => (
+                    <>
+                      <Skeleton height={1} width="90%" radius="md" />
+                      <Skeleton height={24} width="50%" radius="md" />
+                      <Skeleton height={250} width="90%" radius="md" />
+                    </>
+                  ))}
+                  </Stack>
+                ) : (
+                  <FiltersSection
                   facets={data?.facets || []}
                   active={filters || []}
                   onSelect={handleFilterClick}
@@ -464,8 +544,9 @@ function Home() {
                     setPage(0);
                   }}
                   showExpand={false}
-                />
-              </Collapse>
+                  />
+                )}
+                </Collapse>
             </Grid.Col>
           )}
           <Grid.Col

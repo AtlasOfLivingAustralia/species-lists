@@ -14,23 +14,23 @@
  */
 package au.org.ala.listsapi.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.util.List;
 
-import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-import lombok.experimental.SuperBuilder;
-import lombok.extern.jackson.Jacksonized;
 
-@NoArgsConstructor
+/**
+ * Context object for single list searches
+ */
 @Data
-@SuperBuilder
-@AllArgsConstructor
-@Jacksonized
-@ToString
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class AsyncTaskStatus {
-    String name;
-    boolean running = false;
+@Builder
+public  class SingleListSearchContext {
+    private String speciesListId;
+    private SpeciesList speciesList;
+    private String searchQuery;
+    private List<Filter> filters;
+    private String userId;
+    private String sort;
+    private String dir;
+    private boolean isAdmin;
 }
