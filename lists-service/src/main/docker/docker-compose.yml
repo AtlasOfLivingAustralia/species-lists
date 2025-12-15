@@ -3,7 +3,6 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.26-arm64
     container_name: species-lists-elastic
-    # user: "502:20"
     environment:
       - node.name=elasticsearch
       - xpack.security.enabled=false
@@ -19,7 +18,7 @@ services:
     cap_add:
       - IPC_LOCK
     volumes:
-      - /Users/dos009/dev/species-lists/elastic:/usr/share/elasticsearch/data
+      - /Users/${MY_UID}/dev/species-lists/elastic:/usr/share/elasticsearch/data
     restart: on-failure
     ports:
       - "9200:9200"
@@ -32,12 +31,11 @@ services:
   mongodb:
     image: mongo:6.0
     container_name: species-lists-mongo
-    # user: "502:20"
     restart: on-failure
     ports:
       - "27017:27017"
     volumes:
-      - /Users/dos009/dev/species-lists/mongo/db:/data/db
+      - /Users/${MY_UID}/dev/species-lists/mongo/db:/data/db
   namematching:
     image: atlasoflivingaustralia/ala-namematching-service:v20210811-3
     container_name: species-lists-namematching
