@@ -81,7 +81,13 @@ const router = createBrowserRouter([
       },
       {
         path: 'my-lists',
-        element: <Home routeId="my-lists"/>,
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoader />}> 
+              <Home routeId="my-lists"/>
+            </Suspense>
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'admin-lists',

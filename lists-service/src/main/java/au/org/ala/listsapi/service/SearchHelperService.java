@@ -924,6 +924,7 @@ public class SearchHelperService {
 
     /**
      * Builds the base query for a specific list (list ID + search query only)
+     * Used for facet aggregations where we want all items before filtering
      */
     private void buildBaseListQuery(
             SingleListSearchContext context,
@@ -934,9 +935,7 @@ public class SearchHelperService {
         
         // Add search query if present
         if (StringUtils.isNotBlank(context.getSearchQuery())) {
-            bq.must(m -> m.queryString(
-                qs -> qs.query(context.getSearchQuery())
-            ));
+            bq.must(m -> m.queryString(qs -> qs.query(context.getSearchQuery())));
         }
     }
 
@@ -944,19 +943,50 @@ public class SearchHelperService {
      * Builds the full query including filters
      */
     private void buildSingleListQuery(
-            SingleListSearchContext context,
-            BoolQuery.Builder bq) {
+        SingleListSearchContext context,
+        BoolQuery.Builder bq) {
+    
+        // Filter by the specific list ID
+        bq.must(m -> m.term(t -> t.field(SPECIES_LIST_ID).value(context.getSpeciesListId())));
         
-        // Use existing ElasticUtils to build complete query
-        ElasticUtils.buildQuery(
-            context.getSearchQuery(),
-            context.getSpeciesListId(),
-            context.getUserId(),
-            context.isAdmin(),
-            null,
-            context.getFilters(),
-            bq
-        );
+        // Add search query if present
+        if (StringUtils.isNotBlank(context.getSearchQuery())) {
+            bq.must(m -> m.queryString(qs -> qs.query(context.getSearchQuery())));
+        }
+        
+        // Apply user-provided filters (but NOT privacy filters - access already validated)
+        if (context.getFilters() != null && !context.getFilters().isEmpty()) {
+            for (Filter filter : context.getFilters()) {
+                applyFilter(filter, bq);
+            }
+        }
+    }
+
+    /**
+     * Applies a single filter to the query
+     */
+    private void applyFilter(Filter filter, BoolQuery.Builder bq) {
+        String field = filter.getKey();
+        String value = filter.getValue();
+        
+        // Handle different field types
+        if (CORE_FIELDS.contains(field) || field.startsWith("classification.")) {
+            // Core fields - apply as term filter
+            if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
+                bq.filter(f -> f.term(t -> t.field(field).value(Boolean.parseBoolean(value))));
+            } else {
+                bq.filter(f -> f.term(t -> t.field(field + ".keyword").value(value)));
+            }
+        } else {
+            // Property fields - use nested query
+            bq.filter(f -> f.nested(n -> n
+                .path("properties")
+                .query(q -> q.bool(b -> b
+                    .must(m -> m.term(t -> t.field("properties.key.keyword").value(field)))
+                    .must(m -> m.term(t -> t.field("properties.value.keyword").value(value)))
+                ))
+            ));
+        }
     }
 
     /**
