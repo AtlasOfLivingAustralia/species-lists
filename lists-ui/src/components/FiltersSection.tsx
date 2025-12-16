@@ -315,7 +315,7 @@ export const FiltersSection = memo(
 
     return (
       <>
-        <Text size='md' fw='bold' opacity={0.85}>
+        <Text size='md' fw='bold' opacity={0.85} pb={2}>
           <FormattedMessage id='filters.title' defaultMessage='Refine results' />
         </Text>
         <Stack gap={2} mt={3} mb="md" pb={4}>
@@ -427,8 +427,8 @@ export const ActiveFilters = memo((
  * @param {boolean} props.hidefilters - Boolean indicating whether filters are hidden or not.
  * @returns {JSX.Element} The rendered component.
  */
-export function ToggleFiltersButton({ toggleFilters, hidefilters }
-    : { toggleFilters: () => void; hidefilters: boolean }) {
+export function ToggleFiltersButton({ toggleFilters, hidefilters, isMobile }
+    : { toggleFilters: () => void; hidefilters: boolean; isMobile?: boolean }) {
   return (
     <Button
       size= 'sm' 
@@ -437,7 +437,7 @@ export function ToggleFiltersButton({ toggleFilters, hidefilters }
       classNames={{root: classes.filtersDisplayButton}}
       radius="md"
       fw="normal"
-      ml="auto"
+      ml={isMobile ? undefined : 'auto'}
       onClick={toggleFilters}
     >
       { hidefilters 

@@ -388,8 +388,8 @@ const Home = ({ routeId }: { routeId: string }) => {
       </Container>
       <Container fluid mt='lg'>
         <Grid>
-          <Grid.Col span={7}>
-            <Group>
+          <Grid.Col span={isMobile ? 12 : 7}>
+            <Group justify={isMobile ? 'flex-start' : 'flex-end'}>
               {!isMobile && (
                 <ToggleFiltersButton
                   toggleFilters={toggleFilters}
@@ -450,8 +450,7 @@ const Home = ({ routeId }: { routeId: string }) => {
                   variant="light"
                   styles={{
                     root: {
-                      // Remove left border radius
-                      borderTopLeftRadius: 0, //'var(--mantine-color-rust-filled-hover)',
+                      borderTopLeftRadius: 0, 
                       borderBottomLeftRadius: 0,
                       borderColor: 'var(--mantine-color-default-border)',
                     },
@@ -472,13 +471,13 @@ const Home = ({ routeId }: { routeId: string }) => {
               </Group>
             </Group>
           </Grid.Col>
-          <Grid.Col span={5}>
-            <Group justify='flex-end' gap={5}>
+          <Grid.Col span={isMobile ? 12 : 5}>
+            <Group gap={6} justify={isMobile ? 'space-between' : 'flex-end'}>
               <Select
                 w={235}
                 value={`${sort}_${dir}`}
                 label={
-                  <FormattedMessage id='sort.label' defaultMessage='Sort by' />
+                  !isMobile && <FormattedMessage id='sort.label' defaultMessage='Sort by' />
                 }
                 withCheckIcon={true}
                 data={sortOptions}
@@ -516,12 +515,13 @@ const Home = ({ routeId }: { routeId: string }) => {
                 <ToggleFiltersButton
                   toggleFilters={toggleFilters}
                   hidefilters={hidefilters}
+                  isMobile={true}
                 />
               )}
             </Group>
           </Grid.Col>
           {!hidefilters && (
-            <Grid.Col span={{ base: 12, sm: 4, md: 3, lg: 2 }} mt={16}>
+            <Grid.Col span={{ base: 12, sm: 4, md: 3, lg: 2 }} mt={isMobile ? 0 : 16}>
                 <Collapse in={!hidefilters}>
                 {loading ? (
                   <Stack gap={6}>
@@ -655,7 +655,7 @@ const Home = ({ routeId }: { routeId: string }) => {
                     <Table.Tbody>
                       {content
                         ? content.map((list) => (
-                            <ListRow key={list.id} list={list} />
+                            <ListRow key={list.id} list={list} isMobile={isMobile} />
                           ))
                         : Array.from(Array(size).keys()).map((key) => (
                             <ListRow key={key} />

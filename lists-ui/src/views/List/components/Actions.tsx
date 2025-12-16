@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { DotsThreeIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { faEdit, faTrashAlt } from '@fortawesome/free-regular-svg-icons';
 import {
+  faBars,
   faDownload,
   faGlobe,
   faPlus,
@@ -293,7 +293,8 @@ export function Actions({
             radius='lg'
             aria-label={intl.formatMessage({ id: 'actions.menu.ariaLabel', defaultMessage: 'List actions' })}
             >
-            <DotsThreeIcon />
+              {/* <DotsThreeIcon /> */}
+              <FontAwesomeIcon icon={faBars} />
             </ActionIcon>
         </Menu.Target>
         <Menu.Dropdown>
