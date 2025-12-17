@@ -945,13 +945,30 @@ public class SearchHelperService {
     private void buildSingleListQuery(
         SingleListSearchContext context,
         BoolQuery.Builder bq) {
-    
+
         // Filter by the specific list ID
         bq.must(m -> m.term(t -> t.field(SPECIES_LIST_ID).value(context.getSpeciesListId())));
         
         // Add search query if present
         if (StringUtils.isNotBlank(context.getSearchQuery())) {
-            bq.must(m -> m.queryString(qs -> qs.query(context.getSearchQuery())));
+            final String cleanQuery = context.getSearchQuery();
+            
+            // Use simple_query_string for better control with AND operator
+            bq.must(m -> m.simpleQueryString(sqs -> sqs
+                .query(cleanQuery)
+                .fields(List.of(
+                    "scientificName.search^5",
+                    "suppliedName.search^4", 
+                    "vernacularName.search^3",
+                    "classification.scientificName.search^5",
+                    "classification.vernacularName.search^3",
+                    "genus.search^1",
+                    "classification.genus.search^1",
+                    "family.search^0.5",
+                    "classification.family.search^0.5"
+                ))
+                .defaultOperator(co.elastic.clients.elasticsearch._types.query_dsl.Operator.And)
+            ));
         }
         
         // Apply user-provided filters (but NOT privacy filters - access already validated)

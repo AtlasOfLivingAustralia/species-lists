@@ -346,7 +346,7 @@ const Home = ({ routeId }: { routeId: string }) => {
               )}
             </Title>
           </Grid.Col>
-          <Grid.Col span={9}>
+          <Grid.Col span={isMobile ? 12 : 9}>
             <Title order={5} classNames={{ root: classes.subtitle }}>
               <FormattedMessage
                 id='lists.subtitle'
@@ -355,7 +355,7 @@ const Home = ({ routeId }: { routeId: string }) => {
             </Title>
           </Grid.Col>
           <Grid.Col
-            span={3}
+            span={isMobile ? 12 : 3}
             style={{ display: 'flex', justifyContent: 'flex-end' }}
           >
             <Tooltip
