@@ -36,6 +36,8 @@
 }
 
 .listTitlePrefix {
+  display: inline-block;
+  
   @mixin light {
       color: var(--mantine-color-gray-7) !important;
   }

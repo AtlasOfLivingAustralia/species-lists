@@ -146,11 +146,11 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
       <Flex
         direction={{ base: 'column', sm: 'row' }}
         justify="space-between"
-        align={{ base: 'flex-end', sm: 'center' }} // Pins to right on mobile
+        align="center"
         gap="md"
       >
         <Base
-          style={{ alignSelf: 'flex-start' }}
+          // style={{ alignSelf: 'flex-start' }}
           className={classes.breadcrumbs}
           separator={<ChevronRightIcon size={12} />}
           separatorMargin={5}

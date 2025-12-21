@@ -51,7 +51,7 @@ import { Outlet, useLocation, useParams } from 'react-router';
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { faAngleRight, faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import tableClasses from './classes/Table.module.css';
@@ -487,7 +487,7 @@ export function List() {
         onDeleted={handleItemDeleted}
       />
       <Container fluid className={classes.speciesHeader}>
-        <Grid>
+        <Grid align="center">
           <Grid.Col span={12}>
             <Breadcrumbs listTitle={pageTitle ?? undefined} />
           </Grid.Col>
@@ -497,9 +497,9 @@ export function List() {
         <Grid>
           <Grid.Col span={12}>
             <Title order={4} classNames={{root: classes.title}}>
-              <Text classNames={{root: classes.listTitlePrefix}} span inherit>
-                <FormattedMessage id='list.title.prefix' defaultMessage='List details' />{' '}
-                <FontAwesomeIcon icon={faAngleRight} size="xs" className={classes.listTitleSeparator} />{' '}
+              <Text classNames={{root: classes.listTitlePrefix}} inherit>
+                <FormattedMessage id='list.title.prefix' defaultMessage='List details' />
+                <Text pl={8} pr={10} size='lg' className={classes.listTitlePrefix} inherit>{' '}➤{' '}</Text>
               </Text>
               {meta?.title}
             </Title>
