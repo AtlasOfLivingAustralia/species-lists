@@ -11,7 +11,7 @@ export function ActionButtons() {
   const location = useLocation();
 
   return (
-    <Group gap='xs'>
+    <Group gap='xs' ml="auto" justify="flex-end">
       {ala.isAuthenticated && (
         <Button
             component={Link}

@@ -491,6 +491,10 @@ export function List() {
           <Grid.Col span={12}>
             <Breadcrumbs listTitle={pageTitle ?? undefined} />
           </Grid.Col>
+        </Grid>
+      </Container>
+      <Container fluid className={classes.listDetails}>
+        <Grid>
           <Grid.Col span={12}>
             <Title order={4} classNames={{root: classes.title}}>
               <Text classNames={{root: classes.listTitlePrefix}} span inherit>
@@ -500,11 +504,7 @@ export function List() {
               {meta?.title}
             </Title>
           </Grid.Col>
-        </Grid>
-      </Container>
-      <Container fluid className={classes.listDetails}>
-        <Grid>
-          <Grid.Col span={12} pb={6} mt='lg'>
+          <Grid.Col span={12} pt={6} >
             <Flex direction='row' justify='space-between' gap={16}>
               <Stack gap='xs' mb={14}>
                 {meta?.description && (
@@ -532,7 +532,6 @@ export function List() {
                 />
               )}
             </Flex>
-            
           </Grid.Col>
           { rematching && (
             <Grid.Col span={12}>

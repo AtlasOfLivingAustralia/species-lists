@@ -13,7 +13,6 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   ActionIcon,
-  Box,
   Button,
   Divider,
   Flex,
@@ -23,7 +22,7 @@ import {
   Stack,
   Switch,
   Text,
-  Tooltip,
+  Tooltip
 } from '@mantine/core';
 import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -286,16 +285,16 @@ export function Actions({
     <>
       <Menu shadow='md' width={200} position='bottom-end' radius='lg'>
         <Menu.Target>
-            <ActionIcon
+          <ActionIcon
             className={classes.mobile}
             variant='light'
             size='md'
             radius='lg'
             aria-label={intl.formatMessage({ id: 'actions.menu.ariaLabel', defaultMessage: 'List actions' })}
-            >
-              {/* <DotsThreeIcon /> */}
-              <FontAwesomeIcon icon={faBars} />
-            </ActionIcon>
+          >
+            {/* <DotsThreeIcon /> */}
+            <FontAwesomeIcon icon={faBars} />
+          </ActionIcon>
         </Menu.Target>
         <Menu.Dropdown>
             <Menu.Label>
@@ -389,8 +388,8 @@ export function Actions({
           )}
         </Menu.Dropdown>
       </Menu>
-      <Box className={classes.desktop}>
-        <Group gap='xs'>
+      <Group className={classes.desktop}>
+        <Group gap='xs' justify="flex-end">
           {authorisedForList && (
             <Paper 
               py={8}
@@ -588,7 +587,7 @@ export function Actions({
             </Button>
           </Paper>
         </Group>
-      </Box>
+      </Group>
     </>
   );
 }
