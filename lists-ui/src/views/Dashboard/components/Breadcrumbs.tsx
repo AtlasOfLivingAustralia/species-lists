@@ -2,8 +2,8 @@ import { ChevronRightIcon } from '@atlasoflivingaustralia/ala-mantine';
 import {
   Anchor,
   Breadcrumbs as Base,
-  Group,
-  Text,
+  Flex,
+  Text
 } from '@mantine/core';
 import { Link, useLocation } from 'react-router';
 
@@ -143,8 +143,14 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
 
   return (
     <>
-      <Group justify='space-between'>
+      <Flex
+        direction={{ base: 'column', sm: 'row' }}
+        justify="space-between"
+        align="center"
+        gap="md"
+      >
         <Base
+          // style={{ alignSelf: 'flex-start' }}
           className={classes.breadcrumbs}
           separator={<ChevronRightIcon size={12} />}
           separatorMargin={5}
@@ -152,7 +158,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
           {breadcrumbElements}
         </Base>
         <ActionButtons />
-      </Group>
+      </Flex>
     </>
   );
 }

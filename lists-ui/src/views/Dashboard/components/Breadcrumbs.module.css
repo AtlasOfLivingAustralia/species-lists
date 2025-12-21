@@ -17,3 +17,14 @@
     }
   }
 }
+
+.breadcrumbs {
+  @media (max-width: 65em) {
+    align-self: flex-start;
+  }
+
+  /* Desktop Sizes */
+  @media (min-width: 65em) {
+    align-: center
+  }
+}

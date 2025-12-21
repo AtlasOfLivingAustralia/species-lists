@@ -25,6 +25,7 @@ import handleSignout from '../../helpers/auth/handleSignout';
 function Dashboard() {
   const auth = useAuth();
   const { state } = useNavigation();
+  const isLegacySkin = import.meta.env.VITE_LEGACY_SKIN === 'true';
 
   // Effect handler for navigation process indicator
   useEffect(() => {
@@ -62,6 +63,7 @@ function Dashboard() {
         fullWidth 
         compact
         myProfileUrl={import.meta.env.VITE_ALA_USER_PROFILE || ''}
+        isLegacySkin={isLegacySkin}
       />
       <Divider />
       <Outlet />
