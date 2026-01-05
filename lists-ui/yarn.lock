@@ -10,10 +10,10 @@
     "@jridgewell/gen-mapping" "^0.3.5"
     "@jridgewell/trace-mapping" "^0.3.24"
 
-"@atlasoflivingaustralia/ala-mantine@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.npmjs.org/@atlasoflivingaustralia/ala-mantine/-/ala-mantine-1.0.0.tgz"
-  integrity sha512-XcayxzbmVyYJmCqr187CEB3gMY/CvkZsKg/Ucdc4qpm5zRI+i8vwXuRQh5bVG4CNB+DHjvbd3gHsokdkuuZ4xw==
+"@atlasoflivingaustralia/ala-mantine@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.npmjs.org/@atlasoflivingaustralia/ala-mantine/-/ala-mantine-1.0.1.tgz"
+  integrity sha512-u4+s+E+nwqjisHJz7muxPJsqdZjMu7KvNQiqR4v5zYpEfsJW7AUCEDF9dPkytGn1YDCojsbLmt0XWK8jW+U8iA==
 
 "@axe-core/react@^4.10.0":
   version "4.10.1"
