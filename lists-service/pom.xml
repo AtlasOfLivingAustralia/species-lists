@@ -19,6 +19,10 @@
 
   <repositories>
     <repository>
+      <id>central</id>
+      <url>https://repo.maven.apache.org/maven2</url>
+    </repository>
+    <repository>
       <id>gbif-all</id>
       <url>https://repository.gbif.org/content/groups/gbif</url>
     </repository>
@@ -60,6 +64,29 @@
       <version>7.3.0-java21</version>
     </dependency>
     <dependency>
+      <groupId>au.org.ala.names</groupId>
+      <artifactId>ala-namematching-client</artifactId>
+      <version>1.8.1</version>
+      <exclusions>
+          <exclusion>
+              <groupId>com.squareup.okhttp3</groupId>
+              <artifactId>okhttp</artifactId>
+          </exclusion>
+          <exclusion>
+              <groupId>*</groupId>
+              <artifactId>jsr250-api</artifactId>
+          </exclusion>
+          <exclusion>
+              <groupId>*</groupId>
+              <artifactId>sisu-guava</artifactId>
+          </exclusion>
+          <exclusion>
+              <groupId>*</groupId>
+              <artifactId>cache2k-api</artifactId>
+          </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
       <groupId>com.fasterxml.jackson.module</groupId>
       <artifactId>jackson-module-kotlin</artifactId>
     </dependency>
@@ -91,11 +118,11 @@
       <artifactId>url-connection-client</artifactId>
       <version>2.20.26</version>
     </dependency>
-  <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>sts</artifactId>
-      <version>2.20.26</version>
-  </dependency>
+    <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>sts</artifactId>
+        <version>2.20.26</version>
+    </dependency>
     <dependency>
       <groupId>org.springframework.graphql</groupId>
       <artifactId>spring-graphql-test</artifactId>
@@ -128,6 +155,16 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.cache2k</groupId>
+        <artifactId>cache2k-core</artifactId>
+        <version>1.6.0.Final</version>
+    </dependency>
+    <dependency>
+        <groupId>org.cache2k</groupId>
+        <artifactId>cache2k-api</artifactId>
+        <version>1.6.0.Final</version>
     </dependency>
   </dependencies>
   <build>
