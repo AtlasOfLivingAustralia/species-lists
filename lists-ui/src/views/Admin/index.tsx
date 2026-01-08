@@ -60,6 +60,7 @@ export function Component() {
   const ala = useALA();
   const navigate = useNavigate();
   const mounted = useMounted();
+  const [runAction, setRunAction] = useState<string>('');
 
   if (!ala.isAdmin) return <Navigate to='/' />;
 
@@ -151,6 +152,7 @@ export function Component() {
 
   const handleClick = useCallback(
     (action: string, verb: string) => {
+      setRunAction(action);
       modals.openConfirmModal({
         title: (
           <Text fw='bold' size='lg'>
@@ -257,11 +259,11 @@ export function Component() {
                         <Text>
                           {migrationProgress.currentSpeciesList ? (
                             <>
-                              <b>Migrating: </b>{' '}
+                              <b><FormattedMessage id={`admin.${runAction}`} defaultMessage="Migrating" />: </b>{' '}
                               {migrationProgress.currentSpeciesList.title}
                             </>
                           ) : (
-                            'Starting migration'
+                            `Starting ${intl.formatMessage({ id: `admin.${runAction}`, defaultMessage: "Migrating" })}`
                           )}
                         </Text>
                         <Badge miw={80} ml='xs'>
