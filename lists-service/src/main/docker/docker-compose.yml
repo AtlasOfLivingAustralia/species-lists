@@ -36,12 +36,12 @@ services:
       - "27017:27017"
     volumes:
       - /Users/${MY_UID}/dev/species-lists/mongo/db:/data/db
-  namematching:
-    image: atlasoflivingaustralia/ala-namematching-service:v20210811-3
-    container_name: species-lists-namematching
-    restart: on-failure
-    ports:
-      - "9179:9179"
+  # namematching:
+  #   image: atlasoflivingaustralia/ala-namematching-service:v20210811-3
+  #   container_name: species-lists-namematching
+  #   restart: on-failure
+  #   ports:
+  #     - "9179:9179"
 #  lists:
 #    image: atlasoflivingaustralia/lists-service:latest
 #    container_name: lists-service
