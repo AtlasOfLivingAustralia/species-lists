@@ -74,8 +74,11 @@ public class TaxonService {
     private static final Logger logger = LoggerFactory.getLogger(TaxonService.class);
     public static final String SPECIES_LIST_ID = "speciesListID";
     
-    @Value("${namematching.serviceURL:https://namematching-ws.ala.org.au}")
+    @Value("${namematching.url:https://namematching-ws.ala.org.au}")
     private String nameMatchingServiceUrl;
+
+    @Value("${namematching.bulkMatchBatchSize:200}")
+    private int bulkMatchBatchSize;
     
     @Value("${namematching.threadPoolSize:10}")
     private int threadPoolSize;
@@ -83,12 +86,15 @@ public class TaxonService {
     @Value("${namematching.maxConcurrentRequests:20}")
     private int maxConcurrentRequests;
     
-    @Value("${namematching.dataCacheConfig.entryCapacity:20000}")
+    @Value("${namematching.dataCacheConfig.entryCapacity:500000}")
     private int cacheEntryCapacity;
     
+    // If true, enables JMX monitoring for the cache via tools like JConsole or VisualVM
     @Value("${namematching.dataCacheConfig.enableJmx:false}")
     private boolean cacheEnableJmx;
     
+    // If true, keeps data in cache even after expiry (only relevant if eternal=false)
+    // May want to set to true if availability is more important than freshness
     @Value("${namematching.dataCacheConfig.keepDataAfterExpired:false}")
     private boolean cacheKeepDataAfterExpired;
     
@@ -404,7 +410,6 @@ public class TaxonService {
         logger.info("[{}|taxonMatch] Reset ingest progress {}ms", speciesListID, resetProgressElapsed);
         logger.info("[{}|taxonMatch] Started taxon matching", speciesListID);
 
-        int batchSize = 50;
         ObjectId lastId = null;
 
         Set<String> distinctTaxa = new HashSet<>();
@@ -414,7 +419,7 @@ public class TaxonService {
             long startTime = System.nanoTime();
 
             List<SpeciesListItem> items = speciesListItemMongoRepository.findNextBatch(speciesList.getId(), lastId,
-                    PageRequest.of(0, batchSize));
+                    PageRequest.of(0, bulkMatchBatchSize));
             long elapsed = System.nanoTime() - startTime;
 
             logger.info("[{}|taxonMatch] Fetched {} items in {} ms",
@@ -522,7 +527,8 @@ public class TaxonService {
 
     /**
      * Multi-threaded classification lookup using ALANameUsageMatchServiceClient.
-     * This method performs parallel lookups with rate limiting to avoid overwhelming the service.
+     * This method uses the bulk matchAll() API and processes multiple batches in parallel
+     * with rate limiting to avoid overwhelming the service.
      * 
      * @param items List of SpeciesListItem objects to look up
      * @param speciesList The parent species list
@@ -544,63 +550,159 @@ public class TaxonService {
 
             logger.info("[{}|taxonMatch] Built {} name searches", speciesListID, nameSearches.size());
 
-            // Create a list of CompletableFutures for parallel processing
-            List<CompletableFuture<NameUsageMatch>> futures = new ArrayList<>();
+            // If the batch is small enough, just use matchAll() directly without threading
+            if (nameSearches.size() <= bulkMatchBatchSize) {
+                return performBulkMatch(nameSearches, speciesListID, startTime);
+            }
+
+            // Split into batches for parallel processing
+            List<List<NameSearch>> batches = partitionList(nameSearches, bulkMatchBatchSize);
+            logger.info("[{}|taxonMatch] Split into {} batches of up to {} items", 
+                    speciesListID, batches.size(), bulkMatchBatchSize);
+
+            // Create CompletableFutures for each batch
+            List<CompletableFuture<List<NameUsageMatch>>> futures = new ArrayList<>();
             
-            for (int i = 0; i < nameSearches.size(); i++) {
-                final int index = i;
-                final NameSearch search = nameSearches.get(i);
+            for (int i = 0; i < batches.size(); i++) {
+                final int batchIndex = i;
+                final List<NameSearch> batch = batches.get(i);
                 
-                CompletableFuture<NameUsageMatch> future = CompletableFuture.supplyAsync(() -> {
+                CompletableFuture<List<NameUsageMatch>> future = CompletableFuture.supplyAsync(() -> {
                     try {
                         // Acquire permit from rate limiter
                         rateLimiter.acquire();
                         try {
-                            NameUsageMatch result = nameMatchService.match(search);
-                            return result != null ? result : createEmptyNameUsageMatch();
+                            long batchStart = System.nanoTime();
+                            List<NameUsageMatch> results = nameMatchService.matchAll(batch);
+                            long batchElapsed = (System.nanoTime() - batchStart) / 1_000_000;
+                            
+                            logger.info("[{}|taxonMatch|batch-{}] Matched {} items in {}ms", 
+                                    speciesListID, batchIndex, batch.size(), batchElapsed);
+                            
+                            // Ensure we return the same number of results as inputs
+                            if (results == null || results.size() != batch.size()) {
+                                logger.warn("[{}|taxonMatch|batch-{}] Result size mismatch. Expected {}, got {}", 
+                                        speciesListID, batchIndex, batch.size(), 
+                                        results == null ? 0 : results.size());
+                                return fillMissingMatches(results, batch.size());
+                            }
+                            
+                            return results;
                         } finally {
                             // Release permit
                             rateLimiter.release();
                         }
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
-                        logger.error("[{}|taxonMatch] Thread interrupted for item {}", speciesListID, index, e);
-                        return createEmptyNameUsageMatch();
+                        logger.error("[{}|taxonMatch|batch-{}] Thread interrupted", speciesListID, batchIndex, e);
+                        return createEmptyMatches(batch.size());
                     } catch (Exception e) {
-                        logger.error("[{}|taxonMatch] Error matching item {}: {}", speciesListID, index, e.getMessage());
-                        return createEmptyNameUsageMatch();
+                        logger.error("[{}|taxonMatch|batch-{}] Error matching batch: {}", 
+                                speciesListID, batchIndex, e.getMessage(), e);
+                        return createEmptyMatches(batch.size());
                     }
                 }, executorService);
                 
                 futures.add(future);
             }
 
-            // Wait for all futures to complete and collect results
+            // Wait for all futures to complete
             CompletableFuture<Void> allFutures = CompletableFuture.allOf(
                     futures.toArray(new CompletableFuture[0]));
             
             // Wait with timeout
             allFutures.get(5, TimeUnit.MINUTES);
             
-            // Collect results in order
-            List<NameUsageMatch> matches = futures.stream()
+            // Collect and flatten results in order
+            List<NameUsageMatch> allMatches = futures.stream()
                     .map(CompletableFuture::join)
+                    .flatMap(List::stream)
                     .collect(Collectors.toList());
 
             long elapsed = (System.nanoTime() - startTime) / 1_000_000;
-            logger.info("[{}|taxonMatch] Completed {} parallel lookups in {}ms", 
-                    speciesListID, matches.size(), elapsed);
+            logger.info("[{}|taxonMatch] Completed {} bulk lookups in {}ms ({} batches)", 
+                    speciesListID, allMatches.size(), elapsed, batches.size());
 
             // Convert NameUsageMatch to Classification
-            return convertToClassifications(matches);
+            return convertToClassifications(allMatches);
 
         } catch (Exception e) {
-            logger.error("[{}|taxonMatch] Exception during parallel lookup: {}", speciesListID, e.getMessage(), e);
+            logger.error("[{}|taxonMatch] Exception during bulk lookup: {}", speciesListID, e.getMessage(), e);
             // Return empty classifications for all items
             return items.stream()
                     .map(item -> createEmptyClassification())
                     .collect(Collectors.toList());
         }
+    }
+
+    /**
+     * Perform a single bulk match operation (non-threaded helper)
+     */
+    private List<Classification> performBulkMatch(List<NameSearch> nameSearches, String speciesListID, long startTime) {
+        try {
+            rateLimiter.acquire();
+            try {
+                List<NameUsageMatch> matches = nameMatchService.matchAll(nameSearches);
+                
+                long elapsed = (System.nanoTime() - startTime) / 1_000_000;
+                logger.info("[{}|taxonMatch] Completed {} bulk lookups in {}ms (single batch)", 
+                        speciesListID, matches.size(), elapsed);
+                
+                // Ensure we have the right number of results
+                if (matches == null || matches.size() != nameSearches.size()) {
+                    logger.warn("[{}|taxonMatch] Result size mismatch. Expected {}, got {}", 
+                            speciesListID, nameSearches.size(), 
+                            matches == null ? 0 : matches.size());
+                    matches = fillMissingMatches(matches, nameSearches.size());
+                }
+                
+                return convertToClassifications(matches);
+            } finally {
+                rateLimiter.release();
+            }
+        } catch (Exception e) {
+            logger.error("[{}|taxonMatch] Exception during bulk lookup: {}", speciesListID, e.getMessage(), e);
+            return nameSearches.stream()
+                    .map(ns -> createEmptyClassification())
+                    .collect(Collectors.toList());
+        }
+    }
+
+    /**
+     * Partition a list into smaller batches
+     */
+    private <T> List<List<T>> partitionList(List<T> list, int batchSize) {
+        List<List<T>> partitions = new ArrayList<>();
+        for (int i = 0; i < list.size(); i += batchSize) {
+            partitions.add(list.subList(i, Math.min(i + batchSize, list.size())));
+        }
+        return partitions;
+    }
+
+    /**
+     * Create a list of empty matches for error cases
+     */
+    private List<NameUsageMatch> createEmptyMatches(int count) {
+        List<NameUsageMatch> matches = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            matches.add(null);
+        }
+        return matches;
+    }
+
+    /**
+     * Fill in missing matches if the API returns fewer results than expected
+     */
+    private List<NameUsageMatch> fillMissingMatches(List<NameUsageMatch> results, int expectedSize) {
+        if (results == null) {
+            return createEmptyMatches(expectedSize);
+        }
+        
+        List<NameUsageMatch> filled = new ArrayList<>(results);
+        while (filled.size() < expectedSize) {
+            filled.add(null);
+        }
+        return filled;
     }
 
     /**
@@ -668,12 +770,14 @@ public class TaxonService {
         if (StringUtils.isNotBlank(item.getScientificName())) {
             builder.scientificName(StringUtils.trimToNull(item.getScientificName()));
         }
-        
+        // Set taxonID if available
+        if (StringUtils.isNotBlank(item.getTaxonID())) {
+            builder.taxonID(StringUtils.trimToNull(item.getTaxonID()));
+        }
         // Set vernacular/common name
         if (StringUtils.isNotBlank(item.getVernacularName())) {
             builder.vernacularName(StringUtils.trimToNull(item.getVernacularName()));
         }
-        
         // Set taxonomic hierarchy
         if (StringUtils.isNotBlank(item.getKingdom())) {
             builder.kingdom(StringUtils.trimToNull(item.getKingdom()));
@@ -757,37 +861,5 @@ public class TaxonService {
         }
 
         return 0L;
-    }
-
-    /**
-     * Count actual items in MongoDB and update the SpeciesList document's rowCount field.
-     * To fix issue where rowCount is out of sync with actual data (or null). 
-     * 
-     * @param speciesListID
-     */ 
-    public void repairRowCount(String speciesListID) {  
-        int batchSize = 10000;  
-        ObjectId lastId = null;  
-        long actualCount = 0;  
-        
-        boolean finished = false;  
-        while (!finished) {  
-            List<SpeciesListItem> items = speciesListItemMongoRepository  
-                    .findNextBatch(speciesListID, lastId, PageRequest.of(0, batchSize));  
-            
-            if (items.isEmpty()) {  
-                finished = true;  
-            } else {  
-                actualCount += items.size();  
-                lastId = items.get(items.size() - 1).getId();  
-            }  
-        }  
-        
-        // Update the SpeciesList document  
-        Optional<SpeciesList> list = speciesListMongoRepository.findById(speciesListID);  
-        if (list.isPresent()) {  
-            list.get().setRowCount((int) actualCount);  
-            speciesListMongoRepository.save(list.get());  
-        }  
     }
 }
