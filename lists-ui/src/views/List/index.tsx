@@ -758,7 +758,7 @@ export function List() {
                         defaultMessage='Scientific name'
                       />
                       </ThSortable>
-                      {meta!.fieldList.map((field) => (
+                      {meta?.fieldList && meta!.fieldList.map((field) => (
                       <ThEditable
                         key={field}
                         id={meta!.id}

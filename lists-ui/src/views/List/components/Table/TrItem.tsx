@@ -56,7 +56,7 @@ export function TrItem({
           ''
         )}
       </Table.Td>
-      {fields.map((key) => (
+      {fields && fields.map((key) => (
         <Table.Td key={key} style={tdStyles}>
           {find(row.properties, { key })?.value}
         </Table.Td>

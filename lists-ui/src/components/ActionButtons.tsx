@@ -1,7 +1,7 @@
 import { useALA } from '#/helpers/context/useALA';
 import { faChevronDown, faCog, faFloppyDisk, faList, faTools, faUpload } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Group, Menu, Tooltip } from '@mantine/core';
+import { Button, Group, Menu } from '@mantine/core';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { Link, useLocation } from 'react-router';
 
@@ -34,7 +34,6 @@ export function ActionButtons() {
             />
           </Button>
       )}
-      <Tooltip label={intl.formatMessage({ id: 'upload.button.title' })} position='left' opacity={0.8} withArrow>
         <Button
           variant='default'
           radius='xl'
@@ -46,7 +45,6 @@ export function ActionButtons() {
         >
           <FormattedMessage id='upload.button.label' defaultMessage='Upload List'/>
         </Button>
-      </Tooltip>
       {ala.isAdmin && (
         <Menu shadow="md" width={200}>
           {/* 1. Menu Target (The visible button) */}
