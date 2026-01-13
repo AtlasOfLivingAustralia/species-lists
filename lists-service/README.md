@@ -7,14 +7,14 @@ It is a Spring Boot (Maven) application that provides REST and GraphQL web servi
 
 ### Elasticsearch and MongoDB
 
-To run the elasticsearch and mongodb containers needed for the list-service
-, you must first edit the `docker-compose.yml` file and replace `<replace-with-local-user>` with your local user ID or account name. 
+Elasticsearch and MongoDB are needed to run this app locally and the easiest way to run these is via `docker-compose` (Docker Desktop or an equivalent container app is required).
 
 Run the following command:
 
 ```bash
-docker-compose -f src/main/docker/docker-compose.yml up
+docker-compose -f src/main/docker/docker-compose.yml up -d
 ```
+
 ### Local development setup
 
 Make a copy of `lists-service/config/lists-service-config.properties` and save it to `/data/lists-service/config/lists-service-config.properties`. 
