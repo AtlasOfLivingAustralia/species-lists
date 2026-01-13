@@ -12,7 +12,7 @@ Elasticsearch and MongoDB are needed to run this app locally and the easiest way
 Run the following command:
 
 ```bash
-docker-compose -f src/main/docker/docker-compose.yml up -d
+docker-compose -f lists-service/src/main/docker/docker-compose.yml up -d
 ```
 
 ### Local development setup
