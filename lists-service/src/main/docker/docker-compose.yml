@@ -18,7 +18,7 @@ services:
     cap_add:
       - IPC_LOCK
     volumes:
-      - /Users/${MY_UID}/dev/species-lists/elastic:/usr/share/elasticsearch/data
+      - ${HOME}/dev/species-lists/elastic:/usr/share/elasticsearch/data
     restart: on-failure
     ports:
       - "9200:9200"
@@ -35,7 +35,7 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - /Users/${MY_UID}/dev/species-lists/mongo/db:/data/db
+      - ${HOME}/dev/species-lists/mongo/db:/data/db
   # namematching:
   #   image: atlasoflivingaustralia/ala-namematching-service:v20210811-3
   #   container_name: species-lists-namematching
