@@ -64,6 +64,11 @@ spec:
           {{- end }}
           command: [ "java" ]
           args:
+            - "-Xms3g"
+            - "-Xmx3g"
+            - "-XX:+UseG1GC"
+            - "-XX:MaxGCPauseMillis=200"
+            - "-XX:+UseContainerSupport"
             - "-Djavax.net.ssl.trustStore=/data/lists-service/config/lists-service-truststore.jks"
             - "-Djavax.net.ssl.trustStorePassword=changeme"
             - "-Djavax.net.ssl.trustStoreType=jks"
