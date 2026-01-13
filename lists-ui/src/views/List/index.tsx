@@ -169,6 +169,7 @@ export function List() {
             speciesListID: id,
             size,
             filters,
+            searchQuery: search,
           },
           token
         );
@@ -258,6 +259,11 @@ export function List() {
   useEffect(() => {
     if (totalPages && page >= totalPages) setPage(totalPages - 1);
   }, [page, totalPages]);
+  
+  // Sync input search value with search query parameter
+  useEffect(() => {
+    setSearchInputValue(search);
+  }, [search]);
 
   const handleSortClick = useCallback(
     (newSort: string) => {
