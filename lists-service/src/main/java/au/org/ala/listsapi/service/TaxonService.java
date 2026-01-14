@@ -1,17 +1,3 @@
-/*
- * Copyright (C) 2025 Atlas of Living Australia
- * All Rights Reserved.
- *
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
- */
 package au.org.ala.listsapi.service;
 
 import java.util.ArrayList;
@@ -22,6 +8,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -76,9 +63,12 @@ public class TaxonService {
     
     @Value("${namematching.url:https://namematching-ws.ala.org.au}")
     private String nameMatchingServiceUrl;
-
+    
     @Value("${namematching.bulkMatchBatchSize:200}")
     private int bulkMatchBatchSize;
+    
+    @Value("${namematching.datasetProcessingParallelism:5}")
+    private int datasetProcessingParallelism;
     
     @Value("${namematching.threadPoolSize:10}")
     private int threadPoolSize;
@@ -86,15 +76,15 @@ public class TaxonService {
     @Value("${namematching.maxConcurrentRequests:20}")
     private int maxConcurrentRequests;
     
-    @Value("${namematching.dataCacheConfig.entryCapacity:500000}")
+    @Value("${namematching.dataCacheConfig.entryCapacity:400000}")
     private int cacheEntryCapacity;
     
-    // If true, enables JMX monitoring for the cache via tools like JConsole or VisualVM
     @Value("${namematching.dataCacheConfig.enableJmx:false}")
     private boolean cacheEnableJmx;
     
-    // If true, keeps data in cache even after expiry (only relevant if eternal=false)
-    // May want to set to true if availability is more important than freshness
+    @Value("${namematching.dataCacheConfig.eternal:true}")
+    private boolean cacheEternal;
+    
     @Value("${namematching.dataCacheConfig.keepDataAfterExpired:false}")
     private boolean cacheKeepDataAfterExpired;
     
@@ -130,11 +120,10 @@ public class TaxonService {
     public void init() {
         try {
             // Initialize the ALANameUsageMatchServiceClient with caching
-            // Set eternal=true to avoid needing expiry configuration
             DataCacheConfiguration dataCacheConfig = DataCacheConfiguration.builder()
                     .entryCapacity(cacheEntryCapacity)
                     .enableJmx(cacheEnableJmx)
-                    .eternal(true)  // Always use eternal=true to avoid expiry complications
+                    .eternal(cacheEternal)
                     .keepDataAfterExpired(cacheKeepDataAfterExpired)
                     .permitNullValues(cachePermitNullValues)
                     .suppressExceptions(cacheSuppressExceptions)
@@ -215,6 +204,7 @@ public class TaxonService {
 
     @Async("processExecutor")
     public void taxonMatchDatasets() {
+        long overallStartTime = System.nanoTime();
         logger.info("Taxon matching all datasets");
         
         progressService.setupMigrationProgress(speciesListMongoRepository.count());
@@ -250,21 +240,45 @@ public class TaxonService {
         
         logger.info("Processing {} species lists sorted by size (largest first)", allLists.size());
 
-        allLists.forEach(speciesList -> {
-            try {
-                progressService.updateMigrationProgress(speciesList);
+        AtomicInteger processedCount = new AtomicInteger(0);
+        
+        // Process lists in parallel with controlled concurrency
+        // Use ForkJoinPool to limit parallelism
+        ForkJoinPool customThreadPool = new ForkJoinPool(datasetProcessingParallelism);
+        try {
+            customThreadPool.submit(() ->
+                allLists.parallelStream().forEach(speciesList -> {
+                    try {
+                        progressService.updateMigrationProgress(speciesList);
 
-                long distinctMatchCount = taxonMatchDataset(speciesList.getId());
-                speciesList.setDistinctMatchCount(distinctMatchCount);
-                speciesListMongoRepository.save(speciesList);
-                reindex(speciesList.getId());
-            } catch (Exception e) {
-                logger.error("taxonMatchDatasets() error: {}", e.getMessage(), e);
-            }
-        });
+                        long distinctMatchCount = taxonMatchDataset(speciesList.getId());
+                        speciesList.setDistinctMatchCount(distinctMatchCount);
+                        speciesListMongoRepository.save(speciesList);
+                        
+                        int processed = processedCount.incrementAndGet();
+                        logger.info("Completed {}/{} lists. List {} had {} distinct taxa.", 
+                                processed, allLists.size(), speciesList.getId(), distinctMatchCount);
+                        
+                    } catch (Exception e) {
+                        logger.error("taxonMatchDatasets() error: {}", e.getMessage(), e);
+                    }
+                })
+            ).get(); // Wait for completion
+        } catch (Exception e) {
+            logger.error("Error in parallel dataset processing", e);
+        } finally {
+            customThreadPool.shutdown();
+        }
 
         progressService.clearMigrationProgress();
-        logger.info("Taxon matching all datasets complete.");
+        
+        long overallElapsed = (System.nanoTime() - overallStartTime) / 1_000_000;
+        long overallSeconds = overallElapsed / 1000;
+        long minutes = overallSeconds / 60;
+        long seconds = overallSeconds % 60;
+        
+        logger.info("Taxon matching all {} datasets complete. Total time: {}m {}s ({} ms)", 
+                allLists.size(), minutes, seconds, overallElapsed);
     }
 
     private void bulkIndexSafe(List<IndexQuery> updateList, SpeciesList list) {
@@ -392,6 +406,7 @@ public class TaxonService {
 
     public long taxonMatchDataset(String speciesListID) {
         logger.info("[{}|taxonMatch] Starting taxon matching", speciesListID);
+        logMemoryUsage("Start of taxonMatchDataset");
 
         long findByIdStart = System.nanoTime();
         Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
@@ -570,7 +585,15 @@ public class TaxonService {
                 CompletableFuture<List<NameUsageMatch>> future = CompletableFuture.supplyAsync(() -> {
                     try {
                         // Acquire permit from rate limiter
+                        long semaphoreWaitStart = System.nanoTime();
                         rateLimiter.acquire();
+                        long semaphoreWaitTime = (System.nanoTime() - semaphoreWaitStart) / 1_000_000;
+                        
+                        if (semaphoreWaitTime > 100) {
+                            logger.warn("[{}|taxonMatch|batch-{}] Semaphore wait time: {}ms (bottleneck?)", 
+                                    speciesListID, batchIndex, semaphoreWaitTime);
+                        }
+                        
                         try {
                             long batchStart = System.nanoTime();
                             List<NameUsageMatch> results = nameMatchService.matchAll(batch);
@@ -861,5 +884,26 @@ public class TaxonService {
         }
 
         return 0L;
+    }
+
+    /**
+     * Log current memory usage for debugging
+     */
+    private void logMemoryUsage(String context) {
+        Runtime runtime = Runtime.getRuntime();
+        long maxMemory = runtime.maxMemory() / 1024 / 1024;
+        long totalMemory = runtime.totalMemory() / 1024 / 1024;
+        long freeMemory = runtime.freeMemory() / 1024 / 1024;
+        long usedMemory = totalMemory - freeMemory;
+        
+        logger.info("[Memory|{}] Used: {}MB, Free: {}MB, Total: {}MB, Max: {}MB", 
+                context, usedMemory, freeMemory, totalMemory, maxMemory);
+        
+        // Warn if memory usage is high
+        double memoryUsagePercent = (double) usedMemory / maxMemory * 100;
+        if (memoryUsagePercent > 80) {
+            logger.warn("[Memory|{}] High memory usage: {:.1f}% - consider running GC or reducing batch sizes", 
+                    context, memoryUsagePercent);
+        }
     }
 }
