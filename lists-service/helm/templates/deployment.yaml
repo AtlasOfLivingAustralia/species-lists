@@ -62,6 +62,12 @@ spec:
             successThreshold: {{ .Values.readinessProbe.successThreshold }}
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
           {{- end }}
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xms3500m -Xmx3500m"
+          {{- if .Values.env }}
+          {{- toYaml .Values.env | nindent 2 }}
+          {{- end }}
           command: [ "java" ]
           args:
             - "-Xms3500m"
