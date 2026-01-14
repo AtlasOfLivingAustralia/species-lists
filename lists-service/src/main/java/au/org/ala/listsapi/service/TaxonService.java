@@ -241,6 +241,7 @@ public class TaxonService {
         logger.info("Processing {} species lists sorted by size (largest first)", allLists.size());
 
         AtomicInteger processedCount = new AtomicInteger(0);
+        AtomicInteger totalLists = new AtomicInteger(allLists.size());
         
         // Process lists in parallel with controlled concurrency
         // Use ForkJoinPool to limit parallelism
@@ -249,15 +250,20 @@ public class TaxonService {
             customThreadPool.submit(() ->
                 allLists.parallelStream().forEach(speciesList -> {
                     try {
-                        progressService.updateMigrationProgress(speciesList);
-
                         long distinctMatchCount = taxonMatchDataset(speciesList.getId());
                         speciesList.setDistinctMatchCount(distinctMatchCount);
                         speciesListMongoRepository.save(speciesList);
                         
                         int processed = processedCount.incrementAndGet();
+                        
+                        // Update progress service periodically (every 10 lists or at completion)
+                        // This prevents jumpy UI updates from parallel processing
+                        if (processed % 10 == 0 || processed == totalLists.get()) {
+                            progressService.updateMigrationProgress(speciesList);
+                        }
+                        
                         logger.info("Completed {}/{} lists. List {} had {} distinct taxa.", 
-                                processed, allLists.size(), speciesList.getId(), distinctMatchCount);
+                                processed, totalLists.get(), speciesList.getId(), distinctMatchCount);
                         
                     } catch (Exception e) {
                         logger.error("taxonMatchDatasets() error: {}", e.getMessage(), e);
@@ -417,6 +423,12 @@ public class TaxonService {
         if (optionalSpeciesList.isEmpty())
             return 0;
         SpeciesList speciesList = optionalSpeciesList.get();
+        
+        // Skip lists with no entries - nothing to match
+        if (speciesList.getRowCount() == null || speciesList.getRowCount() == 0) {
+            logger.info("[{}|taxonMatch] Skipping list - rowCount is null or 0", speciesListID);
+            return 0;
+        }
 
         // Reset ingestion progress
         long resetProgressStart = System.nanoTime();
@@ -599,8 +611,14 @@ public class TaxonService {
                             List<NameUsageMatch> results = nameMatchService.matchAll(batch);
                             long batchElapsed = (System.nanoTime() - batchStart) / 1_000_000;
                             
-                            logger.info("[{}|taxonMatch|batch-{}] Matched {} items in {}ms", 
-                                    speciesListID, batchIndex, batch.size(), batchElapsed);
+                            // Warn if batch took unusually long (possible throttling or GC)
+                            if (batchElapsed > 5000) {
+                                logger.warn("[{}|taxonMatch|batch-{}] SLOW BATCH: Matched {} items in {}ms (possible throttling or GC pause)", 
+                                        speciesListID, batchIndex, batch.size(), batchElapsed);
+                            } else {
+                                logger.info("[{}|taxonMatch|batch-{}] Matched {} items in {}ms", 
+                                        speciesListID, batchIndex, batch.size(), batchElapsed);
+                            }
                             
                             // Ensure we return the same number of results as inputs
                             if (results == null || results.size() != batch.size()) {
@@ -822,16 +840,6 @@ public class TaxonService {
         }
         
         return builder.build();
-    }
-
-    /**
-     * Create an empty NameUsageMatch for cases where the API returns null
-     * Since NameUsageMatch constructor is not public, we return null and handle it in conversion
-     * 
-     * @return null (will be handled by convertToClassification)
-     */
-    private NameUsageMatch createEmptyNameUsageMatch() {
-        return null;
     }
 
     /**
