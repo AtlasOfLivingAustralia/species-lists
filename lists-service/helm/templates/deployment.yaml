@@ -63,6 +63,7 @@ spec:
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
           {{- end }}
           command: [ "java" ]
+          args:
             - "-Xms3500m"
             - "-Xmx3500m"
             - "-XX:+UseG1GC"
