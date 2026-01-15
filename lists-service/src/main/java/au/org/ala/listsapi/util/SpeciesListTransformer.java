@@ -15,6 +15,7 @@
 
 package au.org.ala.listsapi.util;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -128,7 +129,8 @@ public class SpeciesListTransformer {
 
         SpeciesListItemVersion1 listItemVersion1 = new SpeciesListItemVersion1();
         String speciesListID = speciesListItem.getSpeciesListID();
-        int fakeId = speciesListItem.getId().getTimestamp() + index; // just needs to be unique and is not referenced anywhere
+        BigInteger bigIntId = new BigInteger(speciesListItem.getId().toHexString(), 16);
+        int fakeId = bigIntId.intValue(); // just needs to be unique and is not referenced anywhere
         listItemVersion1.setId((long) fakeId);
         listItemVersion1.setLsid(speciesListItem.getClassification() != null ? speciesListItem.getClassification().getTaxonConceptID() : null);
         listItemVersion1.setScientificName(speciesListItem.getClassification() != null ? speciesListItem.getClassification().getScientificName() : speciesListItem.getScientificName());

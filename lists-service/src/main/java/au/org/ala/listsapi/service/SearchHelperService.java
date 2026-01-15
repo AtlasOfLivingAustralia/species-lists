@@ -60,6 +60,7 @@ import au.org.ala.listsapi.model.SingleListSearchContext;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListIndex;
 import au.org.ala.listsapi.model.SpeciesListItem;
+import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.util.ElasticUtils;
 import au.org.ala.ws.security.profile.AlaUserProfile;
@@ -84,6 +85,7 @@ public class SearchHelperService {
     @Autowired private MongoTemplate mongoTemplate;
     @Autowired private ElasticsearchOperations elasticsearchOperations;
     @Autowired private SpeciesListMongoRepository speciesListMongoRepository;
+    @Autowired private SpeciesListItemMongoRepository speciesListItemMongoRepository;
 
     private static final String SPECIES_LIST_ID = "speciesListID";
     private static final int MAX_LIST_ENTRIES = 10000;
@@ -251,63 +253,28 @@ public class SearchHelperService {
         }
 
         if (!foundLists.isEmpty()) {
+            // Determine valid list IDs based on user access rights
             List<FieldValue> validIDs = foundLists.stream()
                     .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal))
                     .map(list -> FieldValue.of(list.getId())).toList();
 
-            // Enforce ElasticSearch limit of 10,000 documents
-            if ((page - 1) * pageSize + pageSize > 10000 && pageSize > 0) {
-                // throw new IllegalArgumentException("Page size exceeds ElasticSearch limit of 10,000 documents.");
-                // Reverted to returning empty list to avoid breaking existing clients (biocache-service, etc)
-                return new ArrayList<>();
-            } else if ((page - 1) * pageSize + pageSize > 10000) {
-                throw new IllegalArgumentException("Page size exceeds ElasticSearch limit of 10,000 documents.");
-            }
-            
-            if (page < 1 || validIDs.isEmpty()) {
-                return new ArrayList<>();
-            }
-
-            Boolean isAdmin = principal != null ? (authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal))) : false;
-            ArrayList<Filter> tempFilters = new ArrayList<>();
-
             String sortField = (sort != null && !sort.isBlank()) ? sort : "scientificName";
             String sortDir = (dir != null && !dir.isBlank()) ? dir : "asc";
-            
-            // Create Spring Data Sort
-            Sort springSort = 
-                Sort.by(
-                    "asc".equalsIgnoreCase(sortDir) 
-                        ? Sort.Direction.ASC 
-                        : Sort.Direction.DESC,
-                    sortField
-                );
 
-            // Create Pageable with Sort
-            Pageable pageableRequest = PageRequest.of(page - 1, pageSize, springSort);
-            NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
-            builder.withQuery(
-                    q -> q.bool(
-                            bq -> {
-                                ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), validIDs, null, isAdmin, null, tempFilters, bq);
-                                ElasticUtils.restrictFields(searchQuery, restrictedFields, bq);
-                                return bq;
-                            }));
+            List<String> validListIDs = validIDs.stream()
+                    .map(FieldValue::stringValue)
+                    .collect(Collectors.toList());
+            String query = (searchQuery != null && !searchQuery.isBlank()) ? searchQuery + ".*" : ".*";
+            Sort pageableSort = Sort.by(
+                sortDir.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC,
+                sortField
+            );
+            Pageable pageable = PageRequest.of(page, pageSize, pageableSort);
+            // For pagination, we use the repository method directly for better performance
+            Page<SpeciesListItem> itemsPage = speciesListItemMongoRepository.findNextBatch(validListIDs, query, pageable);
+            List<SpeciesListItem> items = itemsPage.getContent();
 
-            NativeQuery query = builder.build();
-            SearchHits<SpeciesListIndex> results =
-                    elasticsearchOperations.search(
-                            query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
-                    
-            if (!results.isEmpty()) {
-                SpeciesListIndex firstItem = results.getSearchHit(0).getContent();
-                logger.debug("First item: " + firstItem);
-            }
-
-            List<SpeciesListItem> speciesListItems =
-                    ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
-
-            return speciesListItems;
+            return items;
         }
 
         return new ArrayList<>();

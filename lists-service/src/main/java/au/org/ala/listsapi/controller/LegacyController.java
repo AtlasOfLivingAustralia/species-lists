@@ -398,8 +398,8 @@ public class LegacyController {
             @RequestParam(name = "includeKVP", defaultValue = "false") Boolean _includeKVP,
             @Nullable @RequestParam(name = "q") String searchQuery,
             @Nullable @RequestParam(name = "fields") String fields,
-            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(10001) Integer offset,
-            @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") Integer offset,
+            @Nullable @RequestParam(name = "max", defaultValue = "10") Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
             @AuthenticationPrincipal Principal principal) {
@@ -442,8 +442,8 @@ public class LegacyController {
             @RequestParam(name = "includeKVP", defaultValue = "false") Boolean _includeKVP,
             @Nullable @RequestParam(name = "q") String searchQuery,
             @Nullable @RequestParam(name = "fields") String fields,
-            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(10001) Integer offset,
-            @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") Integer offset,
+            @Nullable @RequestParam(name = "max", defaultValue = "10") Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
             @AuthenticationPrincipal Principal principal) {
@@ -707,8 +707,8 @@ public class LegacyController {
             @Nullable @RequestParam(name = "fields") String fields,
             @Nullable @RequestParam(name = "includeKVP", defaultValue = "true") Boolean includeKVP,
             @Nullable @RequestParam(name = "nonulls", defaultValue = "false") Boolean nonulls,
-            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(9990) Integer offset,
-            @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") Integer offset,
+            @Nullable @RequestParam(name = "max", defaultValue = "10") Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "order", defaultValue="asc") String order,
             @AuthenticationPrincipal Principal principal
@@ -733,14 +733,15 @@ public class LegacyController {
     }
 
     /**
-     * Calculate the page and size for pagination (legacy API)
+     * Calculate the page and size for Spring Data Pageable pagination 
+     * from legacy offset and max parameters.
      *
      * @param offset the offset to start from
      * @param max the maximum number of items to return
      * @return an array containing the page number and page size
      */
     private static int[] calculatePageAndSize(@Nullable Integer offset, @Nullable Integer max) {
-        int page = ((offset != null ? offset : 0) / (max != null ? max : 10)) + 1;
+        int page = ((offset != null ? offset : 0) / (max != null ? max : 10)); // + 1;
         int pageSize = (max != null ? max : 10);
         logger.debug("Calculated page and pageSize: page: {}, pageSize: {}", page, pageSize);
         return new int[]{page, pageSize};
