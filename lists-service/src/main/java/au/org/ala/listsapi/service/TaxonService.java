@@ -64,7 +64,7 @@ public class TaxonService {
     @Value("${namematching.url:https://namematching-ws.ala.org.au}")
     private String nameMatchingServiceUrl;
     
-    @Value("${namematching.bulkMatchBatchSize:200}")
+    @Value("${namematching.bulkMatchBatchSize:250}")
     private int bulkMatchBatchSize;
     
     @Value("${namematching.datasetProcessingParallelism:5}")
@@ -253,7 +253,7 @@ public class TaxonService {
                         long distinctMatchCount = taxonMatchDataset(speciesList.getId());
                         speciesList.setDistinctMatchCount(distinctMatchCount);
                         speciesListMongoRepository.save(speciesList);
-                        
+                        reindex(speciesList.getId());
                         int processed = processedCount.incrementAndGet();
                         
                         // Update progress service periodically (every 10 lists or at completion)
@@ -357,6 +357,7 @@ public class TaxonService {
 
     public void reindex(String speciesListID) {
         logger.info("[{}|reindex] Starting indexing", speciesListID);
+        int batchSize = bulkMatchBatchSize * 4; // larger batch for indexing
         long findByIdStart = System.nanoTime();
         Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
                 speciesListID);
@@ -368,15 +369,21 @@ public class TaxonService {
 
         SpeciesList speciesList = optionalSpeciesList.get();
 
-        int batchSize = 1000;
         ObjectId lastId = null;
 
         boolean finished = false;
         while (!finished) {
             long startTime = System.nanoTime();
 
-            List<SpeciesListItem> speciesListItems = speciesListItemMongoRepository.findNextBatch(speciesList.getId(),
-                    lastId, PageRequest.of(0, batchSize));
+            List<SpeciesListItem> speciesListItems;
+            // Use optimized batch fetching methods due to DocumentDB performance issues with $expr queries
+            if (lastId == null) {
+                speciesListItems = speciesListItemMongoRepository.findFirstBatch(
+                    speciesList.getId(), PageRequest.of(0, batchSize));
+            } else {
+                speciesListItems = speciesListItemMongoRepository.findNextBatchAfter(
+                    speciesList.getId(), lastId, PageRequest.of(0, batchSize));
+            }
 
             long elapsed = System.nanoTime() - startTime;
 
