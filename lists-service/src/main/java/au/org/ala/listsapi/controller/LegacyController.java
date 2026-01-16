@@ -236,6 +236,7 @@ public class LegacyController {
             @Nullable @RequestParam(name = "druid") String druid,
             @Parameter(description = "Query string (q)")
             @Nullable @RequestParam(name = "q") String query,
+            @Nullable @RequestParam(name = "nonulls") Boolean nonulls,
             @Parameter(description = "Sort field")
             @Schema(allowableValues = {"speciesListName", "speciesListID", "listType", "dateCreated", "lastUpdated", "owner", "scientificName","rawScientificName", "guid"})
             @RequestParam(name = "sort", defaultValue = "speciesListID", required = false) String sort,
@@ -246,6 +247,11 @@ public class LegacyController {
             @RequestParam(name = "offset", defaultValue = "0", required = false) @Max(10000) int offset,
             @AuthenticationPrincipal Principal principal) {
         try {
+            if (Boolean.TRUE.equals(nonulls)) {
+                // TODO: remove this code when nonulls is supported
+                return ResponseEntity.badRequest().body("The 'nonulls' parameter is not yet supported.");
+            }
+
             Integer page = offset / max; // zero indexed, as required by Pageable
             Pageable paging = PageRequest.of(0, 10000); // we want all matching lists, paging will be applied to items later
             RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
@@ -277,6 +283,7 @@ public class LegacyController {
                     speciesListIDs, 
                     query != null ? query : null,  // no additional search query on items
                     null,  // no field filtering
+                    null,  // no noNulls filtering
                     page + 1,  // searchHelperService uses 1-based pagination
                     max, 
                     itemSort,  // use item-appropriate sort field
@@ -397,14 +404,19 @@ public class LegacyController {
             )
             @RequestParam(name = "includeKVP", defaultValue = "false") Boolean _includeKVP,
             @Nullable @RequestParam(name = "q") String searchQuery,
-            @Nullable @RequestParam(name = "fields") String fields,
-            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(10001) Integer offset,
-            @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
+            @Nullable @RequestParam(name = "nonulls") Boolean nonulls,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") Integer offset,
+            @Nullable @RequestParam(name = "max", defaultValue = "10") Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
             @AuthenticationPrincipal Principal principal) {
         try {
-            return getLegacySpeciesListItems(speciesListIDs, searchQuery, fields, offset, max, sort, dir, principal);
+            if (Boolean.TRUE.equals(nonulls)) {
+                // TODO: remove this code when nonulls is supported
+                return ResponseEntity.badRequest().body("The 'nonulls' parameter is not yet supported.");
+            }
+
+            return getLegacySpeciesListItems(speciesListIDs, searchQuery, null, nonulls, offset, max, sort, dir, principal);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -441,13 +453,18 @@ public class LegacyController {
             )
             @RequestParam(name = "includeKVP", defaultValue = "false") Boolean _includeKVP,
             @Nullable @RequestParam(name = "q") String searchQuery,
-            @Nullable @RequestParam(name = "fields") String fields,
-            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(10001) Integer offset,
-            @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
+            @Nullable @RequestParam(name = "nonulls") Boolean nonulls,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") Integer offset,
+            @Nullable @RequestParam(name = "max", defaultValue = "10") Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
             @AuthenticationPrincipal Principal principal) {
         try {
+            if (Boolean.TRUE.equals(nonulls)) {
+                // TODO: remove this code when nonulls is supported
+                return ResponseEntity.badRequest().body("The 'nonulls' parameter is not yet supported.");
+            }
+            // Check if the user/client app is authorized to access this endpoint
             if (!authUtils.isAuthorized(principal)) {
                 ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.name(), "Not authorised to access this endpoint", HttpStatus.FORBIDDEN.value());
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -455,7 +472,7 @@ public class LegacyController {
                         .body(errorResponse);
             }
 
-            return getLegacySpeciesListItems(speciesListIDs, searchQuery, fields, offset, max, sort, dir, principal);
+            return getLegacySpeciesListItems(speciesListIDs, searchQuery, null, nonulls, offset, max, sort, dir, principal);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -474,7 +491,7 @@ public class LegacyController {
      * @param principal
      * @return
      */
-    private ResponseEntity<Object> getLegacySpeciesListItems(String speciesListIDs, String searchQuery, String fields,
+    private ResponseEntity<Object> getLegacySpeciesListItems(String speciesListIDs, String searchQuery, String fields, Boolean nonulls,
             Integer offset, Integer max, String sort, String dir, Principal principal) {
         // convert max and offset to page and pageSize
         int[] pageAndSize = calculatePageAndSize(offset, max);
@@ -485,7 +502,7 @@ public class LegacyController {
         List<SpeciesListItem> speciesListItems;
         
         try {
-            speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs, searchQuery, fields, page, pageSize, sort, dir, principal);
+            speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs, searchQuery, fields, nonulls, page, pageSize, sort, dir, principal);
         } catch (Exception e) {
             logger.error("Error fetching species list items: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -546,7 +563,7 @@ public class LegacyController {
         try {
             List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
             List<SpeciesList> speciesLists = speciesListMongoRepository
-                    .findAllByDataResourceUidIsInOrIdIsIn(IDs, IDs);
+                    .findByDataResourceUidInOrIdIn(IDs);
 
             if (!speciesLists.isEmpty()) {
                 List<SpeciesList> validLists = speciesLists.stream()
@@ -640,13 +657,18 @@ public class LegacyController {
             guid = URLDecoder.decode(guid, StandardCharsets.UTF_8);
         }
 
-        String inputGuids = (StringUtils.isNotBlank(guid) ? guid : (StringUtils.isNotBlank(guids) ? guids : ""));
         // Catch possible null values from unboxed page and pageSize
         int pageVal = Math.max((page != null ? page : 1), 1); // Ensure page is at least 1
-        int pageSizeVal = Math.max((pageSize != null ? pageSize : 9999), 1); // Ensure pageSize is at least 1
+        int pageSizeVal = Math.max((pageSize != null ? pageSize : 999999), 1); // Ensure pageSize is at least 1
+
+        String inputGuids = (StringUtils.isNotBlank(guid) ? guid : (StringUtils.isNotBlank(guids) ? guids : ""));
+        int pageIndex = (pageVal - 1); // spring data pageable is zero based
+        String searchQuery = (inputGuids != null) ? inputGuids.replaceAll(",", "|") : null; // convert to regex OR
+            
 
         try {
-            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(inputGuids, speciesListIDs, pageVal, pageSizeVal, principal);
+            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs,
+                    searchQuery, null, null, pageIndex, pageSizeVal, null, null, principal);
 
             if (speciesListItems.isEmpty()) {
                 return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK); // empty list
@@ -704,21 +726,26 @@ public class LegacyController {
     public ResponseEntity<Object> queryListItemOrKVP(
             @RequestParam(name = "druid") String druid,
             @Nullable @RequestParam(name = "q") String q,
-            @Nullable @RequestParam(name = "fields") String fields,
+            @Nullable @RequestParam(name = "fields") String fields, // not yet implemented in service
             @Nullable @RequestParam(name = "includeKVP", defaultValue = "true") Boolean includeKVP,
             @Nullable @RequestParam(name = "nonulls", defaultValue = "false") Boolean nonulls,
-            @Nullable @RequestParam(name = "offset", defaultValue = "0") @Max(9990) Integer offset,
-            @Nullable @RequestParam(name = "max", defaultValue = "10") @Max(10000) Integer max,
+            @Nullable @RequestParam(name = "offset", defaultValue = "0") Integer offset,
+            @Nullable @RequestParam(name = "max", defaultValue = "10") Integer max,
             @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
             @Nullable @RequestParam(name = "order", defaultValue="asc") String order,
             @AuthenticationPrincipal Principal principal
     ) {
         try {
+            if (Boolean.TRUE.equals(nonulls)) {
+                // TODO: remove this code when nonulls is supported
+                return ResponseEntity.badRequest().body("The 'nonulls' parameter is not yet supported.");
+            }
+
             // convert max and offset to page and pageSize
             int[] pageAndSize = calculatePageAndSize(offset, max);
             int page = pageAndSize[0];
             int pageSize = pageAndSize[1];
-            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(druid, q, fields, page, pageSize, sort, order, principal);
+            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(druid, q, fields, null, page, pageSize, sort, order, principal);
 
             if (speciesListItems.isEmpty()) {
                 return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
@@ -733,14 +760,15 @@ public class LegacyController {
     }
 
     /**
-     * Calculate the page and size for pagination (legacy API)
+     * Calculate the page and size for Spring Data Pageable pagination 
+     * from legacy offset and max parameters.
      *
      * @param offset the offset to start from
      * @param max the maximum number of items to return
      * @return an array containing the page number and page size
      */
     private static int[] calculatePageAndSize(@Nullable Integer offset, @Nullable Integer max) {
-        int page = ((offset != null ? offset : 0) / (max != null ? max : 10)) + 1;
+        int page = ((offset != null ? offset : 0) / (max != null ? max : 10)); // was + 1 for 1-based page, but Pageable is zero-based
         int pageSize = (max != null ? max : 10);
         logger.debug("Calculated page and pageSize: page: {}, pageSize: {}", page, pageSize);
         return new int[]{page, pageSize};
