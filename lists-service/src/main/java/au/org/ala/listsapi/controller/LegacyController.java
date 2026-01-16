@@ -236,6 +236,7 @@ public class LegacyController {
             @Nullable @RequestParam(name = "druid") String druid,
             @Parameter(description = "Query string (q)")
             @Nullable @RequestParam(name = "q") String query,
+            @Nullable @RequestParam(name = "nonulls") Boolean nonulls,
             @Parameter(description = "Sort field")
             @Schema(allowableValues = {"speciesListName", "speciesListID", "listType", "dateCreated", "lastUpdated", "owner", "scientificName","rawScientificName", "guid"})
             @RequestParam(name = "sort", defaultValue = "speciesListID", required = false) String sort,
@@ -246,6 +247,11 @@ public class LegacyController {
             @RequestParam(name = "offset", defaultValue = "0", required = false) @Max(10000) int offset,
             @AuthenticationPrincipal Principal principal) {
         try {
+            if (Boolean.TRUE.equals(nonulls)) {
+                // TODO: remove this code when nonulls is supported
+                return ResponseEntity.badRequest().body("The 'nonulls' parameter is not yet supported.");
+            }
+
             Integer page = offset / max; // zero indexed, as required by Pageable
             Pageable paging = PageRequest.of(0, 10000); // we want all matching lists, paging will be applied to items later
             RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
@@ -405,6 +411,11 @@ public class LegacyController {
             @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
             @AuthenticationPrincipal Principal principal) {
         try {
+            if (Boolean.TRUE.equals(nonulls)) {
+                // TODO: remove this code when nonulls is supported
+                return ResponseEntity.badRequest().body("The 'nonulls' parameter is not yet supported.");
+            }
+
             return getLegacySpeciesListItems(speciesListIDs, searchQuery, null, nonulls, offset, max, sort, dir, principal);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -449,6 +460,11 @@ public class LegacyController {
             @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
             @AuthenticationPrincipal Principal principal) {
         try {
+            if (Boolean.TRUE.equals(nonulls)) {
+                // TODO: remove this code when nonulls is supported
+                return ResponseEntity.badRequest().body("The 'nonulls' parameter is not yet supported.");
+            }
+            // Check if the user/client app is authorized to access this endpoint
             if (!authUtils.isAuthorized(principal)) {
                 ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.name(), "Not authorised to access this endpoint", HttpStatus.FORBIDDEN.value());
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -721,6 +737,11 @@ public class LegacyController {
             @AuthenticationPrincipal Principal principal
     ) {
         try {
+            if (Boolean.TRUE.equals(nonulls)) {
+                // TODO: remove this code when nonulls is supported
+                return ResponseEntity.badRequest().body("The 'nonulls' parameter is not yet supported.");
+            }
+
             // convert max and offset to page and pageSize
             int[] pageAndSize = calculatePageAndSize(offset, max);
             int page = pageAndSize[0];
