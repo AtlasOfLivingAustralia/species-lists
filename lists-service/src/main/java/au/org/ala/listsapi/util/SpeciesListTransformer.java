@@ -130,6 +130,8 @@ public class SpeciesListTransformer {
         SpeciesListItemVersion1 listItemVersion1 = new SpeciesListItemVersion1();
         String speciesListID = speciesListItem.getSpeciesListID();
         BigInteger bigIntId = new BigInteger(speciesListItem.getId().toHexString(), 16);
+        // Legacy IDs were simple integers, so we convert the ObjectId to a BigInteger and then to int
+        // So this does not break any legacy systems that expect integer IDs
         int fakeId = bigIntId.intValue(); // just needs to be unique and is not referenced anywhere
         listItemVersion1.setId((long) fakeId);
         listItemVersion1.setLsid(speciesListItem.getClassification() != null ? speciesListItem.getClassification().getTaxonConceptID() : null);

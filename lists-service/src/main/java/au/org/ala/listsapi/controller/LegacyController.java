@@ -667,7 +667,6 @@ public class LegacyController {
             
 
         try {
-            // List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(inputGuids, speciesListIDs, pageVal, pageSizeVal, principal);
             List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs,
                     searchQuery, null, null, pageIndex, pageSizeVal, null, null, principal);
 
@@ -769,7 +768,7 @@ public class LegacyController {
      * @return an array containing the page number and page size
      */
     private static int[] calculatePageAndSize(@Nullable Integer offset, @Nullable Integer max) {
-        int page = ((offset != null ? offset : 0) / (max != null ? max : 10)); // + 1;
+        int page = ((offset != null ? offset : 0) / (max != null ? max : 10)); // was + 1 for 1-based page, but Pageable is zero-based
         int pageSize = (max != null ? max : 10);
         logger.debug("Calculated page and pageSize: page: {}, pageSize: {}", page, pageSize);
         return new int[]{page, pageSize};
