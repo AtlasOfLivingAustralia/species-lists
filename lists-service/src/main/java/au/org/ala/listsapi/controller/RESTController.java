@@ -324,14 +324,15 @@ public class RESTController {
             @PathVariable("speciesListIDs") String speciesListIDs,
             @Nullable @RequestParam(name = "q") String searchQuery,
             @Nullable @RequestParam(name = "fields") String fields,
-            @Nullable @RequestParam(name = "page", defaultValue = "1") @Max(10000) Integer page,
-            @Nullable @RequestParam(name = "pageSize", defaultValue = "10") @Max(1000) Integer pageSize,
+            @Nullable @RequestParam(name = "page", defaultValue = "1") Integer page,
+            @Nullable @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
             @Nullable @RequestParam(name = "sort", defaultValue = "scientificName") String sort,
             @Nullable @RequestParam(name = "dir", defaultValue = "asc") String dir,
             @AuthenticationPrincipal Principal principal) {
         try {
+            int pageIndex = (page - 1); // spring data pageable is zero based
             List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs,
-                    searchQuery, fields, page, pageSize, sort, dir, principal);
+                    searchQuery, fields, null, pageIndex, pageSize, sort, dir, principal);
 
             if (speciesListItems.isEmpty()) {
                 return ResponseEntity.notFound().build();
@@ -354,12 +355,16 @@ public class RESTController {
     public ResponseEntity<Object> species(
             @RequestParam(name = "guids") String guids,
             @Nullable @RequestParam(name = "speciesListIDs") String speciesListIDs,
-            @Nullable @RequestParam(name = "page", defaultValue = "1") @Max(10000) Integer page,
-            @Nullable @RequestParam(name = "pageSize", defaultValue = "10") @Max(1000) Integer pageSize,
+            @Nullable @RequestParam(name = "page", defaultValue = "1")  Integer page,
+            @Nullable @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
             @AuthenticationPrincipal Principal principal) {
         try {
-            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(guids, speciesListIDs,
-                    page, pageSize, principal);
+            int pageIndex = (page - 1); // spring data pageable is zero based
+            String searchQuery = guids.replaceAll(",", "|"); // convert to regex OR
+            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs,
+                    searchQuery, null, null, pageIndex, pageSize, null, null, principal);
+            // List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(guids, speciesListIDs,
+            //         page, pageSize, principal);
             return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
         } catch (Exception e) {
             logger.info(e.getMessage());
@@ -403,7 +408,7 @@ public class RESTController {
             @AuthenticationPrincipal Principal principal) {
         try {
             List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
-            List<SpeciesList> speciesLists = speciesListMongoRepository.findAllByDataResourceUidIsInOrIdIsIn(IDs, IDs);
+            List<SpeciesList> speciesLists = speciesListMongoRepository.findByDataResourceUidInOrIdIn(IDs);
 
             // Ensure that some species lists were returned with the query
             if (!speciesLists.isEmpty()) {

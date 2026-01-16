@@ -238,21 +238,27 @@ public class SearchHelperService {
     public List<SpeciesListItem> fetchSpeciesListItems(
             String speciesListIDs,
             @Nullable String searchQuery,
-            @Nullable String fields,
+            @Nullable String fields, // we're ignoring this for now
+            @Nullable Boolean noNulls, // currently not implemented -> delete if testing shows this is not being called
             @Nullable Integer page,
             @Nullable Integer pageSize,
             @Nullable String sort,
             @Nullable String dir,
             Principal principal) throws IllegalArgumentException {
+        if (speciesListIDs == null || speciesListIDs.isBlank()) {
+            // throw new IllegalArgumentException("speciesListIDs parameter is required");
+            speciesListIDs = ".*";
+        }
+        
         List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
-        List<SpeciesList> foundLists = speciesListMongoRepository.findAllByDataResourceUidIsInOrIdIsIn(IDs, IDs);
+        List<SpeciesList> foundLists = speciesListMongoRepository.findByDataResourceUidInOrIdIn(IDs);
         HashSet<String> restrictedFields = new HashSet<>();
 
         if (fields != null && !fields.isBlank()) {
             restrictedFields.addAll(Arrays.stream(fields.split(",")).collect(Collectors.toSet()));
         }
 
-        if (!foundLists.isEmpty()) {
+        if (!foundLists.isEmpty() || searchQuery != null && !searchQuery.isBlank()) {
             // Determine valid list IDs based on user access rights
             List<FieldValue> validIDs = foundLists.stream()
                     .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal))
@@ -264,7 +270,7 @@ public class SearchHelperService {
             List<String> validListIDs = validIDs.stream()
                     .map(FieldValue::stringValue)
                     .collect(Collectors.toList());
-            String query = (searchQuery != null && !searchQuery.isBlank()) ? searchQuery + ".*" : ".*";
+            String query = (searchQuery != null && !searchQuery.isBlank()) ? searchQuery : ".*";
             Sort pageableSort = Sort.by(
                 sortDir.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC,
                 sortField

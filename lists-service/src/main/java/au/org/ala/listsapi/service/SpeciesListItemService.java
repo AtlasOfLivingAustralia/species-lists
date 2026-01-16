@@ -609,7 +609,7 @@ public class SpeciesListItemService {
 
         List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
         List<SpeciesList> foundLists = speciesListMongoRepository
-            .findAllByDataResourceUidIsInOrIdIsIn(IDs, IDs);
+            .findByDataResourceUidInOrIdIn(IDs);
 
         HashSet<String> restrictedFields = new HashSet<>();
         if (fields != null && !fields.isBlank()) {
