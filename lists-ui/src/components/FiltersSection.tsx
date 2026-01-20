@@ -258,19 +258,19 @@ export const FiltersSection = memo(
       facets
         .filter((facet) => facet.counts.length > 0) // Filter out empty facets
         .sort((a, b) => {
-        // Sort CORE_FACETS to be the first items
-        if (CORE_FACETS.includes(a.key) && !CORE_FACETS.includes(b.key)) {
+        // Sort BOOLEAN_FACETS to be the first items
+        if (BOOLEAN_FACETS.includes(a.key) && !BOOLEAN_FACETS.includes(b.key)) {
           return -1;
         }
-        if (!CORE_FACETS.includes(a.key) && CORE_FACETS.includes(b.key)) {
+        if (!BOOLEAN_FACETS.includes(a.key) && BOOLEAN_FACETS.includes(b.key)) {
           return 1;
         }
-        // Sort BOOLEAN_FACETS to be after CORE_FACETS
-        if (BOOLEAN_FACETS.includes(a.key) && !BOOLEAN_FACETS.includes(b.key)) {
-          return CORE_FACETS.includes(b.key) ? 1 : -1;
+        // Sort CORE_FACETS to be after BOOLEAN_FACETS
+        if (CORE_FACETS.includes(a.key) && !CORE_FACETS.includes(b.key)) {
+          return BOOLEAN_FACETS.includes(b.key) ? 1 : -1;
         }
-        if (!BOOLEAN_FACETS.includes(a.key) && BOOLEAN_FACETS.includes(b.key)) {
-          return CORE_FACETS.includes(a.key) ? -1 : 1;
+        if (!CORE_FACETS.includes(a.key) && CORE_FACETS.includes(b.key)) {
+          return BOOLEAN_FACETS.includes(a.key) ? -1 : 1;
         }
         // For other facets, sort by the key
         return a.key.localeCompare(b.key);

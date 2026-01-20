@@ -536,14 +536,14 @@ const Home = ({ routeId }: { routeId: string }) => {
                   </Stack>
                 ) : (
                   <FiltersSection
-                  facets={data?.facets || []}
-                  active={filters || []}
-                  onSelect={handleFilterClick}
-                  onReset={() => {
-                    setFilters([]);
-                    setPage(0);
-                  }}
-                  showExpand={false}
+                    facets={data?.facets || []}
+                    active={filters || []}
+                    onSelect={handleFilterClick}
+                    onReset={() => {
+                      setFilters([]);
+                      setPage(0);
+                    }}
+                    showExpand={false}
                   />
                 )}
                 </Collapse>
