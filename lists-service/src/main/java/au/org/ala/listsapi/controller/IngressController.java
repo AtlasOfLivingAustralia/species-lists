@@ -377,8 +377,17 @@ public class IngressController {
                 }
                 logger.info("Async ingestion started for S3 key: {}", fileIdentifier);
             } else {
-                File tempFile = new File(tempDir + "/" + fileIdentifier);
-                if (!tempFile.exists()) {
+                File tempDirFile = new File(tempDir);
+                File tempFile = new File(tempDirFile, fileIdentifier);
+
+                // Ensure the resolved file is within the expected temp directory
+                File canonicalTempDir = tempDirFile.getCanonicalFile();
+                File canonicalTempFile = tempFile.getCanonicalFile();
+                if (!canonicalTempFile.getPath().startsWith(canonicalTempDir.getPath() + File.separator)) {
+                    return ResponseEntity.badRequest().body("Invalid file identifier");
+                }
+
+                if (!canonicalTempFile.exists()) {
                     return ResponseEntity.badRequest().body("File not uploaded yet");
                 }
                 logger.info("Async ingestion started for local file: {}", fileIdentifier);
@@ -450,7 +459,11 @@ public class IngressController {
                 }
                 logger.info("Re-Ingestion started for S3 key: {}", fileIdentifier);
             } else {
-                File tempFile = new File(tempDir + "/" + fileIdentifier);
+                // Ensure the file identifier is a simple filename and cannot escape the temp directory
+                if (fileIdentifier.contains("..") || fileIdentifier.contains("/") || fileIdentifier.contains("\\")) {
+                    return ResponseEntity.badRequest().body("Invalid file identifier");
+                }
+                File tempFile = new File(tempDir, fileIdentifier);
                 if (!tempFile.exists()) {
                     return ResponseEntity.badRequest().body("File not uploaded yet");
                 }

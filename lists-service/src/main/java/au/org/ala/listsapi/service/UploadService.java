@@ -513,7 +513,7 @@ public class UploadService {
         if (!canonicalPath.startsWith(expectedParentPath)) {
             throw new SecurityException("Invalid file path: potential path traversal detected");
         }
-        return loadCSV(speciesListID,  new FileInputStream(file), dryRun, skipIndexing, false);
+        return loadCSV(speciesListID, new FileInputStream(file), dryRun, skipIndexing, false);
     }
 
     public IngestJob ingestZip(
