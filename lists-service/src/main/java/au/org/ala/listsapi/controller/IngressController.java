@@ -459,7 +459,11 @@ public class IngressController {
                 }
                 logger.info("Re-Ingestion started for S3 key: {}", fileIdentifier);
             } else {
-                File tempFile = new File(tempDir + "/" + fileIdentifier);
+                // Ensure the file identifier is a simple filename and cannot escape the temp directory
+                if (fileIdentifier.contains("..") || fileIdentifier.contains("/") || fileIdentifier.contains("\\")) {
+                    return ResponseEntity.badRequest().body("Invalid file identifier");
+                }
+                File tempFile = new File(tempDir, fileIdentifier);
                 if (!tempFile.exists()) {
                     return ResponseEntity.badRequest().body("File not uploaded yet");
                 }
