@@ -432,7 +432,7 @@ public class TaxonService {
         SpeciesList speciesList = optionalSpeciesList.get();
         
         // Skip lists with no entries - nothing to match
-        if (speciesList.getRowCount() == null || speciesList.getRowCount() == 0) {
+        if (speciesList.getRowCount() != null && speciesList.getRowCount() == 0) {
             logger.info("[{}|taxonMatch] Skipping list - rowCount is null or 0", speciesListID);
             return 0;
         }
