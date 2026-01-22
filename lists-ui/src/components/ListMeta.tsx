@@ -90,7 +90,7 @@ export function ListMeta({
   // This is a basic check and not a full validation.
   const validWKT = (value: string) =>
     // Checks that the entire string is a word, optional whitespace, and content enclosed in parentheses.
-    /^\s*\w+\s*\((.|\s)*\)\s*$/i.test(value)
+    /^\s*\w+\s*\([\s\S]*\)\s*$/i.test(value)
       ? null
       : intl.formatMessage({id:'listmeta.validation.wkt', defaultMessage:'Please enter valid WKT format (e.g., POLYGON(...))'});
 
