@@ -317,6 +317,15 @@ public class UploadService {
         }
     }
 
+    /**
+     * Uploads and ingests a file, returning the IngestJob details.
+     * Called from the controller after upload.
+     * 
+     * @param fileIdentifier
+     * @param file
+     * @return
+     * @throws Exception
+     */
     public IngestJob upload(String fileIdentifier, MultipartFile file)
             throws Exception { 
 
@@ -498,7 +507,13 @@ public class UploadService {
 
     public IngestJob ingestCSV(String speciesListID, File file, boolean dryRun, boolean skipIndexing)
             throws Exception {
-        return loadCSV(speciesListID, new FileInputStream(file), dryRun, skipIndexing, false);
+        // Validate file path to prevent path traversal attacks
+        String canonicalPath = file.getCanonicalPath();
+        String expectedParentPath = new File(tempDir).getCanonicalPath();
+        if (!canonicalPath.startsWith(expectedParentPath)) {
+            throw new SecurityException("Invalid file path: potential path traversal detected");
+        }
+        return loadCSV(speciesListID,  new FileInputStream(file), dryRun, skipIndexing, false);
     }
 
     public IngestJob ingestZip(
