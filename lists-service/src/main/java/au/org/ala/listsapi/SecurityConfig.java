@@ -10,6 +10,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
@@ -62,10 +63,12 @@ public class SecurityConfig {
                                 "frame-ancestors 'none'; " +
                                 "base-uri 'self'")));
 
-        // Removed disable CSRF protection (remove ::disable to protect against CSRF attacks)
-        // was http.csrf(AbstractHttpConfigurer::disable).build(); in case this is needed by au.org.ala.ws.security
-
-        return http.build();
+        // CSRF protection must be disabled for GraphQL to work properly.
+        // Enabling CSRF (removing ::disable) causes 403 Forbidden errors for all GraphQL requests,
+        // even when authenticated. This is because GraphQL typically uses POST requests without
+        // traditional form submissions, and doesn't include CSRF tokens by default.
+        // Alternative CSRF protection should be implemented at the application level if needed.
+        return http.csrf(AbstractHttpConfigurer::disable).build();
     }
 
     @Bean
