@@ -18,6 +18,9 @@ on:
     paths:
       - 'lists-service/**'
     
+permissions:
+  contents: read
+
 env:
   # Customize these environment variables
   JAVA_APP_PATH: './lists-service'
