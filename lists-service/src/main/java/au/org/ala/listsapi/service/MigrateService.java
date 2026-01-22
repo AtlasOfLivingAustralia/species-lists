@@ -345,8 +345,13 @@ public class MigrateService {
                     } else {
                         try {
                             String safeDataResourceUid = sanitizeForFilename(speciesList.getDataResourceUid());
-                            File localFile = new File(
-                                    tempDir + "/species-list-migrate-" + safeDataResourceUid + ".csv");
+                            File tempDirectory = new File(tempDir);
+                            File localFile = new File(tempDirectory, "species-list-migrate-" + safeDataResourceUid + ".csv");
+                            
+                            // Validate that the resolved path is within the temp directory
+                            if (!localFile.getCanonicalPath().startsWith(tempDirectory.getCanonicalPath())) {
+                                throw new SecurityException("Invalid file path: potential path traversal detected");
+                            }
 
                             AccessToken token = tokenService.getAuthToken(false, null, null);
 
