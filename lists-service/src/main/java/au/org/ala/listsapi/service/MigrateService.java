@@ -160,6 +160,26 @@ public class MigrateService {
         return lists;
     }
 
+    /**
+     * Sanitize a string so it is safe to use as part of a filename.
+     * Allows only alphanumeric characters, dot, underscore and dash.
+     * All other characters are replaced with '_', and any remaining
+     * ".." sequences are removed to avoid directory traversal.
+     */
+    private String sanitizeForFilename(String input) {
+        if (input == null || input.isEmpty()) {
+            return "unknown";
+        }
+        String sanitized = input.replaceAll("[^a-zA-Z0-9._-]", "_");
+        if (sanitized.contains("..")) {
+            sanitized = sanitized.replace("..", "_");
+        }
+        if (sanitized.isEmpty()) {
+            return "unknown";
+        }
+        return sanitized;
+    }
+
     private List<SpeciesList> filterExistingLists(List<SpeciesList> lists, boolean doesExist) {
         List<String> dataResources = lists.stream().map(SpeciesList::getDataResourceUid).toList();
         Set<String> existingDrUIDs = speciesListMongoRepository
@@ -324,8 +344,9 @@ public class MigrateService {
                         }
                     } else {
                         try {
+                            String safeDataResourceUid = sanitizeForFilename(speciesList.getDataResourceUid());
                             File localFile = new File(
-                                    tempDir + "/species-list-migrate-" + speciesList.getDataResourceUid() + ".csv");
+                                    tempDir + "/species-list-migrate-" + safeDataResourceUid + ".csv");
 
                             AccessToken token = tokenService.getAuthToken(false, null, null);
 
