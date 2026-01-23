@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # 1. Java / Maven Config
+  - package-ecosystem: "maven"
+    directory: "/lists-service"
+    schedule:
+      interval: "daily"
+
+  # 2. React / npm Config
+  - package-ecosystem: "npm"
+    directory: "/lists-ui"
+    schedule:
+      interval: "daily"
