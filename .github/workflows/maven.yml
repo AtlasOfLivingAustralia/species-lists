@@ -19,9 +19,9 @@ on:
       - 'lists-service/**'
     
 permissions:
-  contents: read
-  checks: write
-  pull-requests: write
+  contents: write           # Required to submit the Dependency Graph snapshot
+  checks: write             # Required for dorny/test-reporter to create "Maven Tests"
+  pull-requests: write      # Required for dorny/test-reporter to link to PRs
 
 env:
   # Customize these environment variables
