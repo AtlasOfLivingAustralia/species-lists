@@ -1,13 +1,14 @@
 version: 2
 updates:
-  # 1. Java / Maven Config
   - package-ecosystem: "maven"
-    directory: "/lists-service"
+    directory: "lists-service" # Keep the leading slash for monorepos
     schedule:
       interval: "daily"
+    # Adding this can help skip complex property resolutions that crash the bot
+    open-pull-requests-limit: 5
 
   # 2. React / npm Config
   - package-ecosystem: "npm"
-    directory: "/lists-ui"
+    directory: "lists-ui"
     schedule:
       interval: "daily"
