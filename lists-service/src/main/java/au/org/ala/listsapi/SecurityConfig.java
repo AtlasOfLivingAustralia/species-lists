@@ -1,23 +1,56 @@
+/**
+ * Copyright (c) 2025 Atlas of Living Australia
+ * All Rights Reserved.
+ * 
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ */
+
 package au.org.ala.listsapi;
 
+import java.io.IOException;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.firewall.DefaultHttpFirewall;
 import org.springframework.security.web.firewall.HttpFirewall;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.multipart.support.MultipartFilter;
 
 import au.org.ala.ws.security.AlaWebServiceAuthFilter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 @EnableWebSecurity
@@ -30,22 +63,79 @@ public class SecurityConfig {
     @Autowired
     protected AlaWebServiceAuthFilter alaWebServiceAuthFilter;
 
+    @Value("${app.url}")
+    private String appUrl;
+
+    @Bean
+    public FilterRegistrationBean<MultipartFilter> multipartFilterRegistrationBean() {
+        FilterRegistrationBean<MultipartFilter> registrationBean = new FilterRegistrationBean<>();
+        MultipartFilter multipartFilter = new MultipartFilter();
+        registrationBean.setFilter(multipartFilter);
+        // This ensures it runs before the Spring Security Filter Chain
+        registrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE); 
+        return registrationBean;
+    }
+
+    // 
+    
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        
+        // Explicitly use the origin. 
+        // Note: If appUrl has a trailing slash (e.g. ...:5173/), remove it!
+        configuration.setAllowedOrigins(List.of(appUrl)); 
+        
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of(
+            "Authorization", 
+            "Content-Type", 
+            "X-XSRF-TOKEN", 
+            "Accept", 
+            "X-Requested-With"
+        ));
+        
+        configuration.setAllowCredentials(true); 
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-
+        CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
         http.addFilterBefore(alaWebServiceAuthFilter, BasicAuthenticationFilter.class);
+        
+        // 1. Authorization Configuration
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/graphql", "/ingest", "/graphiql", "/v1/species/**", "/**")
+            // ALLOW ALL OPTIONS REQUESTS (The fix for 403 Preflight)
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers("/", "/graphql", "/ingest", "/graphiql", "/v1/species/**", "/csrf", "/**")
                 .permitAll());
+        http.cors(Customizer.withDefaults());
+        // 2. CSRF Configuration (Updated for SPA/React)
+        http.csrf(csrf -> csrf
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .csrfTokenRequestHandler(requestHandler)
+        );
 
-        /*
-         * Configure security headers to address vulnerabilities:
-         * - Fix Missing HTTP Strict Transport Security Policy (Medium severity)
-         * - Fix Missing 'X-Frame-Options' Header (Low severity) - prevents clickjacking
-         * - Fix Missing 'X-Content-Type-Options' Header (Low severity) - prevents MIME
-         * sniffing
-         * - Fix Missing Content Security Policy (Low severity) - prevents XSS attacks
-         */
+        // 3. Force the cookie to be sent on every request so React can find it
+        http.addFilterAfter(new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+                    throws ServletException, IOException {
+                CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+                if (csrfToken != null) {
+                    // This triggers the actual generation of the token/cookie
+                    csrfToken.getToken();
+                }
+                filterChain.doFilter(request, response);
+            }
+        }, BasicAuthenticationFilter.class);
+
+        // 4. Security Headers
         http.headers(headers -> headers
                 .httpStrictTransportSecurity(hstsConfig -> hstsConfig
                         .maxAgeInSeconds(31536000) // 1 year
@@ -63,12 +153,7 @@ public class SecurityConfig {
                                 "frame-ancestors 'none'; " +
                                 "base-uri 'self'")));
 
-        // CSRF protection must be disabled for GraphQL to work properly.
-        // Enabling CSRF (removing ::disable) causes 403 Forbidden errors for all GraphQL requests,
-        // even when authenticated. This is because GraphQL typically uses POST requests without
-        // traditional form submissions, and doesn't include CSRF tokens by default.
-        // Alternative CSRF protection should be implemented at the application level if needed.
-        return http.csrf(AbstractHttpConfigurer::disable).build();
+        return http.build();
     }
 
     @Bean
