@@ -14,8 +14,12 @@
  */
 package au.org.ala.listsapi.controller;  
 
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;  
+import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;  
 
 /**
  * 
@@ -30,8 +34,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class CsrfController {  
     
     @GetMapping("/csrf")  
-    public void setupCsrf() {
-        // Just an empty endpoint. 
-        // The csrf Filter handles the actual cookie generation.
+    public void setupCsrf(HttpServletRequest request, HttpServletResponse response) {
+        // This attribute is set by Spring Security's CsrfFilter
+        CsrfToken token = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+        if (token != null) {
+            // IMPORTANT: Calling .getToken() "resolves" the deferred token
+            // and forces the Repository to write the Set-Cookie header.
+            token.getToken(); 
+        }
     }
 }

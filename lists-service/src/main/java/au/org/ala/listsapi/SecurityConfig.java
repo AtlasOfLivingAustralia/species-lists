@@ -115,9 +115,20 @@ public class SecurityConfig {
                 .requestMatchers("/", "/graphql", "/ingest", "/graphiql", "/v1/species/**", "/csrf", "/**")
                 .permitAll());
         http.cors(Customizer.withDefaults());
+        
         // 2. CSRF Configuration (Updated for SPA/React)
+        boolean isSecure = appUrl.toLowerCase().startsWith("https");
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookiePath("/");
+        // If EKS is HTTPS, this MUST be true. 
+        // If you're testing on HTTP, it must be false.
+        repository.setCookieCustomizer(cookie -> {
+            cookie.secure(isSecure); // true for EKS/Prod, false for localhost HTTP
+            cookie.sameSite("Lax");
+        });
+
         http.csrf(csrf -> csrf
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .csrfTokenRepository(repository)
                 .csrfTokenRequestHandler(requestHandler)
         );
 
