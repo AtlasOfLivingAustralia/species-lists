@@ -66,6 +66,9 @@ public class SecurityConfig {
     @Value("${app.url}")
     private String appUrl;
 
+    @Value("${app.commonDomain:ala.org.au}")
+    private String appCommonDomain;
+
     @Bean
     public FilterRegistrationBean<MultipartFilter> multipartFilterRegistrationBean() {
         FilterRegistrationBean<MultipartFilter> registrationBean = new FilterRegistrationBean<>();
@@ -123,8 +126,18 @@ public class SecurityConfig {
         // If EKS is HTTPS, this MUST be true. 
         // If you're testing on HTTP, it must be false.
         repository.setCookieCustomizer(cookie -> {
-            cookie.secure(isSecure); // true for EKS/Prod, false for localhost HTTP
-            cookie.sameSite("Lax");
+            cookie.path("/");
+            if (isSecure) {
+                // EKS / Production settings
+                cookie.secure(true);
+                cookie.domain(appCommonDomain); // e.g., "ala.org.au"
+                cookie.sameSite("None");        // Required for cross-subdomain
+            } else {
+                // Localhost settings
+                cookie.secure(false);
+                // DO NOT set domain for localhost; let it default to null/host-only
+                cookie.sameSite("Lax"); 
+            }
         });
 
         http.csrf(csrf -> csrf
