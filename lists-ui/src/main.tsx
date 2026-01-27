@@ -1,5 +1,5 @@
 // Global styles
-import '@atlasoflivingaustralia/ala-mantine/dist/index.css';
+import '@atlasoflivingaustralia/ala-mantine/styles';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import '@mantine/nprogress/styles.css';
