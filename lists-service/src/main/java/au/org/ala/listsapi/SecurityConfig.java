@@ -66,8 +66,8 @@ public class SecurityConfig {
     @Value("${app.url}")
     private String appUrl;
 
-    @Value("${app.commonDomain:ala.org.au}")
-    private String appCommonDomain;
+    @Value("${app.cookie.domain:}")
+    private String cookieDomain;
 
     @Bean
     public FilterRegistrationBean<MultipartFilter> multipartFilterRegistrationBean() {
@@ -130,7 +130,7 @@ public class SecurityConfig {
             if (isSecure) {
                 // EKS / Production settings
                 cookie.secure(true);
-                cookie.domain(appCommonDomain); // e.g., "ala.org.au"
+                cookie.domain(cookieDomain); // e.g., "dev.ala.org.au" or "ala.org.au"
                 cookie.sameSite("None");        // Required for cross-subdomain
             } else {
                 // Localhost settings

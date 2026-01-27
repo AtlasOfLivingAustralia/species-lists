@@ -144,6 +144,8 @@ phases:
           app:
             name: $APP_NAME
             url: $APP_URL
+            cookie:
+              domain: $APP_COOKIE_DOMAIN
           graphql:
             enabled: $GRAPHQL_ENABLED
             path: $GRAPHQL_PATH
