@@ -109,41 +109,40 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
-        
-        // Add your custom auth filter
         http.addFilterBefore(alaWebServiceAuthFilter, BasicAuthenticationFilter.class);
         
         // 1. Authorization Configuration
         http.authorizeHttpRequests(auth -> auth
+            // ALLOW ALL OPTIONS REQUESTS (The fix for 403 Preflight)
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/", "/graphql", "/ingest", "/graphiql", "/v1/species/**", "/csrf", "/**")
                 .permitAll());
-        
         http.cors(Customizer.withDefaults());
         
-        // 2. CSRF Configuration (Updated for SPA/React and 3rd Party API exclusions)
+        // 2. CSRF Configuration (Updated for SPA/React)
         boolean isSecure = appUrl.toLowerCase().startsWith("https");
         CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-        
+        repository.setCookiePath("/");
+        // If EKS is HTTPS, this MUST be true. 
+        // If you're testing on HTTP, it must be false.
         repository.setCookieCustomizer(cookie -> {
             cookie.path("/");
-            if (isSecure && cookieDomain != null && !cookieDomain.isEmpty()) {
+            if (isSecure) {
                 // EKS / Production settings
                 cookie.secure(true);
-                cookie.domain(cookieDomain);
-                cookie.sameSite("None");
+                cookie.domain(cookieDomain); // e.g., "dev.ala.org.au" or "ala.org.au"
+                cookie.sameSite("None");        // Required for cross-subdomain
             } else {
                 // Localhost settings
                 cookie.secure(false);
-                cookie.sameSite("Lax");
+                // DO NOT set domain for localhost; let it default to null/host-only
+                cookie.sameSite("Lax"); 
             }
         });
 
         http.csrf(csrf -> csrf
                 .csrfTokenRepository(repository)
                 .csrfTokenRequestHandler(requestHandler)
-                // --- EXCLUSIONS FOR THIRD PARTY APIs ---
-                .ignoringRequestMatchers("/v1/**", "/v2/**")
         );
 
         // 3. Force the cookie to be sent on every request so React can find it
@@ -153,6 +152,7 @@ public class SecurityConfig {
                     throws ServletException, IOException {
                 CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
                 if (csrfToken != null) {
+                    // This triggers the actual generation of the token/cookie
                     csrfToken.getToken();
                 }
                 filterChain.doFilter(request, response);
@@ -162,7 +162,7 @@ public class SecurityConfig {
         // 4. Security Headers
         http.headers(headers -> headers
                 .httpStrictTransportSecurity(hstsConfig -> hstsConfig
-                        .maxAgeInSeconds(31536000)
+                        .maxAgeInSeconds(31536000) // 1 year
                         .includeSubDomains(true)
                         .preload(true))
                 .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
