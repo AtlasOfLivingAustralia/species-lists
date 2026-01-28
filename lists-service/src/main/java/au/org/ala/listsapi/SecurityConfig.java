@@ -142,25 +142,7 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf
                 .csrfTokenRepository(repository)
                 .csrfTokenRequestHandler(requestHandler)
-                .requireCsrfProtectionMatcher(request -> {
-                    String path = request.getRequestURI();
-                    String method = request.getMethod();
-                    
-                    // Skip CSRF for OPTIONS requests (CORS preflight)
-                    if ("OPTIONS".equals(method)) {
-                        return false;
-                    }
-                    
-                    // Skip CSRF for API endpoints
-                    if (path.startsWith("/v1/") || path.startsWith("/v2/") || 
-                        path.equals("/graphql") || path.equals("/ingest")) {
-                        return false;
-                    }
-                    
-                    // Require CSRF for state-changing methods on other paths
-                    return "POST".equals(method) || "PUT".equals(method) || 
-                            "DELETE".equals(method) || "PATCH".equals(method);
-                })
+                .ignoringRequestMatchers("/v1/**", "/v2/**") // CSRF Exclusion
         );
 
         // 3. Force the cookie for UI requests ONLY
@@ -170,9 +152,7 @@ public class SecurityConfig {
                     throws ServletException, IOException {
                 
                 String path = request.getRequestURI();
-                // Skip CSRF token generation for API endpoints and exempt paths
-                boolean isApi = path.startsWith("/v1/") || path.startsWith("/v2/") || 
-                                path.equals("/graphql") || path.equals("/ingest");
+                boolean isApi = path.startsWith("/v1/") || path.startsWith("/v2/");
                 
                 if (!isApi) {
                     CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
