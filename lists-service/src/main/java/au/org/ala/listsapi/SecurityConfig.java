@@ -62,7 +62,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @Order(1)
 public class SecurityConfig {
 
-    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Autowired
     protected AlaWebServiceAuthFilter alaWebServiceAuthFilter;
@@ -78,6 +78,7 @@ public class SecurityConfig {
         FilterRegistrationBean<MultipartFilter> registrationBean = new FilterRegistrationBean<>();
         MultipartFilter multipartFilter = new MultipartFilter();
         registrationBean.setFilter(multipartFilter);
+        // This ensures it runs before the Spring Security Filter Chain
         registrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE); 
         return registrationBean;
     }
@@ -90,30 +91,29 @@ public class SecurityConfig {
     public FilterRegistrationBean<OncePerRequestFilter> debugFilterRegistrationBean() {
         FilterRegistrationBean<OncePerRequestFilter> registrationBean = new FilterRegistrationBean<>();
         registrationBean.setFilter(new OncePerRequestFilter() {
-            private final Logger filterLog = LoggerFactory.getLogger("DebugFilter");
-            
             @Override
             protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
-                                          FilterChain filterChain) throws ServletException, IOException {
-                filterLog.info("====== DEBUG FILTER ======");
-                filterLog.info("Request URI: {}", request.getRequestURI());
-                filterLog.info("Request URL: {}", request.getRequestURL());
-                filterLog.info("Method: {}", request.getMethod());
-                filterLog.info("Context Path: {}", request.getContextPath());
-                filterLog.info("Servlet Path: {}", request.getServletPath());
-                filterLog.info("Query String: {}", request.getQueryString());
-                filterLog.info("Remote Addr: {}", request.getRemoteAddr());
-                filterLog.info("==========================");
+                                            FilterChain filterChain) throws ServletException, IOException {
+                logger.info("====== DEBUG FILTER ======");
+                logger.info("Request URI: " + request.getRequestURI());
+                logger.info("Request URL: " + request.getRequestURL());
+                logger.info("Method: " + request.getMethod());
+                logger.info("Context Path: " + request.getContextPath());
+                logger.info("Servlet Path: " + request.getServletPath());
+                logger.info("Query String: " + request.getQueryString());
+                logger.info("Remote Addr: " + request.getRemoteAddr());
+                logger.info("==========================");
                 
                 try {
                     filterChain.doFilter(request, response);
-                    filterLog.info("Response Status: {}", response.getStatus());
+                    logger.info("Response Status: " + response.getStatus());
                 } catch (Exception e) {
-                    filterLog.error("Exception in filter chain: {}", e.getMessage(), e);
+                    logger.error("Exception in filter chain: " + e.getMessage(), e);
                     throw e;
                 }
             }
         });
+        // Run even before multipart filter
         registrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE - 1);
         return registrationBean;
     }
@@ -151,35 +151,13 @@ public class SecurityConfig {
 
         http.addFilterBefore(alaWebServiceAuthFilter, BasicAuthenticationFilter.class);
         
-        // Debug filter to log authorization decisions
-        http.addFilterBefore(new OncePerRequestFilter() {
-            private final Logger authLog = LoggerFactory.getLogger("AuthorizationCheck");
-            
-            @Override
-            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
-                                          FilterChain filterChain) throws ServletException, IOException {
-                String path = request.getRequestURI();
-                String method = request.getMethod();
-                
-                authLog.info("=== AUTHORIZATION CHECK ===");
-                authLog.info("Path: {}", path);
-                authLog.info("Method: {}", method);
-                authLog.info("Auth header: {}", request.getHeader("Authorization"));
-                authLog.info("User Principal: {}", request.getUserPrincipal());
-                
-                filterChain.doFilter(request, response);
-            }
-        }, AlaWebServiceAuthFilter.class);
-        
         // 1. Authorization Configuration
-        http.authorizeHttpRequests(auth -> {
-            log.info("=== Configuring Authorization Rules ===");
-            auth
+        http.authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/v1/**", "/v2/**").permitAll()
+                .requestMatchers("/v1/**", "/v2/**").permitAll() // Broad API Permit
                 .requestMatchers("/", "/graphql", "/ingest", "/graphiql", "/csrf").permitAll()
-                .anyRequest().permitAll();
-        });
+                .anyRequest().permitAll() // Match old behavior - permit all
+        );
 
         http.cors(Customizer.withDefaults());
         
@@ -205,30 +183,21 @@ public class SecurityConfig {
                 .requireCsrfProtectionMatcher(request -> {
                     String path = request.getRequestURI();
                     String method = request.getMethod();
-                    Logger csrfLog = LoggerFactory.getLogger("CsrfCheck");
-                    
-                    csrfLog.info("=== CSRF CHECK ===");
-                    csrfLog.info("Path: {}", path);
-                    csrfLog.info("Method: {}", method);
                     
                     // Skip CSRF for OPTIONS requests (CORS preflight)
                     if ("OPTIONS".equals(method)) {
-                        csrfLog.info("Result: SKIP (OPTIONS)");
                         return false;
                     }
                     
                     // Skip CSRF for API endpoints
                     if (path.startsWith("/v1/") || path.startsWith("/v2/") || 
                         path.equals("/graphql") || path.equals("/ingest")) {
-                        csrfLog.info("Result: SKIP (API endpoint)");
                         return false;
                     }
                     
                     // Require CSRF for state-changing methods on other paths
-                    boolean requiresCsrf = "POST".equals(method) || "PUT".equals(method) || 
-                           "DELETE".equals(method) || "PATCH".equals(method);
-                    csrfLog.info("Result: {}", requiresCsrf ? "REQUIRE CSRF" : "SKIP");
-                    return requiresCsrf;
+                    return "POST".equals(method) || "PUT".equals(method) || 
+                            "DELETE".equals(method) || "PATCH".equals(method);
                 })
         );
 
@@ -239,7 +208,9 @@ public class SecurityConfig {
                     throws ServletException, IOException {
                 
                 String path = request.getRequestURI();
-                boolean isApi = path.startsWith("/v1/") || path.startsWith("/v2/");
+                // Skip CSRF token generation for API endpoints and exempt paths
+                boolean isApi = path.startsWith("/v1/") || path.startsWith("/v2/") || 
+                                path.equals("/graphql") || path.equals("/ingest");
                 
                 if (!isApi) {
                     CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
@@ -278,6 +249,7 @@ public class SecurityConfig {
         firewall.setAllowUrlEncodedSlash(true);
         firewall.setAllowUrlEncodedDoubleSlash(true); 
         firewall.setAllowSemicolon(true);
+        // Additional allowances for API compatibility
         firewall.setAllowUrlEncodedPercent(true);
         firewall.setAllowBackSlash(true);
         firewall.setAllowUrlEncodedPeriod(true);
