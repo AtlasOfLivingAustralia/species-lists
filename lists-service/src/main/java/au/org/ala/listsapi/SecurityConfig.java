@@ -18,6 +18,8 @@ package au.org.ala.listsapi;
 import java.io.IOException;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -38,7 +40,6 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
-import org.springframework.security.web.firewall.DefaultHttpFirewall;
 import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.security.web.firewall.StrictHttpFirewall;
 import org.springframework.web.cors.CorsConfiguration;
@@ -61,6 +62,8 @@ import jakarta.servlet.http.HttpServletResponse;
 @Order(1)
 public class SecurityConfig {
 
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+
     @Autowired
     protected AlaWebServiceAuthFilter alaWebServiceAuthFilter;
 
@@ -77,6 +80,41 @@ public class SecurityConfig {
         registrationBean.setFilter(multipartFilter);
         // This ensures it runs before the Spring Security Filter Chain
         registrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE); 
+        return registrationBean;
+    }
+
+    /**
+     * Debug filter to log ALL requests - helps diagnose issues in EKS
+     * Remove this in production once issues are resolved
+     */
+    @Bean
+    public FilterRegistrationBean<OncePerRequestFilter> debugFilterRegistrationBean() {
+        FilterRegistrationBean<OncePerRequestFilter> registrationBean = new FilterRegistrationBean<>();
+        registrationBean.setFilter(new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
+                                            FilterChain filterChain) throws ServletException, IOException {
+                logger.info("====== DEBUG FILTER ======");
+                logger.info("Request URI: " + request.getRequestURI());
+                logger.info("Request URL: " + request.getRequestURL());
+                logger.info("Method: " + request.getMethod());
+                logger.info("Context Path: " + request.getContextPath());
+                logger.info("Servlet Path: " + request.getServletPath());
+                logger.info("Query String: " + request.getQueryString());
+                logger.info("Remote Addr: " + request.getRemoteAddr());
+                logger.info("==========================");
+                
+                try {
+                    filterChain.doFilter(request, response);
+                    logger.info("Response Status: " + response.getStatus());
+                } catch (Exception e) {
+                    logger.error("Exception in filter chain: " + e.getMessage(), e);
+                    throw e;
+                }
+            }
+        });
+        // Run even before multipart filter
+        registrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE - 1);
         return registrationBean;
     }
 
@@ -118,7 +156,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/v1/**", "/v2/**").permitAll() // Broad API Permit
                 .requestMatchers("/", "/graphql", "/ingest", "/graphiql", "/csrf").permitAll()
-                .anyRequest().authenticated()
+                .anyRequest().permitAll() // Match old behavior - permit all
         );
 
         http.cors(Customizer.withDefaults());
@@ -145,13 +183,6 @@ public class SecurityConfig {
                 .requireCsrfProtectionMatcher(request -> {
                     String path = request.getRequestURI();
                     String method = request.getMethod();
-
-                    // TEMPORARY DEBUG LOGGING - TODO: Remove this block after verifying CSRF behavior
-                    System.out.println("=== CSRF CHECK ===");
-                    System.out.println("Path: " + path);
-                    System.out.println("Method: " + method);
-                    System.out.println("Context Path: " + request.getContextPath());
-                    System.out.println("Servlet Path: " + request.getServletPath());
                     
                     // Skip CSRF for OPTIONS requests (CORS preflight)
                     if ("OPTIONS".equals(method)) {
@@ -213,29 +244,15 @@ public class SecurityConfig {
     }
 
     @Bean
-    public HttpFirewall allowEncodedSlashHttpFirewall() {
-        DefaultHttpFirewall firewall = new DefaultHttpFirewall();
-        firewall.setAllowUrlEncodedSlash(true); // Allows %2F
-        // firewall.setAllowUrlEncodedPercent(true); // Allows %25 (use with caution)
-        // firewall.setAllowSemicolon(true); // Allows ; in path (often needed for
-        // matrix variables or if URLs naturally contain them)
-        // firewall.setAllowUrlEncodedPeriod(true); // Allows %2E
-        // Add any other specific allowances you've identified as necessary
-        return firewall;
-    }
-
-    /**
-     * A StrictHttpFirewall that allows encoded slashes and semicolons in the URL.
-     * 
-     * @return
-     */
-    @Bean
     public HttpFirewall allowUrlEncodedSlashHttpFirewall() {
         StrictHttpFirewall firewall = new StrictHttpFirewall();
         firewall.setAllowUrlEncodedSlash(true);
-        // Note the 'UrlEncoded' part of the method name
         firewall.setAllowUrlEncodedDoubleSlash(true); 
         firewall.setAllowSemicolon(true);
+        // Additional allowances for API compatibility
+        firewall.setAllowUrlEncodedPercent(true);
+        firewall.setAllowBackSlash(true);
+        firewall.setAllowUrlEncodedPeriod(true);
         return firewall;
     }
 }
