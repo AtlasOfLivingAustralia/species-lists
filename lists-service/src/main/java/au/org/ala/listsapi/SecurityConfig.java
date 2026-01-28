@@ -40,6 +40,7 @@ import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.firewall.DefaultHttpFirewall;
 import org.springframework.security.web.firewall.HttpFirewall;
+import org.springframework.security.web.firewall.StrictHttpFirewall;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -109,62 +110,64 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
-        
-        // Add your custom auth filter
+
         http.addFilterBefore(alaWebServiceAuthFilter, BasicAuthenticationFilter.class);
         
         // 1. Authorization Configuration
         http.authorizeHttpRequests(auth -> auth
-            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-            // Add v1 and v2 explicitly here
-            .requestMatchers("/v1/**", "/v2/**").permitAll() 
-            .requestMatchers("/", "/graphql", "/ingest", "/graphiql", "/csrf").permitAll()
-            .anyRequest().authenticated()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers("/v1/**", "/v2/**").permitAll() // Broad API Permit
+                .requestMatchers("/", "/graphql", "/ingest", "/graphiql", "/csrf").permitAll()
+                .anyRequest().authenticated()
         );
-        
+
         http.cors(Customizer.withDefaults());
         
-        // 2. CSRF Configuration (Updated for SPA/React and 3rd Party API exclusions)
+        // 2. CSRF Configuration
         boolean isSecure = appUrl.toLowerCase().startsWith("https");
         CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         
         repository.setCookieCustomizer(cookie -> {
             cookie.path("/");
             if (isSecure && cookieDomain != null && !cookieDomain.isEmpty()) {
-                // EKS / Production settings
                 cookie.secure(true);
                 cookie.domain(cookieDomain);
                 cookie.sameSite("None");
             } else {
-                // Localhost settings
                 cookie.secure(false);
                 cookie.sameSite("Lax");
             }
         });
 
         http.csrf(csrf -> csrf
-            .csrfTokenRepository(repository)
-            .csrfTokenRequestHandler(requestHandler)
-            .ignoringRequestMatchers("/v1/**", "/v2/**") // This stops the CSRF 403
+                .csrfTokenRepository(repository)
+                .csrfTokenRequestHandler(requestHandler)
+                .ignoringRequestMatchers("/v1/**", "/v2/**") // CSRF Exclusion
         );
 
-        // 3. Force the cookie to be sent on every request so React can find it
+        // 3. Force the cookie for UI requests ONLY
         http.addFilterAfter(new OncePerRequestFilter() {
             @Override
             protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
                     throws ServletException, IOException {
-                CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
-                if (csrfToken != null) {
-                    csrfToken.getToken();
+                
+                String path = request.getRequestURI();
+                boolean isApi = path.startsWith("/v1/") || path.startsWith("/v2/");
+                
+                if (!isApi) {
+                    CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+                    if (csrfToken != null) {
+                        csrfToken.getToken();
+                    }
                 }
                 filterChain.doFilter(request, response);
             }
         }, BasicAuthenticationFilter.class);
 
-        // 4. Security Headers
+        // 4. Security Headers (Restored)
         http.headers(headers -> headers
                 .httpStrictTransportSecurity(hstsConfig -> hstsConfig
-                        .maxAgeInSeconds(31536000)
+                        .maxAgeInSeconds(31536000) // 1 year
                         .includeSubDomains(true)
                         .preload(true))
                 .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
@@ -191,6 +194,21 @@ public class SecurityConfig {
         // matrix variables or if URLs naturally contain them)
         // firewall.setAllowUrlEncodedPeriod(true); // Allows %2E
         // Add any other specific allowances you've identified as necessary
+        return firewall;
+    }
+
+    /**
+     * A StrictHttpFirewall that allows encoded slashes and semicolons in the URL.
+     * 
+     * @return
+     */
+    @Bean
+    public HttpFirewall allowUrlEncodedSlashHttpFirewall() {
+        StrictHttpFirewall firewall = new StrictHttpFirewall();
+        firewall.setAllowUrlEncodedSlash(true);
+        // Note the 'UrlEncoded' part of the method name
+        firewall.setAllowUrlEncodedDoubleSlash(true); 
+        firewall.setAllowSemicolon(true);
         return firewall;
     }
 }
