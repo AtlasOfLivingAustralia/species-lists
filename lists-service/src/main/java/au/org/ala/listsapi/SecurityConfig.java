@@ -34,11 +34,10 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.security.web.firewall.StrictHttpFirewall;
@@ -94,7 +93,7 @@ public class SecurityConfig {
             
             @Override
             protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
-                                          FilterChain filterChain) throws ServletException, IOException {
+                                            FilterChain filterChain) throws ServletException, IOException {
                 filterLog.info("====== DEBUG FILTER ======");
                 filterLog.info("Request URI: {}", request.getRequestURI());
                 filterLog.info("Request URL: {}", request.getRequestURL());
@@ -183,75 +182,13 @@ public class SecurityConfig {
 
         http.cors(Customizer.withDefaults());
         
-        // 2. CSRF Configuration
-        boolean isSecure = appUrl.toLowerCase().startsWith("https");
-        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-        
-        repository.setCookieCustomizer(cookie -> {
-            cookie.path("/");
-            if (isSecure && cookieDomain != null && !cookieDomain.isEmpty()) {
-                cookie.secure(true);
-                cookie.domain(cookieDomain);
-                cookie.sameSite("None");
-            } else {
-                cookie.secure(false);
-                cookie.sameSite("Lax");
-            }
-        });
+        // 2. CSRF Configuration - DISABLED (matches old working config)
+        // The old config had CSRF disabled. When CSRF is enabled, even with requireCsrfProtectionMatcher
+        // skipping /v2/ endpoints, it causes AuthUtils to return 403 with "User profile: null"
+        // TODO: Investigate why CSRF filter affects AuthUtils and implement proper CSRF protection
+        http.csrf(AbstractHttpConfigurer::disable);
 
-        http.csrf(csrf -> csrf
-                .csrfTokenRepository(repository)
-                .csrfTokenRequestHandler(requestHandler)
-                .requireCsrfProtectionMatcher(request -> {
-                    String path = request.getRequestURI();
-                    String method = request.getMethod();
-                    Logger csrfLog = LoggerFactory.getLogger("CsrfCheck");
-                    
-                    csrfLog.info("=== CSRF CHECK ===");
-                    csrfLog.info("Path: {}", path);
-                    csrfLog.info("Method: {}", method);
-                    
-                    // Skip CSRF for OPTIONS requests (CORS preflight)
-                    if ("OPTIONS".equals(method)) {
-                        csrfLog.info("Result: SKIP (OPTIONS)");
-                        return false;
-                    }
-                    
-                    // Skip CSRF for API endpoints
-                    if (path.startsWith("/v1/") || path.startsWith("/v2/") || 
-                        path.equals("/graphql") || path.equals("/ingest")) {
-                        csrfLog.info("Result: SKIP (API endpoint)");
-                        return false;
-                    }
-                    
-                    // Require CSRF for state-changing methods on other paths
-                    boolean requiresCsrf = "POST".equals(method) || "PUT".equals(method) || 
-                           "DELETE".equals(method) || "PATCH".equals(method);
-                    csrfLog.info("Result: {}", requiresCsrf ? "REQUIRE CSRF" : "SKIP");
-                    return requiresCsrf;
-                })
-        );
-
-        // 3. Force the cookie for UI requests ONLY
-        http.addFilterAfter(new OncePerRequestFilter() {
-            @Override
-            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-                    throws ServletException, IOException {
-                
-                String path = request.getRequestURI();
-                boolean isApi = path.startsWith("/v1/") || path.startsWith("/v2/");
-                
-                if (!isApi) {
-                    CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
-                    if (csrfToken != null) {
-                        csrfToken.getToken();
-                    }
-                }
-                filterChain.doFilter(request, response);
-            }
-        }, BasicAuthenticationFilter.class);
-
-        // 4. Security Headers (Restored)
+        // 3. Security Headers (Restored)
         http.headers(headers -> headers
                 .httpStrictTransportSecurity(hstsConfig -> hstsConfig
                         .maxAgeInSeconds(31536000) // 1 year
