@@ -115,9 +115,12 @@ public class SecurityConfig {
         
         // 1. Authorization Configuration
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/", "/graphql", "/ingest", "/graphiql", "/v1/species/**", "/csrf", "/**")
-                .permitAll());
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+            // Add v1 and v2 explicitly here
+            .requestMatchers("/v1/**", "/v2/**").permitAll() 
+            .requestMatchers("/", "/graphql", "/ingest", "/graphiql", "/csrf").permitAll()
+            .anyRequest().authenticated()
+        );
         
         http.cors(Customizer.withDefaults());
         
@@ -140,10 +143,9 @@ public class SecurityConfig {
         });
 
         http.csrf(csrf -> csrf
-                .csrfTokenRepository(repository)
-                .csrfTokenRequestHandler(requestHandler)
-                // --- EXCLUSIONS FOR THIRD PARTY APIs ---
-                .ignoringRequestMatchers("/v1/**", "/v2/**")
+            .csrfTokenRepository(repository)
+            .csrfTokenRequestHandler(requestHandler)
+            .ignoringRequestMatchers("/v1/**", "/v2/**") // This stops the CSRF 403
         );
 
         // 3. Force the cookie to be sent on every request so React can find it
