@@ -102,6 +102,9 @@ public class SecurityConfig {
                 filterLog.info("Servlet Path: {}", request.getServletPath());
                 filterLog.info("Query String: {}", request.getQueryString());
                 filterLog.info("Remote Addr: {}", request.getRemoteAddr());
+                filterLog.info("Request scheme: {}", request.getScheme());
+                filterLog.info("Request isSecure: {}", request.isSecure());
+                filterLog.info("X-Forwarded-Proto: {}", request.getHeader("X-Forwarded-Proto"));
                 filterLog.info("==========================");
                 
                 try {
@@ -156,7 +159,7 @@ public class SecurityConfig {
             
             @Override
             protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
-                                          FilterChain filterChain) throws ServletException, IOException {
+                                            FilterChain filterChain) throws ServletException, IOException {
                 String path = request.getRequestURI();
                 String method = request.getMethod();
                 
