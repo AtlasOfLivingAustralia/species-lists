@@ -145,6 +145,13 @@ public class SecurityConfig {
                 .requireCsrfProtectionMatcher(request -> {
                     String path = request.getRequestURI();
                     String method = request.getMethod();
+
+                    // TEMPORARY DEBUG LOGGING - TODO: Remove this block after verifying CSRF behavior
+                    System.out.println("=== CSRF CHECK ===");
+                    System.out.println("Path: " + path);
+                    System.out.println("Method: " + method);
+                    System.out.println("Context Path: " + request.getContextPath());
+                    System.out.println("Servlet Path: " + request.getServletPath());
                     
                     // Skip CSRF for OPTIONS requests (CORS preflight)
                     if ("OPTIONS".equals(method)) {
