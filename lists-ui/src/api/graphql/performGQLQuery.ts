@@ -12,7 +12,8 @@ async function performGQLQuery<T = any>(
     
   const headers: HeadersInit = {  
     'Content-Type': 'application/json',  
-    'X-XSRF-TOKEN': csrfToken,  
+    'X-XSRF-TOKEN': csrfToken,
+    'X-Internal-Source': 'lists-ui',
     ...((token && token.trim() !== '') ? { Authorization: `Bearer ${token}` } : {}),
   };
 

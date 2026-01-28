@@ -14,6 +14,7 @@ const csrfToken = await getCsrfToken();
 // 2. Build headers using a plain object to satisfy TypeScript
 const headerMap: Record<string, string> = {
   'X-XSRF-TOKEN': csrfToken,
+  'X-Internal-Source': 'lists-ui',
   ...(additionalHeaders as Record<string, string> || {}),
 };
 
