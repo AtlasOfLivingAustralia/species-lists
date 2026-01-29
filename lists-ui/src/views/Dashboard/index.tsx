@@ -54,7 +54,7 @@ function Dashboard() {
           if (auth.isAuthenticated) {
             handleSignout(auth);
           } else {
-            auth.signinRedirect();
+            auth.signinRedirect({ state: { targetUrl: window.location.pathname + window.location.search } });
           }
         }}
         homeUrl={import.meta.env.VITE_ALA_HOME_PAGE || ''}
