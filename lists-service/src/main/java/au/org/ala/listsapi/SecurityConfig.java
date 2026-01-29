@@ -16,6 +16,7 @@
 package au.org.ala.listsapi;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,9 +86,11 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Explicitly use the origin. 
         // Note: If appUrl has a trailing slash (e.g. ...:5173/), remove it!
-        configuration.setAllowedOrigins(List.of(appUrl)); 
+        // Mulitple origins can be comma-separated
+        configuration.setAllowedOrigins(
+            Arrays.asList(appUrl.split(",\\s*"))
+        );
         
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of(
