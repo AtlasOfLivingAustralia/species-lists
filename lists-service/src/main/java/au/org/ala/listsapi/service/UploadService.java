@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -556,7 +557,7 @@ public class UploadService {
         // store
         Map<String, Set<String>> facets = new HashMap<>();
         Set<String> notFacetable = new HashSet<>();
-        Set<String> fieldNames = new HashSet<>();
+        LinkedHashSet<String> fieldNames = new LinkedHashSet<>();
 
         int recordsWithoutScientificName = 0;
 
