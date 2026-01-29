@@ -88,7 +88,7 @@ public class SecurityConfig {
         
         // Note: If appUrl has a trailing slash (e.g. ...:5173/), remove it!
         // Mulitple origins can be comma-separated
-        configuration.setAllowedOrigins(
+        configuration.setAllowedOriginPatterns(
             Arrays.asList(appUrl.split(",\\s*"))
         );
         
@@ -123,7 +123,7 @@ public class SecurityConfig {
         http.cors(Customizer.withDefaults());
         
         // 2. CSRF Configuration (Updated for SPA/React)
-        boolean isSecure = appUrl.toLowerCase().startsWith("https");
+        boolean isSecure = Arrays.stream(appUrl.split(",\\s*")).anyMatch(url -> url.toLowerCase().startsWith("https"));
         CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         repository.setCookiePath("/");
         // If EKS is HTTPS, this MUST be true. 
