@@ -17,7 +17,7 @@ as well as the 2 required containers for ElasticSearch and MongoDB.
 
 Create a local config properties file at `/data/lists-service/config/lists-service-config.properties`. 
 
-Add the following properties, sourcing client IDs (values with`<insert-client-id>`) and secrets (values with `<insert-client-secret>`) from the [OIDC Migration on ALA Applications](https://confluence.csiro.au/spaces/ALASD/pages/1661624100/OIDC+Migration+on+ALA+Applications) Confulence page.
+Add the following properties, sourcing client IDs (values with`<insert-client-id>`) and secrets (values with `<insert-client-secret>`) from the [OIDC Migration on ALA Applications](https://confluence.csiro.au/spaces/ALASD/pages/1661624100/OIDC+Migration+on+ALA+Applications) Confluence page.
 
 ```properties
 # AUTH config common to CAS and Cognito
@@ -69,7 +69,7 @@ The GraphQL test interface is available at `http://localhost:8080/graphiql`.
 
 ## REST
 
-The Swagger UI for REST services are available at `http://localhost:8080`.
+The OpenAPI/Swagger UI for REST services are available at `http://localhost:8080`.
 
 ## Docker hub
 
