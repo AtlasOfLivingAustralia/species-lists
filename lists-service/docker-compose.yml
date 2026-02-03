@@ -1,9 +1,19 @@
-# Note a DevContainer setup is available in .devcontainer/docker-compose.yml
-# which uses a version of this file, found in the spring boot project root. 
-# This version is kept for historical reasons and should only be used if really needed.
+# This docker-compose file is used to run Elasticsearch and MongoDB for local development.
+# It was copied from src/main/docker/docker-compose.yml in the spring boot project root. 
 # Any changes should be reflected in both files.
 version: '3.7'
 services:
+  app:
+    image: mcr.microsoft.com/devcontainers/java:1-21-bookworm
+    user: vscode
+    volumes:
+      - .:/workspace:cached
+    command: sleep infinity
+    depends_on:
+      - mongodb
+      - elasticsearch
+    ports:
+      - "8080:8080" 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.26-arm64
     container_name: species-lists-elastic
@@ -40,23 +50,6 @@ services:
       - "27017:27017"
     volumes:
       - ${HOME}/dev/species-lists/mongo/db:/data/db
-  # namematching:
-  #   image: atlasoflivingaustralia/ala-namematching-service:v20210811-3
-  #   container_name: species-lists-namematching
-  #   restart: on-failure
-  #   ports:
-  #     - "9179:9179"
-#  lists:
-#    image: atlasoflivingaustralia/lists-service:latest
-#    container_name: lists-service
-#    volumes:
-#      - type: bind
-#        source: /data/lists-service/config/lists-service-config.properties
-#        target: /data/lists-service/config/lists-service-config.properties
-#      - /data/lists/tmp:/tmp
-#    restart: on-failure
-#    ports:
-#      - "8080:8080"
 volumes:
   mongodb_data_container:
   elasticsearch-data:

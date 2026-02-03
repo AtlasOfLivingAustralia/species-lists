@@ -18,16 +18,23 @@ export default ({ mode }: { mode: string }) => {
     optimizeDeps: {
       exclude: ['@atlasoflivingaustralia/ala-mantine']
     },
+    // server: {
+    //   https: {
+    //     key: fs.readFileSync('./localhost-key.pem'),
+    //     cert: fs.readFileSync('./localhost.pem'),
+    //   },
+    //   port: 5173
+    // },
     server: {
-    fs: {
-      allow: [
-        // Your existing project
-        '.',
-        // Add your linked library path
-        //'/Users/dos009/Documents/Github/ala-mantine'
-        resolve(__dirname, '../../ala-mantine')
-      ]
-    }
-  },
+      fs: {
+        allow: [
+          // Your existing project
+          '.',
+          // Add your linked library path
+          //'/Users/dos009/Documents/Github/ala-mantine'
+          resolve(__dirname, '../../ala-mantine')
+        ]
+      }
+    },
   });
 }
