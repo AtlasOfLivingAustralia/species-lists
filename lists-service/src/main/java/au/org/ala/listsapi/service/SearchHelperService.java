@@ -1251,7 +1251,7 @@ public class SearchHelperService {
         }
         
         Facet facet = new Facet();
-        facet.setKey("properties." + propertyKey);
+        facet.setKey(propertyKey); 
         facet.setCounts(new ArrayList<>());
         
         for (StringTermsBucket bucket : valueBuckets) {
