@@ -9,6 +9,9 @@
   "mounts": [
     "source=/data/lists-service/config/lists-service-config.properties,target=/data/lists-service/config/lists-service-config.properties,type=bind,consistency=cached"
   ],
+  "remoteEnv": {
+    "JAVA_HOME": "/usr/lib/jvm/msopenjdk-current"
+  },
 
   "features": {
     // Example: Install Maven (version "none" means use the default from the image/feature)
