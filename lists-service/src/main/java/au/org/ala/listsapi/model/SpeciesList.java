@@ -102,13 +102,13 @@ import lombok.extern.jackson.Jacksonized;
     }
 
     public String getId() { return id; }
-    public Boolean getIsPrivate() { return isPrivate; }
+    public Boolean isPrivate() { return isPrivate; }
     public List<String> getFieldList() { return fieldList; }
-    public Boolean getIsAuthoritative() { return isAuthoritative; }
-    public Boolean getIsThreatened() { return isThreatened; }
-    public Boolean getIsInvasive() { return isInvasive; }
-    public Boolean getIsBIE() { return isBIE; }
-    public Boolean getIsSDS() { return isSDS; }
+    public Boolean isAuthoritative() { return isAuthoritative; }
+    public Boolean isThreatened() { return isThreatened; }
+    public Boolean isInvasive() { return isInvasive; }
+    public Boolean isBIE() { return isBIE; }
+    public Boolean isSDS() { return isSDS; }
     public String getDataResourceUid() { return dataResourceUid; }
     public String getTitle() { return title; }
     public String getDescription() { return description; }
