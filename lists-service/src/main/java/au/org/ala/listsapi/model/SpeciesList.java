@@ -100,4 +100,31 @@ import lombok.extern.jackson.Jacksonized;
         this.lastUpdated = other.lastUpdated != null ? new Date(other.lastUpdated.getTime()) : null;
         this.lastUploaded = other.lastUploaded != null ? new Date(other.lastUploaded.getTime()) : null;
     }
+
+    public String getId() { return id; }
+    public Boolean getIsPrivate() { return isPrivate; }
+    public List<String> getFieldList() { return fieldList; }
+    public Boolean getIsAuthoritative() { return isAuthoritative; }
+    public Boolean getIsThreatened() { return isThreatened; }
+    public Boolean getIsInvasive() { return isInvasive; }
+    public Boolean getIsBIE() { return isBIE; }
+    public Boolean getIsSDS() { return isSDS; }
+    public String getDataResourceUid() { return dataResourceUid; }
+    public String getTitle() { return title; }
+    public String getDescription() { return description; }
+    public String getListType() { return listType; }
+    public String getLicence() { return licence; }
+    public List<String> getFacetList() { return facetList; }
+    public String getRegion() { return region; }
+    public String getWkt() { return wkt; }
+    public String getOwner() { return owner; }
+    public List<String> getEditors() { return editors; }
+    public List<String> getTags() { return tags; }
+    public Date getDateCreated() { return dateCreated; }
+    public Date getLastUpdated() { return lastUpdated; }
+    public String getLastUpdatedBy() { return lastUpdatedBy; }
+    public Integer getRowCount() { return rowCount; }
+    public void setRowCount(Integer rowCount) { this.rowCount = rowCount; }
+    public Long getDistinctMatchCount() { return distinctMatchCount; }
+    public void setDistinctMatchCount(Long distinctMatchCount) { this.distinctMatchCount = distinctMatchCount; }
 }

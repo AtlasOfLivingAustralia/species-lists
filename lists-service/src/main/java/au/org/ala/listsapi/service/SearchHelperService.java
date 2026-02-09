@@ -946,35 +946,52 @@ public class SearchHelperService {
         
         // Apply user-provided filters (but NOT privacy filters - access already validated)
         if (context.getFilters() != null && !context.getFilters().isEmpty()) {
-            for (Filter filter : context.getFilters()) {
-                applyFilter(filter, bq);
+            Map<String, List<Filter>> filtersByKey = context.getFilters().stream()
+                    .collect(Collectors.groupingBy(Filter::getKey));
+
+            for (Map.Entry<String, List<Filter>> entry : filtersByKey.entrySet()) {
+                applyFilterGroup(entry.getKey(), entry.getValue(), bq);
             }
         }
     }
 
     /**
-     * Applies a single filter to the query
+     * Applies a group of filters (same key) to the query with OR logic for values
      */
-    private void applyFilter(Filter filter, BoolQuery.Builder bq) {
-        String field = filter.getKey();
-        String value = filter.getValue();
-        
+    private void applyFilterGroup(String field, List<Filter> filters, BoolQuery.Builder bq) {
+        List<String> values = filters.stream().map(Filter::getValue).collect(Collectors.toList());
+
         // Handle different field types
         if (CORE_FIELDS.contains(field) || field.startsWith("classification.")) {
-            // Core fields - apply as term filter
-            if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
-                bq.filter(f -> f.term(t -> t.field(field).value(Boolean.parseBoolean(value))));
-            } else {
-                bq.filter(f -> f.term(t -> t.field(field + ".keyword").value(value)));
-            }
+            // Core fields - apply as boolean should (OR)
+            bq.filter(f -> f.bool(b -> {
+                for (String value : values) {
+                    b.should(s -> {
+                        if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
+                            return s.term(t -> t.field(field).value(Boolean.parseBoolean(value)));
+                        } else {
+                            return s.term(t -> t.field(field + ".keyword").value(value));
+                        }
+                    });
+                }
+                b.minimumShouldMatch("1");
+                return b;
+            }));
         } else {
             // Property fields - use nested query
             bq.filter(f -> f.nested(n -> n
-                .path("properties")
-                .query(q -> q.bool(b -> b
-                    .must(m -> m.term(t -> t.field("properties.key.keyword").value(field)))
-                    .must(m -> m.term(t -> t.field("properties.value.keyword").value(value)))
-                ))
+                    .path("properties")
+                    .query(q -> q.bool(b -> {
+                        b.must(m -> m.term(t -> t.field("properties.key.keyword").value(field)));
+                        b.must(m -> m.bool(vb -> {
+                            for (String value : values) {
+                                vb.should(s -> s.term(t -> t.field("properties.value.keyword").value(value)));
+                            }
+                            vb.minimumShouldMatch("1");
+                            return vb;
+                        }));
+                        return b;
+                    }))
             ));
         }
     }
