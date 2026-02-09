@@ -961,7 +961,10 @@ public class SearchHelperService {
      * Applies a group of filters (same key) to the query with OR logic for values
      */
     private void applyFilterGroup(String field, List<Filter> filters, BoolQuery.Builder bq) {
-        List<String> values = filters.stream().map(Filter::getValue).collect(Collectors.toList());
+        List<String> values = filters.stream()
+                .map(Filter::getValue)
+                .distinct()
+                .collect(Collectors.toList());
 
         // Handle different field types
         if (CORE_FIELDS.contains(field) || field.startsWith("classification.")) {
