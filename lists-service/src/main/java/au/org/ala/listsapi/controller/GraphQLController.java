@@ -286,15 +286,18 @@ public class GraphQLController {
      * @param isPrivate
      * @return Boolean indicating if the isPrivate filter is applied, null if no filtering
      */
-    @NotNull
+    @Nullable
     private Boolean getPrivateFilterOrFlag(List<Filter> filters, Boolean isPrivate) {
-        if ((filters == null || filters.isEmpty()) && isPrivate == null) {
+        boolean isPrivateInFilters = filters != null && filters.stream()
+                .anyMatch(f -> "isPrivate".equals(f.getKey()));
+
+        if (!isPrivateInFilters && isPrivate == null) {
             return null;
         }
-        
+
         boolean hasPrivateFilter = filters != null && filters.stream()
-            .anyMatch(f -> f.getKey().equals("isPrivate") && f.getValue().equals("true"));
-        
+                .anyMatch(f -> f.getKey().equals("isPrivate") && f.getValue().equals("true"));
+
         return hasPrivateFilter || (isPrivate != null && isPrivate);
     }
     
