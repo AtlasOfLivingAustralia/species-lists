@@ -142,4 +142,5 @@ public class SpeciesListItem {
     public String getClasss() {
         return this.classs;
     }
+
 }
