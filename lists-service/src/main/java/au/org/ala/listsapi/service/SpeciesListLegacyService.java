@@ -15,71 +15,68 @@
 
 package au.org.ala.listsapi.service;
 
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import au.org.ala.listsapi.model.QueryListItemVersion1;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.model.SpeciesListItemVersion1;
 import au.org.ala.listsapi.model.SpeciesListVersion1;
 import au.org.ala.listsapi.util.SpeciesListTransformer;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-/**
- * Service for providing legacy compatibility for species lists.
- */
+/** Service for providing legacy compatibility for species lists. */
 @Service
 public class SpeciesListLegacyService {
-    @Autowired
-    SpeciesListTransformer speciesListTransformer;
+  @Autowired SpeciesListTransformer speciesListTransformer;
 
-    /**
-     * Converts a SpeciesList to the legacy SpeciesListVersion1 format.
-     *
-     * @param speciesList The modern SpeciesList object
-     * @return The legacy SpeciesListVersion1 representation
-     */
-    public SpeciesListVersion1 convertListToVersion1(SpeciesList speciesList) {
-        return speciesListTransformer.transformToVersion1(speciesList);
-    }
+  /**
+   * Converts a SpeciesList to the legacy SpeciesListVersion1 format.
+   *
+   * @param speciesList The modern SpeciesList object
+   * @return The legacy SpeciesListVersion1 representation
+   */
+  public SpeciesListVersion1 convertListToVersion1(SpeciesList speciesList) {
+    return speciesListTransformer.transformToVersion1(speciesList);
+  }
 
-    /**
-     * Converts a list of SpeciesList objects to legacy SpeciesListVersion1 format.
-     *
-     * @param speciesLists List of modern SpeciesList objects
-     * @return List of legacy SpeciesListVersion1 representations
-     */
-    public List<SpeciesListVersion1> convertListToVersion1(List<SpeciesList> speciesLists) {
-        return speciesLists.stream()
-                .map(speciesListTransformer::transformToVersion1)
-                .collect(Collectors.toList());
-    }
+  /**
+   * Converts a list of SpeciesList objects to legacy SpeciesListVersion1 format.
+   *
+   * @param speciesLists List of modern SpeciesList objects
+   * @return List of legacy SpeciesListVersion1 representations
+   */
+  public List<SpeciesListVersion1> convertListToVersion1(List<SpeciesList> speciesLists) {
+    return speciesLists.stream()
+        .map(speciesListTransformer::transformToVersion1)
+        .collect(Collectors.toList());
+  }
 
-    /**
-     * Converts a list of SpeciesListItem to the legacy SpeciesListItemVersion1 format.
-     *
-     * @param speciesListItems List of modern SpeciesListItem objects
-     * @return List of legacy SpeciesListItemVersion1 representations
-     */
-    public List<SpeciesListItemVersion1> convertListItemToVersion1(List<SpeciesListItem> speciesListItems) {
-        return IntStream.range(0, speciesListItems.size())
-                .mapToObj(i -> speciesListTransformer.transformToVersion1(speciesListItems.get(i), i))
-                .collect(Collectors.toList());
-    }
+  /**
+   * Converts a list of SpeciesListItem to the legacy SpeciesListItemVersion1 format.
+   *
+   * @param speciesListItems List of modern SpeciesListItem objects
+   * @return List of legacy SpeciesListItemVersion1 representations
+   */
+  public List<SpeciesListItemVersion1> convertListItemToVersion1(
+      List<SpeciesListItem> speciesListItems) {
+    return IntStream.range(0, speciesListItems.size())
+        .mapToObj(i -> speciesListTransformer.transformToVersion1(speciesListItems.get(i), i))
+        .collect(Collectors.toList());
+  }
 
-    /**
-     * Converts a single SpeciesListItem to the legacy SpeciesListItemVersion1 format.
-     *
-     * @param queryListItems The modern SpeciesListItem object
-     * @return The legacy SpeciesListItemVersion1 representation
-     */
-    public List<QueryListItemVersion1> convertQueryListItemToVersion1(List<SpeciesListItem> queryListItems) {
-        return queryListItems.stream()
-                .map(speciesListTransformer::transformToQueryListVersion1)
-                .collect(Collectors.toList());
-    }
+  /**
+   * Converts a single SpeciesListItem to the legacy SpeciesListItemVersion1 format.
+   *
+   * @param queryListItems The modern SpeciesListItem object
+   * @return The legacy SpeciesListItemVersion1 representation
+   */
+  public List<QueryListItemVersion1> convertQueryListItemToVersion1(
+      List<SpeciesListItem> queryListItems) {
+    return queryListItems.stream()
+        .map(speciesListTransformer::transformToQueryListVersion1)
+        .collect(Collectors.toList());
+  }
 }

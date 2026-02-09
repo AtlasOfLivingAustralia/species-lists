@@ -30,6 +30,7 @@ META-INF/
 !**/src/test/**/build/
 
 !**/lists-service/cicd/build/
+*.log
 
 ### VS Code ###
 .vscode/

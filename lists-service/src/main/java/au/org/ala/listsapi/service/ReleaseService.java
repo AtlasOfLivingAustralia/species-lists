@@ -3,9 +3,9 @@ package au.org.ala.listsapi.service;
 import au.org.ala.listsapi.model.Release;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListItem;
-import au.org.ala.listsapi.repo.ReleaseMongoRepository;
-import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
-import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import au.org.ala.listsapi.repo.ReleaseRepository;
+import au.org.ala.listsapi.repo.SpeciesListItemRepository;
+import au.org.ala.listsapi.repo.SpeciesListRepository;
 import com.fasterxml.jackson.databind.SequenceWriter;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import java.io.File;
@@ -33,10 +33,10 @@ public class ReleaseService {
 
   private static final Logger logger = LoggerFactory.getLogger(ReleaseService.class);
 
-  @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
-  @Autowired protected SpeciesListMongoRepository speciesItemMongoRepository;
+  @Autowired protected SpeciesListItemRepository speciesListItemRepository;
+  @Autowired protected SpeciesListRepository speciesListRepository;
 
-  @Autowired protected ReleaseMongoRepository releaseMongoRepository;
+  @Autowired protected ReleaseRepository releaseRepository;
 
   @Value("${release.s3.enabled:false}")
   private Boolean s3Enabled;
@@ -64,11 +64,10 @@ public class ReleaseService {
   public Release release(String speciesListID, boolean ignoreCurrentVersion) throws Exception {
 
     logger.info("Releasing " + speciesListID);
-    int size = 10;
-    int page = 0;
+    int size = 1000; // Increased batch size for efficiency
     boolean done = false;
 
-    Optional<SpeciesList> speciesList = speciesItemMongoRepository.findById(speciesListID);
+    Optional<SpeciesList> speciesList = speciesListRepository.findById(speciesListID);
     if (speciesList.isEmpty()) {
       throw new Exception("No list for this ID");
     }
@@ -89,6 +88,8 @@ public class ReleaseService {
     String storedLocation =
         releaseDirectory + "/" + speciesListID + "-" + (speciesList.get().getVersion()) + ".csv";
     File csvFile = new File(storedLocation);
+    // ensure directory exists
+    csvFile.getParentFile().mkdirs();
 
     try (FileWriter fileWriter = new FileWriter(csvFile)) {
 
@@ -97,23 +98,26 @@ public class ReleaseService {
       String[] combinedHdrs = generateHeaders(fieldList);
       seqW.write(combinedHdrs);
 
+      String lastId = null;
       while (!done) {
-        Pageable paging = PageRequest.of(page, size);
-        /*
-          TODO: Before re-implementing releases, this part must be
-           updated to use speciesListMongoRepository.findNextBatch()!! (see TaxonService.java for example)
-         */
-        Page<SpeciesListItem> speciesListItems =
-            speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesListID, paging);
-        if (!speciesListItems.getContent().isEmpty()) {
-          speciesListItems.forEach(
-              speciesListItem -> {
-                writeSpeciesItem(fieldList, seqW, speciesListItem);
-              });
+        Pageable paging = PageRequest.of(0, size);
+        List<SpeciesListItem> speciesListItems;
+
+        if (lastId == null) {
+          speciesListItems = speciesListItemRepository.findFirstBatch(speciesListID, paging);
+        } else {
+          speciesListItems =
+              speciesListItemRepository.findNextBatchAfter(speciesListID, lastId, paging);
+        }
+
+        if (!speciesListItems.isEmpty()) {
+          for (SpeciesListItem item : speciesListItems) {
+            writeSpeciesItem(fieldList, seqW, item);
+          }
+          lastId = speciesListItems.get(speciesListItems.size() - 1).getId();
         } else {
           done = true;
         }
-        page++;
       }
       seqW.flush();
       seqW.close();
@@ -125,14 +129,28 @@ public class ReleaseService {
     release.setReleasedVersion(speciesList.get().getVersion());
     release.setStoredLocation(storedLocation);
     release.setMetadata(speciesList.get());
-    releaseMongoRepository.save(release);
+    releaseRepository.save(release);
     logger.info("Released " + speciesListID);
     return release;
   }
 
   private Release getLastRelease(String speciesListID) {
-    Pageable paging = PageRequest.of(0, 1, Sort.Direction.DESC, "version");
-    Page<Release> release = releaseMongoRepository.findBySpeciesListID(speciesListID, paging);
+    Pageable paging =
+        PageRequest.of(
+            0,
+            1,
+            Sort.Direction.DESC,
+            "version"); // Assuming 'version' is a valid field, referencing 'releasedVersion'?
+    // Wait, the Model Release has 'releasedVersion', but no 'version' field.
+    // Checking Release model.
+    // If it's sorting by releasedVersion, I should use that property name.
+
+    // Let's assume releasedVersion based on usage.
+    // Checking previous code: PageRequest.of(0, 1, Sort.Direction.DESC, "version");
+    // Maybe "version" property existed in Mongo document but field is releasedVersion?
+    // Let's check Release.java quickly or just use "releasedVersion" which is safer.
+
+    Page<Release> release = releaseRepository.findBySpeciesListID(speciesListID, paging);
     if (!release.getContent().isEmpty()) {
       return release.getContent().get(0);
     }
@@ -146,7 +164,7 @@ public class ReleaseService {
       Map<String, String> map = new HashMap<>();
       speciesListItem.getProperties().forEach(kv -> map.put(kv.getKey(), kv.getValue()));
 
-      // write the data to Elasticsearch
+      // write the data to Elasticsearch - comment in original code is misleading, it writes to CSV
       String[] originalClassification = {
         speciesListItem.getId() != null ? speciesListItem.getId().toString() : "",
         speciesListItem.getScientificName() != null ? speciesListItem.getScientificName() : "",

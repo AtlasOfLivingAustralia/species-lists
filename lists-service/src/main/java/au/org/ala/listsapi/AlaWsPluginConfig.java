@@ -15,43 +15,44 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 class AlaWsPluginConfig {
 
-    @Value("${webservice.client-id}")
-    String clientId;
+  @Value("${webservice.client-id}")
+  String clientId;
 
-    @Value("${webservice.client-secret}")
-    String clientSecret;
+  @Value("${webservice.client-secret}")
+  String clientSecret;
 
-    @Value("${webservice.jwt-scopes}")
-    String jwtScopes;
+  @Value("${webservice.jwt-scopes}")
+  String jwtScopes;
 
-    @Value("${webservices.cache-tokens:true}")
-    boolean cacheTokens;
+  @Value("${webservices.cache-tokens:true}")
+  boolean cacheTokens;
 
-    @Bean
-    TokenClient tokenClient(
-            @Autowired(required = false) OidcConfiguration oidcConfiguration
-    ) {
-        return new TokenClient(oidcConfiguration);
-    }
+  @Bean
+  TokenClient tokenClient(@Autowired(required = false) OidcConfiguration oidcConfiguration) {
+    return new TokenClient(oidcConfiguration);
+  }
 
-    @Bean
-    TokenService tokenService(
-            @Autowired(required = false) OidcConfiguration oidcConfiguration,
-            @Autowired(required = false) SessionStore sessionStore,
-            @Autowired TokenClient tokenClient) {
-        // note not injecting PAC4j Config here due to potential circular dependency
-        return new TokenService(oidcConfiguration,
-                sessionStore, tokenClient, clientId, clientSecret, jwtScopes, cacheTokens);
-    }
+  @Bean
+  TokenService tokenService(
+      @Autowired(required = false) OidcConfiguration oidcConfiguration,
+      @Autowired(required = false) SessionStore sessionStore,
+      @Autowired TokenClient tokenClient) {
+    // note not injecting PAC4j Config here due to potential circular dependency
+    return new TokenService(
+        oidcConfiguration,
+        sessionStore,
+        tokenClient,
+        clientId,
+        clientSecret,
+        jwtScopes,
+        cacheTokens);
+  }
 
-
-    /**
-     * OK HTTP Interceptor that injects a client credentials Bearer token into a request
-     */
-    @ConditionalOnProperty(prefix = "webservice", name = "jwt")
-    @ConditionalOnMissingBean(name = "jwtInterceptor")
-    @Bean
-    TokenInterceptor jwtInterceptor(@Autowired TokenService tokenService) {
-        return new TokenInterceptor(tokenService);
-    }
+  /** OK HTTP Interceptor that injects a client credentials Bearer token into a request */
+  @ConditionalOnProperty(prefix = "webservice", name = "jwt")
+  @ConditionalOnMissingBean(name = "jwtInterceptor")
+  @Bean
+  TokenInterceptor jwtInterceptor(@Autowired TokenService tokenService) {
+    return new TokenInterceptor(tokenService);
+  }
 }

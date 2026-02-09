@@ -14,43 +14,28 @@
  */
 package au.org.ala.listsapi.service;
 
-import java.util.HashMap;
-import java.util.List;
-
+import au.org.ala.listsapi.repo.SpeciesListItemRepository;
+import au.org.ala.listsapi.repo.SpeciesListRepository;
+import java.util.Collections;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.index.IndexInfo;
 import org.springframework.stereotype.Service;
-
-import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
-import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
-import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 
 @Service
 public class AdminService {
-    @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
-    @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
-    @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
-    @Autowired protected ElasticsearchOperations elasticsearchOperations;
-    @Autowired protected MongoTemplate mongoTemplate;
+  @Autowired protected SpeciesListRepository speciesListRepository;
+  @Autowired protected SpeciesListItemRepository speciesListItemRepository;
 
-    public void deleteDocs() {
-        speciesListMongoRepository.deleteAll();
-        speciesListItemMongoRepository.deleteAll();
-    }
+  public void deleteDocs() {
+    speciesListItemRepository.deleteAll();
+    speciesListRepository.deleteAll();
+  }
 
-    public void deleteIndex() {
-        elasticsearchOperations.indexOps(IndexCoordinates.of("species-lists")).delete();
-    }
+  public void deleteIndex() {
+    // No-op for Postgres migration
+  }
 
-    public HashMap<String, List<IndexInfo>> getMongoIndexes() {
-        HashMap<String, List<IndexInfo>> indexData = new HashMap<>();
-        mongoTemplate
-                .getCollectionNames()
-                .forEach(collection -> indexData.put(collection, mongoTemplate.indexOps(collection).getIndexInfo()));
-
-        return indexData;
-    }
+  public Map<String, Object> getMongoIndexes() {
+    return Collections.emptyMap();
+  }
 }

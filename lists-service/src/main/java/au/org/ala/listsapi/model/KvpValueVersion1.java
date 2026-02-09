@@ -15,20 +15,34 @@
 
 package au.org.ala.listsapi.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
-
 /**
- * Model class representing a list kvp value for /v1 backwards compatibility.
- * This POJO is used for controller response serialization only.
+ * Model class representing a list kvp value for /v1 backwards compatibility. This POJO is used for
+ * controller response serialization only.
  */
-@NoArgsConstructor
-@Data
-@SuperBuilder
-@AllArgsConstructor
 public class KvpValueVersion1 {
-    private String key;
-    private String value;
+  private String key;
+  private String value;
+
+  public KvpValueVersion1() {}
+
+  public KvpValueVersion1(String key, String value) {
+    this.key = key;
+    this.value = value;
+  }
+
+  public String getKey() {
+    return key;
+  }
+
+  public void setKey(String key) {
+    this.key = key;
+  }
+
+  public String getValue() {
+    return value;
+  }
+
+  public void setValue(String value) {
+    this.value = value;
+  }
 }

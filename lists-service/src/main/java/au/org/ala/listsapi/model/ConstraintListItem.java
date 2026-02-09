@@ -1,17 +1,30 @@
 package au.org.ala.listsapi.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
 
-@Getter
 @NoArgsConstructor
-@Data
-@SuperBuilder
-@AllArgsConstructor
 public class ConstraintListItem {
   private String value;
   private String label;
+
+  public ConstraintListItem(String value, String label) {
+    this.value = value;
+    this.label = label;
+  }
+
+  public String getValue() {
+    return value;
+  }
+
+  public void setValue(String value) {
+    this.value = value;
+  }
+
+  public String getLabel() {
+    return label;
+  }
+
+  public void setLabel(String label) {
+    this.label = label;
+  }
 }

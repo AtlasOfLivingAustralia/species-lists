@@ -17,31 +17,100 @@ package au.org.ala.listsapi.model;
 
 import java.io.Serializable;
 import java.util.List;
-
-import org.springframework.data.annotation.Id;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
 
 /**
- * Model class representing a species list version for /v1 backwards compatibility.
- * This POJO is used for controller response serialization only.
+ * Model class representing a species list version for /v1 backwards compatibility. This POJO is
+ * used for controller response serialization only.
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class QueryListItemVersion1 implements Serializable {
 
-    private static final long serialVersionUID = 1L;
-    @Id
-    private String id;
-    private String speciesListID;
-    private String dataResourceUid;
-    private String lsid; // same as guid
-    private String name;
-    private String rawScientificName;
-    private String matchedName;
-    private String commonName;
-    private List<KvpValueVersion1> kvpValues;
+  private static final long serialVersionUID = 1L;
+  @Id private String id;
+  private String speciesListID;
+  private String dataResourceUid;
+  private String lsid; // same as guid
+  private String name;
+  private String rawScientificName;
+  private String matchedName;
+  private String commonName;
+  private List<KvpValueVersion1> kvpValues;
+
+  public String getId() {
+    return id;
+  }
+
+  public void setId(String id) {
+    this.id = id;
+  }
+
+  public String getSpeciesListID() {
+    return speciesListID;
+  }
+
+  public void setSpeciesListID(String speciesListID) {
+    this.speciesListID = speciesListID;
+  }
+
+  public String getDataResourceUid() {
+    return dataResourceUid;
+  }
+
+  public void setDataResourceUid(String dataResourceUid) {
+    this.dataResourceUid = dataResourceUid;
+  }
+
+  public String getLsid() {
+    return lsid;
+  }
+
+  public void setLsid(String lsid) {
+    this.lsid = lsid;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public String getRawScientificName() {
+    return rawScientificName;
+  }
+
+  public void setRawScientificName(String rawScientificName) {
+    this.rawScientificName = rawScientificName;
+  }
+
+  public String getMatchedName() {
+    return matchedName;
+  }
+
+  public void setMatchedName(String matchedName) {
+    this.matchedName = matchedName;
+  }
+
+  public String getCommonName() {
+    return commonName;
+  }
+
+  public void setCommonName(String commonName) {
+    this.commonName = commonName;
+  }
+
+  public List<KvpValueVersion1> getKvpValues() {
+    return kvpValues;
+  }
+
+  public void setKvpValues(List<KvpValueVersion1> kvpValues) {
+    this.kvpValues = kvpValues;
+  }
 }

@@ -17,24 +17,71 @@ package au.org.ala.listsapi.model;
 
 import java.io.Serializable;
 import java.util.List;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Model class representing a species list page model
- * This POJO is used for controller response serialization only.
+ * Model class representing a species list page model This POJO is used for controller response
+ * serialization only.
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class SpeciesListPageVersion1 implements Serializable {
 
-    private List<SpeciesListVersion1> lists;
-    private long listCount;
-    private int offset;
-    private int max;
-    private String sort = "listName";
-    private String order = "asc";
+  private List<SpeciesListVersion1> lists;
+  private long listCount;
+  private int offset;
+  private int max;
+  private String sort = "listName";
+  private String order = "asc";
+
+  public List<SpeciesListVersion1> getLists() {
+    return lists;
+  }
+
+  public void setLists(List<SpeciesListVersion1> lists) {
+    this.lists = lists;
+  }
+
+  public long getListCount() {
+    return listCount;
+  }
+
+  public void setListCount(long listCount) {
+    this.listCount = listCount;
+  }
+
+  public int getOffset() {
+    return offset;
+  }
+
+  public void setOffset(int offset) {
+    this.offset = offset;
+  }
+
+  public int getMax() {
+    return max;
+  }
+
+  public void setMax(int max) {
+    this.max = max;
+  }
+
+  public String getSort() {
+    return sort;
+  }
+
+  public void setSort(String sort) {
+    this.sort = sort;
+  }
+
+  public String getOrder() {
+    return order;
+  }
+
+  public void setOrder(String order) {
+    this.order = order;
+  }
 }

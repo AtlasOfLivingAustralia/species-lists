@@ -1,30 +1,37 @@
 package au.org.ala.listsapi.model;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import java.util.Date;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.jackson.Jacksonized;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-
-import java.util.Date;
 
 @NoArgsConstructor
 @Data
 @SuperBuilder
 @AllArgsConstructor
 @Jacksonized
-@org.springframework.data.mongodb.core.mapping.Document(collection = "migrationProgress")
+@Entity
+@Table(name = "migration_progress")
 public class MigrateProgressItem {
-    @Id private String id = "_";
-    private SpeciesList currentSpeciesList;
-    private long completed = 0;
-    private long total;
+  @Id private String id = "_";
 
-    @CreatedDate public Date started;
+  @JdbcTypeCode(SqlTypes.JSON)
+  private SpeciesList currentSpeciesList;
 
-    public MigrateProgressItem(long total) {
-        this.total = total;
-    }
+  private long completed = 0;
+  private long total;
+
+  @CreatedDate public Date started;
+
+  public MigrateProgressItem(long total) {
+    this.total = total;
+  }
 }
