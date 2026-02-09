@@ -279,6 +279,8 @@ public class MigrateService {
 
   public void migration(List<SpeciesList> speciesLists) {
     progressService.setupMigrationProgress(speciesLists.size());
+    int starttimestamp = (int) (System.currentTimeMillis() / 1000);
+
 
     // Create a map to store already retrieved user info
     HashMap<String, Map> foundUsers = new HashMap<>();
@@ -421,6 +423,10 @@ public class MigrateService {
             }
           }
         });
+
+    logger.info("Migration completed for {} lists.", speciesLists.size());
+    int stoptimestamp = (int) (System.currentTimeMillis() / 1000);
+    logger.info("Migration took {} ms.", stoptimestamp - starttimestamp);
 
     progressService.clearMigrationProgress();
   }

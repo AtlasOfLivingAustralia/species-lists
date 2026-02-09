@@ -5,11 +5,11 @@ CREATE EXTENSION IF NOT EXISTS "unaccent";
 CREATE EXTENSION IF NOT EXISTS "postgis";
 
 -- Cleanup (for development iteration)
-DROP TABLE IF EXISTS species_list_item;
-DROP TABLE IF EXISTS species_list;
-DROP TABLE IF EXISTS ingest_progress;
-DROP TABLE IF EXISTS release;
-DROP TABLE IF EXISTS migration_progress;
+-- DROP TABLE IF EXISTS species_list_item;
+-- DROP TABLE IF EXISTS species_list;
+-- DROP TABLE IF EXISTS ingest_progress;
+-- DROP TABLE IF EXISTS release;
+-- DROP TABLE IF EXISTS migration_progress;
 
 -- Species List Table
 CREATE TABLE IF NOT EXISTS species_list (

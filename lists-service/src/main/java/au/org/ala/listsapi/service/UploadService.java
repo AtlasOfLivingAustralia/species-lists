@@ -557,9 +557,6 @@ public class UploadService {
       if (isMigration) {
         // remove legacy data
         values.remove("guid");
-        values.remove("scientificName");
-        values.remove("family");
-        values.remove("kingdom");
       }
 
       if (originalFieldNames.isEmpty()) {
@@ -567,6 +564,7 @@ public class UploadService {
       }
 
       String scientificName = values.remove(DwcTerm.scientificName.simpleName());
+
       String taxonID = values.remove(DwcTerm.taxonID.simpleName());
       String taxonConceptID = values.remove(DwcTerm.taxonConceptID.simpleName());
       String vernacularName =
@@ -591,6 +589,7 @@ public class UploadService {
       }
 
       String kingdom = values.remove(DwcTerm.kingdom.simpleName());
+
       String phylum = values.remove(DwcTerm.phylum.simpleName());
       String classs = values.remove(DwcTerm.class_.simpleName());
       String order = values.remove(DwcTerm.order.simpleName());

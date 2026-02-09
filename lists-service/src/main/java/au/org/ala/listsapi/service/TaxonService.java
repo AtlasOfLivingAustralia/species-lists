@@ -347,7 +347,17 @@ public class TaxonService {
           classification.setMatchType("noMatch");
         }
 
-        speciesListItems.get(i).setClassification(classification);
+        SpeciesListItem item = speciesListItems.get(i);
+        item.setClassification(classification);
+
+        if (classification != null && classification.getSuccess()) {
+          item.setKingdom(classification.getKingdom());
+          item.setPhylum(classification.getPhylum());
+          item.setClasss(classification.getClasss());
+          item.setOrder(classification.getOrder());
+          item.setFamily(classification.getFamily());
+          item.setGenus(classification.getGenus());
+        }
       }
     } catch (Exception e) {
       logger.error("updateClassifications() exception: {}", e.getMessage(), e);

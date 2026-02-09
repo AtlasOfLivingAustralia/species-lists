@@ -446,12 +446,12 @@ public class SearchHelperService {
       query.groupBy(root.get(field));
 
       return entityManager.createQuery(query).getResultList().stream()
-          .map(
-              tuple -> {
-                Object val = tuple.get(0);
-                Long count = (Long) tuple.get(1);
-                return new FacetCount(val != null ? val.toString() : "null", count);
-              })
+              .map(
+                  tuple -> {
+                    Object val = tuple.get(0);
+                    Long count = (Long) tuple.get(1);
+                    return new FacetCount(val != null ? val.toString() : "null", count);
+                  })
           .collect(Collectors.toList());
     } catch (Exception e) {
       logger.warn("Failed to get facet for field {}", field, e);

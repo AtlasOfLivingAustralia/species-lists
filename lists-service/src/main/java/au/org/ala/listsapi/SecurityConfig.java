@@ -135,7 +135,7 @@ public class SecurityConfig {
           }
         });
 
-    http.csrf(csrf -> csrf.csrfTokenRepository(repository).csrfTokenRequestHandler(requestHandler));
+    http.csrf(csrf -> csrf.csrfTokenRepository(repository).csrfTokenRequestHandler(requestHandler).ignoringRequestMatchers("/graphql"));
 
     // 3. Force the cookie to be sent on every request so React can find it
     http.addFilterAfter(
