@@ -102,7 +102,7 @@ Resources:
     Type: AWS::DocDB::DBClusterParameterGroup
     Properties:
       Name: !Sub
-        - ${pProductName}-${ResourceName}-cluster-pg
+        - ${pProductName}-${ResourceName}-cluster-pg8
         - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
       Description: DocumentDB cluster parameter group
       Family: !Ref pDbParameterGroupFamily
