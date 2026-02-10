@@ -118,10 +118,6 @@ Resources:
 
   DocDbCluster:
     Type: AWS::DocDB::DBCluster
-    DependsOn: 
-      - DocDbClusterParameterGroup
-      - DocDbSecurityGrp
-      - DocDbSubnetGrp
     Properties:
       CopyTagsToSnapshot: true
       BackupRetentionPeriod: !Ref pBackupRetentionPeriod
@@ -149,7 +145,6 @@ Resources:
 
   DocDbInstance:
     Type: AWS::DocDB::DBInstance
-    DependsOn: DocDbCluster
     Properties:
       DBClusterIdentifier: !Ref DocDbCluster
       DBInstanceClass: !Ref pInstanceClass
