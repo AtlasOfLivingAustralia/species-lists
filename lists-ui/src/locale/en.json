@@ -45,6 +45,8 @@
   "false": "public",
   "taxon": "taxon",
   "taxa": "taxa",
+  "record": "record",
+  "records": "records",
   "lists.home.title": "Species Lists",
   "lists.myLists.title": "My Species Lists",
   "lists.subtitle": "Discover, create and manage species lists with custom attributes like traits, geographic extent, conservation status, sensitivity, invasiveness, etc.",

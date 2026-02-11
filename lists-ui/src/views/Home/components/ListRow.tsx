@@ -110,7 +110,7 @@ export function ListRow({ list, isMobile }: ListRowProps) {
             <Group gap='4'>
               <MapLayersIcon size={15} color='grey'/>
               <Text size='sm' fw='400' ml={3}><FormattedNumber value={list?.rowCount || 0} />{' '}</Text>
-              <Text size='sm' fw='400'>{ list?.rowCount === 1 ? <FormattedMessage id="taxon" /> : <FormattedMessage id="taxa" /> }</Text>
+              <Text size='sm' fw='400'>{ list?.rowCount === 1 ? <FormattedMessage id="record" /> : <FormattedMessage id="records" /> }</Text>
             </Group>
             <Group gap='4'>
               <FontAwesomeIcon icon={faCalendar} fontSize={15} color='grey'/>
