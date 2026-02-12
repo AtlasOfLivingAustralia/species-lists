@@ -243,8 +243,8 @@ public class LegacyController {
             @Parameter(description = "Sort direction")
             @Schema(allowableValues = {"asc", "desc"})
             @RequestParam(name = "order", defaultValue = "asc") String order,
-            @RequestParam(name = "max", defaultValue = "25", required = false) @Max(10000) int max,
-            @RequestParam(name = "offset", defaultValue = "0", required = false) @Max(10000) int offset,
+            @RequestParam(name = "max", defaultValue = "25", required = false) int max,
+            @RequestParam(name = "offset", defaultValue = "0", required = false) int offset,
             @AuthenticationPrincipal Principal principal) {
         try {
             if (Boolean.TRUE.equals(nonulls)) {
