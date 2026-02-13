@@ -117,17 +117,10 @@ public class LegacyController {
             @RequestParam(name = "offset", defaultValue = "0", required = false) @Max(9990) int offset,
             @AuthenticationPrincipal Principal principal) {
         try {
-            Integer page = offset / max; // zero indexed, as required by Pageable
+            int page = offset / max;
             Pageable paging = PageRequest.of(page, max);
             RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
             fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, isSDS, isBIE, druid, speciesListQuery);
-            
-            if (StringUtils.isNotBlank(sort)) {
-                paging = PageRequest.of(page, max,
-                        "asc".equalsIgnoreCase(order)
-                                ? org.springframework.data.domain.Sort.by(fixSortField(sort)).ascending()
-                                : org.springframework.data.domain.Sort.by(fixSortField(sort)).descending());
-            }
 
             SpeciesList convertedSpeciesListQuery = speciesListQuery.convertTo();
             AlaUserProfile profile = authUtils.getUserProfile(principal);
@@ -220,87 +213,111 @@ public class LegacyController {
     }
 
     @SecurityRequirement(name = "JWT")
-    @Operation(tags = "REST v1", summary = "Search for species list items", deprecated = true)
+    @Operation(tags = "REST v1", summary = "Search for species list items", deprecated = true,
+            description = "Get details of items in species lists. Can filter by list properties or retrieve items for specific lists.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Species lists items found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = List.class))),
             @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
     })
-    @GetMapping("/v1/speciesListItems")
-    public ResponseEntity<Object> speciesListItemsSearch(
+    @GetMapping({"/v1/speciesListItems", "/v1/speciesListItems/{druid}", "/v1/speciesListItems/{druid}/"})
+    public ResponseEntity<Object> speciesListItemsMerged(
+            @Parameter(description = "The data resource id (or speciesListID)")
+            @PathVariable(name = "druid", required = false) String druidPath,
+            @Parameter(description = "The data resource id (or speciesListID) query parameter")
+            @RequestParam(name = "druid", required = false) String druidParam,
             @Nullable @RequestParam(name = "isAuthoritative") String isAuthoritative,
             @Nullable @RequestParam(name = "isThreatened") String isThreatened,
             @Nullable @RequestParam(name = "isInvasive") String isInvasive,
             @Nullable @RequestParam(name = "isSDS") String isSDS,
             @Nullable @RequestParam(name = "isBIE") String isBIE,
-            @Nullable @RequestParam(name = "druid") String druid,
             @Parameter(description = "Query string (q)")
             @Nullable @RequestParam(name = "q") String query,
             @Nullable @RequestParam(name = "nonulls") Boolean nonulls,
+            @Parameter(description = "Include KVP (ignored, always included)")
+            @RequestParam(name = "includeKVP", defaultValue = "false") Boolean _includeKVP,
             @Parameter(description = "Sort field")
             @Schema(allowableValues = {"speciesListName", "speciesListID", "listType", "dateCreated", "lastUpdated", "owner", "scientificName","rawScientificName", "guid"})
             @RequestParam(name = "sort", defaultValue = "speciesListID", required = false) String sort,
             @Parameter(description = "Sort direction")
             @Schema(allowableValues = {"asc", "desc"})
-            @RequestParam(name = "order", defaultValue = "asc") String order,
-            @RequestParam(name = "max", defaultValue = "25", required = false) int max,
-            @RequestParam(name = "offset", defaultValue = "0", required = false) int offset,
+            @RequestParam(name = "order", required = false) String order,
+            @RequestParam(name = "dir", required = false) String dir,
+            @RequestParam(name = "max", required = false) Integer max,
+            @RequestParam(name = "offset", defaultValue = "0", required = false) Integer offset,
             @AuthenticationPrincipal Principal principal) {
         try {
             if (Boolean.TRUE.equals(nonulls)) {
-                // TODO: remove this code when nonulls is supported
                 return ResponseEntity.badRequest().body("The 'nonulls' parameter is not yet supported.");
             }
 
-            Integer page = offset / max; // zero indexed, as required by Pageable
-            Pageable paging = PageRequest.of(0, 10000); // we want all matching lists, paging will be applied to items later
-            RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
-            fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, isSDS, isBIE, druid, speciesListQuery);
+            // Consolidate parameters
+            String effectiveDruid = StringUtils.isNotBlank(druidPath) ? druidPath : druidParam;
+            String effectiveOrder = StringUtils.isNotBlank(order) ? order : (StringUtils.isNotBlank(dir) ? dir : "asc");
+            // Default max: 25 if searching (no ID), 10 if specific ID (matching legacy defaults)
+            int effectiveMax = (max != null) ? max : (StringUtils.isBlank(effectiveDruid) ? 25 : 10);
+            int effectiveOffset = (offset != null) ? offset : 0;
 
-            SpeciesList convertedSpeciesListQuery = speciesListQuery.convertTo();
-            AlaUserProfile profile = authUtils.getUserProfile(principal);
-            String userId = profile != null ? profile.getUserId() : null;
-            Boolean isAdmin = authUtils.hasAdminRole(profile);
-            query = StringUtils.isNotBlank(query) ? URLDecoder.decode(query, StandardCharsets.UTF_8) : ""; // regex for all if blank
-            
-            // First, get the matching species lists
-            Page<SpeciesList> speciesLists = searchHelperService.searchDocuments(convertedSpeciesListQuery, userId, isAdmin, query, paging);
-            
-            if (speciesLists.isEmpty()) {
-                return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+            if (effectiveOffset != 0 && (effectiveOffset % effectiveMax) != 0) {
+                return ResponseEntity.badRequest().body(
+                        String.format("Invalid pagination: 'offset' (%d) must be a multiple of 'max' (%d).",
+                                effectiveOffset, effectiveMax)
+                );
             }
-            
-            // Extract the list IDs (data resource UIDs)
-            String speciesListIDs = speciesLists.getContent().stream()
-                    .map(list -> list.getDataResourceUid() != null ? list.getDataResourceUid() : list.getId())
-                    .collect(java.util.stream.Collectors.joining(","));
-            
-            // Map sort field for items (fix for lergacy sort fields)
-            String itemSort = sort != null ? fixSortField(sort) : "speciesListID";
-            
-            // Fetch all items from the matching lists
-            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(
-                    speciesListIDs, 
-                    query != null ? query : null,  // no additional search query on items
-                    null,  // no field filtering
-                    null,  // no noNulls filtering
-                    page + 1,  // searchHelperService uses 1-based pagination
-                    max, 
-                    itemSort,  // use item-appropriate sort field
-                    order, 
-                    principal);
-            
-            if (speciesListItems.isEmpty()) {
-                return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+
+            boolean hasListFilters = StringUtils.isNotBlank(isAuthoritative) ||
+                    StringUtils.isNotBlank(isThreatened) ||
+                    StringUtils.isNotBlank(isInvasive) ||
+                    StringUtils.isNotBlank(isSDS) ||
+                    StringUtils.isNotBlank(isBIE);
+
+            String decodedQuery = StringUtils.isNotBlank(query) ? URLDecoder.decode(query, StandardCharsets.UTF_8) : "";
+
+            // Branch A: List Search Required
+            if (hasListFilters || StringUtils.isBlank(effectiveDruid)) {
+                Integer page = effectiveOffset / effectiveMax;
+                Pageable paging = PageRequest.of(0, 10000);
+                RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
+                fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, isSDS, isBIE, effectiveDruid, speciesListQuery);
+
+                SpeciesList convertedSpeciesListQuery = speciesListQuery.convertTo();
+                AlaUserProfile profile = authUtils.getUserProfile(principal);
+                String userId = profile != null ? profile.getUserId() : null;
+                Boolean isAdmin = authUtils.hasAdminRole(profile);
+
+                // Search lists
+                Page<SpeciesList> speciesLists = searchHelperService.searchDocuments(convertedSpeciesListQuery, userId, isAdmin, decodedQuery, paging);
+
+                if (speciesLists.isEmpty()) {
+                    return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+                }
+
+                String speciesListIDs = speciesLists.getContent().stream()
+                        .map(list -> list.getDataResourceUid() != null ? list.getDataResourceUid() : list.getId())
+                        .collect(java.util.stream.Collectors.joining(","));
+
+                String itemSort = sort != null ? fixSortField(sort) : "speciesListID";
+
+                // Fetch items
+                List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(
+                        speciesListIDs,
+                        StringUtils.isNotBlank(decodedQuery) ? decodedQuery : null,
+                        null, null, page, effectiveMax, itemSort, effectiveOrder, principal);
+
+                if (speciesListItems.isEmpty()) {
+                    return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+                }
+
+                return new ResponseEntity<>(legacyService.convertListItemToVersion1(speciesListItems), HttpStatus.OK);
             }
-            
-            // Convert to legacy format
-            List<SpeciesListItemVersion1> legacySpeciesListItems = legacyService.convertListItemToVersion1(speciesListItems);
-            
-            return new ResponseEntity<>(legacySpeciesListItems, HttpStatus.OK);
+            // Branch B: Direct ID Lookup
+            else {
+                return getLegacySpeciesListItems(effectiveDruid, decodedQuery, null, nonulls, effectiveOffset, effectiveMax, sort, effectiveOrder, principal);
+            }
         } catch (Exception e) {
             logger.error("Error occurred for /v1/speciesListItems: {}", e.getMessage(), e);
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
@@ -353,7 +370,7 @@ public class LegacyController {
 
         Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
 
-        if (speciesList.isPresent() && speciesList.get().getIsPrivate() && !authUtils.isAuthorized(speciesList.get(), principal)) {
+        if (speciesList.isPresent() && speciesList.get().isPrivate() && !authUtils.isAuthorized(speciesList.get(), principal)) {
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.FORBIDDEN.name(), "Not authorised to access this endpoint", HttpStatus.FORBIDDEN.value());
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .contentType(MediaType.APPLICATION_JSON)
@@ -374,53 +391,7 @@ public class LegacyController {
             });
     }
 
-    @Operation(tags = "REST v1", summary = "Get species list items for a given species list ID", deprecated = true)
-    @ApiResponses({
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Species list found",
-                    content = @Content(
-                            mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = SpeciesListItemVersion1.class)
-                    )
-            ),
-            @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
 
-    })
-    @GetMapping({"/v1/speciesListItems/{druid}", "/v1/speciesListItems/{druid}/"})
-    public ResponseEntity<Object> speciesListItems(
-            @Parameter(
-                    name = "druid",
-                    description = "The data resource id (or speciesListID) or comma separated ids to identify list(s) to return list items for e.g. '/v1/speciesListItems/dr123,dr456,dr789'",
-                    schema = @Schema(type = "string")
-            )
-            @PathVariable("druid") String speciesListIDs,
-            @Parameter(
-                    name = "includeKVP",
-                    description = "Whether to include KVP (key value pairs) values in the returned list item. Note this is now ignored and  KVP values are always returned.",
-                    schema = @Schema(type = "boolean", defaultValue = "true")
-            )
-            @RequestParam(name = "includeKVP", defaultValue = "false") Boolean _includeKVP,
-            @Nullable @RequestParam(name = "q") String searchQuery,
-            @Nullable @RequestParam(name = "nonulls") Boolean nonulls,
-            @Nullable @RequestParam(name = "offset", defaultValue = "0") Integer offset,
-            @Nullable @RequestParam(name = "max", defaultValue = "10") Integer max,
-            @Nullable @RequestParam(name = "sort", defaultValue="speciesListID") String sort,
-            @Nullable @RequestParam(name = "dir", defaultValue="asc") String dir,
-            @AuthenticationPrincipal Principal principal) {
-        try {
-            if (Boolean.TRUE.equals(nonulls)) {
-                // TODO: remove this code when nonulls is supported
-                return ResponseEntity.badRequest().body("The 'nonulls' parameter is not yet supported.");
-            }
-
-            return getLegacySpeciesListItems(speciesListIDs, searchQuery, null, nonulls, offset, max, sort, dir, principal);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
 
     @Operation(tags = "REST v1", summary = "Get species list items (internal use) for a given species list ID", deprecated = true)
     @ApiResponses({
@@ -567,7 +538,7 @@ public class LegacyController {
 
             if (!speciesLists.isEmpty()) {
                 List<SpeciesList> validLists = speciesLists.stream()
-                        .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal))
+                        .filter(list -> !list.isPrivate() || authUtils.isAuthorized(list, principal))
                         .toList();
 
                 if (validLists.isEmpty()) {
