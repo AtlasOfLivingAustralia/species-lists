@@ -12,7 +12,7 @@ export function ActionButtons() {
 
   return (
     <Group gap='xs' ml="auto" justify="flex-end">
-      {ala.isAuthenticated && (
+      {ala.isAuthenticated && location.pathname !== '/my-lists' && (
         <Button
             component={Link}
             to='/my-lists'

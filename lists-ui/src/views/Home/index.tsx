@@ -346,44 +346,48 @@ const Home = ({ routeId }: { routeId: string }) => {
               )}
             </Title>
           </Grid.Col>
-          <Grid.Col span={isMobile ? 12 : 9}>
-            <Title order={5} classNames={{ root: classes.subtitle }}>
-              <FormattedMessage
-                id='lists.subtitle'
-                defaultMessage='A tool for finding species checklists'
-              />
-            </Title>
-          </Grid.Col>
-          <Grid.Col
-            span={isMobile ? 12 : 3}
-            style={{ display: 'flex', justifyContent: 'flex-end' }}
-          >
-            <Tooltip
-              label={intl.formatMessage({ id: 'openapi.button.title' })}
-              position='left'
-              withArrow
-              multiline
-              w={200}
-              opacity={0.8}
-            >
-              <Button
-                variant='default'
-                radius='xl'
-                component={Link}
-                to={import.meta.env.VITE_API_BASEURL}
-                target='openapi'
-                rel='noopener noreferrer'
-                title={intl.formatMessage({ id: 'openapi.button.title' })}
-                aria-label={intl.formatMessage({ id: 'openapi.button.title' })}
-                leftSection={<FontAwesomeIcon icon={faCode} />}
+          {location.pathname !== '/my-lists' && (
+            <>
+              <Grid.Col span={isMobile ? 12 : 9}>
+                <Title order={5} classNames={{ root: classes.subtitle }}>
+                  <FormattedMessage
+                    id='lists.subtitle'
+                    defaultMessage='A tool for finding species checklists'
+                  />
+                </Title>
+              </Grid.Col>
+              <Grid.Col
+                span={isMobile ? 12 : 3}
+                style={{ display: 'flex', justifyContent: 'flex-end' }}
               >
-                <FormattedMessage
-                  id='openapi.button.label'
-                  defaultMessage='OpenAPI'
-                />
-              </Button>
-            </Tooltip>
-          </Grid.Col>
+                <Tooltip
+                  label={intl.formatMessage({ id: 'openapi.button.title' })}
+                  position='left'
+                  withArrow
+                  multiline
+                  w={200}
+                  opacity={0.8}
+                >
+                  <Button
+                    variant='default'
+                    radius='xl'
+                    component={Link}
+                    to={import.meta.env.VITE_API_BASEURL}
+                    target='openapi'
+                    rel='noopener noreferrer'
+                    title={intl.formatMessage({ id: 'openapi.button.title' })}
+                    aria-label={intl.formatMessage({ id: 'openapi.button.title' })}
+                    leftSection={<FontAwesomeIcon icon={faCode} />}
+                  >
+                    <FormattedMessage
+                      id='openapi.button.label'
+                      defaultMessage='OpenAPI'
+                    />
+                  </Button>
+                </Tooltip>
+              </Grid.Col>
+            </>
+          )}
         </Grid>
       </Container>
       <Container fluid mt='lg'>
@@ -617,10 +621,6 @@ const Home = ({ routeId }: { routeId: string }) => {
                           className={classes.resultsSummary}
                           component='span'
                         >
-                          <FormattedMessage
-                            id='results.noRecords'
-                            defaultMessage='No records found'
-                          />
                           {search && search.length > 0 ? (
                             <>
                               {' '}
@@ -667,13 +667,15 @@ const Home = ({ routeId }: { routeId: string }) => {
               {totalElements === 0 && (
                 <Message
                   title={intl.formatMessage({
-                    id: 'error.noListsFound.title',
+                    id: 'lists.noListsFound.title',
                     defaultMessage: 'No lists found',
                   })}
                   subtitle={intl.formatMessage({
-                    id: 'error.noListsFound.subTitle',
+                    id: location.pathname === '/my-lists' ? 'lists.noListsFound.myLists.subTitle' : 'lists.noListsFound.subTitle',
                     defaultMessage:
-                      'Try removing a filter or searching with a different query',
+                      location.pathname === '/my-lists'
+                        ? 'You haven\'t created any lists yet'
+                        : 'Try removing a filter or searching with a different query',
                   })}
                 />
               )}
