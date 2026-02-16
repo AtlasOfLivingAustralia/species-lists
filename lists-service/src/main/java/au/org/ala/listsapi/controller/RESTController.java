@@ -105,7 +105,7 @@ public class RESTController {
     })
     @GetMapping("/v2/speciesList/{speciesListID}")
     public ResponseEntity<SpeciesList> speciesList(
-            @Parameter(description = "The species list ID  or data resource ID", example = "dr656", required = true)
+            @Parameter(description = "The species list ID or data resource ID", example = "dr656", required = true)
             @PathVariable("speciesListID") String speciesListID,
             @AuthenticationPrincipal Principal principal) {
         Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
@@ -371,7 +371,7 @@ public class RESTController {
     })
     @GetMapping("/v2/speciesListQid/{speciesListID}")
     public ResponseEntity<Object> speciesListQid(
-            @Parameter(description = "The species list ID  or data resource ID", example = "dr656", required = true)
+            @Parameter(description = "The species list ID or data resource ID", example = "dr656", required = true)
             @PathVariable("speciesListID") String speciesListID) {
         try {
             Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
