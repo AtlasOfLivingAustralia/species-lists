@@ -61,13 +61,16 @@ import au.org.ala.listsapi.util.ElasticUtils;
 import au.org.ala.ws.security.profile.AlaUserProfile;
 import co.elastic.clients.elasticsearch.core.search.FieldCollapse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.constraints.Max;
 
-/** Services added for backwards compatibility with the legacy lists API */
+/** 
+ * REST API controller for species lists. 
+ */
 @CrossOrigin(origins = "*", maxAge = 3600)
 @Validated
 @org.springframework.web.bind.annotation.RestController
@@ -101,6 +104,7 @@ public class RESTController {
     })
     @GetMapping("/v2/speciesList/{speciesListID}")
     public ResponseEntity<SpeciesList> speciesList(
+            @Parameter(description = "The species list ID  or data resource ID", example = "dr656", required = true)
             @PathVariable("speciesListID") String speciesListID,
             @AuthenticationPrincipal Principal principal) {
         Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
@@ -131,6 +135,7 @@ public class RESTController {
         })
     @GetMapping("/v2/speciesList")
     public ResponseEntity<Object> speciesLists(
+            @Parameter(description = "The species list object", example = "{\"listType\":\"sensitive\",\"licence\":\"CC-BY\", \"isThreatened\":\"true\"}", required = true)
             RESTSpeciesListQuery speciesList,
             @RequestParam(name = "page", defaultValue = "1", required = false) @Max(10000) int page,
             @RequestParam(name = "pageSize", defaultValue = "10", required = false) @Max(1000) int pageSize,
@@ -210,8 +215,11 @@ public class RESTController {
     })
     @GetMapping("/v2/speciesList/byGuid")
     public ResponseEntity<Object> speciesListsByGuid(
+            @Parameter(description = "The taxon globally unique identifier (GUID)", example = "https://biodiversity.org.au/afd/taxa/0d382040-d26d-4009-921a-abf76013df3a", required = true)
             @RequestParam(name = "guid") String guid,
+            @Parameter(description = "The page number to return (starting from 1)", example = "1")
             @RequestParam(name = "page", defaultValue = "1", required = false) @Max(10000) int page,
+            @Parameter(description = "The number of items per page", example = "10")
             @RequestParam(name = "pageSize", defaultValue = "10", required = false) @Max(1000) int pageSize,
             @AuthenticationPrincipal Principal principal) {
         try {
@@ -285,33 +293,6 @@ public class RESTController {
         }
     }
 
-    /**
-     * Convert the results to a legacy format
-     * Note: this is not 100% backwards compatible with the old API, see the
-     * 
-     * @au.org.ala.listsapi.LegacyController
-     *
-     * @param results
-     * @return
-     */
-    public SpeciesListPage getLegacyFormatModel(Page<SpeciesList> results) {
-        SpeciesListPage legacyFormat = new SpeciesListPage();
-        legacyFormat.setListCount(results.getTotalElements());
-        legacyFormat.setOffset(results.getPageable().getPageNumber());
-        legacyFormat.setMax(results.getPageable().getPageSize());
-        legacyFormat.setLists(results.getContent());
-        return legacyFormat;
-    }
-
-    public SpeciesListPage getLegacyFormatModel(List<SpeciesList> results, long totalRecords, int max, int offset) {
-        SpeciesListPage legacyFormat = new SpeciesListPage();
-        legacyFormat.setListCount(totalRecords);
-        legacyFormat.setOffset(offset);
-        legacyFormat.setMax(max);
-        legacyFormat.setLists(results);
-        return legacyFormat;
-    }
-
     @Operation(tags = "REST v2", summary = "Get species lists items for a list. List IDs can be a single value, or comma separated IDs.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
@@ -321,12 +302,19 @@ public class RESTController {
     })
     @GetMapping("/v2/speciesListItems/{speciesListIDs}")
     public ResponseEntity<Object> speciesListItems(
+            @Parameter(description = "Comma separated list of species list IDs or data resource IDs", example = "dr18404,dr18457,dr18706", required = true)
             @PathVariable("speciesListIDs") String speciesListIDs,
+            @Parameter(description = "Search query for filtering species list items", example = "Eucalyptus", required = false)
             @Nullable @RequestParam(name = "q") String searchQuery,
+            @Parameter(description = "Fields to include in the response", example = "scientificName,commonName", required = false)
             @Nullable @RequestParam(name = "fields") String fields,
+            @Parameter(description = "The page number to return (starting from 1)", example = "1", required = false)
             @Nullable @RequestParam(name = "page", defaultValue = "1") Integer page,
+            @Parameter(description = "The number of items per page", example = "10", required = false)
             @Nullable @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
+            @Parameter(description = "Field to sort by", example = "scientificName", required = false)
             @Nullable @RequestParam(name = "sort", defaultValue = "scientificName") String sort,
+            @Parameter(description = "Sort direction (asc or desc)", example = "asc", required = false)
             @Nullable @RequestParam(name = "dir", defaultValue = "asc") String dir,
             @AuthenticationPrincipal Principal principal) {
         try {
@@ -353,10 +341,14 @@ public class RESTController {
     })
     @GetMapping("/v2/species")
     public ResponseEntity<Object> species(
-            @RequestParam(name = "guids") String guids,
+            @Parameter(description = "One or more (comma separated) species list IDs or data resource IDs", example = "dr18404,dr18457,dr18706")
             @Nullable @RequestParam(name = "speciesListIDs") String speciesListIDs,
-            @Nullable @RequestParam(name = "page", defaultValue = "1")  Integer page,
-            @Nullable @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
+            @Parameter(description = "One or more (comma separated) taxon globally unique identifiers (GUID)", example = "https://biodiversity.org.au/afd/taxa/083b413f-8746-4788-8dc1-3da495d78a79")
+            @RequestParam(name = "guids") String guids,
+            @Parameter(description = "The page number to return (starting from 1)", example = "1")
+            @RequestParam(name = "page", defaultValue = "1", required = false) @Max(10000) int page,
+            @Parameter(description = "The number of items per page", example = "10")
+            @RequestParam(name = "pageSize", defaultValue = "10", required = false) @Max(1000) int pageSize,
             @AuthenticationPrincipal Principal principal) {
         try {
             int pageIndex = (page - 1); // spring data pageable is zero based
@@ -372,13 +364,14 @@ public class RESTController {
         }
     }
 
-    @Operation(tags = "REST v2", summary = "Get a SOLR query PID for a list")
+    @Operation(tags = "REST v2", summary = "Generate a Biocache query ID (QID) for up to 4000 taxa from a given species list")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found")))
     })
     @GetMapping("/v2/speciesListQid/{speciesListID}")
-    public ResponseEntity<Object> speciesListPid(
+    public ResponseEntity<Object> speciesListQid(
+            @Parameter(description = "The species list ID  or data resource ID", example = "dr656", required = true)
             @PathVariable("speciesListID") String speciesListID) {
         try {
             Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
@@ -396,7 +389,7 @@ public class RESTController {
         }
     }
 
-    @Operation(tags = "REST v2", summary = "Get a list of keys from KVP common across a list multiple species lists")
+    @Operation(tags = "REST v2", summary = "Get a list of keys from (user provided) key value pairs (KVP) that are common across multiple species lists")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
             @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view private species lists", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "You must be authenticated to query private lists"))),
@@ -404,6 +397,7 @@ public class RESTController {
     })
     @GetMapping("/v2/listCommonKeys/{speciesListIDs}")
     public ResponseEntity<Object> listCommonKeys(
+            @Parameter(description = "Comma separated list of species list IDs or data resource IDs", example = "dr18404,dr18457,dr18706", required = true)
             @PathVariable("speciesListIDs") String speciesListIDs,
             @AuthenticationPrincipal Principal principal) {
         try {
@@ -426,5 +420,32 @@ public class RESTController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    /**
+     * Convert the results to a legacy format
+     * Note: this is not 100% backwards compatible with the old API, see the
+     * 
+     * @au.org.ala.listsapi.LegacyController
+     *
+     * @param results
+     * @return
+     */
+    public SpeciesListPage getLegacyFormatModel(Page<SpeciesList> results) {
+        SpeciesListPage legacyFormat = new SpeciesListPage();
+        legacyFormat.setListCount(results.getTotalElements());
+        legacyFormat.setOffset(results.getPageable().getPageNumber());
+        legacyFormat.setMax(results.getPageable().getPageSize());
+        legacyFormat.setLists(results.getContent());
+        return legacyFormat;
+    }
+
+    public SpeciesListPage getLegacyFormatModel(List<SpeciesList> results, long totalRecords, int max, int offset) {
+        SpeciesListPage legacyFormat = new SpeciesListPage();
+        legacyFormat.setListCount(totalRecords);
+        legacyFormat.setOffset(offset);
+        legacyFormat.setMax(max);
+        legacyFormat.setLists(results);
+        return legacyFormat;
     }
 }

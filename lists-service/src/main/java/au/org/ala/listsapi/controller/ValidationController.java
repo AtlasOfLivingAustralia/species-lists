@@ -35,10 +35,10 @@ public class ValidationController {
     @Autowired
     protected ValidationService validationService;
 
-    @Operation(tags = "Validation", summary = "Get all constraint lists")
+    @Operation(tags = "Validation", summary = "Get all constraint values for the service, including valid values for list constraints and any other relevant controlled vocabularies.")
     @ApiResponses({
             @ApiResponse(
-                    responseCode = "200", description = "Constraint lists", 
+                    responseCode = "200", description = "Constraint values", 
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = JsonObject.class))),
             @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameter")
     })
