@@ -24,6 +24,7 @@ import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
@@ -135,8 +136,7 @@ public class RESTController {
         })
     @GetMapping("/v2/speciesList")
     public ResponseEntity<Object> speciesLists(
-            @Parameter(description = "The species list object", example = "{\"listType\":\"sensitive\",\"licence\":\"CC-BY\", \"isThreatened\":\"true\"}", required = true)
-            RESTSpeciesListQuery speciesList,
+            @ParameterObject RESTSpeciesListQuery speciesList,
             @RequestParam(name = "page", defaultValue = "1", required = false) @Max(10000) int page,
             @RequestParam(name = "pageSize", defaultValue = "10", required = false) @Max(1000) int pageSize,
             @AuthenticationPrincipal Principal principal) {
