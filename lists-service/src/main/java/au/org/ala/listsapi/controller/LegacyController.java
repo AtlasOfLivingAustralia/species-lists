@@ -92,7 +92,7 @@ public class LegacyController {
     protected AuthUtils authUtils;
 
     @SecurityRequirement(name = "JWT")
-    @Operation(tags = "REST v1", summary = "Get species list metadata for all lists", deprecated = true, order = 1)
+    @Operation(tags = "REST v1", summary = "Get species list metadata for all lists", deprecated = true)
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Species lists found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPageVersion1.class))),
             @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
