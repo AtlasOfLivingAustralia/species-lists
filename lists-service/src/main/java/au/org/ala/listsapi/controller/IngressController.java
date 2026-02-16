@@ -65,7 +65,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 
-/** Ingress REST API */
+/** 
+ * Ingress REST API
+ */
 @CrossOrigin(origins = "*", maxAge = 3600)
 @SecurityScheme(name = "JWT", type = SecuritySchemeType.HTTP, scheme = "bearer", bearerFormat = "JWT")
 @org.springframework.web.bind.annotation.RestController
@@ -129,7 +131,7 @@ public class IngressController {
     // }
 
     @SecurityRequirement(name = "JWT")
-    @Operation(tags = "Ingress", summary = "Delete a species list")
+    @Operation(tags = "Ingress", summary = "Delete a species list. Deletions are final and cannot be undone.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Species list deleted", content = @Content),
             @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameter"),
@@ -138,6 +140,7 @@ public class IngressController {
     })
     @DeleteMapping("/v2/delete/{speciesListID}")
     public ResponseEntity<Object> delete(
+            @Parameter(description = "The species list ID or data resource ID to delete", example = "dr656", required = true)
             @PathVariable("speciesListID") String speciesListID,
             @AuthenticationPrincipal Principal principal) {
         try {
@@ -164,6 +167,7 @@ public class IngressController {
     @Operation(tags = "Ingress", description = "Rematch the taxonomy for a species list. This is a long running process.", summary = "Rematch the taxonomy for a species list")
     @GetMapping("/v2/rematch/{speciesListID}")
     public ResponseEntity<Object> rematch(
+            @Parameter(description = "The species list ID or data resource ID to rematch", example = "dr656", required = true)
             @PathVariable("speciesListID") String speciesListID,
             @AuthenticationPrincipal Principal principal) {
         try {
@@ -264,7 +268,7 @@ public class IngressController {
         summary = "Upload a CSV species list", 
         tags = "Ingress", 
         description = "Upload a CSV species list. This is step 1 of a 2 step process. "
-            + "The file is uploaded to temporary storage (S3 or local) and then ingested. "
+            + "The file is uploaded to the server and then ingested. "
             + "The second step is to `ingest` the species list. For a new list, use the `/v2/ingest` endpoint. "
             + "For an existing list, use the `/v2/ingest/{speciesListID}` endpoint. "
     )
@@ -290,6 +294,7 @@ public class IngressController {
         )
     })
     public ResponseEntity<Object> handleFileUpload(
+        @Parameter(description = "The CSV file to upload", required = true)
         @RequestPart("file") MultipartFile file,
         @AuthenticationPrincipal AlaUserProfile profile
     ) {
@@ -327,10 +332,10 @@ public class IngressController {
         summary = "Asynchronously ingest a new species list", 
         tags = "Ingress", 
         description = "Asynchronously ingest a _new_ species list. This is step 2 of a 2 step process. "
-            + "The file is uploaded to temporary storage (S3 or local) and then ingested. "
-            + "The first step is to upload the species list. The ID of the list being ingested will be returned, "
-            + "where you can then use `/ingest/{ID}/progress` to track ingestion progress. "
-            + "The ingested list is validated against the constraints returned from the `/constraints` endpoint, "
+            + "The file is uploaded to the server and then ingested. "
+            + "The first step is to upload the species list CSV file via the `/v2/upload` endpoint. The ID of the list being ingested will be returned, "
+            + "where you can then use `/v2/ingest/{ID}/progress` to track ingestion progress. "
+            + "The ingested list is validated against the constraints returned from the `/v2/constraints` endpoint, "
             + "where each key is a list property that will be validated, and the value is all of the possible values for that key."
     )
     @PostMapping("/v2/ingest")
@@ -350,10 +355,10 @@ public class IngressController {
         )
     })
     public ResponseEntity<Object> ingest(
-        @Parameter(description = "Value should be the `localFile` property returned from the `/upload` endpoint")
+        @Parameter(description = "Value should be the `localFile` property returned from the `/v2/upload` endpoint")
         @RequestParam("file") String fileIdentifier,
+        @Parameter(description = "Species list metadata. See the `InputSpeciesList` model for details.")
         InputSpeciesList speciesList,
-        @Parameter(description = "Spceies list metadata. See the `InputSpeciesList` model for details.")
         @AuthenticationPrincipal Principal principal
     ) {
         try {
@@ -412,7 +417,9 @@ public class IngressController {
             @ApiResponse(responseCode = "401", description = "Unauthorized", content = {
                     @Content(mediaType = "text/plain") })
     })
-    public ResponseEntity<Object> ingestProgress(@PathVariable("speciesListID") String speciesListID,
+    public ResponseEntity<Object> ingestProgress(
+            @Parameter(description = "The species list ID or data resource ID to check progress for", example = "dr656", required = true)
+            @PathVariable("speciesListID") String speciesListID,
             @AuthenticationPrincipal Principal principal) {
         // check user logged in
         AlaUserProfile alaUserProfile = (AlaUserProfile) principal;
@@ -427,9 +434,13 @@ public class IngressController {
     }
 
     @SecurityRequirement(name = "JWT")
-    @Operation(summary = "Ingest a species list that has been uploaded before", description = "Ingest a species list. This is step 2 of a 2 step process. "
-            + "The file is uploaded to temporary storage (S3 or local) and then ingested. "
-            + "The first step is to upload the species list.", tags = "Ingress")
+    @Operation(summary = "Asynchronously ingest an existing species list", 
+            description = "Asynchronously re-ingest an _existing_ species list. This is step 2 of a 2 step process. "
+            + "The file is uploaded to the server and then ingested. "
+            + "The first step is to upload the species list CSV file via the `/v2/upload` endpoint. The ID of the list being ingested will be returned, "
+            + "where you can then use `/v2/ingest/{ID}/progress` to track ingestion progress. "
+            + "The ingested list is validated against the constraints returned from the `/v2/constraints` endpoint, "
+            + "where each key is a list property that will be validated, and the value is all of the possible values for that key.", tags = "Ingress")
     @PostMapping("/v2/ingest/{speciesListID}")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully ingested", content = {
@@ -439,7 +450,7 @@ public class IngressController {
                     @Content(mediaType = "text/plain") })
     })
     public ResponseEntity<Object> ingest(
-            @Parameter(description = "Value should be the `localFile` property returned from the `/upload` endpoint")
+            @Parameter(description = "Value should be the `localFile` property returned from the `/v2/upload` endpoint")
             @RequestParam("file") String fileIdentifier,
             @Parameter(description = "Value should be the `speciesListID` for the existing species list to be reloaded")
             @PathVariable("speciesListID") String speciesListID,

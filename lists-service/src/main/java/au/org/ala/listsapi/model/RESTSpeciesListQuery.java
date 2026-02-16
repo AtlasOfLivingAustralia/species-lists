@@ -1,5 +1,6 @@
 package au.org.ala.listsapi.model;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,22 +14,39 @@ import lombok.extern.jackson.Jacksonized;
 @Jacksonized
 public class RESTSpeciesListQuery {
 
+    @Schema(description = "Unique identifier of the species list", hidden = true)
     private String id;
+    @Schema(description = "Data resource UID associated with the list")
     private String dataResourceUid;
+    @Schema(description = "Title of the species list", example = "status")
     private String title;
+    @Schema(description = "Description of the species list")
     private String description;
+    @Schema(description = "Type of list (see `/v2/constraints` for valid values)")
     private String listType;
+    @Schema(description = "Licence applied to the list (see `/v2/constraints` for valid values)")
     private String licence;
+    @Schema(description = "DOI associated with the list")
     private String doi;
+    @Schema(description = "Category assigned to the list")
     private String category;
+    @Schema(description = "Region covered by the list")
     private String region;
+    @Schema(description = "Owner of the species list")
     private String owner;
+    @Schema(description = "Whether the list is versioned", hidden = true)
     String isVersioned;
+    @Schema(description = "Whether the list is authoritative", example = "false")
     String isAuthoritative;
+    @Schema(description = "Whether the list is private", example = "false")
     String isPrivate;
+    @Schema(description = "Whether the list is invasive", example = "false")
     String isInvasive;
+    @Schema(description = "Whether the list is threatened", example = "true")
     String isThreatened;
+    @Schema(description = "Whether the list appears on ALA species pages", example = "false")
     String isBIE;
+    @Schema(description = "Whether the list is an SDS list", example = "false")
     String isSDS;
 
     public boolean isEmpty() {
