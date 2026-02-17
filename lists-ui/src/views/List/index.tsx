@@ -503,7 +503,7 @@ export function List() {
             <Flex direction='row' justify='space-between' gap={16}>
               <Stack gap='xs' mb={14}>
                 {meta?.description && (
-                  <Text c='dark-grey-1' size='sm' mt={4} opacity={0.75}>
+                  <Text component="div" c='dark-grey-1' size='sm' mt={4} opacity={0.75}>
                     <ReactMarkdown
                       components={{
                         p: ({ children }) => <>{children}</>,

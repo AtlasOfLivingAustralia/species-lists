@@ -1,6 +1,4 @@
-import { Checkbox, CheckboxCardProps, Flex, List, Text } from '@mantine/core';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { IconProp } from '@fortawesome/fontawesome-svg-core';
+import { Checkbox, CheckboxCardProps, Flex, Text } from '@mantine/core';
 
 import classes from './FlagCard.module.css';
 import { ListTypeBadge } from './ListTypeBadge';
@@ -8,14 +6,12 @@ import { ListTypeBadge } from './ListTypeBadge';
 interface FlagCardProps extends CheckboxCardProps {
   label: string;
   description: string;
-  icon: IconProp;
   flag: string;
 }
 
 export function FlagCard({
   label,
   description,
-  icon,
   flag,
   ...props
 }: FlagCardProps) {
