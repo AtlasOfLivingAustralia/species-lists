@@ -34,7 +34,7 @@ interface SpeciesList {
   owner: string;
   ownerName: string | null;
   wkt: string;
-  tags: string[];
+  tags: string[] | null;
 }
 
 type SpeciesListSubmit = Omit<
@@ -192,6 +192,7 @@ interface SpeciesListConstraints {
   listType: Constraint[];
   licence: Constraint[];
   region: Constraint[];
+  tags: Constraint[];
 }
 
 export type {

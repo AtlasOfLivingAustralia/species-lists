@@ -21,7 +21,7 @@ export function ListTypeBadge({
   iconSide = 'left'
 } : {
   listTypeValue: string, 
-  titleText?: string,
+  titleText?: string | React.ReactNode,
   iconSide?: 'left' | 'right'}) 
 {
   const intl = useIntl();
@@ -29,7 +29,7 @@ export function ListTypeBadge({
   // sanitise the listTypeValue to prevent XSS attacks
   const sanitisedListTypeValue = sanitiseText(listTypeValue);
   const message = <FormattedMessage id={sanitisedListTypeValue || 'filter.key.missing'} defaultMessage={sanitisedListTypeValue}/>;
-  const tooltipText = intl.formatMessage({ id: `licence.${titleText ? sanitiseText(titleText) : 'none'}`, defaultMessage: titleText || '' });
+  const tooltipText = intl.formatMessage({ id: `licence.${titleText && typeof titleText === 'string' ? sanitiseText(titleText) : 'none'}`, defaultMessage: (typeof titleText === 'string' ? titleText : '') || '' });
 
   return (
     <Box style={{ display: 'flex', alignItems: 'center', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100%' }}>
@@ -40,7 +40,7 @@ export function ListTypeBadge({
         pl={listIcon && iconSide === 'left' ? 5 : 0}
         component='span'
       >
-        {titleText && titleText.length > 1 && tooltipText !== titleText ? (
+        {titleText && typeof titleText === 'string' && titleText.length > 1 && tooltipText !== titleText ? (
           <Tooltip label={tooltipText} withArrow position="right">
             <span>{titleText}</span>
           </Tooltip>

@@ -48,6 +48,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 import { Outlet, useLocation, useParams } from 'react-router';
+import ReactMarkdown from 'react-markdown';
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
@@ -343,18 +344,6 @@ export function List() {
     []
   );
 
-  // Handler for the Enter key press
-  interface KeyDownEvent extends React.KeyboardEvent<HTMLInputElement> {}
-
-  const handleKeyDown = (event: KeyDownEvent): void => {
-    // Check if the key pressed is the Enter key
-    if (event.key === 'Enter') {
-      // Prevent the default form submission behavior (if the input is inside a form)
-      event.preventDefault(); 
-      handleSearchChange(inputSearchValue);
-    }
-  };
-
   // Field deletion handler
   const handleFieldCreated = useCallback(
     (field: string, defaultValue?: string) => {
@@ -503,9 +492,9 @@ export function List() {
         <Grid>
           <Grid.Col span={12}>
             <Title order={4} classNames={{root: classes.title}}>
-              <Text classNames={{root: classes.listTitlePrefix}} inherit>
+              <Text component='span' classNames={{root: classes.listTitlePrefix}} inherit>
                 <FormattedMessage id='list.title.prefix' defaultMessage='List details' />
-                <Text pl={8} pr={10} size='lg' className={classes.listTitlePrefix} inherit>{' '}➤{' '}</Text>
+                <Text component='span' pl={8} pr={10} size='lg' className={classes.listTitlePrefix} inherit>{' '}➤{' '}</Text>
               </Text>
               {meta?.title}
             </Title>
@@ -514,8 +503,26 @@ export function List() {
             <Flex direction='row' justify='space-between' gap={16}>
               <Stack gap='xs' mb={14}>
                 {meta?.description && (
-                  <Text c='dark-grey-1' size='sm' mt='xs' opacity={0.75}>
-                    {meta.description}
+                  <Text c='dark-grey-1' size='sm' mt={4} opacity={0.75}>
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => <>{children}</>,
+                        blockquote: ({ node, ...props }) => (
+                          <blockquote
+                            style={{
+                              borderLeft: '4px solid #d0d7de',
+                              margin: '0',
+                              paddingLeft: '0.75rem',
+                            }}
+                            {...props}
+                          />
+                        ),
+                        ul: ({ node, ...props }) => (
+                          <ul style={{ marginTop: '4px', marginBottom: '4px' }} {...props} />
+                        ),
+                      }}>
+                      {meta.description}
+                    </ReactMarkdown>
                   </Text>
                 )}
                 <Summary meta={meta!} />
