@@ -1,3 +1,17 @@
+/*
+ * Copyright (C) 2025 Atlas of Living Australia
+ * All Rights Reserved.
+ *
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ */
 package au.org.ala.listsapi.service;
 
 import java.util.List;
@@ -27,21 +41,24 @@ public class MetadataService {
 
     private Map listToDataResourceJSON(SpeciesList speciesList) {
         return Map.of(
-                "name", speciesList.getTitle(),
-                "pubDescription", speciesList.getDescription(),
-                "licenseType", speciesList.getLicence(),
-                "websiteUrl", appUrl + "/list/" + speciesList.getId(),
-                "resourceType", "species-list"
+            "name", speciesList.getTitle(),
+            "pubDescription", speciesList.getDescription(),
+            "licenseType", speciesList.getLicence(),
+            "websiteUrl", appUrl + "/list/" + speciesList.getId(),
+            "isPrivate", speciesList.getIsPrivate() != null && speciesList.getIsPrivate() == true ? "true" : "", // Collectory expects "true" or "" (Groovy truth bug)
+            "resourceType", "species-list"
         );
     }
 
     public void setMeta(SpeciesList speciesList) throws Exception {
+        logger.info("Setting metadata in Collectory for species list: " + speciesList.getId());
         String dataResourceUid = speciesList.getDataResourceUid();
         String entityUid = dataResourceUid != null ? "/" + dataResourceUid : "";
+        Map metaDataJsonMap = listToDataResourceJSON(speciesList);
 
         Map response = webService.post(
                 collectoryUrl + "/ws/dataResource" + entityUid,
-                listToDataResourceJSON(speciesList),
+                metaDataJsonMap,
                 null,
                 ContentType.APPLICATION_JSON,
                 true,

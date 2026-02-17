@@ -57,7 +57,7 @@ public class WebService {
     @Value("${app.version}")
     private String infoAppVersion;
 
-    private static String appendQueryString(String url, Map<String, String> params) {
+    private static String appendQueryString(String url, Map<String, Object> params) {
         if (params != null) {
             StringBuilder sb = new StringBuilder();
             params.forEach((k, v) -> {
@@ -89,7 +89,7 @@ public class WebService {
      * @param customHeaders Map of [headerName:value] for any extra HTTP headers to be sent with the request. Default = [:].
      * @return [statusCode: int, resp: [:]] on success, or [statusCode: int, error: string] on error
      */
-    public Map get(String url, Map params, ContentType contentType, boolean includeApiKey, boolean includeUser, Map customHeaders) {
+    public Map<String, Object> get(String url, Map<String,Object> params, ContentType contentType, boolean includeApiKey, boolean includeUser, Map<String, Object> customHeaders) {
         return send(GET, url, params, contentType, null, null, includeApiKey, includeUser, customHeaders);
     }
 
@@ -131,7 +131,7 @@ public class WebService {
      * @param customHeaders Map of [headerName:value] for any extra HTTP headers to be sent with the request. Default = [:].
      * @return [statusCode: int, resp: [:]] on success, or [statusCode: int, error: string] on error
      */
-    public Map post(String url, Object body, Map params, ContentType contentType, boolean includeApiKey, boolean includeUser, Map customHeaders) {
+    public Map<String, Object> post(String url, Object body, Map<String, Object> params, ContentType contentType, boolean includeApiKey, boolean includeUser, Map<String, Object> customHeaders) {
         return send(POST, url, params, contentType, body, null, includeApiKey, includeUser, customHeaders);
     }
 
@@ -335,12 +335,12 @@ public class WebService {
         }
     }
 
-    private Map send(HttpMethod method, String url, Map params, ContentType contentType,
-                     Object body, Object files, boolean includeApiKey, boolean includeUser,
-                     Map customHeaders) {
+    private Map<String, Object> send(HttpMethod method, String url, Map<String, Object> params, ContentType contentType,
+                    Object body, Object files, boolean includeApiKey, boolean includeUser,
+                    Map<String, Object> customHeaders) {
         logger.debug(method.name() + " request to " + url);
 
-        Map result = new HashMap();
+        Map<String, Object> result = new HashMap<String, Object>();
 
         HttpURLConnection conn = null;
 
@@ -408,7 +408,7 @@ public class WebService {
         conn.setReadTimeout(readTimeout);
     }
 
-    private void configureRequestHeaders(HttpURLConnection conn, boolean includeApiKey, boolean includeUser, Map<String, String> customHeaders) {
+    private void configureRequestHeaders(HttpURLConnection conn, boolean includeApiKey, boolean includeUser, Map<String, Object> customHeaders) {
         UserDetails user = null;
         // We can only get the user id from the auth service if we are running in a http request.
         // The Sprint RequestContextHolder's requestAttributes will be null if there is no request.
@@ -423,8 +423,8 @@ public class WebService {
         includeAuthTokensInternal(conn, includeUser, includeApiKey, user);
 
         if (customHeaders != null) {
-            for (Map.Entry<String, String> entry : customHeaders.entrySet()) {
-                conn.setRequestProperty(entry.getKey(), entry.getValue());
+            for (Map.Entry<String, Object> entry : customHeaders.entrySet()) {
+                conn.setRequestProperty(entry.getKey(), entry.getValue().toString());
             }
         }
     }

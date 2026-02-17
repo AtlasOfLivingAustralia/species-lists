@@ -12,6 +12,7 @@ import {
 import {
   ActionIcon,
   Box,
+  Button,
   Center,
   Collapse,
   Container,
@@ -50,7 +51,7 @@ import { Outlet, useLocation, useParams } from 'react-router';
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { faAngleRight, faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import tableClasses from './classes/Table.module.css';
@@ -100,6 +101,7 @@ export function List() {
 
   const [list, setList] = useState<FilteredSpeciesList | null>(null);
   const [meta, setMeta] = useState<SpeciesList | null>(null);
+  const [inputSearchValue, setSearchInputValue] = useState(''); // internal search input state
 
   useDocumentTitle(meta?.title || 'Loading...');
   const isMobile = useMediaQuery(`(max-width: ${em(750)})`) || false;
@@ -166,6 +168,8 @@ export function List() {
           {
             speciesListID: id,
             size,
+            filters,
+            searchQuery: search,
           },
           token
         );
@@ -255,6 +259,11 @@ export function List() {
   useEffect(() => {
     if (totalPages && page >= totalPages) setPage(totalPages - 1);
   }, [page, totalPages]);
+  
+  // Sync input search value with search query parameter
+  useEffect(() => {
+    setSearchInputValue(search);
+  }, [search]);
 
   const handleSortClick = useCallback(
     (newSort: string) => {
@@ -274,6 +283,12 @@ export function List() {
     // Hide filters for mobile devices
     setHideFilters(isMobile);
   }, [isMobile]);
+
+  // Handle search value changes and sort logic
+  const handleSearchChange = useCallback((newValue: string) => {
+    setPage(0); // Reset 'page' when search is changed
+    setSearch(newValue);
+  }, [sort, dir, setPage, setSearch, setSort, setDir]);
 
   const resetFilters = useCallback(
     () => {
@@ -327,6 +342,18 @@ export function List() {
     },
     []
   );
+
+  // Handler for the Enter key press
+  interface KeyDownEvent extends React.KeyboardEvent<HTMLInputElement> {}
+
+  const handleKeyDown = (event: KeyDownEvent): void => {
+    // Check if the key pressed is the Enter key
+    if (event.key === 'Enter') {
+      // Prevent the default form submission behavior (if the input is inside a form)
+      event.preventDefault(); 
+      handleSearchChange(inputSearchValue);
+    }
+  };
 
   // Field deletion handler
   const handleFieldCreated = useCallback(
@@ -466,24 +493,24 @@ export function List() {
         onDeleted={handleItemDeleted}
       />
       <Container fluid className={classes.speciesHeader}>
-        <Grid>
+        <Grid align="center">
           <Grid.Col span={12}>
             <Breadcrumbs listTitle={pageTitle ?? undefined} />
-          </Grid.Col>
-          <Grid.Col span={12}>
-            <Title order={4} classNames={{root: classes.title}}>
-              <Text classNames={{root: classes.listTitlePrefix}} span inherit>
-                <FormattedMessage id='list.title.prefix' defaultMessage='List details' />{' '}
-                <FontAwesomeIcon icon={faAngleRight} size="xs" className={classes.listTitleSeparator} />{' '}
-              </Text>
-              {meta?.title}
-            </Title>
           </Grid.Col>
         </Grid>
       </Container>
       <Container fluid className={classes.listDetails}>
         <Grid>
-          <Grid.Col span={12} pb={6} mt='lg'>
+          <Grid.Col span={12}>
+            <Title order={4} classNames={{root: classes.title}}>
+              <Text classNames={{root: classes.listTitlePrefix}} inherit>
+                <FormattedMessage id='list.title.prefix' defaultMessage='List details' />
+                <Text pl={8} pr={10} size='lg' className={classes.listTitlePrefix} inherit>{' '}➤{' '}</Text>
+              </Text>
+              {meta?.title}
+            </Title>
+          </Grid.Col>
+          <Grid.Col span={12} pt={6} >
             <Flex direction='row' justify='space-between' gap={16}>
               <Stack gap='xs' mb={14}>
                 {meta?.description && (
@@ -511,7 +538,6 @@ export function List() {
                 />
               )}
             </Flex>
-            
           </Grid.Col>
           { rematching && (
             <Grid.Col span={12}>
@@ -543,38 +569,76 @@ export function List() {
             </Grid.Col>
           ) : (
             <>
-              <Grid.Col span={12}>
-                <Group>
+              <Grid.Col span={isMobile ? 12 : 9}>
+                <Group justify={isMobile ? 'flex-start' : 'flex-end'}>
                   { !isMobile && (
                     <ToggleFiltersButton toggleFilters={toggleFilters} hidefilters={hidefilters} />
                   )}
-                  <TextInput
-                    style={{ flexGrow: 1 }}
-                    disabled={hasError}
-                    value={search}
-                    onChange={(event) => {
-                      setSearch(event.currentTarget.value);
-                      setPage(0);
-                    }}
-                    placeholder={intl.formatMessage({ id: 'search.input.placeholder', defaultMessage: 'Search within list' })}
-                    aria-label={intl.formatMessage({ id: 'search.input.label', defaultMessage: 'Search within list' })}
-                    w={200}
-                    leftSection={<FontAwesomeIcon icon={faMagnifyingGlass} fontSize={16} stroke='2' />}
-                    rightSection={
-                      <ActionIcon
-                        radius='sm'
-                        variant='transparent'
-                        size='xs'
-                        title={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
-                        aria-label={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
-                        disabled={search.length === 0}
-                        onClick={() => setSearch('')}
-                        style={{ marginLeft: 5, marginRight: 10 }}
-                      >
-                      <FontAwesomeIcon icon={faXmark} fontSize={20} />
-                      </ActionIcon>
-                    }
-                  />
+                  <Group gap={0} wrap="nowrap" style={{ flexGrow: 1 }}>
+                    <TextInput
+                      // style={{ flexGrow: 1 }}
+                      style={{ flex: 1 }}
+                      styles={{ 
+                        input: { 
+                          // Remove right border radius and border
+                          borderTopRightRadius: 0, 
+                          borderBottomRightRadius: 0,
+                          borderRight: 'none', 
+                        } 
+                      }}
+                      disabled={hasError}
+                      value={inputSearchValue}
+                      onChange={(event) => setSearchInputValue(event.currentTarget.value)}
+                      placeholder={intl.formatMessage({ id: 'search.input.placeholder', defaultMessage: 'Search within list' })}
+                      aria-label={intl.formatMessage({ id: 'search.input.label', defaultMessage: 'Search within list' })}
+                      leftSection={<FontAwesomeIcon icon={faMagnifyingGlass} fontSize={16} stroke='2' />}
+                      rightSection={
+                        <ActionIcon
+                          radius='sm'
+                          variant='transparent'
+                          size='xs'
+                          title={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
+                          aria-label={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
+                          disabled={search.length === 0}
+                          onClick={() => {
+                            handleSearchChange('')
+                            setSearchInputValue('');
+                          }}
+                          style={{ marginLeft: 5, marginRight: 10 }}
+                        >
+                        <FontAwesomeIcon icon={faXmark} fontSize={20} />
+                        </ActionIcon>
+                      }
+                    />
+                    <Button
+                      variant="light"
+                      styles={{
+                        root: {
+                          borderTopLeftRadius: 0, 
+                          borderBottomLeftRadius: 0,
+                          borderColor: 'var(--mantine-color-default-border)',
+                        },
+                      }}
+                      style={{
+                        '--button-hover': 'var(--mantine-color-rust-filled-hover)',
+                        '--button-hover-color': 'white',
+                      }}
+                      radius="md"
+                      onClick={(event) => {
+                        event.preventDefault(); 
+                        handleSearchChange(inputSearchValue);
+                      }}
+                    >
+                      <FormattedMessage id='search.button.label' defaultMessage='Search' />
+                    </Button>
+                  </Group>
+                </Group>
+              </Grid.Col>
+              <Grid.Col span={isMobile ? 12 : 3}>
+                <Group gap={6} justify={isMobile ? 'space-between' : 'flex-end'}>
+                  { isMobile && (
+                    <ToggleFiltersButton toggleFilters={toggleFilters} hidefilters={hidefilters} isMobile={isMobile} />
+                  )}
                   <Select
                     disabled={hasError}
                     w={140}
@@ -586,9 +650,6 @@ export function List() {
                     }))}
                     aria-label={intl.formatMessage({ id: 'list.page.size.label', defaultMessage: 'Select number of results' })}
                   />
-                  { isMobile && (
-                    <ToggleFiltersButton toggleFilters={toggleFilters} hidefilters={hidefilters} />
-                  )}
                 </Group>
               </Grid.Col>
               {/* Filters appear here */}
@@ -611,7 +672,7 @@ export function List() {
                       <FormattedMessage id='results.showing' defaultMessage='Showing' /> {' '}
                         {startPage}-{endPage} of {' '}
                       <FormattedNumber value={totalEntries || 0} /> {' '}
-                      <FormattedMessage id='results.records' defaultMessage='records' /> {' '}
+                      <FormattedMessage id='results.records' defaultMessage='taxa' /> {' '}
                       { meta?.distinctMatchCount &&
                         <>
                           {'('}
@@ -703,7 +764,7 @@ export function List() {
                         defaultMessage='Scientific name'
                       />
                       </ThSortable>
-                      {meta!.fieldList.map((field) => (
+                      {meta?.fieldList && meta!.fieldList.map((field) => (
                       <ThEditable
                         key={field}
                         id={meta!.id}

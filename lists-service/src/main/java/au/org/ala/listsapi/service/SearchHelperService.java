@@ -22,15 +22,20 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregation;
+import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregations;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -48,14 +53,27 @@ import org.springframework.stereotype.Service;
 import com.mongodb.bulk.BulkWriteResult;
 
 import au.org.ala.listsapi.controller.AuthUtils;
+import au.org.ala.listsapi.model.Facet;
+import au.org.ala.listsapi.model.FacetCount;
 import au.org.ala.listsapi.model.Filter;
+import au.org.ala.listsapi.model.ListSearchContext;
+import au.org.ala.listsapi.model.SingleListSearchContext;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListIndex;
 import au.org.ala.listsapi.model.SpeciesListItem;
+import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.util.ElasticUtils;
 import au.org.ala.ws.security.profile.AlaUserProfile;
+import co.elastic.clients.elasticsearch._types.FieldSort;
 import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
+import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
+import co.elastic.clients.elasticsearch._types.aggregations.MultiBucketBase;
+import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.util.ObjectBuilder;
 
 /**
  * A helper service for performing search-related operations on species lists.
@@ -69,6 +87,33 @@ public class SearchHelperService {
     @Autowired private MongoTemplate mongoTemplate;
     @Autowired private ElasticsearchOperations elasticsearchOperations;
     @Autowired private SpeciesListMongoRepository speciesListMongoRepository;
+    @Autowired private SpeciesListItemMongoRepository speciesListItemMongoRepository;
+
+    private static final String SPECIES_LIST_ID = "speciesListID";
+    private static final int MAX_LIST_ENTRIES = 10000;
+
+    private static final Set<String> CORE_FIELDS = Set.of(
+                    "id",
+                    "scientificName",
+                    "vernacularName",
+                    "licence",
+                    "taxonID",
+                    "kingdom",
+                    "phylum",
+                    "class",
+                    "order",
+                    "family",
+                    "genus",
+                    "isBIE",
+                    "listType",
+                    "isAuthoritative",
+                    "hasRegion",
+                    "isSDS",
+                    "isThreatened",
+                    "isInvasive",
+                    "isPrivate",
+                    "tags");
+
 
     /**
      * Performs a bulk update on a list of SpeciesListItem objects.
@@ -123,7 +168,7 @@ public class SearchHelperService {
             int page,
             int pageSize,
             Principal principal
-) {
+    ) {
         AlaUserProfile profile = authUtils.getUserProfile(principal);
         List<FieldValue> GUIDs = Arrays.stream(guids.split(",")).map(FieldValue::of).toList();
         List<FieldValue> listIDs = speciesListIDs != null ?
@@ -195,78 +240,49 @@ public class SearchHelperService {
     public List<SpeciesListItem> fetchSpeciesListItems(
             String speciesListIDs,
             @Nullable String searchQuery,
-            @Nullable String fields,
+            @Nullable String fields, // we're ignoring this for now
+            @Nullable Boolean noNulls, // currently not implemented -> delete if testing shows this is not being called
             @Nullable Integer page,
             @Nullable Integer pageSize,
             @Nullable String sort,
             @Nullable String dir,
             Principal principal) throws IllegalArgumentException {
+        if (speciesListIDs == null || speciesListIDs.isBlank()) {
+            // throw new IllegalArgumentException("speciesListIDs parameter is required");
+            speciesListIDs = ".*";
+        }
+        
         List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
-        List<SpeciesList> foundLists = speciesListMongoRepository.findAllByDataResourceUidIsInOrIdIsIn(IDs, IDs);
+        List<SpeciesList> foundLists = speciesListMongoRepository.findByDataResourceUidInOrIdIn(IDs);
         HashSet<String> restrictedFields = new HashSet<>();
 
         if (fields != null && !fields.isBlank()) {
             restrictedFields.addAll(Arrays.stream(fields.split(",")).collect(Collectors.toSet()));
         }
 
-        if (!foundLists.isEmpty()) {
+        if (!foundLists.isEmpty() || searchQuery != null && !searchQuery.isBlank()) {
+            // Determine valid list IDs based on user access rights
             List<FieldValue> validIDs = foundLists.stream()
                     .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal))
                     .map(list -> FieldValue.of(list.getId())).toList();
 
-            // Enforce ElasticSearch limit of 10,000 documents
-            if ((page - 1) * pageSize + pageSize > 10000 && pageSize > 0) {
-                // throw new IllegalArgumentException("Page size exceeds ElasticSearch limit of 10,000 documents.");
-                // Reverted to returning empty list to avoid breaking existing clients (biocache-service, etc)
-                return new ArrayList<>();
-            } else if ((page - 1) * pageSize + pageSize > 10000) {
-                throw new IllegalArgumentException("Page size exceeds ElasticSearch limit of 10,000 documents.");
-            }
-            
-            if (page < 1 || validIDs.isEmpty()) {
-                return new ArrayList<>();
-            }
-
-            Boolean isAdmin = principal != null ? (authUtils.hasAdminRole(authUtils.getUserProfile(principal)) || authUtils.hasInternalScope(authUtils.getUserProfile(principal))) : false;
-            ArrayList<Filter> tempFilters = new ArrayList<>();
-
             String sortField = (sort != null && !sort.isBlank()) ? sort : "scientificName";
             String sortDir = (dir != null && !dir.isBlank()) ? dir : "asc";
-            
-            // Create Spring Data Sort
-            Sort springSort = 
-                Sort.by(
-                    "asc".equalsIgnoreCase(sortDir) 
-                        ? Sort.Direction.ASC 
-                        : Sort.Direction.DESC,
-                    sortField
-                );
 
-            // Create Pageable with Sort
-            Pageable pageableRequest = PageRequest.of(page - 1, pageSize, springSort);
-            NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
-            builder.withQuery(
-                    q -> q.bool(
-                            bq -> {
-                                ElasticUtils.buildQuery(ElasticUtils.cleanRawQuery(searchQuery), validIDs, null, isAdmin, null, tempFilters, bq);
-                                ElasticUtils.restrictFields(searchQuery, restrictedFields, bq);
-                                return bq;
-                            }));
+            List<String> validListIDs = validIDs.stream()
+                    .map(FieldValue::stringValue)
+                    .collect(Collectors.toList());
+            String query = (searchQuery != null && !searchQuery.isBlank()) ? searchQuery : ".*";
+            Sort pageableSort = Sort.by(
+                sortDir.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC,
+                sortField
+            );
+            Pageable pageable = PageRequest.of(page, pageSize, pageableSort);
+            // For pagination, we use the repository method directly for better performance
+            Page<SpeciesListItem> itemsPage = speciesListItemMongoRepository.findNextBatch(validListIDs, query, pageable);
+            List<SpeciesListItem> items = itemsPage.getContent();
 
-            NativeQuery query = builder.build();
-            SearchHits<SpeciesListIndex> results =
-                    elasticsearchOperations.search(
-                            query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
-                    
-            if (!results.isEmpty()) {
-                SpeciesListIndex firstItem = results.getSearchHit(0).getContent();
-                logger.debug("First item: " + firstItem);
-            }
-
-            List<SpeciesListItem> speciesListItems =
-                    ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
-
-            return speciesListItems;
+            return items;
         }
 
         return new ArrayList<>();
@@ -397,5 +413,908 @@ public class SearchHelperService {
         }
         
         return accessCriteria;
+    }
+
+    // Methods added from GraphQL refactoring - Dec 2025
+
+    /**
+     * Main search method for species lists with permission-aware filtering
+     */
+    public Page<SpeciesList> searchSpeciesLists(
+            ListSearchContext context, 
+            Pageable pageable) {
+        
+        // Build Elasticsearch query
+        NativeQueryBuilder builder = NativeQuery.builder()
+            .withPageable(PageRequest.of(0, 1)); // Initial query for aggregations only
+        
+        // Apply query with permission filters
+        builder.withQuery(q -> q.bool(bq -> {
+            buildListSearchQuery(context, bq);
+            return bq;
+        }));
+        
+        // Add aggregations for list counting and scoring
+        addListAggregations(builder);
+        
+        // Execute search
+        SearchHits<SpeciesListIndex> results = elasticsearchOperations.search(
+            builder.build(), 
+            SpeciesListIndex.class
+        );
+        
+        // Extract list IDs and scores
+        Map<String, Long> listCounts = extractListCounts(results);
+        Map<String, Double> listScores = extractListScores(results);
+        long totalLists = extractTotalListCount(results);
+        
+        // Fetch list metadata
+        List<SpeciesList> lists = fetchAndEnrichLists(listCounts, listScores, context);
+        
+        // Apply pagination
+        return paginateResults(lists, pageable, totalLists);
+    }
+
+    /**
+     * Get facets for species lists with permission-aware filtering
+     */
+    public List<Facet> getFacetsForSpeciesLists(ListSearchContext context) {
+        NativeQueryBuilder builder = NativeQuery.builder();
+        
+        // Apply query with permission filters
+        builder.withQuery(q -> q.bool(bq -> {
+            buildListSearchQuery(context, bq);
+            return bq;
+        }));
+        
+        // Add facet aggregations
+        addFacetAggregations(builder);
+        
+        // Execute search
+        SearchHits<SpeciesListIndex> results = elasticsearchOperations.search(
+            builder.build(),
+            SpeciesListIndex.class
+        );
+        
+        // Process and return facets
+        return processFacetResults(results);
+    }
+
+    /**
+     * Builds the core Elasticsearch query with permission-aware filters
+     */
+    private void buildListSearchQuery(
+            ListSearchContext context, 
+            BoolQuery.Builder bq) {
+        
+        // Add search query if present
+        if (StringUtils.isNotBlank(context.getSearchQuery())) {
+            if ("relevance".equalsIgnoreCase(context.getSort())) {
+                ElasticUtils.buildListSearchQuery(
+                    context.getSearchQuery(), 
+                    context.getUserId(),
+                    context.isAdmin(), 
+                    null, 
+                    context.getFilters(), 
+                    bq
+                );
+            } else {
+                List<FieldValue> emptyList = new ArrayList<>();
+                ElasticUtils.buildQuery(
+                    context.getSearchQuery(),
+                    emptyList,
+                    context.getUserId(),
+                    context.isAdmin(),
+                    null,
+                    context.getFilters(),
+                    bq
+                );
+            }
+        } else {
+            List<FieldValue> emptyList = new ArrayList<>();
+            ElasticUtils.buildQuery(
+                "",
+                emptyList,
+                context.getUserId(),
+                context.isAdmin(),
+                null,
+                context.getFilters(),
+                bq
+            );
+        }
+        
+        // Apply permission-based filters
+        applyPermissionFilters(context, bq);
+    }
+
+    /**
+     * Applies permission-based filters to the query
+     */
+    private void applyPermissionFilters(
+            ListSearchContext context, 
+            BoolQuery.Builder bq) {
+        
+        // Check if isPrivate filter is explicitly set
+        boolean hasPrivateFilter = context.getFilters().stream()
+            .anyMatch(f -> "isPrivate".equals(f.getKey()));
+        
+        if (hasPrivateFilter) {
+            // Filter is explicitly set, let it be handled by ElasticUtils
+            return;
+        }
+        
+        // Apply default permission logic
+        if (!context.isAuthenticated()) {
+            // Unauthenticated: only public lists
+            bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
+            
+        } else if (context.isViewingOwnLists()) {
+            // Viewing own lists: show all their lists (public and private)
+            bq.filter(f -> f.term(t -> t.field("owner").value(context.getUserId())));
+            
+        } else if (!context.isAdmin()) {
+            // Authenticated non-admin: only public lists (unless viewing own)
+            bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
+            
+        } else if (context.isAdmin() && context.getUserId() != null) {
+            // Admin viewing specific user's lists
+            bq.filter(f -> f.term(t -> t.field("owner").value(context.getUserId())));
+        }
+        // Admin without userId specified: see all lists (no filter)
+    }
+
+    /**
+     * Adds aggregations for list counting and scoring
+     */
+    private void addListAggregations(NativeQueryBuilder builder) {
+        // Total list count
+        builder.withAggregation(
+            "list_count",
+            Aggregation.of(a -> a.cardinality(
+                ca -> ca.field(SPECIES_LIST_ID + ".keyword")
+            ))
+        );
+        
+        // List IDs with max scores
+        builder.withAggregation(
+            SPECIES_LIST_ID,
+            Aggregation.of(a -> a
+                .terms(ta -> ta
+                    .field(SPECIES_LIST_ID + ".keyword")
+                    .size(MAX_LIST_ENTRIES)
+                )
+                .aggregations("max_score",
+                    Aggregation.of(ma -> ma.max(m -> m.script(s -> s.source("_score"))))
+                )
+            )
+        );
+    }
+
+    /**
+     * Adds facet aggregations with distinct list counts
+     */
+    private void addFacetAggregations(NativeQueryBuilder builder) {
+        List<String> facetFields = Arrays.asList(
+            "isAuthoritative", "listType", "isBIE", "isSDS", 
+            "isPrivate", "hasRegion", "tags", "isThreatened", 
+            "isInvasive", "licence"
+        );
+        
+        Set<String> booleanFields = Set.of(
+            "isAuthoritative", "isBIE", "isSDS", "hasRegion",
+            "isThreatened", "isInvasive", "isPrivate"
+        );
+        
+        for (String field : facetFields) {
+            String esField = booleanFields.contains(field) 
+                ? field 
+                : field + ".keyword";
+            
+            builder.withAggregation(
+                field,
+                Aggregation.of(a -> a
+                    .terms(ta -> ta.field(esField).size(50))
+                    .aggregations("distinct_list_count",
+                        Aggregation.of(ca -> ca.cardinality(
+                            c -> c.field(SPECIES_LIST_ID + ".keyword")
+                        ))
+                    )
+                )
+            );
+        }
+    }
+
+    /**
+     * Extracts list counts from aggregation results
+     */
+    private Map<String, Long> extractListCounts(SearchHits<SpeciesListIndex> results) {
+        ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
+        if (agg == null) return Collections.emptyMap();
+        
+        return agg.aggregations().stream()
+            .filter(a -> SPECIES_LIST_ID.equals(a.aggregation().getName()))
+            .findFirst()
+            .map(a -> a.aggregation().getAggregate().sterms().buckets().array())
+            .orElse(Collections.emptyList())
+            .stream()
+            .collect(Collectors.toMap(
+                b -> b.key().stringValue(),
+                MultiBucketBase::docCount
+            ));
+    }
+
+    /**
+     * Extracts relevance scores from aggregation results
+     */
+    private Map<String, Double> extractListScores(SearchHits<SpeciesListIndex> results) {
+        ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
+        if (agg == null) return Collections.emptyMap();
+        
+        return agg.aggregations().stream()
+            .filter(a -> SPECIES_LIST_ID.equals(a.aggregation().getName()))
+            .findFirst()
+            .map(a -> a.aggregation().getAggregate().sterms().buckets().array())
+            .orElse(Collections.emptyList())
+            .stream()
+            .collect(Collectors.toMap(
+                b -> b.key().stringValue(),
+                b -> {
+                    Aggregate maxScore = b.aggregations().get("max_score");
+                    double score = maxScore != null ? maxScore.max().value() : 0.0;
+                    return (Double.isInfinite(score) || Double.isNaN(score)) ? 0.0 : score;
+                }
+            ));
+    }
+
+    /**
+     * Extracts total list count from aggregation results
+     */
+    private long extractTotalListCount(SearchHits<SpeciesListIndex> results) {
+        ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
+        if (agg == null) return 0;
+        
+        return agg.aggregations().stream()
+            .filter(a -> "list_count".equals(a.aggregation().getName()))
+            .findFirst()
+            .map(a -> a.aggregation().getAggregate().cardinality().value())
+            .orElse(0L);
+    }
+
+    /**
+     * Fetches list metadata and enriches with counts and scores
+     */
+    private List<SpeciesList> fetchAndEnrichLists(
+            Map<String, Long> counts,
+            Map<String, Double> scores,
+            ListSearchContext context) {
+        
+        if (counts.isEmpty()) return Collections.emptyList();
+        
+        List<SpeciesList> lists = new ArrayList<>();
+        speciesListMongoRepository.findAllById(counts.keySet())
+            .forEach(list -> {
+                list.setRowCount(counts.get(list.getId()).intValue());
+                lists.add(list);
+            });
+        
+        // Sort lists
+        lists.sort(buildComparator(context.getSort(), context.getDir(), scores));
+        
+        return lists;
+    }
+
+    /**
+     * Builds comparator for sorting lists
+     */
+    private Comparator<SpeciesList> buildComparator(
+            String sort,
+            String dir,
+            Map<String, Double> scores) {
+        
+        boolean ascending = "asc".equalsIgnoreCase(dir);
+        Comparator<SpeciesList> comparator;
+        
+        switch (sort) {
+            case "relevance":
+                comparator = Comparator
+                    .comparing((SpeciesList list) -> scores.getOrDefault(list.getId(), 0.0))
+                    .thenComparing(list -> 
+                        list.getTitle() != null ? list.getTitle() : "", 
+                        String.CASE_INSENSITIVE_ORDER
+                    );
+                return ascending ? comparator : comparator.reversed();
+                
+            case "title":
+                comparator = Comparator.comparing(
+                    SpeciesList::getTitle, 
+                    String.CASE_INSENSITIVE_ORDER
+                );
+                break;
+                
+            case "listType":
+                comparator = ascending
+                    ? Comparator.comparing(
+                        SpeciesList::getListType,
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)
+                    )
+                    : Comparator.comparing(
+                        SpeciesList::getListType,
+                        Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER)
+                    );
+                break;
+                
+            case "rowCount":
+                comparator = Comparator.comparing(SpeciesList::getRowCount);
+                break;
+                
+            case "lastUpdated":
+            default:
+                comparator = Comparator.comparing(SpeciesList::getLastUpdated);
+                break;
+        }
+        
+        return ascending ? comparator : comparator.reversed();
+    }
+
+    /**
+     * Applies pagination to results
+     */
+    private Page<SpeciesList> paginateResults(
+            List<SpeciesList> lists,
+            Pageable pageable,
+            long total) {
+        
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), lists.size());
+        
+        List<SpeciesList> page = lists.subList(start, end);
+        return new PageImpl<>(page, pageable, total);
+    }
+
+    /**
+     * Processes facet aggregation results
+     */
+    private List<Facet> processFacetResults(SearchHits<SpeciesListIndex> results) {
+        ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
+        if (agg == null) return Collections.emptyList();
+        
+        List<Facet> facets = new ArrayList<>();
+        
+        for (ElasticsearchAggregation aggResult : agg.aggregations()) {
+            String fieldName = aggResult.aggregation().getName();
+            Aggregate aggregate = aggResult.aggregation().getAggregate();
+            
+            Facet facet = new Facet();
+            facet.setKey(fieldName);
+            facet.setCounts(new ArrayList<>());
+            
+            if (aggregate.isSterms()) {
+                // String terms
+                aggregate.sterms().buckets().array().forEach(bucket -> {
+                    long distinctCount = getDistinctListCount(bucket.aggregations());
+                    facet.getCounts().add(
+                        new FacetCount(bucket.key().stringValue(), distinctCount)
+                    );
+                });
+            } else if (aggregate.isLterms()) {
+                // Boolean terms
+                aggregate.lterms().buckets().array().forEach(bucket -> {
+                    long distinctCount = getDistinctListCount(bucket.aggregations());
+                    String key = bucket.key() == 1 ? "true" : "false";
+                    facet.getCounts().add(new FacetCount(key, distinctCount));
+                });
+            }
+            
+            if (!facet.getCounts().isEmpty()) {
+                facets.add(facet);
+            }
+        }
+        
+        return facets;
+    }
+
+    /**
+     * Extracts distinct list count from nested aggregation
+     */
+    private long getDistinctListCount(Map<String, Aggregate> aggregations) {
+        Aggregate distinctCount = aggregations.get("distinct_list_count");
+        return distinctCount != null ? distinctCount.cardinality().value() : 0;
+    }
+
+    // Helpers for list view graphql methods
+
+    /**
+     * Search items within a specific species list
+     */
+    public Page<SpeciesListItem> searchSingleSpeciesList(
+            SingleListSearchContext context,
+            Pageable pageable) {
+        
+        // Build Elasticsearch query
+        NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageable);
+        
+        // Apply query with filters
+        builder.withQuery(q -> q.bool(bq -> {
+            buildSingleListQuery(context, bq);
+            return bq;
+        }));
+        
+        // Apply sorting
+        applySorting(builder, context.getSort(), context.getDir());
+        
+        // Execute search
+        NativeQuery query = builder.build();
+        SearchHits<SpeciesListIndex> results = elasticsearchOperations.search(
+            query,
+            SpeciesListIndex.class,
+            IndexCoordinates.of("species-lists")
+        );
+        
+        // Convert and return results
+        List<SpeciesListItem> items = convertSearchResults(results);
+        return new PageImpl<>(items, pageable, results.getTotalHits());
+    }
+
+    /**
+     * Get facets for a specific species list
+     */
+    public List<Facet> getFacetsForSingleSpeciesList(
+            SingleListSearchContext context,
+            List<String> facetFields) {
+        
+        NativeQueryBuilder builder = NativeQuery.builder();
+        
+        // Build query without filters (for base aggregations)
+        builder.withQuery(q -> q.bool(bq -> {
+            buildBaseListQuery(context, bq);
+            return bq;
+        }));
+        
+        // Add post-filter if filters are present
+        if (!context.getFilters().isEmpty()) {
+            builder.withFilter(q -> q.bool(bq -> {
+                buildSingleListQuery(context, bq);
+                return bq;
+            }));
+        }
+        
+        // Add aggregations for facet fields
+        addSingleListFacetAggregations(builder, facetFields);
+        
+        // Add classification aggregations
+        addClassificationAggregations(builder);
+        
+        // Add property key aggregations
+        addPropertyAggregations(builder);
+        
+        // Execute search
+        SearchHits<SpeciesListIndex> results = elasticsearchOperations.search(
+            builder.build(),
+            SpeciesListIndex.class
+        );
+        
+        // Process and return facets
+        return processSingleListFacets(results, facetFields, context);
+    }
+
+    /**
+     * Builds the base query for a specific list (list ID + search query only)
+     * Used for facet aggregations where we want all items before filtering
+     */
+    private void buildBaseListQuery(
+            SingleListSearchContext context,
+            BoolQuery.Builder bq) {
+        
+        // Filter by list ID
+        bq.must(m -> m.term(t -> t.field(SPECIES_LIST_ID).value(context.getSpeciesListId())));
+        
+        // Add search query if present
+        if (StringUtils.isNotBlank(context.getSearchQuery())) {
+            bq.must(m -> m.queryString(qs -> qs.query(context.getSearchQuery())));
+        }
+    }
+
+    /**
+     * Builds the full query including filters
+     */
+    private void buildSingleListQuery(
+        SingleListSearchContext context,
+        BoolQuery.Builder bq) {
+
+        // Filter by the specific list ID
+        bq.must(m -> m.term(t -> t.field(SPECIES_LIST_ID).value(context.getSpeciesListId())));
+        
+        // Add search query if present
+        if (StringUtils.isNotBlank(context.getSearchQuery())) {
+            final String cleanQuery = context.getSearchQuery();
+            
+            // Use simple_query_string for better control with AND operator
+            bq.must(m -> m.simpleQueryString(sqs -> sqs
+                .query(cleanQuery)
+                .fields(List.of(
+                    "scientificName.search^5",
+                    "suppliedName.search^4", 
+                    "vernacularName.search^3",
+                    "classification.scientificName.search^5",
+                    "classification.vernacularName.search^3",
+                    "genus.search^1",
+                    "classification.genus.search^1",
+                    "family.search^0.5",
+                    "classification.family.search^0.5"
+                ))
+                .defaultOperator(co.elastic.clients.elasticsearch._types.query_dsl.Operator.And)
+            ));
+        }
+        
+        // Apply user-provided filters (but NOT privacy filters - access already validated)
+        if (context.getFilters() != null && !context.getFilters().isEmpty()) {
+            Map<String, List<Filter>> filtersByKey = context.getFilters().stream()
+                    .collect(Collectors.groupingBy(Filter::getKey));
+
+            for (Map.Entry<String, List<Filter>> entry : filtersByKey.entrySet()) {
+                applyFilterGroup(entry.getKey(), entry.getValue(), bq);
+            }
+        }
+    }
+
+    /**
+     * Applies a group of filters (same key) to the query with OR logic for values
+     */
+    private void applyFilterGroup(String field, List<Filter> filters, BoolQuery.Builder bq) {
+        List<String> values = filters.stream()
+                .map(Filter::getValue)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // Handle different field types
+        if (CORE_FIELDS.contains(field) || field.startsWith("classification.")) {
+            // Core fields - apply as boolean should (OR)
+            bq.filter(f -> f.bool(b -> buildOrQuery(b, values, (val, builder) -> {
+                if ("true".equalsIgnoreCase(val) || "false".equalsIgnoreCase(val)) {
+                    return builder.term(t -> t.field(field).value(Boolean.parseBoolean(val)));
+                } else {
+                    return builder.term(t -> t.field(field + ".keyword").value(val));
+                }
+            })));
+        } else {
+            // Property fields - use nested query
+            bq.filter(f -> f.nested(n -> n
+                    .path("properties")
+                    .query(q -> q.bool(b -> {
+                        b.must(m -> m.term(t -> t.field("properties.key.keyword").value(field)));
+                        b.must(m -> m.bool(vb -> buildOrQuery(vb, values, (val, builder) -> 
+                            builder.term(t -> t.field("properties.value.keyword").value(val))
+                        )));
+                        return b;
+                    }))
+            ));
+        }
+    }
+
+    /**
+     * Helper method to build OR logic for a list of values
+     */
+    private BoolQuery.Builder buildOrQuery(
+            BoolQuery.Builder b, 
+            List<String> values, 
+            BiFunction<String, co.elastic.clients.elasticsearch._types.query_dsl.Query.Builder, ObjectBuilder<co.elastic.clients.elasticsearch._types.query_dsl.Query>> termQueryFactory) {
+        
+        for (String value : values) {
+            b.should(s -> termQueryFactory.apply(value, s));
+        }
+        b.minimumShouldMatch("1");
+        return b;
+    }
+
+    /**
+     * Applies sorting to the query
+     */
+    private void applySorting(NativeQueryBuilder builder, String sort, String dir) {
+        SortOrder order = "asc".equalsIgnoreCase(dir) ? SortOrder.Asc : SortOrder.Desc;
+        
+        builder.withSort(s -> s.field(
+            new FieldSort.Builder()
+                .field(sort)
+                .order(order)
+                .build()
+        ));
+    }
+
+    /**
+     * Adds facet aggregations for the specified fields
+     */
+    private void addSingleListFacetAggregations(
+            NativeQueryBuilder builder,
+            List<String> facetFields) {
+        
+        if (facetFields == null || facetFields.isEmpty()) {
+            return;
+        }
+        
+        for (String field : facetFields) {
+            String esField = getPropertiesFacetField(field);
+            builder.withAggregation(
+                field,
+                Aggregation.of(a -> a.terms(ta -> ta.field(esField).size(30)))
+            );
+        }
+    }
+
+    /**
+     * Adds classification field aggregations
+     */
+    private void addClassificationAggregations(NativeQueryBuilder builder) {
+        List<String> classificationFields = Arrays.asList(
+            "classification.family",
+            "classification.order",
+            "classification.class",
+            "classification.phylum",
+            "classification.kingdom",
+            "classification.speciesSubgroup",
+            "classification.rank",
+            "classification.vernacularName",
+            "classification.matchType"
+        );
+        
+        for (String field : classificationFields) {
+            builder.withAggregation(
+                field,
+                Aggregation.of(a -> a.terms(ta -> ta.field(field + ".keyword").size(500)))
+            );
+        }
+    }
+
+    /**
+     * Adds property key aggregations for dynamic properties
+     */
+    private void addPropertyAggregations(NativeQueryBuilder builder) {
+        builder.withAggregation(
+            "properties_keys",
+            Aggregation.of(a -> a
+                .nested(na -> na.path("properties"))
+                .aggregations("key_counts",
+                    sa -> sa.terms(ta -> ta.field("properties.key.keyword").size(100))
+                )
+            )
+        );
+    }
+
+    /**
+     * Processes facet results including property facets
+     */
+    private List<Facet> processSingleListFacets(
+            SearchHits<SpeciesListIndex> results,
+            List<String> facetFields,
+            SingleListSearchContext context) {
+        
+        ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
+        if (agg == null) {
+            return Collections.emptyList();
+        }
+        
+        List<Facet> facets = new ArrayList<>();
+        
+        // Process standard facets (includes classification fields)
+        List<String> allFields = new ArrayList<>();
+        if (facetFields != null) {
+            allFields.addAll(facetFields);
+        }
+        
+        // Add classification fields
+        allFields.addAll(Arrays.asList(
+            "classification.family", "classification.order", "classification.class",
+            "classification.phylum", "classification.kingdom", "classification.speciesSubgroup",
+            "classification.rank", "classification.vernacularName", "classification.matchType"
+        ));
+        
+        for (String field : allFields) {
+            ElasticsearchAggregation aggResult = agg.aggregations().stream()
+                .filter(a -> field.equals(a.aggregation().getName()))
+                .findFirst()
+                .orElse(null);
+            
+            if (aggResult != null && aggResult.aggregation().getAggregate().isSterms()) {
+                Facet facet = createFacetFromTerms(field, 
+                    aggResult.aggregation().getAggregate().sterms().buckets().array());
+                if (!facet.getCounts().isEmpty()) {
+                    facets.add(facet);
+                }
+            }
+        }
+        
+        // Process property facets
+        List<Facet> propertyFacets = processPropertyFacets(agg, context);
+        facets.addAll(propertyFacets);
+        
+        return facets;
+    }
+
+    /**
+     * Creates a facet from term aggregation results
+     */
+    private Facet createFacetFromTerms(String fieldName, List<StringTermsBucket> buckets) {
+        Facet facet = new Facet();
+        facet.setKey(fieldName);
+        facet.setCounts(new ArrayList<>());
+        
+        for (StringTermsBucket bucket : buckets) {
+            facet.getCounts().add(
+                new FacetCount(bucket.key().stringValue(), bucket.docCount())
+            );
+        }
+        
+        return facet;
+    }
+
+    /**
+     * Processes property facets by identifying keys and their values
+     */
+    private List<Facet> processPropertyFacets(
+            ElasticsearchAggregations agg,
+            SingleListSearchContext context) {
+        
+        List<Facet> propertyFacets = new ArrayList<>();
+        
+        // Extract property keys
+        List<String> propertyKeys = extractPropertyKeys(agg);
+        
+        // For each property key, get its values
+        for (String propertyKey : propertyKeys) {
+            Facet propertyFacet = getPropertyValueFacet(propertyKey, context);
+            if (propertyFacet != null && !propertyFacet.getCounts().isEmpty()) {
+                propertyFacets.add(propertyFacet);
+            }
+        }
+        
+        return propertyFacets;
+    }
+
+    /**
+     * Extracts property keys from the properties_keys aggregation
+     */
+    private List<String> extractPropertyKeys(ElasticsearchAggregations agg) {
+        List<String> keys = new ArrayList<>();
+        
+        ElasticsearchAggregation propertiesAgg = agg.aggregations().stream()
+            .filter(a -> "properties_keys".equals(a.aggregation().getName()))
+            .findFirst()
+            .orElse(null);
+        
+        if (propertiesAgg == null) {
+            return keys;
+        }
+        
+        Aggregate nestedAgg = propertiesAgg.aggregation().getAggregate();
+        if (nestedAgg.isNested()) {
+            Aggregate keyCountsAgg = nestedAgg.nested().aggregations().get("key_counts");
+            if (keyCountsAgg != null && keyCountsAgg.isSterms()) {
+                keyCountsAgg.sterms().buckets().array()
+                    .forEach(bucket -> keys.add(bucket.key().stringValue()));
+            }
+        }
+        
+        return keys;
+    }
+
+    /**
+     * Gets facet counts for a specific property key by executing a separate query
+     */
+    private Facet getPropertyValueFacet(String propertyKey, SingleListSearchContext context) {
+        NativeQueryBuilder builder = NativeQuery.builder();
+        
+        // Build base query (list ID + search query)
+        builder.withQuery(q -> q.bool(bq -> {
+            buildBaseListQuery(context, bq);
+            return bq;
+        }));
+        
+        // Add nested aggregation for this specific property key's values
+        builder.withAggregation(
+            propertyKey + "_values",
+            Aggregation.of(a -> a
+                .nested(na -> na.path("properties"))
+                .aggregations("filtered_values", 
+                    sa -> sa
+                        .filter(f -> f.term(t -> t
+                            .field("properties.key.keyword")
+                            .value(propertyKey)
+                        ))
+                        .aggregations("value_counts",
+                            va -> va.terms(ta -> ta
+                                .field("properties.value.keyword")
+                                .size(100)
+                            )
+                        )
+                )
+            )
+        );
+        
+        // Execute query
+        SearchHits<SpeciesListIndex> results = elasticsearchOperations.search(
+            builder.build(),
+            SpeciesListIndex.class
+        );
+        
+        // Extract results
+        return extractPropertyValueFacet(propertyKey, results);
+    }
+
+    /**
+     * Extracts property value facet from query results
+     */
+    private Facet extractPropertyValueFacet(String propertyKey, SearchHits<SpeciesListIndex> results) {
+        ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
+        if (agg == null) {
+            return null;
+        }
+        
+        ElasticsearchAggregation keyValueAgg = agg.aggregations().stream()
+            .filter(a -> (propertyKey + "_values").equals(a.aggregation().getName()))
+            .findFirst()
+            .orElse(null);
+        
+        if (keyValueAgg == null) {
+            return null;
+        }
+        
+        Aggregate nestedAgg = keyValueAgg.aggregation().getAggregate();
+        if (!nestedAgg.isNested()) {
+            return null;
+        }
+        
+        Aggregate filteredValuesAgg = nestedAgg.nested().aggregations().get("filtered_values");
+        if (filteredValuesAgg == null || !filteredValuesAgg.isFilter()) {
+            return null;
+        }
+        
+        Aggregate valueCountsAgg = filteredValuesAgg.filter().aggregations().get("value_counts");
+        if (valueCountsAgg == null || !valueCountsAgg.isSterms()) {
+            return null;
+        }
+        
+        List<StringTermsBucket> valueBuckets = valueCountsAgg.sterms().buckets().array();
+        if (valueBuckets.isEmpty()) {
+            return null;
+        }
+        
+        Facet facet = new Facet();
+        facet.setKey(propertyKey); 
+        facet.setCounts(new ArrayList<>());
+        
+        for (StringTermsBucket bucket : valueBuckets) {
+            facet.getCounts().add(
+                new FacetCount(bucket.key().stringValue(), bucket.docCount())
+            );
+        }
+        
+        return facet;
+    }
+
+    /**
+     * Converts search results to SpeciesListItem list
+     */
+    private List<SpeciesListItem> convertSearchResults(SearchHits<SpeciesListIndex> results) {
+        Object unwrapped = SearchHitSupport.unwrapSearchHits(results);
+        
+        if (!(unwrapped instanceof List)) {
+            throw new IllegalStateException("unwrapSearchHits did not return a List");
+        }
+        
+        @SuppressWarnings("unchecked")
+        List<SpeciesListIndex> indexes = (List<SpeciesListIndex>) unwrapped;
+        
+        return ElasticUtils.convertList(indexes);
+    }
+
+    /**
+     * Helper method to determine the correct Elasticsearch field name
+     */
+    private String getPropertiesFacetField(String filter) {
+        if (CORE_FIELDS.contains(filter) || 
+            filter.startsWith("classification.") || 
+            filter.startsWith("licence")) {
+            return filter + ".keyword";
+        }
+        return "properties." + filter + ".keyword";
     }
 }

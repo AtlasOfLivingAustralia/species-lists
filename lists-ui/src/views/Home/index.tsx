@@ -5,7 +5,6 @@ import {
   Box,
   Button,
   Center,
-  Checkbox,
   Collapse,
   Container,
   em,
@@ -13,7 +12,6 @@ import {
   Group,
   Pagination,
   Paper,
-  SegmentedControl,
   Select,
   Skeleton,
   Space,
@@ -22,7 +20,7 @@ import {
   Text,
   TextInput,
   Title,
-  Tooltip,
+  Tooltip
 } from '@mantine/core';
 import {
   useDebouncedValue,
@@ -45,7 +43,7 @@ import {
   faEye,
   faEyeSlash,
   faMagnifyingGlass,
-  faXmark,
+  faXmark
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
@@ -82,10 +80,14 @@ const sortField = [
   'rowCount_asc',
 ];
 
-function Home() {
+const Home = ({ routeId }: { routeId: string }) => {
   useDocumentTitle('ALA Species Lists');
   const isMobile = useMediaQuery(`(max-width: ${em(750)})`) || false;
   const intl = useIntl();
+  const ala = useALA();
+  const [isMyListsPage, setIsMyListsPage] = useState<boolean>(false);
+  const [isAdminListPage, setIsAdminListPage] = useState<boolean>(false);
+  const [inputSearchValue, setSearchInputValue] = useState('');
 
   // Search
   const [search, setSearch] = useQueryState<string>(
@@ -105,7 +107,7 @@ function Home() {
   );
   const [sort, setSort] = useQueryState<string>(
     'sort',
-    parseAsString.withDefault('relevance')
+    parseAsString.withDefault('lastUpdated') // Default to newest
   );
   const [dir, setDir] = useQueryState<string>(
     'dir',
@@ -116,14 +118,28 @@ function Home() {
     parseAsString.withDefault('public')
   );
   // Shows the user's lists (my lists) when true
-  const [isUser, setIsUser] = useQueryState<boolean>(
-    'isUser',
-    parseAsBoolean.withDefault(false)
-  );
-  const [filters, setFilters] = useQueryState<KV[]>(
+  const [isUser, setIsUser] = useState<boolean>(isMyListsPage);
+  // const [filters, setFilters] = useQueryState<KV[]>(
+  //   'filters',
+  //   parseAsFilters // Note: adding `.withDefault([])` causes infinite loop (bug in nuqs v2.4.1 ??)
+  // );
+  const [filtersRaw, setFiltersRaw] = useQueryState<KV[]>(
     'filters',
-    parseAsFilters // Note: adding `.withDefault([])` causes infinite loop (bug in nuqs v2.4.1 ??)
+    parseAsFilters
   );
+
+  // Normalize filters to always be an array
+  const filters = useMemo(() => filtersRaw || [], [filtersRaw]);
+  const setFilters = useCallback((value: KV[] | ((prev: KV[] | null) => KV[] | null)) => {
+    if (typeof value === 'function') {
+      setFiltersRaw((prev) => {
+        const result = value(prev);
+        return result && result.length > 0 ? result : null;
+      });
+    } else {
+      setFiltersRaw(value && value.length > 0 ? value : null);
+    }
+  }, [setFiltersRaw]);
 
   // Internal state (not driven by search params)
   const [refresh, setRefresh] = useState<boolean>(false);
@@ -135,7 +151,22 @@ function Home() {
   );
   const toggleFilters = () => setHideFilters((o) => !o);
 
-  const ala = useALA();
+  // Handle search value changes and sort logic
+  const handleSearchChange = useCallback((newValue: string) => {
+    setPage(0); // Reset 'page' when search is changed
+    setSearch(newValue);
+    // If user types in search, set sort to relevance unless already set
+    if (newValue && `${sort}_${dir}` !== 'relevance_desc') {
+      setSort('relevance');
+      setDir('desc');
+    }
+    // If search is cleared, reset to newest
+    if (!newValue && `${sort}_${dir}` === 'relevance_desc') {
+      setSort('lastUpdated');
+      setDir('desc');
+    }
+  }, [sort, dir, setPage, setSearch, setSort, setDir]);
+
   const { data, error, loading, update } = useGQLQuery<HomeQuery>(
     queries.QUERY_LISTS_SEARCH,
     {
@@ -145,15 +176,26 @@ function Home() {
       dir,
       size: size,
       filters,
-      isPrivate: view === 'private',
+      isPrivate: isMyListsPage || isAdminListPage ? undefined : view === 'private',
       ...(isUser ? { userId: ala.userid } : {}),
     },
     { clearDataOnUpdate: false, token: ala.token }
   );
 
+  useEffect(() => {
+    setIsMyListsPage(routeId === 'my-lists');
+    setIsAdminListPage(routeId === 'admin-lists');
+    setIsUser(routeId === 'my-lists');
+  }, [routeId]);
+
+  useEffect(() => {
+    setSearchInputValue(search);
+  }, [search]);
+
   // Destructure results & calculate the real page offset
   const { totalElements, totalPages, content } = data?.lists || {};
   const realPage = page + 1;
+  const filtersKey = JSON.stringify(filters);
 
   // Update the search query
   useEffect(() => {
@@ -163,11 +205,12 @@ function Home() {
       sort,
       dir,
       size,
-      filters,
-      isPrivate: view === 'private',
+      isPrivate: isMyListsPage || isAdminListPage ? undefined : view === 'private',
+      filters: filters.length > 0 ? filters : [], // Always pass an array
       ...(isUser ? { userId: ala.userid } : {}),
     });
-  }, [page, size, searchDebounced, sort, dir, filters, refresh, view, isUser]);
+  }, [page, size, searchDebounced, sort, dir, filtersKey, refresh, view, isUser, isMyListsPage, isAdminListPage]);
+  // Note: using filtersKey instead of filters in dependencies
 
   // Keep the current page in check
   useEffect(() => {
@@ -183,7 +226,7 @@ function Home() {
   const handleRetry = useCallback(() => {
     setPage(0);
     setSize(10);
-    setSort('relevance_desc');
+    setSort('relevance');
     setDir('desc');
     setSearch('');
     setView('public');
@@ -230,6 +273,18 @@ function Home() {
     setFilters([]);
   }, [filters]);
 
+  // Handler for the Enter key press
+  interface KeyDownEvent extends React.KeyboardEvent<HTMLInputElement> {}
+
+  const handleKeyDown = (event: KeyDownEvent): void => {
+    // Check if the key pressed is the Enter key
+    if (event.key === 'Enter') {
+      // Prevent the default form submission behavior (if the input is inside a form)
+      event.preventDefault(); 
+      handleSearchChange(inputSearchValue);
+    }
+  };
+
   const labels = useMemo(
     () => [
       {
@@ -269,131 +324,164 @@ function Home() {
           </Grid.Col>
           <Grid.Col span={12}>
             <Title order={3} classNames={{ root: classes.title }}>
+              {isMyListsPage ? (
               <FormattedMessage
-                id='lists.title'
+                id='lists.myLists.title'
+                defaultMessage='My Species Lists'
+              />
+              ) : (
+              <FormattedMessage
+                id='lists.home.title'
                 defaultMessage='Species Lists'
               />
+              )}
+              {ala.isAdmin && !isMyListsPage && isAdminListPage && (
+                <Text component='span' inherit opacity={0.7} c='flamingo'>
+                  {' '}
+                  <FormattedMessage
+                    id='lists.home.admin.title'
+                    defaultMessage='(Admin view)'
+                  />
+                </Text>
+              )}
             </Title>
           </Grid.Col>
-          <Grid.Col span={9}>
-            <Title order={5} classNames={{ root: classes.subtitle }}>
-              <FormattedMessage
-                id='lists.subtitle'
-                defaultMessage='A tool for finding species checklists'
-              />
-            </Title>
-          </Grid.Col>
-          <Grid.Col
-            span={3}
-            style={{ display: 'flex', justifyContent: 'flex-end' }}
-          >
-            <Tooltip
-              label={intl.formatMessage({ id: 'openapi.button.title' })}
-              position='left'
-              withArrow
-              multiline
-              w={200}
-              opacity={0.8}
-            >
-              <Button
-                variant='default'
-                radius='xl'
-                component={Link}
-                to={import.meta.env.VITE_API_BASEURL}
-                target='openapi'
-                rel='noopener noreferrer'
-                title={intl.formatMessage({ id: 'openapi.button.title' })}
-                aria-label={intl.formatMessage({ id: 'openapi.button.title' })}
-                leftSection={<FontAwesomeIcon icon={faCode} />}
+          {location.pathname !== '/my-lists' && (
+            <>
+              <Grid.Col span={isMobile ? 12 : 9}>
+                <Title order={5} classNames={{ root: classes.subtitle }}>
+                  <FormattedMessage
+                    id='lists.subtitle'
+                    defaultMessage='A tool for finding species checklists'
+                  />
+                </Title>
+              </Grid.Col>
+              <Grid.Col
+                span={isMobile ? 12 : 3}
+                style={{ display: 'flex', justifyContent: 'flex-end' }}
               >
-                <FormattedMessage
-                  id='openapi.button.label'
-                  defaultMessage='OpenAPI'
-                />
-              </Button>
-            </Tooltip>
-          </Grid.Col>
+                <Tooltip
+                  label={intl.formatMessage({ id: 'openapi.button.title' })}
+                  position='left'
+                  withArrow
+                  multiline
+                  w={200}
+                  opacity={0.8}
+                >
+                  <Button
+                    variant='default'
+                    radius='xl'
+                    component={Link}
+                    to={import.meta.env.VITE_API_BASEURL}
+                    target='openapi'
+                    rel='noopener noreferrer'
+                    title={intl.formatMessage({ id: 'openapi.button.title' })}
+                    aria-label={intl.formatMessage({ id: 'openapi.button.title' })}
+                    leftSection={<FontAwesomeIcon icon={faCode} />}
+                  >
+                    <FormattedMessage
+                      id='openapi.button.label'
+                      defaultMessage='OpenAPI'
+                    />
+                  </Button>
+                </Tooltip>
+              </Grid.Col>
+            </>
+          )}
         </Grid>
       </Container>
       <Container fluid mt='lg'>
         <Grid>
-          <Grid.Col span={12}>
-            <Group>
+          <Grid.Col span={isMobile ? 12 : 7}>
+            <Group justify={isMobile ? 'flex-start' : 'flex-end'}>
               {!isMobile && (
                 <ToggleFiltersButton
                   toggleFilters={toggleFilters}
                   hidefilters={hidefilters}
                 />
               )}
-              <TextInput
-                style={{ flexGrow: 1 }}
-                disabled={!data || hasError}
-                value={search}
-                onChange={(event) => {
-                  setPage(0); // Reset 'page' when search is changed
-                  setSearch(event.currentTarget.value);
-                }}
-                placeholder={intl.formatMessage({
-                  id: 'search.input.placeholder',
-                  defaultMessage: 'Search lists by name or taxa',
-                })}
-                w={200}
-                leftSection={
-                  <FontAwesomeIcon
-                    icon={faMagnifyingGlass}
-                    fontSize={16}
-                    stroke='2'
-                  />
-                }
-                rightSection={
-                  <ActionIcon
-                    radius='sm'
-                    variant='transparent'
-                    size='xs'
-                    title={intl.formatMessage({
-                      id: 'search.clear.label',
-                      defaultMessage: 'Clear search',
-                    })}
-                    aria-label={intl.formatMessage({
-                      id: 'search.clear.label',
-                      defaultMessage: 'Clear search',
-                    })}
-                    disabled={search.length === 0}
-                    onClick={() => setSearch('')}
-                    style={{ marginLeft: 5, marginRight: 10 }}
-                  >
-                    <FontAwesomeIcon icon={faXmark} fontSize={20} />
-                  </ActionIcon>
-                }
-              />
-              {ala.isAuthenticated && (
-                <>
-                  <SegmentedControl
-                    disabled={!data || hasError}
-                    value={view}
-                    onChange={setView}
-                    radius='md'
-                    data={labels}
-                  />
-                  <Checkbox
-                    label={
-                      <FormattedMessage
-                        id='myLists.label'
-                        defaultMessage='My Lists'
-                      />
-                    }
-                    checked={isUser}
-                    size='sm'
-                    onChange={(e) => setIsUser(e.currentTarget.checked)}
-                    classNames={{ label: classes.myListsLabel }}
-                  />
-                </>
-              )}
+              <Group gap={0} wrap="nowrap" style={{ flexGrow: 1 }}>
+                <TextInput
+                  style={{ flex: 1 }}
+                  styles={{ 
+                    input: { 
+                      // Remove right border radius and border
+                      borderTopRightRadius: 0, 
+                      borderBottomRightRadius: 0,
+                      borderRight: 'none', 
+                    } 
+                  }}
+                  disabled={!data || hasError}
+                  onKeyDown={handleKeyDown}
+                  value={inputSearchValue}
+                  onChange={(event) => setSearchInputValue(event.currentTarget.value)}
+                  placeholder={intl.formatMessage({
+                    id: 'search.input.placeholder',
+                    defaultMessage: 'Search lists by name or taxa',
+                  })}
+                  leftSection={
+                    <FontAwesomeIcon
+                      icon={faMagnifyingGlass}
+                      fontSize={16}
+                      stroke='2'
+                    />
+                  }
+                  rightSection={
+                    <ActionIcon
+                      radius='sm'
+                      variant='transparent'
+                      size='xs'
+                      title={intl.formatMessage({
+                        id: 'search.clear.label',
+                        defaultMessage: 'Clear search',
+                      })}
+                      aria-label={intl.formatMessage({
+                        id: 'search.clear.label',
+                        defaultMessage: 'Clear search',
+                      })}
+                      disabled={search.length === 0}
+                      onClick={() => {
+                        handleSearchChange('')
+                        setSearchInputValue('');
+                      }}
+                      style={{ marginLeft: 5, marginRight: 10 }}
+                    >
+                      <FontAwesomeIcon icon={faXmark} fontSize={20} />
+                    </ActionIcon>
+                  }
+                />
+                <Button
+                  variant="light"
+                  styles={{
+                    root: {
+                      borderTopLeftRadius: 0, 
+                      borderBottomLeftRadius: 0,
+                      borderColor: 'var(--mantine-color-default-border)',
+                    },
+                  }}
+                  style={{
+                    '--button-hover': 'var(--mantine-color-rust-filled-hover)',
+                    '--button-hover-color': 'white',
+                  }}
+                  // opacity={1}
+                  radius="md"
+                  onClick={(event) => {
+                    event.preventDefault(); 
+                    handleSearchChange(inputSearchValue);
+                  }}
+                >
+                  <FormattedMessage id='search.button.label' defaultMessage='Search' />
+                </Button>
+              </Group>
+            </Group>
+          </Grid.Col>
+          <Grid.Col span={isMobile ? 12 : 5}>
+            <Group gap={6} justify={isMobile ? 'space-between' : 'flex-end'}>
               <Select
                 w={235}
                 value={`${sort}_${dir}`}
                 label={
-                  <FormattedMessage id='sort.label' defaultMessage='Sort by' />
+                  !isMobile && <FormattedMessage id='sort.label' defaultMessage='Sort by' />
                 }
                 withCheckIcon={true}
                 data={sortOptions}
@@ -431,24 +519,38 @@ function Home() {
                 <ToggleFiltersButton
                   toggleFilters={toggleFilters}
                   hidefilters={hidefilters}
+                  isMobile={true}
                 />
               )}
             </Group>
           </Grid.Col>
           {!hidefilters && (
-            <Grid.Col span={{ base: 12, sm: 4, md: 3, lg: 2 }} mt={16}>
-              <Collapse in={!hidefilters}>
-                {/* Filters appear here */}
-                <FiltersSection
-                  facets={data?.facets || []}
-                  active={filters || []}
-                  onSelect={handleFilterClick}
-                  onReset={() => {
-                    setFilters([]);
-                    setPage(0);
-                  }}
-                />
-              </Collapse>
+            <Grid.Col span={{ base: 12, sm: 4, md: 3, lg: 2 }} mt={isMobile ? 0 : 16}>
+                <Collapse in={!hidefilters}>
+                {loading ? (
+                  <Stack gap={6}>
+                    <Skeleton height={24} width="60%" radius="md" />
+                  {Array.from({ length: 3 }).map((_, _index) => (
+                    <>
+                      <Skeleton height={1} width="90%" radius="md" />
+                      <Skeleton height={24} width="50%" radius="md" />
+                      <Skeleton height={250} width="90%" radius="md" />
+                    </>
+                  ))}
+                  </Stack>
+                ) : (
+                  <FiltersSection
+                    facets={data?.facets || []}
+                    active={filters || []}
+                    onSelect={handleFilterClick}
+                    onReset={() => {
+                      setFilters([]);
+                      setPage(0);
+                    }}
+                    showExpand={false}
+                  />
+                )}
+                </Collapse>
             </Grid.Col>
           )}
           <Grid.Col
@@ -498,7 +600,7 @@ function Home() {
                           )}{' '}
                           of <FormattedNumber value={totalElements || 0} />{' '}
                           <FormattedMessage
-                            id='results.records'
+                            id='home.results.records'
                             defaultMessage='records'
                           />
                           {filters && filters.length > 0 && (
@@ -519,10 +621,6 @@ function Home() {
                           className={classes.resultsSummary}
                           component='span'
                         >
-                          <FormattedMessage
-                            id='results.noRecords'
-                            defaultMessage='No records found'
-                          />
                           {search && search.length > 0 ? (
                             <>
                               {' '}
@@ -557,7 +655,7 @@ function Home() {
                     <Table.Tbody>
                       {content
                         ? content.map((list) => (
-                            <ListRow key={list.id} list={list} />
+                            <ListRow key={list.id} list={list} isMobile={isMobile} />
                           ))
                         : Array.from(Array(size).keys()).map((key) => (
                             <ListRow key={key} />
@@ -569,13 +667,15 @@ function Home() {
               {totalElements === 0 && (
                 <Message
                   title={intl.formatMessage({
-                    id: 'error.noListsFound.title',
+                    id: 'lists.noListsFound.title',
                     defaultMessage: 'No lists found',
                   })}
                   subtitle={intl.formatMessage({
-                    id: 'error.noListsFound.subTitle',
+                    id: location.pathname === '/my-lists' ? 'lists.noListsFound.myLists.subTitle' : 'lists.noListsFound.subTitle',
                     defaultMessage:
-                      'Try removing a filter or searching with a different query',
+                      location.pathname === '/my-lists'
+                        ? 'You haven\'t created any lists yet'
+                        : 'Try removing a filter or searching with a different query',
                   })}
                 />
               )}

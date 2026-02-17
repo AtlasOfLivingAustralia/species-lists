@@ -29,6 +29,7 @@ export function Display({ item, meta }: SpeciesItemDisplayProps) {
   const expandedStyle = {
     padding: 0,
     width: expandedTaxonomy ? '33%' : 0,
+    display: expandedTaxonomy ? 'table-cell' : 'none',
   };
 
   return (

@@ -30,16 +30,16 @@ public class InputSpeciesList {
     @Schema(description = "Data resource UID associated with the species list", accessMode = Schema.AccessMode.READ_ONLY)
     private String dataResourceUid;
 
-    @Schema(description = "Title of the species list", required = true)
+    @Schema(description = "Title of the species list", requiredMode = Schema.RequiredMode.REQUIRED)
     private String title;
 
-    @Schema(description = "Description of the species list", required = true)
+    @Schema(description = "Description of the species list", requiredMode = Schema.RequiredMode.REQUIRED)
     private String description;
 
-    @Schema(description = "Type of the species list", required = true)
+    @Schema(description = "Type of the species list", requiredMode = Schema.RequiredMode.REQUIRED)
     private String listType;
 
-    @Schema(description = "Licence under which the species list is shared", required = true)
+    @Schema(description = "Licence under which the species list is shared", requiredMode = Schema.RequiredMode.REQUIRED)
     private String licence;
 
     @Schema(description = "Original field list provided for the species list", accessMode = Schema.AccessMode.READ_ONLY)

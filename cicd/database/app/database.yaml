@@ -102,7 +102,7 @@ Resources:
     Type: AWS::DocDB::DBClusterParameterGroup
     Properties:
       Name: !Sub
-        - ${pProductName}-${ResourceName}-cluster-pg
+        - ${pProductName}-${ResourceName}-cluster-pg8
         - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
       Description: DocumentDB cluster parameter group
       Family: !Ref pDbParameterGroupFamily
@@ -118,10 +118,6 @@ Resources:
 
   DocDbCluster:
     Type: AWS::DocDB::DBCluster
-    DependsOn: 
-      - DocDbClusterParameterGroup
-      - DocDbSecurityGrp
-      - DocDbSubnetGrp
     Properties:
       CopyTagsToSnapshot: true
       BackupRetentionPeriod: !Ref pBackupRetentionPeriod
@@ -149,7 +145,6 @@ Resources:
 
   DocDbInstance:
     Type: AWS::DocDB::DBInstance
-    DependsOn: DocDbCluster
     Properties:
       DBClusterIdentifier: !Ref DocDbCluster
       DBInstanceClass: !Ref pInstanceClass

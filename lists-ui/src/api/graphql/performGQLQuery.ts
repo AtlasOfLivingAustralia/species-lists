@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Variables = { [key: string]: any };
+import { getCsrfToken } from '../csrf';
 
 async function performGQLQuery<T = any>(
   query: string,
@@ -7,8 +8,11 @@ async function performGQLQuery<T = any>(
   token?: string,
   signal?: AbortSignal
 ): Promise<T> {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
+  const csrfToken = await getCsrfToken();  
+    
+  const headers: HeadersInit = {  
+    'Content-Type': 'application/json',  
+    'X-XSRF-TOKEN': csrfToken,  
     ...((token && token.trim() !== '') ? { Authorization: `Bearer ${token}` } : {}),
   };
 
@@ -22,6 +26,7 @@ async function performGQLQuery<T = any>(
         operationName: query.match(/(?<=mutation |query )[a-zA-Z]+/g)?.[0],
         variables: variables || {},
       }),
+      credentials: 'include',
       signal,
     }
   );
@@ -42,6 +47,8 @@ async function performGQLQuery<T = any>(
 
   throw response;
 }
+
+
 
 export type { Variables };
 export default performGQLQuery;

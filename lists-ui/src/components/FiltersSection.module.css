@@ -26,10 +26,12 @@
 
 .facetHeader {
   display: inline-block;
+  text-transform: capitalize;
   font-size: var(--mantine-font-size-sm);
   font-weight: bold;
   opacity: 0.8;
   padding-top: 4px;
+  margin-top: 3px;
 }
 
 .facetHeaderBoolean {
@@ -39,6 +41,12 @@
   margin-bottom: 4px;
 }
 
+.facetHeaderTags {
+  border-top: 1px solid var(--mantine-color-default-border);
+  width: 100%;
+  padding-top: 4px;
+}
+
 .collapse {
   max-height: 400px;
   overflow-y: auto;
@@ -46,6 +54,7 @@
 
 .countsChipRoot {
   pointer-events: none;
+  cursor: pointer;
 }
 .countsChipLabel {
   padding: 0px 8px 0px 8px;
@@ -58,6 +67,7 @@
 
 .checkboxRoot {
   margin: 4px 0px 4px 0px;
+  cursor: pointer;
 }
 .checkboxLabel { 
   font-size: 10px;
@@ -65,9 +75,13 @@
   max-width: 100%;
   flex-grow: 1;
   display: flex;
+  cursor: pointer;
 }
 .checkboxInner {
   margin-top: 3px;
+}
+.checkboxInner input {
+  cursor: pointer;
 }
 .checkboxLabelWrapper {
   width: 100%;
@@ -84,10 +98,11 @@
   width: 100%;
   border-radius: 0;
   font-size: var(--mantine-font-size-sm);
+  cursor: pointer;
 }
 
 .facetPaper {
-  padding: 5px 2px 2px 0px;
+  padding: 2px 2px 2px 0px;
 }
 
 .resultsSummary {

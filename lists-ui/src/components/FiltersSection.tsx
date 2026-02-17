@@ -1,10 +1,10 @@
 import {
+  faAngleDown,
+  faAngleUp,
   faClose,
   faDeleteLeft,
   faInfoCircle,
-  faMinus,
-  faPlus,
-  faSliders,
+  faSliders
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -18,7 +18,7 @@ import {
   Stack,
   Text,
   ThemeIcon,
-  Tooltip,
+  Tooltip
 } from '@mantine/core';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
@@ -32,14 +32,17 @@ import classes from './FiltersSection.module.css';
 interface FiltersDrawerProps {
   facets: Facet[];
   active: KV[];
+  showExpand?: boolean;
   onSelect: (item: KV) => void;
   onReset: () => void;
 }
 
 const BOOLEAN_FACETS = ['isAuthoritative', 'isSDS', 'isBIE', 'hasRegion', 'isThreatened', 'isInvasive'];
+const CORE_FACETS = ['listType'];
 
 // Helper function to render the entire Checkbox with its label
 const renderCheckbox = (
+  facetName: string,
   key: string,
   countItem: { value: string; count: number } | undefined,
   isChecked: boolean,
@@ -47,6 +50,14 @@ const renderCheckbox = (
   onChange: () => void // Accept the specific onChange handler
 ) => {
   if (!countItem) return null; // Handle case where countItem might be undefined
+  const intl = useIntl();
+  // const licenseKey = 'licence.' + key;
+
+  // Determine the correct message ID with fallback (needed for isPrivate facet)
+  const primaryKey = `facet.${facetName}.${key}`; // isPrivate values only
+  const fallbackKey = key || 'filter.key.missing'; // all other facets (so its backwards compatible)
+  const messages = intl.messages; // load all messages into an object
+  const messageId = messages[primaryKey] ? primaryKey : fallbackKey; // check if primaryKey exists, else use fallbackKey
 
   return (
     <Checkbox
@@ -64,7 +75,11 @@ const renderCheckbox = (
       label={
         // The label structure remains the same
         <Paper className={classes.checkboxPaper}>
-          <ListTypeBadge listTypeValue={key} iconSide='right' />
+          <ListTypeBadge 
+            listTypeValue={key} 
+            iconSide='right' 
+            titleText={intl.formatMessage({ id: messageId, defaultMessage: key })} 
+          />
           <Chip
             size="xs"
             checked={isChecked}
@@ -109,6 +124,7 @@ export const FacetComponent = memo(
     active,
     onSelect,
     isShowFlagLabel,
+    showExpand = true,
   }: {
     facet: Facet;
     isExpanded: boolean;
@@ -116,7 +132,9 @@ export const FacetComponent = memo(
     active: KV[];
     onSelect: (item: KV) => void;
     isShowFlagLabel: boolean;
+    showExpand?: boolean;
   }) => {
+    const isTag = facet.key === 'tags';
     const handleToggle = useCallback(() => {
       handleFacetToggle(facet.key);
     }, [handleFacetToggle, facet.key]);
@@ -133,8 +151,9 @@ export const FacetComponent = memo(
 
     // Determine if it's a boolean facet
     const isBooleanFacet = itemCount <= 2 &&
-        (sortedCounts[0]?.value === 'true' || sortedCounts[0]?.value === 'false');
-
+        (sortedCounts[0]?.value === 'true' || sortedCounts[0]?.value === 'false')
+        && BOOLEAN_FACETS.includes(facet.key);
+    
     // Helper to check if a value is active
     const isValueActive = useCallback((value: string | undefined) => {
       if (value === undefined) return false;
@@ -164,29 +183,32 @@ export const FacetComponent = memo(
           radius={0}
         > 
         {/* Render header only for non-boolean facets */}
-        {!isBooleanFacet && (
+        {!(isBooleanFacet || isTag) && (
           <Group justify='space-between' className={classes.facetGroup}>
             <Text size='md' className={classes.facetHeader} span>
               <FormattedMessage id={facet.key || 'filter.key.missing'} defaultMessage={removeFilterPrefix(facet.key)}
               />{' '}
-              <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.nonBoolean.tooltip', defaultMessage: '' })} />
+              <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.or.tooltip', defaultMessage: '' })} />
             </Text>
-            <ActionIcon
-              variant='subtle'
-              color='dark'
-              size='sm'
-              onClick={handleToggle}
-              title={`${intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Toggle filters for' })} ${intl.formatMessage({ id: facet.key || 'filter.key.missing', defaultMessage: facet.key })}`}
-              aria-label={`${intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Toggle filters for' })} ${intl.formatMessage({ id: facet.key || 'filter.key.missing', defaultMessage: facet.key })}`}
-            >
-              <FontAwesomeIcon icon={isExpanded ? faMinus : faPlus} />
-            </ActionIcon>
+            {showExpand && (
+              <ActionIcon
+                mt={5}
+                variant='subtle'
+                color='dark'
+                size='sm'
+                onClick={handleToggle}
+                title={`${intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Toggle filters for' })} ${intl.formatMessage({ id: facet.key || 'filter.key.missing', defaultMessage: facet.key })}`}
+                aria-label={`${intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Toggle filters for' })} ${intl.formatMessage({ id: facet.key || 'filter.key.missing', defaultMessage: facet.key })}`}
+              >
+                <FontAwesomeIcon icon={isExpanded ? faAngleUp : faAngleDown} />
+              </ActionIcon>
+            )}
           </Group>
         )}
-        { isBooleanFacet && isShowFlagLabel && (
-            <Text size='md' span className={classes.facetHeader + ' ' + classes.facetHeaderBoolean} >
+        { ((isBooleanFacet && isShowFlagLabel) || isTag) && (
+            <Text size='md' span className={classes.facetHeader + ' ' + (isBooleanFacet ? classes.facetHeaderBoolean : classes.facetHeaderTags)} >
               <FormattedMessage id='facet.flag.label' defaultMessage='List flags' />{' '}
-              <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.boolean.tooltip', defaultMessage: '' })} />
+              <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.and.tooltip', defaultMessage: '' })} />
             </Text>
         )}
         {/* Render checkboxes using the helper */}
@@ -196,6 +218,7 @@ export const FacetComponent = memo(
             const booleanItem = sortedCounts[1];
             const isChecked = isValueActive(booleanItem?.value);
             return renderCheckbox(
+              facet.key, // Pass the facet key for proper labeling
               facet.key, // Key for the single boolean checkbox
               booleanItem,
               isChecked,
@@ -205,10 +228,11 @@ export const FacetComponent = memo(
           })()
         ) : (
           // --- Non-boolean Facet Rendering ---
-          <Collapse in={isExpanded} className={classes.collapse}>
+          <Collapse in={!showExpand || isExpanded} className={classes.collapse}>
             {sortedCounts.map((item) => {
               const isChecked = isValueActive(item.value);
               return renderCheckbox(
+                facet.key, // Key for the checkbox group
                 item.value, // Key is the item value
                 item,
                 isChecked,
@@ -225,26 +249,32 @@ export const FacetComponent = memo(
 );
 
 export const FiltersSection = memo(
-  ({ facets, active, onSelect }: FiltersDrawerProps) => {
+  ({ facets, active, onSelect, showExpand }: FiltersDrawerProps) => {
     const [expanded, setExpanded] = useState<string[]>([]);
 
     // Sort facets to ensure boolean facets are at the bottom
     const sortedFacets = useMemo(
       () =>
-        facets
-          .filter((facet) => facet.counts.length > 0) // Filter out empty facets
-          .sort((a, b) => {
-            // Sort by the first occurrence of boolean facets
-            if (BOOLEAN_FACETS.includes(a.key) && !BOOLEAN_FACETS.includes(b.key)) {
-              return 1; 
-            }
-            if (!BOOLEAN_FACETS.includes(a.key) && BOOLEAN_FACETS.includes(b.key)) {
-              return -1; 
-            }
-            // For other facets, sort by the key
-            return a.key.localeCompare(b.key);      
-          }
-          ),
+      facets
+        .filter((facet) => facet.counts.length > 0) // Filter out empty facets
+        .sort((a, b) => {
+        // Sort BOOLEAN_FACETS to be the first items
+        if (BOOLEAN_FACETS.includes(a.key) && !BOOLEAN_FACETS.includes(b.key)) {
+          return -1;
+        }
+        if (!BOOLEAN_FACETS.includes(a.key) && BOOLEAN_FACETS.includes(b.key)) {
+          return 1;
+        }
+        // Sort CORE_FACETS to be after BOOLEAN_FACETS
+        if (CORE_FACETS.includes(a.key) && !CORE_FACETS.includes(b.key)) {
+          return BOOLEAN_FACETS.includes(b.key) ? 1 : -1;
+        }
+        if (!CORE_FACETS.includes(a.key) && CORE_FACETS.includes(b.key)) {
+          return BOOLEAN_FACETS.includes(a.key) ? -1 : 1;
+        }
+        // For other facets, sort by the key
+        return a.key.localeCompare(b.key);
+        }),
       [facets]
     );
     
@@ -285,7 +315,7 @@ export const FiltersSection = memo(
 
     return (
       <>
-        <Text size='md' fw='bold' opacity={0.85}>
+        <Text size='md' fw='bold' opacity={0.85} pb={2}>
           <FormattedMessage id='filters.title' defaultMessage='Refine results' />
         </Text>
         <Stack gap={2} mt={3} mb="md" pb={4}>
@@ -305,6 +335,7 @@ export const FiltersSection = memo(
                 active={active}
                 onSelect={onSelect}
                 isShowFlagLabel={isFirst}
+                showExpand={showExpand}
               />
             );
           })}
@@ -351,7 +382,7 @@ export const ActiveFilters = memo((
         >
           <Text component='div' fs='xs' className={classes.activeFiltersText}>
             <FormattedMessage id={sanitiseText(filter.key) || 'filter.key.missing'} defaultMessage={removeFilterPrefix(filter.key)}/>
-            { filter.value && filter.value !== 'true' && filter.value !== 'false' && (
+            { !BOOLEAN_FACETS.includes(filter.key) && (
               <>
                 :{' '}
                 <FormattedMessage id={sanitiseText(filter.value) || 'filter.value.missing'} defaultMessage={sanitiseText(filter.value)}/>
@@ -396,8 +427,8 @@ export const ActiveFilters = memo((
  * @param {boolean} props.hidefilters - Boolean indicating whether filters are hidden or not.
  * @returns {JSX.Element} The rendered component.
  */
-export function ToggleFiltersButton({ toggleFilters, hidefilters }
-    : { toggleFilters: () => void; hidefilters: boolean }) {
+export function ToggleFiltersButton({ toggleFilters, hidefilters, isMobile }
+    : { toggleFilters: () => void; hidefilters: boolean; isMobile?: boolean }) {
   return (
     <Button
       size= 'sm' 
@@ -406,7 +437,7 @@ export function ToggleFiltersButton({ toggleFilters, hidefilters }
       classNames={{root: classes.filtersDisplayButton}}
       radius="md"
       fw="normal"
-      ml="auto"
+      ml={isMobile ? undefined : 'auto'}
       onClick={toggleFilters}
     >
       { hidefilters 

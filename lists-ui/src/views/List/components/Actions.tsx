@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { DotsThreeIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { faEdit, faTrashAlt } from '@fortawesome/free-regular-svg-icons';
 import {
+  faBars,
   faDownload,
   faGlobe,
   faPlus,
@@ -13,7 +13,6 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   ActionIcon,
-  Box,
   Button,
   Divider,
   Flex,
@@ -23,7 +22,7 @@ import {
   Stack,
   Switch,
   Text,
-  Tooltip,
+  Tooltip
 } from '@mantine/core';
 import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -286,15 +285,16 @@ export function Actions({
     <>
       <Menu shadow='md' width={200} position='bottom-end' radius='lg'>
         <Menu.Target>
-            <ActionIcon
+          <ActionIcon
             className={classes.mobile}
             variant='light'
             size='md'
             radius='lg'
             aria-label={intl.formatMessage({ id: 'actions.menu.ariaLabel', defaultMessage: 'List actions' })}
-            >
-            <DotsThreeIcon />
-            </ActionIcon>
+          >
+            {/* <DotsThreeIcon /> */}
+            <FontAwesomeIcon icon={faBars} />
+          </ActionIcon>
         </Menu.Target>
         <Menu.Dropdown>
             <Menu.Label>
@@ -388,19 +388,16 @@ export function Actions({
           )}
         </Menu.Dropdown>
       </Menu>
-      <Box className={classes.desktop}>
-        <Stack gap='xs'>
+      <Group className={classes.desktop}>
+        <Group gap='xs' justify="flex-end">
           {authorisedForList && (
-          <>
-            <Paper
-              // miw={authorisedForList ? 285 : undefined}
+            <Paper 
               py={8}
               px='sm'
-              shadow='sm'
               radius='lg'
               withBorder
             >
-              <Group gap='xs'>
+              <Group gap='xs' justify="space-between">
                 <Tooltip label={intl.formatMessage({ id: 'actions.editMetadata', defaultMessage: 'Edit metadata' })} withArrow position='bottom'>
                   <ActionIcon
                     onClick={handleMetaEdit}
@@ -485,9 +482,8 @@ export function Actions({
                 )}
                 </Stack>
             </Paper>
-          </>
           )}
-          <Paper withBorder radius='lg'>
+          <Paper withBorder radius='lg' my={0} px={0}>
             <Button
               onClick={handleDownload}
               fullWidth
@@ -499,6 +495,7 @@ export function Actions({
                 borderRadius: 0,
                 borderTopLeftRadius: 14,
                 borderTopRightRadius: 14,
+                margin: '1px 0px',
               }}
             >
               Download list
@@ -563,6 +560,7 @@ export function Actions({
                 borderRadius: 0,
                 borderTopLeftRadius: 0,
                 borderTopRightRadius: 0,
+                margin: '1px 0px',
               }}
             >
               View occurrence records
@@ -582,13 +580,14 @@ export function Actions({
                 borderRadius: 0,
                 borderBottomLeftRadius: 14,
                 borderBottomRightRadius: 14,
+                margin: '1px 0px',
               }}
             >
               View in spatial portal
             </Button>
           </Paper>
-        </Stack>
-      </Box>
+        </Group>
+      </Group>
     </>
   );
 }

@@ -69,7 +69,7 @@ function MetaBadge({
 
 export function Summary({ meta, ...rest }: SummaryProps) {
   const intl = useIntl();
-  console.log('Summary component rendered with meta:', meta);
+  
   return (
     <Group {...rest} gap='xs' align='center' mt={10} ml={0}>
       <MetaBadge typeName='listType' typeValue={meta.listType ?? 'No list type'} color='' icon={faBookmark} >
@@ -83,6 +83,7 @@ export function Summary({ meta, ...rest }: SummaryProps) {
       {meta.authority && <MetaBadge typeName='authority' typeValue={meta.authority} icon={faBank} />}
       {((meta?.tags || []).length > 0) && meta!.tags.map((tag) => (
         <MetaBadge
+          key={tag}
           color='brown'
           typeName='tag'
           typeValue={tag}

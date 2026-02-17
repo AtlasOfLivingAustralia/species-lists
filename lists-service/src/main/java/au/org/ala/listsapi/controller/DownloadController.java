@@ -42,6 +42,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletResponse;
 
+/**
+ * Controller for downloading species lists in CSV format. Supports both zipped and plain CSV downloads.
+ */
 @Controller
 @Validated
 public class DownloadController {
@@ -85,9 +88,11 @@ public class DownloadController {
     })
     @GetMapping("/v2/download/{speciesListID}")
     public ResponseEntity<Object> download(
+            @Parameter(description = "The species list ID or data resource ID to download", example = "dr656", required = true)
             @PathVariable("speciesListID") String speciesListID,
             @AuthenticationPrincipal Principal principal,
-            @Parameter(name = "zip", description = "Set to true to receive data in ZIP format, false for plain CSV", schema = @Schema(type = "boolean", defaultValue = "false")) @RequestParam(value = "zip", defaultValue = "false") Boolean zipped,
+            @Parameter(name = "zip", description = "Set to true to receive data in ZIP format, false for plain CSV", schema = @Schema(type = "boolean", defaultValue = "false")) 
+            @RequestParam(value = "zip", defaultValue = "false") Boolean zipped,
             HttpServletResponse response) {
         try {
             logger.info("Downloading species list " + speciesListID);
