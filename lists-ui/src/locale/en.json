@@ -178,7 +178,7 @@
   "listmeta.private.label": "Private",
   "listmeta.title.label": "Name",
   "listmeta.title.placeholder": "List name",
-  "listmeta.description.label": "Description",
+  "listmeta.description.label": "Description (supports markdown)",
   "listmeta.description.placeholder": "List details",
   "listmeta.type.label": "Type",
   "listmeta.type.placeholder": "List type",

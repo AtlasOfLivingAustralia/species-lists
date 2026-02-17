@@ -10,7 +10,7 @@ export default [
   {
     flag: 'isAuthoritative',
     label: 'Authoritative',
-    description: 'Verified by the ALA',
+    description: 'List taxa indexed in ALA Biocache',
     icon: faShield,
     admin: true,
   },

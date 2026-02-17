@@ -58,7 +58,7 @@ const defaultList = (
   region: list?.region || '',
   title: list?.title || initialTitle || '',
   wkt: list?.wkt || '',
-  tags: list?.tags || [],
+  tags: list?.tags || [] || null,
   dataResourceUid: list?.dataResourceUid || '',
   metadataLastUpdated: list?.metadataLastUpdated || '',
 });
@@ -74,6 +74,8 @@ export function ListMeta({
   // State to manage form constraints and region label
   const [constraints, setConstraints] = useState<SpeciesListConstraints | null>(null);
   const [regionLabel, setRegionLabel] = useState('');
+  const [tagSearch, setTagSearch] = useState('');
+  const [customTags, setCustomTags] = useState<string[]>([]);
 
   const loaded = Boolean(constraints);
   const mounted = useMounted();
@@ -155,6 +157,44 @@ export function ListMeta({
     }
   };
 
+  const handleTagsChange = (selectedValues: string[]) => {
+    const data = constraints?.tags || [];
+    
+    if (selectedValues.length === 0) {
+      // When cleared, set to null instead of empty array
+      form.setFieldValue('tags', null);
+    } else {
+      // Map selected labels back to their values
+      const mappedValues = selectedValues.map(label => {
+        const option = data.find(item => item.label === label);
+        return option ? option.value : label;
+      });
+      form.setFieldValue('tags', mappedValues);
+    }
+  };
+
+  const tagOptions = useMemo(() => {
+    const base = constraints?.tags || [];
+    const custom = customTags.map((v) => ({ value: v, label: v }));
+    const selected = (form.values.tags || [])
+      .filter((v) => !base.some((b) => b.value === v) && !customTags.includes(v))
+      .map((v) => ({ value: v, label: v }));
+
+    return [...base, ...custom, ...selected];
+  }, [constraints?.tags, customTags, form.values.tags]);
+
+  const commitTag = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+
+    const exists = tagOptions.some((t) => t.value === trimmed);
+    if (!exists) setCustomTags((prev) => [...prev, trimmed]);
+
+    const next = Array.from(new Set([...(form.values.tags || []), trimmed]));
+    form.setFieldValue('tags', next);
+    setTagSearch('');
+  };
+
   const handleSumbit = (values: typeof form.values) => {
     onSubmit(values);
   };
@@ -188,7 +228,6 @@ export function ListMeta({
     [ala.isAdmin]
   );
 
-
   return (
     <form onSubmit={form.onSubmit(handleSumbit)}>
       <Grid>
@@ -202,18 +241,6 @@ export function ListMeta({
             required
             disabled={loading}
             {...form.getInputProps('title')}
-          />
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-          <TextInput
-            name='description'
-            label={
-              <FormattedMessage id="listmeta.description.label" defaultMessage="Description" />
-            }
-            placeholder={intl.formatMessage({ id: 'listmeta.description.placeholder', defaultMessage: 'List details' })}
-            required
-            disabled={loading}
-            {...form.getInputProps('description')}
           />
         </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
@@ -241,6 +268,19 @@ export function ListMeta({
             required
             disabled={!loaded || loading}
             {...form.getInputProps('licence')}
+          />
+        </Grid.Col>
+        <Grid.Col span={{ base: 12, sm: 12, md: 12 }}>
+          <Textarea
+            name='description'
+            label={
+              <FormattedMessage id="listmeta.description.label" defaultMessage="Description" />
+            }
+            placeholder={intl.formatMessage({ id: 'listmeta.description.placeholder', defaultMessage: 'List details' })}
+            required
+            disabled={loading}
+            rows={3}
+            {...form.getInputProps('description')}
           />
         </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
@@ -273,17 +313,29 @@ export function ListMeta({
         </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
           <MultiSelect
+            name='tags'
             label={
               <FormattedMessage id="listmeta.tags.label" defaultMessage="Tags" />
             }
-            data={['biocollect', 'galah', 'spatial-portal', 'profiles', 'arga']}
-            placeholder={
-              (form.values['tags'] || []).length > 0
-          ? undefined
-          : intl.formatMessage({ id: 'listmeta.tags.placeholder', defaultMessage: 'Select tags' })
-            }
-            disabled={loading}
-            {...form.getInputProps('tags')}
+            placeholder={intl.formatMessage({ id: 'listmeta.tags.placeholder', defaultMessage: 'Select OR type a custom value' })}
+            clearable
+            searchable
+            radius='md'
+            data={constraints?.tags || []} 
+            disabled={!loaded || loading}
+            value={form.values.tags || []}
+            searchValue={tagSearch}
+            onSearchChange={setTagSearch}
+            onChange={handleTagsChange}
+            // onBlur={form.getInputProps('tags').onBlur}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                commitTag(tagSearch);
+              }
+            }}
+            onBlur={() => commitTag(tagSearch)}
+            error={form.errors.tags}
           />
         </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
@@ -326,7 +378,6 @@ export function ListMeta({
         <Grid.Col span={12}>
           <Divider variant='dashed' my='md' />
         </Grid.Col>
-        {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
         {filteredFlags.map(({ flag, admin, ...props }) => (
           <Grid.Col key={flag} span={{ base: 12, xs: 12, sm: 6, md: 4, lg: 3 }}>
             <FlagCard
@@ -334,6 +385,7 @@ export function ListMeta({
               onClick={() =>
                 form.setFieldValue(flag, !(form.values as any)[flag])
               }
+              flag={flag}
               disabled={loading}
               {...props}
               {...form.getInputProps(flag, { type: 'checkbox' })}

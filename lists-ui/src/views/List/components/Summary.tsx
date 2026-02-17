@@ -43,6 +43,12 @@ function MetaBadge({
   children?: React.ReactNode;
 }) {
   const intl = useIntl();
+
+  if (!typeValue) {
+    // empty value, don't render badge
+    return null;
+  }
+
   return (
     <Tooltip 
         position='bottom' 
@@ -59,7 +65,7 @@ function MetaBadge({
           component={href ? 'a' : undefined}
           {...(href ? { href } : {})}
         >
-          <FormattedMessage id={typeValue || '–'} defaultMessage={typeValue} />{' '}
+          <FormattedMessage id={typeValue} defaultMessage={typeValue} />{' '}
           {children}
         </Badge>
       </span>
@@ -81,12 +87,12 @@ export function Summary({ meta, ...rest }: SummaryProps) {
       {meta.licence && <MetaBadge typeName='licence' typeValue={meta.licence} icon={faCreativeCommons} />}
       {meta.region && <MetaBadge typeName='region' typeValue={meta.region} icon={faGlobe} />}
       {meta.authority && <MetaBadge typeName='authority' typeValue={meta.authority} icon={faBank} />}
-      {((meta?.tags || []).length > 0) && meta!.tags.map((tag) => (
+      {meta?.tags?.map((tag)=> (
         <MetaBadge
-          key={tag}
+          key={tag.toLowerCase()} 
           color='brown'
           typeName='tag'
-          typeValue={tag}
+          typeValue={tag.toLowerCase()} // hack to show label value and not (uppercase) constraint field value (avoids loading constraints via WS)
           icon={faTag}
         />
       ))}
