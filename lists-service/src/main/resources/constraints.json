@@ -48,5 +48,13 @@
       "value": "CC-BY-SA",
       "label": "Creative Commons By Attribution-Sharealike"
     }
+  ],
+  "tags": [
+    { "value": "BIOCOLLECT", "label": "biocollect" },
+    { "value": "GALAH", "label": "galah" },
+    { "value": "SPATIAL_PORTAL", "label": "spatial-portal" },
+    { "value": "PROFILES", "label": "profiles" },
+    { "value": "ARGA", "label": "arga" },
+    { "value": "DIGIVOL", "label": "digivol" }
   ]
 }
