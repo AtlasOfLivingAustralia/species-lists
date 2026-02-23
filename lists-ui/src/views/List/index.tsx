@@ -31,7 +31,6 @@ import {
   Title
 } from '@mantine/core';
 import {
-  useDebouncedValue,
   useDisclosure,
   useDocumentTitle,
   useMediaQuery,
@@ -114,7 +113,7 @@ function List() {
   // Initialise from URL so the input reflects the current search on load/back-nav
   const [inputSearchValue, setSearchInputValue] = useState(search);
 
-  const [searchDebounced] = useDebouncedValue(search, 300);
+  // const [searchDebounced] = useDebouncedValue(search, 300);
 
   // Search params state
   const [page, setPage] = useQueryState<number>(
@@ -228,7 +227,7 @@ function List() {
           queries.QUERY_LISTS_GET,
           {
             speciesListID: id,
-            searchQuery: searchDebounced,
+            searchQuery: search,
             page,
             size,
             filters,
@@ -261,7 +260,7 @@ function List() {
     }
 
     if (mounted) runQuery();
-  }, [page, size, filters, searchDebounced, refresh, sort, dir, isReingest, mounted, id, ala.token]);
+  }, [page, size, filters, search, refresh, sort, dir, isReingest, mounted, id, ala.token]);
 
   // Keep the current page in check
   useEffect(() => {
@@ -613,7 +612,7 @@ function List() {
                           size='xs'
                           title={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
                           aria-label={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
-                          disabled={search.length === 0}
+                          disabled={inputSearchValue.length === 0}
                           onClick={() => {
                             handleSearchChange('')
                             setSearchInputValue('');
