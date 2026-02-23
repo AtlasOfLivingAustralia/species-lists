@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import {
   Facet,
   FilteredSpeciesList,
@@ -95,14 +94,13 @@ enum SortDirection {
 const maxEntries = 10000; // ES maximumDocuments limit (see elastic.maximumDocuments config in lists-service)
 const classificationFields = ['family', 'kingdom', 'vernacularName', 'matchType'];
 
-export function List() {
+function List() {
   const { id } = useParams();
   const [_data, setData] = useState<ListLoaderData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [list, setList] = useState<FilteredSpeciesList | null>(null);
   const [meta, setMeta] = useState<SpeciesList | null>(null);
-  const [inputSearchValue, setSearchInputValue] = useState(''); // internal search input state
 
   useDocumentTitle(meta?.title || 'Loading...');
   const isMobile = useMediaQuery(`(max-width: ${em(750)})`) || false;
@@ -112,6 +110,10 @@ export function List() {
     'search',
     parseAsString.withDefault('')
   );
+
+  // Initialise from URL so the input reflects the current search on load/back-nav
+  const [inputSearchValue, setSearchInputValue] = useState(search);
+
   const [searchDebounced] = useDebouncedValue(search, 300);
 
   // Search params state
@@ -135,9 +137,14 @@ export function List() {
     )
   );
 
-  // Filters display state
-  const [hidefilters, setHideFilters] = useQueryState<boolean>('hideFilters', parseAsBoolean.withDefault(false)); 
-  const toggleFilters = () => setHideFilters((o) => !o);
+  // Filters display state — omit withDefault so null means "user hasn't set a preference".
+  // Compute the effective value inline: fall back to isMobile when not explicitly set.
+  const [hidefiltersRaw, setHideFilters] = useQueryState<boolean>(
+    'hideFilters',
+    parseAsBoolean
+  );
+  const hidefilters = hidefiltersRaw ?? isMobile;
+  const toggleFilters = () => setHideFilters(!hidefilters);
 
   // Internal state (not driven by search params)
   const [facets, setFacets] = useState<Facet[]>([]);
@@ -217,18 +224,14 @@ export function List() {
           controller.current.abort('New GraphQL request invoked');
         controller.current = new AbortController();
 
-        const {
-          meta: updatedMeta,
-          list: updatedList,
-          facets: updatedFacets,
-        } = await performGQLQuery(
+        const result = await performGQLQuery(
           queries.QUERY_LISTS_GET,
           {
             speciesListID: id,
             searchQuery: searchDebounced,
             page,
             size,
-            filters, // filters: toKV(filters),
+            filters,
             isPrivate: false,
             sort,
             dir,
@@ -237,8 +240,13 @@ export function List() {
           controller.current.signal
         );
 
-        controller.current = null;
+        const {
+          meta: updatedMeta,
+          list: updatedList,
+          facets: updatedFacets,
+        } = result;
 
+        controller.current = null;
         setError(null);
         setMeta(updatedMeta);
         setList(updatedList);
@@ -253,18 +261,12 @@ export function List() {
     }
 
     if (mounted) runQuery();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, size, filters, searchDebounced, refresh, sort, dir, isReingest]);
+  }, [page, size, filters, searchDebounced, refresh, sort, dir, isReingest, mounted, id, ala.token]);
 
   // Keep the current page in check
   useEffect(() => {
     if (totalPages && page >= totalPages) setPage(totalPages - 1);
   }, [page, totalPages]);
-  
-  // Sync input search value with search query parameter
-  useEffect(() => {
-    setSearchInputValue(search);
-  }, [search]);
 
   const handleSortClick = useCallback(
     (newSort: string) => {
@@ -280,22 +282,17 @@ export function List() {
     [sort, dir]
   );
 
-  useEffect(() => {
-    // Hide filters for mobile devices
-    setHideFilters(isMobile);
-  }, [isMobile]);
-
   // Handle search value changes and sort logic
   const handleSearchChange = useCallback((newValue: string) => {
     setPage(0); // Reset 'page' when search is changed
     setSearch(newValue);
-  }, [sort, dir, setPage, setSearch, setSort, setDir]);
+  }, [setPage, setSearch]);
 
   const resetFilters = useCallback(
     () => {
       setPage(0); // Reset 'page' when filters are reset
       setFilters([]);
-    },[filters]
+    }, [setFilters, setPage]
   );
 
   const handleSizeChange = (newSize: string | null) => {
@@ -332,7 +329,7 @@ export function List() {
     []
   );
 
-  // Item edit handler
+  // Item delete handler
   const handleItemDeleted = useCallback(
     (id: string) => {
       close();
@@ -344,7 +341,7 @@ export function List() {
     []
   );
 
-  // Field deletion handler
+  // Field creation handler
   const handleFieldCreated = useCallback(
     (field: string, defaultValue?: string) => {
       setMeta((prevMeta) => ({
@@ -387,7 +384,7 @@ export function List() {
     []
   );
 
-  // Field deletion handler
+  // Field rename handler
   const handleFieldRenamed = useCallback(
     (from: string, to: string) => {
       // Update new list meta to update renamed field
@@ -449,6 +446,16 @@ export function List() {
     []
   );
 
+  // Handler for the Enter key press
+  interface KeyDownEvent extends React.KeyboardEvent<HTMLInputElement> {}
+
+  const handleKeyDown = (event: KeyDownEvent): void => {
+    if (event.key === 'Enter') {
+      event.preventDefault(); 
+      handleSearchChange(inputSearchValue);
+    }
+  };
+
   if (loading) {
     return <PageLoader />;
   }
@@ -473,6 +480,7 @@ export function List() {
   return (
     <>
       <SpeciesItemDrawer
+        key={selected?.id}
         opened={opened}
         item={selected}
         meta={meta!} 
@@ -583,11 +591,9 @@ export function List() {
                   )}
                   <Group gap={0} wrap="nowrap" style={{ flexGrow: 1 }}>
                     <TextInput
-                      // style={{ flexGrow: 1 }}
                       style={{ flex: 1 }}
                       styles={{ 
                         input: { 
-                          // Remove right border radius and border
                           borderTopRightRadius: 0, 
                           borderBottomRightRadius: 0,
                           borderRight: 'none', 
@@ -596,6 +602,7 @@ export function List() {
                       disabled={hasError}
                       value={inputSearchValue}
                       onChange={(event) => setSearchInputValue(event.currentTarget.value)}
+                      onKeyDown={handleKeyDown}
                       placeholder={intl.formatMessage({ id: 'search.input.placeholder', defaultMessage: 'Search within list' })}
                       aria-label={intl.formatMessage({ id: 'search.input.label', defaultMessage: 'Search within list' })}
                       leftSection={<FontAwesomeIcon icon={faMagnifyingGlass} fontSize={16} stroke='2' />}
@@ -740,7 +747,7 @@ export function List() {
                   ) : paginationLoading ? (
                     <Stack gap="xs" mt={4}>
                       {[...Array(size)].map((_, i) => (
-                      <Skeleton key={i} height={i === 0 ? 42 : 30} radius={4} />
+                      <Skeleton key={`skeleton-${i}-${size}`} height={i === 0 ? 42 : 30} radius={4} />
                       ))}
                     </Stack>
                   ) : (
@@ -826,7 +833,7 @@ export function List() {
                     disabled={(totalPages || 0) < 1 || hasError}
                     value={realPage}
                     onChange={(value) => {
-                      if (paginationLoading) return; // better than setting paginationLoading in disabled property as UI jitters when that is used
+                      if (paginationLoading) return;
                       setPaginationLoading(true);
                       setPage(value - 1);
                     }}
@@ -837,11 +844,8 @@ export function List() {
                       'aria-label': `${control} page`,
                     })}
                     getItemProps={(page) => {
-                      // Hide the last page number button (but keep navigation arrows)
                       if (page === totalPages) {
-                        return {
-                        style: { display: 'none' }
-                        };
+                        return { style: { display: 'none' } };
                       }
                       return {};
                     }}

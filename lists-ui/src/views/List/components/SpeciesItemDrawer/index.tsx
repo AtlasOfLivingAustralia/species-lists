@@ -61,17 +61,11 @@ export function SpeciesItemDrawer({
   const [editItem, setEditItem] = useState<InputSpeciesList | null>(null);
   const { auth, isAuthorisedForList } = useALA();
 
-  // Reset the editing status when the supplied item changes
-  useEffect(() => {
-    setUpdating(false);
-    setEditing(false);
+  // useEffect replaced with a simple function to stop editing and reset state when closing the drawer
+  const stopEditing = () => {
+    setEditing(false); // Set editing to false
     setEditItem(null);
-  }, [item]);
-
-  // // Clear edit item when finished editing
-  useEffect(() => {
-    if (!editing) setEditItem(null);
-  }, [editing]);
+  };
 
   const onItemUpdate = async () => {
     setUpdating(true);
@@ -86,7 +80,7 @@ export function SpeciesItemDrawer({
       );
 
       if (newItem) onEdited(newItem);
-      setEditing(false);
+      stopEditing();
       setRefresh(true);
     } catch (error) {
       notifications.show({
@@ -115,7 +109,7 @@ export function SpeciesItemDrawer({
       );
 
       if (newItem) onEdited(newItem);
-      setEditing(false);
+      stopEditing();
       setRefresh(true);
     } catch (error) {
       notifications.show({
@@ -255,7 +249,7 @@ export function SpeciesItemDrawer({
                   radius='md'
                   variant='light'
                   color='grey'
-                  onClick={() => setEditing(false)}
+                  onClick={() => stopEditing()}
                 >
                   Cancel
                 </Button>

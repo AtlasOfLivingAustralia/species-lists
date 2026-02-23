@@ -20,7 +20,7 @@ import {
   ThemeIcon,
   Tooltip
 } from '@mantine/core';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 
 import { Facet, KV } from '#/api';
@@ -41,17 +41,15 @@ const BOOLEAN_FACETS = ['isAuthoritative', 'isSDS', 'isBIE', 'hasRegion', 'isThr
 const CORE_FACETS = ['listType'];
 
 // Helper function to render the entire Checkbox with its label
-const renderCheckbox = (
+function RenderCheckbox(
   facetName: string,
   key: string,
   countItem: { value: string; count: number } | undefined,
   isChecked: boolean,
   isBooleanFacet: boolean,
   onChange: () => void // Accept the specific onChange handler
-) => {
-  if (!countItem) return null; // Handle case where countItem might be undefined
+) {
   const intl = useIntl();
-  // const licenseKey = 'licence.' + key;
 
   // Determine the correct message ID with fallback (needed for isPrivate facet)
   const primaryKey = `facet.${facetName}.${key}`; // isPrivate values only
@@ -59,6 +57,8 @@ const renderCheckbox = (
   const messages = intl.messages; // load all messages into an object
   const messageId = messages[primaryKey] ? primaryKey : fallbackKey; // check if primaryKey exists, else use fallbackKey
 
+  if (!countItem) return null; // Handle case where countItem might be undefined
+  
   return (
     <Checkbox
       key={key} // Use the provided key
@@ -116,7 +116,7 @@ const removeFilterPrefix = (key: string) => {
   return key;
 }
 
-export const FacetComponent = memo(
+const FacetComponent = memo(
   ({
     facet,
     isExpanded,
@@ -146,7 +146,6 @@ export const FacetComponent = memo(
     );
 
     const itemCount = sortedCounts.length;
-
     const intl = useIntl();
 
     // Determine if it's a boolean facet
@@ -207,7 +206,8 @@ export const FacetComponent = memo(
         )}
         { ((isBooleanFacet && isShowFlagLabel) || isTag) && (
             <Text size='md' span className={classes.facetHeader + ' ' + (isBooleanFacet ? classes.facetHeaderBoolean : classes.facetHeaderTags)} >
-              <FormattedMessage id='facet.flag.label' defaultMessage='List flags' />{' '}
+              { isTag ? <FormattedMessage id='facet.tag.label' defaultMessage='List tags' />
+                : <FormattedMessage id='facet.flag.label' defaultMessage='List flags' />}{' '} 
               <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.and.tooltip', defaultMessage: '' })} />
             </Text>
         )}
@@ -217,7 +217,7 @@ export const FacetComponent = memo(
           (() => {
             const booleanItem = sortedCounts[1];
             const isChecked = isValueActive(booleanItem?.value);
-            return renderCheckbox(
+            return RenderCheckbox(
               facet.key, // Pass the facet key for proper labeling
               facet.key, // Key for the single boolean checkbox
               booleanItem,
@@ -231,7 +231,7 @@ export const FacetComponent = memo(
           <Collapse in={!showExpand || isExpanded} className={classes.collapse}>
             {sortedCounts.map((item) => {
               const isChecked = isValueActive(item.value);
-              return renderCheckbox(
+              return RenderCheckbox(
                 facet.key, // Key for the checkbox group
                 item.value, // Key is the item value
                 item,
@@ -250,7 +250,14 @@ export const FacetComponent = memo(
 
 export const FiltersSection = memo(
   ({ facets, active, onSelect, showExpand }: FiltersDrawerProps) => {
-    const [expanded, setExpanded] = useState<string[]>([]);
+    // Lazy initializer runs once on mount — replaces the useRef + useEffect
+    // "run once" pattern that was calling setState synchronously inside an effect.
+    const [expanded, setExpanded] = useState<string[]>(() =>
+      facets
+        .filter(facet => facet.counts.length > 2)
+        .slice(0, 1)
+        .map(facet => facet.key)
+    );
 
     // Sort facets to ensure boolean facets are at the bottom
     const sortedFacets = useMemo(
@@ -297,21 +304,6 @@ export const FiltersSection = memo(
           : [...prevExpanded, key]
       );
     }, []);
-
-    useEffect(() => {
-      // Set initial expanded facets
-      // Expand the first facet by default
-      if (facets.length > 0) {
-        setExpanded((prevExpanded) =>
-          prevExpanded.length === 0
-            ? facets
-          .filter((facet) => facet.counts.length > 2) // Only expand facets with more than 2 counts (e.g., not boolean facets)
-          .slice(0, 1) // Expand only the first one
-          .map((facet) => facet.key)
-            : prevExpanded
-        );
-      }
-    }, [facets]);
 
     return (
       <>

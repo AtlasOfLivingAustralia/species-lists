@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import { faEdit, faTrashAlt } from '@fortawesome/free-regular-svg-icons';
 import {
   faBars,
@@ -75,32 +74,18 @@ export function Actions({
   // Value may change, see lists-service/src/main/java/au/org/ala/listsapi/service/BiocacheService.java#getQidForSpeciesList
   const maxTaxaSearch = 2000; 
 
-  // Handle Biocache links
-  const handleBiocacheLink = useCallback(
-    (dataResourceId: string) => {
-      if (meta.isAuthoritative && !meta.isPrivate) {
-        handleAuthoritativeBiocacheLink(dataResourceId);
-      } else if (!meta.isPrivate) {
-        handlePublicBiocacheLink(dataResourceId);
-      } else {
-        handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH);
-      }
-    },
-    []
-  );
-
-  // Authoritative Biocache link handler
+  // Authoritative Biocache link handler (moved before handleBiocacheLink)
   const handleAuthoritativeBiocacheLink = useCallback((dataResourceId: string) => {
     const url = import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH;
     window.open(`${url}?q=species_list_uid:${dataResourceId}`, '_blank');
   }, []);
 
-  // Public list Biocache link handler (subtly different URL to handleAuthoritativeBiocacheLink)
+  // Public list Biocache link handler
   const handlePublicBiocacheLink = useCallback((dataResourceId: string) => {
     const url = import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH;
     window.open(`${url}?q=species_list:${dataResourceId}`, '_blank');
   }, []);
-  
+
   // Biocache QID callback handler
   // NOTE: Biocache can handle more than 2000 taxa for non-authoritative lists, 
   // as long they are public (it calls the API). We could implement this service
@@ -127,7 +112,21 @@ export function Actions({
       if (listQid.current)
         window.open(`${url}?q=qid:${listQid.current}`, '_blank');
     },
-    [ala, meta, listQid.current]
+    [ala, meta]
+  );
+  
+  // Handle Biocache links (now can reference the above functions)
+  const handleBiocacheLink = useCallback(
+    (dataResourceId: string) => {
+      if (meta.isAuthoritative && !meta.isPrivate) {
+        handleAuthoritativeBiocacheLink(dataResourceId);
+      } else if (!meta.isPrivate) {
+        handlePublicBiocacheLink(dataResourceId);
+      } else {
+        handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH);
+      }
+    },
+    [meta.isAuthoritative, meta.isPrivate, handleAuthoritativeBiocacheLink, handlePublicBiocacheLink, handleQidRedirect]
   );
 
   // Download callback handler
@@ -143,10 +142,10 @@ export function Actions({
     }
   }, [ala, meta]);
 
-  // Download callback handler
+  // Reingest callback handler
   const handleReingest = useCallback(() => {
     navigate(`/list/${meta.id}/reingest`);
-  }, [ala, meta]);
+  }, [navigate, meta]);
 
   // Delete callback handler
   const handleDelete = useCallback(() => {
@@ -185,7 +184,7 @@ export function Actions({
         }
       },
     });
-  }, [ala, meta]);
+  }, [ala, meta, navigate]);
 
   const handleRematch = useCallback(() => {
     modals.openConfirmModal({
@@ -219,7 +218,7 @@ export function Actions({
         }
       },
     });
-  }, [meta]);
+  }, [ala, meta, onRematch]);
 
   const handleMetaEdit = useCallback(() => {
     modals.open({

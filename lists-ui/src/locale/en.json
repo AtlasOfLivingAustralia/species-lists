@@ -128,6 +128,7 @@
   "date.created": "Created",
 
   "facet.flag.label": "List flags",
+  "facet.tag.label": "Tags",
   "filters.or.tooltip":"An entry can only have one value for this filter. Selecting mulitple options will result in values being OR'ed together",
   "filters.and.tooltip":"An entry can have multiple flags. Selecting mulitple options will result in values being AND'ed together",
   "filter.key.missing": "[No value provided]",
@@ -149,6 +150,7 @@
   "home.results.records": "records",
   "results.noRecords": "No taxa found",
   "results.for": "for",
+  "results.noRecordsFound": "No records found",
 
   "reingest.error.list.notFount": "List not found",
   "reingest.error.list.notAuthorised": "You are not authorized to reingest this list",
@@ -189,7 +191,7 @@
   "listmeta.region.label": "Region",
   "listmeta.region.placeholder": "Select OR type a custom value",
   "listmeta.tags.label": "Tags",
-  "listmeta.tags.placeholder": "Select tags",
+  "listmeta.tags.placeholder": "Select OR type a custom value",
   "listmeta.visibility.label": "Visibility",
   "listmeta.wkt.label": "Geo Coordinates",
   "listmeta.wkt.placeholder": "Enter geo coordinates",

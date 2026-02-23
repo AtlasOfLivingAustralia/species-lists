@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/exhaustive-deps */
+// Removed a "eslint-disable react-hooks/exhaustive-deps" comment here
 import { Facet, KV, queries, SpeciesListPage, useGQLQuery } from '#/api';
 import {
   ActionIcon,
@@ -85,15 +85,19 @@ const Home = ({ routeId }: { routeId: string }) => {
   const isMobile = useMediaQuery(`(max-width: ${em(750)})`) || false;
   const intl = useIntl();
   const ala = useALA();
-  const [isMyListsPage, setIsMyListsPage] = useState<boolean>(false);
-  const [isAdminListPage, setIsAdminListPage] = useState<boolean>(false);
-  const [inputSearchValue, setSearchInputValue] = useState('');
+  const isMyListsPage = routeId === 'my-lists';
+  const isAdminListPage = routeId === 'admin-lists';
+  const isUser = routeId === 'my-lists';
 
   // Search
   const [search, setSearch] = useQueryState<string>(
     'search',
     parseAsString.withDefault('')
   );
+
+  // Initialise from URL so the input reflects the current search on load/back-nav
+  const [inputSearchValue, setSearchInputValue] = useState(search);
+
   const [searchDebounced] = useDebouncedValue(search, 300);
 
   // Search query state
@@ -117,12 +121,7 @@ const Home = ({ routeId }: { routeId: string }) => {
     'view',
     parseAsString.withDefault('public')
   );
-  // Shows the user's lists (my lists) when true
-  const [isUser, setIsUser] = useState<boolean>(isMyListsPage);
-  // const [filters, setFilters] = useQueryState<KV[]>(
-  //   'filters',
-  //   parseAsFilters // Note: adding `.withDefault([])` causes infinite loop (bug in nuqs v2.4.1 ??)
-  // );
+
   const [filtersRaw, setFiltersRaw] = useQueryState<KV[]>(
     'filters',
     parseAsFilters
@@ -144,12 +143,14 @@ const Home = ({ routeId }: { routeId: string }) => {
   // Internal state (not driven by search params)
   const [refresh, setRefresh] = useState<boolean>(false);
 
-  // Filters display state
-  const [hidefilters, setHideFilters] = useQueryState<boolean>(
+  // Filters display state — omit withDefault so null means "user hasn't set a preference".
+  // Compute the effective value inline: fall back to isMobile when not explicitly set.
+  const [hidefiltersRaw, setHideFilters] = useQueryState<boolean>(
     'hideFilters',
-    parseAsBoolean.withDefault(false)
+    parseAsBoolean
   );
-  const toggleFilters = () => setHideFilters((o) => !o);
+  const hidefilters = hidefiltersRaw ?? isMobile;
+  const toggleFilters = () => setHideFilters(!hidefilters);
 
   // Handle search value changes and sort logic
   const handleSearchChange = useCallback((newValue: string) => {
@@ -182,16 +183,6 @@ const Home = ({ routeId }: { routeId: string }) => {
     { clearDataOnUpdate: false, token: ala.token }
   );
 
-  useEffect(() => {
-    setIsMyListsPage(routeId === 'my-lists');
-    setIsAdminListPage(routeId === 'admin-lists');
-    setIsUser(routeId === 'my-lists');
-  }, [routeId]);
-
-  useEffect(() => {
-    setSearchInputValue(search);
-  }, [search]);
-
   // Destructure results & calculate the real page offset
   const { totalElements, totalPages, content } = data?.lists || {};
   const realPage = page + 1;
@@ -217,11 +208,6 @@ const Home = ({ routeId }: { routeId: string }) => {
     if (totalPages && page >= totalPages) setPage(totalPages - 1);
   }, [page, totalPages]);
 
-  useEffect(() => {
-    // Hide filters for mobile devices
-    setHideFilters(isMobile);
-  }, [isMobile]);
-
   // Retry handler
   const handleRetry = useCallback(() => {
     setPage(0);
@@ -230,7 +216,6 @@ const Home = ({ routeId }: { routeId: string }) => {
     setDir('desc');
     setSearch('');
     setView('public');
-    setIsUser(false);
     setRefresh(!refresh);
   }, [refresh]);
 
@@ -248,7 +233,6 @@ const Home = ({ routeId }: { routeId: string }) => {
 
   const handleFilterClick = useCallback(
     (filter: KV) => {
-      // console.log('Filter clicked:', filter);
       if (
         (filters || []).find(
           ({ key, value }) => filter.key === key && filter.value === value
@@ -265,53 +249,23 @@ const Home = ({ routeId }: { routeId: string }) => {
         setFilters([...(filters || []), filter]);
       }
     },
-    [filters]
+    [filters, setFilters, setPage]
   );
 
   const resetFilters = useCallback(() => {
     setPage(0); // Reset 'page' when filters are reset
     setFilters([]);
-  }, [filters]);
+  }, [setFilters, setPage]);
 
   // Handler for the Enter key press
   interface KeyDownEvent extends React.KeyboardEvent<HTMLInputElement> {}
 
   const handleKeyDown = (event: KeyDownEvent): void => {
-    // Check if the key pressed is the Enter key
     if (event.key === 'Enter') {
-      // Prevent the default form submission behavior (if the input is inside a form)
       event.preventDefault(); 
       handleSearchChange(inputSearchValue);
     }
   };
-
-  const labels = useMemo(
-    () => [
-      {
-        value: 'public',
-        label: (
-          <Center style={{ gap: 10 }}>
-            <FontAwesomeIcon icon={faEye} fontSize={14} />
-            <span>
-              <FormattedMessage id='public.label' defaultMessage='Public' />
-            </span>
-          </Center>
-        ),
-      },
-      {
-        value: 'private',
-        label: (
-          <Center style={{ gap: 10 }}>
-            <FontAwesomeIcon icon={faEyeSlash} fontSize={14} />
-            <span>
-              <FormattedMessage id='private.label' defaultMessage='Private' />
-            </span>
-          </Center>
-        ),
-      },
-    ],
-    [ala.isAdmin]
-  );
 
   const hasError = Boolean(error);
 
@@ -405,7 +359,6 @@ const Home = ({ routeId }: { routeId: string }) => {
                   style={{ flex: 1 }}
                   styles={{ 
                     input: { 
-                      // Remove right border radius and border
                       borderTopRightRadius: 0, 
                       borderBottomRightRadius: 0,
                       borderRight: 'none', 
@@ -441,7 +394,7 @@ const Home = ({ routeId }: { routeId: string }) => {
                       })}
                       disabled={search.length === 0}
                       onClick={() => {
-                        handleSearchChange('')
+                        handleSearchChange('');
                         setSearchInputValue('');
                       }}
                       style={{ marginLeft: 5, marginRight: 10 }}
@@ -463,7 +416,6 @@ const Home = ({ routeId }: { routeId: string }) => {
                     '--button-hover': 'var(--mantine-color-rust-filled-hover)',
                     '--button-hover-color': 'white',
                   }}
-                  // opacity={1}
                   radius="md"
                   onClick={(event) => {
                     event.preventDefault(); 
@@ -528,16 +480,16 @@ const Home = ({ routeId }: { routeId: string }) => {
             <Grid.Col span={{ base: 12, sm: 4, md: 3, lg: 2 }} mt={isMobile ? 0 : 16}>
                 <Collapse in={!hidefilters}>
                 {loading ? (
-                  <Stack gap={6}>
-                    <Skeleton height={24} width="60%" radius="md" />
-                  {Array.from({ length: 3 }).map((_, _index) => (
-                    <>
-                      <Skeleton height={1} width="90%" radius="md" />
-                      <Skeleton height={24} width="50%" radius="md" />
-                      <Skeleton height={250} width="90%" radius="md" />
-                    </>
-                  ))}
-                  </Stack>
+                    <Stack gap={6}>
+                      <Skeleton height={24} width="60%" radius="md" />
+                      {Array.from({ length: 3 }).map((_, index) => (
+                        <div key={index}>
+                          <Skeleton height={1} width="90%" radius="md" />
+                          <Skeleton height={24} width="50%" radius="md" />
+                          <Skeleton height={250} width="90%" radius="md" />
+                        </div>
+                      ))}
+                    </Stack>
                 ) : (
                   <FiltersSection
                     facets={data?.facets || []}
@@ -623,6 +575,10 @@ const Home = ({ routeId }: { routeId: string }) => {
                         >
                           {search && search.length > 0 ? (
                             <>
+                              <FormattedMessage
+                                id='results.noRecordsFound'
+                                defaultMessage='No records found'
+                              />
                               {' '}
                               <FormattedMessage
                                 id='results.for'
@@ -658,7 +614,7 @@ const Home = ({ routeId }: { routeId: string }) => {
                             <ListRow key={list.id} list={list} isMobile={isMobile} />
                           ))
                         : Array.from(Array(size).keys()).map((key) => (
-                            <ListRow key={key} />
+                            <ListRow key={`skeleton-${key}-${size}`} />
                           ))}
                     </Table.Tbody>
                   </Table>
@@ -691,11 +647,8 @@ const Home = ({ routeId }: { routeId: string }) => {
                     'aria-label': `${control} page`,
                   })}
                   getItemProps={(page) => {
-                    // Hide the last page number button (but keep navigation arrows)
                     if (page === totalPages) {
-                      return {
-                        style: { display: 'none' }
-                      };
+                      return { style: { display: 'none' } };
                     }
                     return {};
                   }}

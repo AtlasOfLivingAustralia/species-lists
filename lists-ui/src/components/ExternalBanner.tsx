@@ -3,6 +3,8 @@
 import { Flex, Stack, Text, useMantineTheme } from '@mantine/core';
 import { useMounted } from '@mantine/hooks';
 import { useEffect, useMemo, useState } from 'react';
+import TurndownService from 'turndown';
+import ReactMarkdown from 'react-markdown';
 import {
   StopIcon,
   InfoIcon,
@@ -29,6 +31,7 @@ function ExternalBanner({ url, services }: ExternalBannerProps) {
   const [rawMessages, setRawMessages] = useState<Messages | null>(null);
   const theme = useMantineTheme();
   const mounted = useMounted();
+  const turndownService = new TurndownService();
 
   const styles = useMemo(
     () => ({
@@ -61,7 +64,7 @@ function ExternalBanner({ url, services }: ExternalBannerProps) {
                 ['global', ...(services || [])].includes(service) &&
                 message.length > 0
             )
-            .map(([_, message]) => message)
+            .map(([_, message]) => ({ ...message, message: turndownService.turndown(message.message || '') }))
         : null,
     [rawMessages, services]
   );
@@ -92,6 +95,7 @@ function ExternalBanner({ url, services }: ExternalBannerProps) {
         const Icon = styles[severity].icon;
         return (
           <Flex
+            key={message}
             bg={styles[severity].bg}
             align='center'
             justify='center'
@@ -104,10 +108,9 @@ function ExternalBanner({ url, services }: ExternalBannerProps) {
                 style={{ minWidth: 14, minHeight: 14 }}
               />
             }
-            <Text
-              c={styles[severity].fg}
-              dangerouslySetInnerHTML={{ __html: message }}
-            />
+            <Text c={styles[severity].fg} component='div'>
+              <ReactMarkdown>{message}</ReactMarkdown>
+            </Text>
           </Flex>
         );
       })}
