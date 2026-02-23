@@ -108,8 +108,10 @@ function ExternalBanner({ url, services }: ExternalBannerProps) {
                 style={{ minWidth: 14, minHeight: 14 }}
               />
             }
-            <Text c={styles[severity].fg} component='div'>
-              <ReactMarkdown>{message}</ReactMarkdown>
+            <Text c={styles[severity].fg}>
+              <ReactMarkdown components={{
+                p: ({ children }) => <>{children}</>,
+              }}>{message}</ReactMarkdown>
             </Text>
           </Flex>
         );
