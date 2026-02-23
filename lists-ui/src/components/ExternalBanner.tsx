@@ -32,6 +32,7 @@ function ExternalBanner({ url, services }: ExternalBannerProps) {
   const theme = useMantineTheme();
   const mounted = useMounted();
   const turndownService = new TurndownService();
+  const containsHtml = (str) => /<[a-z][\s\S]*>/i.test(str);
 
   const styles = useMemo(
     () => ({
@@ -64,7 +65,16 @@ function ExternalBanner({ url, services }: ExternalBannerProps) {
                 ['global', ...(services || [])].includes(service) &&
                 message.length > 0
             )
-            .map(([_, message]) => ({ ...message, message: turndownService.turndown(message.message || '') }))
+            .map(([_, message]) => {
+              const rawMessage = message.message || '';
+              // Detect if the message contains HTML tags. 
+              // If it does, convert it to markdown using Turndown. 
+              // Otherwise, use the raw message as is, assuming markdown formatting is already present.
+              const markdown = containsHtml(rawMessage)
+                ? turndownService.turndown(rawMessage)
+                : rawMessage;
+              return { ...message, message: markdown };
+            })
         : null,
     [rawMessages, services]
   );
