@@ -483,11 +483,11 @@ const Home = ({ routeId }: { routeId: string }) => {
                     <Stack gap={6}>
                       <Skeleton height={24} width="60%" radius="md" />
                       {Array.from({ length: 3 }).map((_, index) => (
-                        <div key={index}>
+                        <Stack key={index} gap={6}>
                           <Skeleton height={1} width="90%" radius="md" />
                           <Skeleton height={24} width="50%" radius="md" />
                           <Skeleton height={250} width="90%" radius="md" />
-                        </div>
+                        </Stack>
                       ))}
                     </Stack>
                 ) : (
