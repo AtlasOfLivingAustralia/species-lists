@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -157,6 +158,10 @@ public class GraphQLController {
     /**
      * Browse & search across lists with proper permission handling
      */
+    @Cacheable(
+        value = "homePageData", 
+        key = "T(java.util.Objects).hash(#searchQuery, #filters, #page, #size, #userId, #sort, #isPrivate, #dir)"
+    )
     @QueryMapping
     public Page<SpeciesList> lists(
             @Argument String searchQuery,
@@ -168,7 +173,7 @@ public class GraphQLController {
             @Argument Boolean isPrivate,
             @Argument String dir,
             @AuthenticationPrincipal Principal principal) {
-
+        logger.debug("GraphQL lists query - check cache is working.");
         // Build search context with permission checks
         ListSearchContext searchContext = buildSearchContext(
             searchQuery, isPrivate, filters, userId, sort, dir, principal
