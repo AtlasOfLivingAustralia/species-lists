@@ -5,7 +5,8 @@ import handleSignout from './handleSignout';
 interface TokenRefreshPayload {
   access_token: string;
   expires_in: number;
-  id_token: string;
+  id_token?: string;
+  refresh_token?: string;
   token_type: string;
 }
 
@@ -41,15 +42,19 @@ export default async function handleRefresh(auth: AuthContextProps) {
   }
 
   // Extract the token payload data
-  const { access_token, expires_in } =
+  const { access_token, expires_in, refresh_token, id_token } =
     (await resp.json()) as TokenRefreshPayload;
 
   // Update the existing user
   existing.access_token = access_token;
   existing.expires_in = expires_in;
   existing.expires_at = Math.floor(Date.now() / 1000) + expires_in;
+  // Apply the new refresh_token if the IdP issued one (e.g. rotating refresh tokens)
+  if (refresh_token) existing.refresh_token = refresh_token;
+  // Apply the new id_token if returned
+  if (id_token) existing.id_token = id_token;
 
-  // Trigger the user event to propagate changes & update localStorage
+  // Trigger the user event to propagate changes & persist to sessionStorage
   await auth.events.load(existing, true);
   await userManager.storeUser(existing);
 }
