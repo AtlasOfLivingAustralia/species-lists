@@ -113,7 +113,6 @@ function List() {
   // Initialise from URL so the input reflects the current search on load/back-nav
   const [inputSearchValue, setSearchInputValue] = useState(search);
 
-  // const [searchDebounced] = useDebouncedValue(search, 300);
 
   // Search params state
   const [page, setPage] = useQueryState<number>(
