@@ -80,40 +80,42 @@ function MetaBadge({
 
 export function Summary({ meta, ...rest }: SummaryProps) {
   const ala = useALA();
-  const { constraints, loaded } = useConstraints(ala);
+  const { constraints } = useConstraints(ala);
 
-  // Resolve display values from constraints once loaded
-  const listType = constraints?.listType?.find(t => t.value === meta.listType);
+  // These resolve to undefined until loaded — that's fine, we fall back to raw meta values
+  const listType    = constraints?.listType?.find(t => t.value === meta.listType);
   const listLicence = constraints?.licence?.find(l => l.value === meta.licence);
-  const listRegion = constraints?.region?.find(r => r.value === meta.region);
+  const listRegion  = constraints?.region?.find(r => r.value === meta.region);
 
   return (
     <Group {...rest} gap='xs' align='center' mt={10} ml={0}>
 
-      {/* All remaining badges are gated on `loaded` so labels are fully resolved before rendering */}
-      {loaded && (
+      {/* Render immediately with raw value; swap in resolved label when constraints load */}
+      {meta.listType && (
         <MetaBadge
           typeName='listType'
-          typeValue={listType?.label ?? meta.listType ?? 'No list type'}
-          title={`List type: ${listType?.label ?? meta.listType ?? 'No list type'}`}
+          typeValue={listType?.label ?? meta.listType}
+          title={`List type: ${listType?.label ?? meta.listType}`}
           color=''
           icon={faBookmark}
         />
       )}
 
-      {/* ownerName has no constraint lookup, renders immediately */}
       <MetaBadge typeName='ownerName' typeValue={meta.ownerName ?? '–'} icon={faUser} />
 
-      {loaded && listLicence && (
+      {/* Licence: only meaningful if we have a resolved label (to build the CC link),
+          but show the raw value as a fallback while loading */}
+      {meta.licence && (
         <MetaBadge
           typeName='licence'
-          typeValue={listLicence.value}
+          typeValue={listLicence?.value ?? meta.licence}
           icon={faCreativeCommons}
-          href={generateCCLink(listLicence.value)}
-          title={`Licence: ${listLicence.label}`}
+          href={listLicence ? generateCCLink(listLicence.value) : undefined}
+          title={`Licence: ${listLicence?.label ?? meta.licence}`}
         />
       )}
-      {loaded && meta.region && (
+
+      {meta.region && (
         <MetaBadge
           typeName='region'
           typeValue={listRegion?.value ?? meta.region}
@@ -122,12 +124,12 @@ export function Summary({ meta, ...rest }: SummaryProps) {
         />
       )}
 
-      {/* authority has no constraint lookup, no need to gate on loaded */}
       {meta.authority && (
         <MetaBadge typeName='authority' typeValue={meta.authority} icon={faBank} />
       )}
 
-      {loaded && meta?.tags?.map((tag) => {
+      {/* Tags: render with raw value immediately, swap label in when loaded */}
+      {meta.tags?.map((tag) => {
         const tagOption = constraints?.tags?.find(t => t.value === tag);
         return (
           <MetaBadge

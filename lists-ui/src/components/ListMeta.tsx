@@ -1,5 +1,4 @@
-import { SpeciesList, SpeciesListSubmit } from '#/api';
-import { ExternalLinkIcon } from '@atlasoflivingaustralia/ala-mantine';
+import { useMemo, useState } from 'react';
 import {
   Anchor,
   Autocomplete,
@@ -17,22 +16,17 @@ import {
   TextInput,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { useMemo, useState } from 'react';
-
-import { listFlags } from '#/helpers';
-import { ALAContextProps } from '#/helpers/context/ALAContext';
-import { generateCCLink } from '#/helpers/utils/generateCCLinks';
+import { ExternalLinkIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { FlagCard } from './FlagCard';
-import { useConstraints } from '#/api/graphql/useConstraints';
 
-/** Shape of every entry in a constraints dropdown (region, tags, etc.) */
-interface ConstraintOption {
-  value: string;
-  label: string;
-}
+import { Constraint, SpeciesList, SpeciesListSubmit } from '#/api';
+import { useConstraints } from '#/api/graphql/useConstraints';
+import { listFlags } from '#/helpers';
+import { ALAContextProps } from '#/helpers/context/ALAContext';
+import { generateCCLink } from '#/helpers/utils/generateCCLinks';
+import { FlagCard } from './FlagCard';
 
 interface ListMetaProps {
   ala: ALAContextProps;
@@ -109,13 +103,13 @@ export function ListMeta({
 
   const regionLabel = useMemo(() => {
     if (!form.values.region) return '';
-    const option = constraints?.region?.find((item: ConstraintOption) => item.value === form.values.region);
+    const option = constraints?.region?.find((item: Constraint) => item.value === form.values.region);
     return option ? option.label : form.values.region;
   }, [form.values.region, constraints?.region]);
 
   const handleRegionChange = (selectedValueOrTypedText: string) => {
     const data = constraints?.region || [];
-    const selectedOption = data.find((item: ConstraintOption) => item.label === selectedValueOrTypedText);
+    const selectedOption = data.find((item: Constraint) => item.label === selectedValueOrTypedText);
 
     if (selectedOption) {
       form.setFieldValue('region', selectedOption.value);
@@ -131,7 +125,7 @@ export function ListMeta({
       form.setFieldValue('tags', null);
     } else {
       const mappedValues = selectedValues.map(label => {
-        const option = data.find((item: ConstraintOption) => item.label === label);
+        const option = data.find((item: Constraint) => item.label === label);
         return option ? option.value : label;
       });
       form.setFieldValue('tags', mappedValues);
@@ -142,7 +136,7 @@ export function ListMeta({
     const base = constraints?.tags || [];
     const custom = customTags.map((v) => ({ value: v, label: v }));
     const selected = (form.values.tags || [])
-      .filter((v) => !base.some((b: ConstraintOption) => b.value === v) && !customTags.includes(v))
+      .filter((v) => !base.some((b: Constraint) => b.value === v) && !customTags.includes(v))
       .map((v) => ({ value: v, label: v }));
 
     return [...base, ...custom, ...selected];
