@@ -184,7 +184,7 @@
   "listmeta.description.placeholder": "List details",
   "listmeta.type.label": "Type",
   "listmeta.type.placeholder": "List type",
-  "listmeta.licence.label": "Licence",
+  "listmeta.licence.label": "Licence (see <chooserLink>CC chooser</chooserLink>)",
   "listmeta.licence.placeholder": "List licence",
   "listmeta.authority.label": "Authority",
   "listmeta.authority.placeholder": "Authority",
@@ -477,6 +477,7 @@
   "region.ZW": "Zimbabwe",
   "region.AX": "Åland",
 
+  "TODO.CC.codes": "any code using these CC values below should be updated to use the Constraints API via `useConstraints()`, and these values should be removed from the locale file",
   "licence.CC0": "Creative Commons Zero (Public Domain)",
   "licence.CC-BY": "Creative Commons By Attribution",
   "licence.CC-BY-NC": "Creative Commons Attribution-Noncommercial",

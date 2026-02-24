@@ -296,16 +296,16 @@ export function Actions({
           </ActionIcon>
         </Menu.Target>
         <Menu.Dropdown>
-            <Menu.Label>
+          <Menu.Label>
               {intl.formatMessage({ id: 'actions.menu.label', defaultMessage: 'Actions' })}
-            </Menu.Label>
-            <Menu.Item
+          </Menu.Label>
+          <Menu.Item
             onClick={handleDownload}
             disabled={updating || rematching || deleting}
             leftSection={<FontAwesomeIcon icon={faDownload} />}
             >
             {intl.formatMessage({ id: 'actions.downloadList', defaultMessage: 'Download list' })}
-            </Menu.Item>
+          </Menu.Item>
           <Menu.Item
             onClick={() =>
               handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH)

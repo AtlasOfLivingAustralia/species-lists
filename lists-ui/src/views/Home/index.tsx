@@ -392,7 +392,7 @@ const Home = ({ routeId }: { routeId: string }) => {
                         id: 'search.clear.label',
                         defaultMessage: 'Clear search',
                       })}
-                      disabled={search.length === 0}
+                      disabled={inputSearchValue.length === 0}
                       onClick={() => {
                         handleSearchChange('');
                         setSearchInputValue('');
