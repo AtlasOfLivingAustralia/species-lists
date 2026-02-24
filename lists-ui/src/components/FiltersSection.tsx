@@ -320,7 +320,7 @@ export const FiltersSection = memo(
             const isFirst = index === firstBooleanIndex;
             return (
               <FacetComponent
-                key={facet.key}
+                key={`facet-${facet.key}-${index}`} // include index to ensure uniqueness even if keys are duplicated
                 facet={facet}
                 isExpanded={expanded.includes(facet.key)}
                 handleFacetToggle={handleFacetToggle}

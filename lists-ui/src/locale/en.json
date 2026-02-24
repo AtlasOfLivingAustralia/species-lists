@@ -186,6 +186,7 @@
   "listmeta.type.placeholder": "List type",
   "listmeta.licence.label": "Licence (see <chooserLink>CC chooser</chooserLink>)",
   "listmeta.licence.placeholder": "List licence",
+  "listmeta.licence.link.help": "Click to view licence details",
   "listmeta.authority.label": "Authority",
   "listmeta.authority.placeholder": "Authority",
   "listmeta.region.label": "Region",

@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Anchor,
   Autocomplete,
   Button,
   Center,
+  CheckIcon,
   ComboboxItem,
+  ComboboxLikeRenderOptionInput,
   Divider,
   Grid,
   Group,
@@ -14,6 +16,7 @@ import {
   Text,
   Textarea,
   TextInput,
+  Tooltip,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { ExternalLinkIcon } from '@atlasoflivingaustralia/ala-mantine';
@@ -100,6 +103,17 @@ export function ListMeta({
       licence: notEmpty,
     },
   });
+
+  // Derive these from constraints, not inline, so they don't recalculate on every render
+  const licenceData = useMemo(() =>
+    constraints?.licence?.map(l => ({ value: l.value, label: l.value })) ?? [],
+    [constraints?.licence]
+  );
+
+  const licenceLabelMap = useMemo(() =>
+    Object.fromEntries((constraints?.licence ?? []).map(l => [l.value, l.label])),
+    [constraints?.licence]
+  );
 
   const regionLabel = useMemo(() => {
     if (!form.values.region) return '';
@@ -218,41 +232,72 @@ export function ListMeta({
         </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
           <Select
-            name='licence'
+            name="licence"
             label={
               <FormattedMessage
                 id="listmeta.licence.label"
                 defaultMessage="Licence: <chooserLink>Creative Commons Chooser</chooserLink>"
                 values={{
-                  chooserLink: (chunks: React.ReactNode) => (
-                    <a 
-                      href={chooserUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ textDecoration: 'underline', color: 'blue' }} // Optional styling
-                    >
-                      {chunks}
-                    </a>
-                  ),
+                  chooserLink: (chunks: React.ReactNode) => {
+                    return React.createElement(
+                      'a',
+                      {
+                        href: chooserUrl,
+                        target: '_blank',
+                        rel: 'noopener noreferrer',
+                        style: { textDecoration: 'underline', color: 'blue' },
+                      },
+                      chunks
+                    );
+                  },
                 }}
               />
             }
-            data={constraints?.licence || []}
-            placeholder={intl.formatMessage({ id: 'listmeta.licence.placeholder', defaultMessage: 'List licence' })}
+            data={licenceData}
+            placeholder={intl.formatMessage({
+              id: 'listmeta.licence.placeholder',
+              defaultMessage: 'List licence',
+            })}
             required
             disabled={!loaded || loading}
-            renderOption={({ option }: { option: ComboboxItem }) => (
-              <Group justify='space-between' wrap='nowrap' style={{ flex: 1 }}>
-                <span>{option.label}</span>
-                <Anchor
-                  href={generateCCLink(option.value)}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  size='xs'
-                  onClick={(e) => e.stopPropagation()}
+            renderOption={({ option, checked }: ComboboxLikeRenderOptionInput<ComboboxItem>) => (
+              <Group justify="space-between" wrap="nowrap" style={{ flex: 1 }}>
+                <Group gap="xs" wrap="nowrap">
+                  {checked && <CheckIcon size={12} opacity={0.5}/>}
+                  <Tooltip
+                    label={licenceLabelMap[option.value]}
+                    position="left"
+                    withArrow
+                    multiline
+                    w={200}
+                    opacity={0.8}
+                  >
+                    <span>{option.value}</span>
+                  </Tooltip>
+                </Group>
+                <Tooltip
+                  label={
+                    <FormattedMessage
+                      id="listmeta.licence.link.help"
+                      defaultMessage="Click to view licence details"
+                    />
+                  }
+                  position="left"
+                  withArrow
+                  multiline
+                  w={200}
+                  opacity={0.8}
                 >
-                  <ExternalLinkIcon />
-                </Anchor>
+                  <Anchor
+                    href={generateCCLink(option.value)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    size="xs"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLinkIcon />
+                  </Anchor>
+                </Tooltip>
               </Group>
             )}
             {...form.getInputProps('licence')}
