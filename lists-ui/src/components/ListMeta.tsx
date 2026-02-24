@@ -5,6 +5,7 @@ import {
   Autocomplete,
   Button,
   Center,
+  ComboboxItem,
   Divider,
   Grid,
   Group,
@@ -20,6 +21,7 @@ import { useMemo, useState } from 'react';
 
 import { listFlags } from '#/helpers';
 import { ALAContextProps } from '#/helpers/context/ALAContext';
+import { generateCCLink } from '#/helpers/utils/generateCCLinks';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -80,6 +82,7 @@ export function ListMeta({
   const [customTags, setCustomTags] = useState<string[]>([]);
 
   const intl = useIntl();
+  const chooserUrl = "https://creativecommons.org/share-your-work/cclicenses/";
 
   // Custom validator for the `listType` and `licence` fields.
   const notEmpty = (value: string) =>
@@ -223,12 +226,41 @@ export function ListMeta({
           <Select
             name='licence'
             label={
-              <FormattedMessage id="listmeta.licence.label" defaultMessage="Licence" />
+              <FormattedMessage
+                id="listmeta.licence.label"
+                defaultMessage="Licence: <chooserLink>Creative Commons Chooser</chooserLink>"
+                values={{
+                  chooserLink: (chunks: React.ReactNode) => (
+                    <a 
+                      href={chooserUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{ textDecoration: 'underline', color: 'blue' }} // Optional styling
+                    >
+                      {chunks}
+                    </a>
+                  ),
+                }}
+              />
             }
             data={constraints?.licence || []}
             placeholder={intl.formatMessage({ id: 'listmeta.licence.placeholder', defaultMessage: 'List licence' })}
             required
             disabled={!loaded || loading}
+            renderOption={({ option }: { option: ComboboxItem }) => (
+              <Group justify='space-between' wrap='nowrap' style={{ flex: 1 }}>
+                <span>{option.label}</span>
+                <Anchor
+                  href={generateCCLink(option.value)}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  size='xs'
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLinkIcon />
+                </Anchor>
+              </Group>
+            )}
             {...form.getInputProps('licence')}
           />
         </Grid.Col>
