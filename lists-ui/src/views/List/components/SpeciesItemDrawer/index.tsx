@@ -59,7 +59,7 @@ export function SpeciesItemDrawer({
   const [updating, setUpdating] = useState<boolean>(false);
   const [editing, setEditing] = useState<boolean>(false);
   const [editItem, setEditItem] = useState<InputSpeciesList | null>(null);
-  const { auth, isAuthorisedForList } = useALA();
+  const { token, isAuthenticated, isAuthorisedForList } = useALA();
 
   // useEffect replaced with a simple function to stop editing and reset state when closing the drawer
   const stopEditing = () => {
@@ -76,7 +76,7 @@ export function SpeciesItemDrawer({
         {
           editItem,
         },
-        auth?.user?.access_token
+        token
       );
 
       if (newItem) onEdited(newItem);
@@ -105,7 +105,7 @@ export function SpeciesItemDrawer({
             speciesListID: meta.id,
           },
         },
-        auth?.user?.access_token
+        token
       );
 
       if (newItem) onEdited(newItem);
@@ -133,7 +133,7 @@ export function SpeciesItemDrawer({
         {
           id: item.id,
         },
-        auth?.user?.access_token
+        token
       );
 
       onDeleted(item.id);
@@ -181,8 +181,8 @@ export function SpeciesItemDrawer({
                   onChange={(event) => setEditing(event.currentTarget.checked)}
                   labelPosition='left'
                   size='xs'
-                  label={auth?.isAuthenticated ? 'Edit' : 'Sign in to edit'}
-                  miw={auth?.isAuthenticated ? undefined : 120}
+                  label={isAuthenticated ? 'Edit' : 'Sign in to edit'}
+                  miw={isAuthenticated ? undefined : 120}
                 />
               )}
               <Drawer.CloseButton
