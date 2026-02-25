@@ -25,8 +25,8 @@ import org.springframework.data.annotation.Id;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
- * Model class representing a species list version for /v1 backwards compatibility. This POJO is
- * used for controller response serialization only.
+ * Model class representing a single species list item for /v1 backwards compatibility. This POJO
+ * is used for controller response serialization only (e.g. for /v1/species/** endpoints).
  */
 @Data
 @NoArgsConstructor
