@@ -158,8 +158,10 @@ public class SpeciesListTransformer {
         }
 
         List<KvpValueVersion1> kvps = new ArrayList<>();
-        speciesListItem.getProperties()
-                .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
+        if (speciesListItem.getProperties() != null) {
+            speciesListItem.getProperties()
+                    .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
+        }
         listItemVersion1.setKvpValues(kvps);
 
         return listItemVersion1;
@@ -210,8 +212,12 @@ public class SpeciesListTransformer {
         Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
 
         List<KvpValueVersion1> kvps = new ArrayList<>();
-        speciesListItem.getProperties()
-                .forEach(kvpValue -> kvps.add(new KvpValueVersion1(replaceKnownKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
+        
+        if (speciesListItem.getProperties() != null) {
+            speciesListItem.getProperties()
+                    .forEach(kvpValue -> kvps.add(new KvpValueVersion1(replaceKnownKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
+        } 
+
         queryListItemV1.setKvpValues(kvps);
 
         if (speciesList.isPresent()) {
