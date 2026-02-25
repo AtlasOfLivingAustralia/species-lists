@@ -61,6 +61,7 @@ import au.org.ala.ws.security.profile.AlaUserProfile;
 import io.micrometer.common.util.StringUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -613,7 +614,7 @@ public class LegacyController {
                     description = "Species list items found for GUID/s",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = SpeciesItemVersion1.class)
+                            array = @ArraySchema(schema = @Schema(implementation = SpeciesItemVersion1.class))
                     )
             ),
             @ApiResponse(
