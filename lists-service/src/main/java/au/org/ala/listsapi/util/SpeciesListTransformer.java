@@ -31,6 +31,7 @@ import au.org.ala.listsapi.model.AbbrListVersion1;
 import au.org.ala.listsapi.model.KvpValueVersion1;
 import au.org.ala.listsapi.model.QueryListItemVersion1;
 import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesItemVersion1;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.model.SpeciesListItemVersion1;
 import au.org.ala.listsapi.model.SpeciesListVersion1;
@@ -158,7 +159,7 @@ public class SpeciesListTransformer {
 
         List<KvpValueVersion1> kvps = new ArrayList<>();
         speciesListItem.getProperties()
-                .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue())));
+                .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
         listItemVersion1.setKvpValues(kvps);
 
         return listItemVersion1;
@@ -210,7 +211,7 @@ public class SpeciesListTransformer {
 
         List<KvpValueVersion1> kvps = new ArrayList<>();
         speciesListItem.getProperties()
-                .forEach(kvpValue -> kvps.add(new KvpValueVersion1(replaceKnownKeys(kvpValue.getKey()), kvpValue.getValue())));
+                .forEach(kvpValue -> kvps.add(new KvpValueVersion1(replaceKnownKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
         queryListItemV1.setKvpValues(kvps);
 
         if (speciesList.isPresent()) {
@@ -222,6 +223,52 @@ public class SpeciesListTransformer {
         }
 
         return queryListItemV1;
+    }
+
+    /**
+     * Transforms a SpeciesListItem to a SpeciesItemVersion1 object, suitable for the
+     * /v1/species/** endpoint response.
+     *
+     * @param speciesListItem The source SpeciesListItem object
+     * @return A new SpeciesItemVersion1 populated with values from the source
+     */
+    public SpeciesItemVersion1 transformToSpeciesItemVersion1(SpeciesListItem speciesListItem) {
+        if (speciesListItem == null) {
+            return null;
+        }
+
+        SpeciesItemVersion1 item = new SpeciesItemVersion1();
+        String speciesListID = speciesListItem.getSpeciesListID();
+
+        item.setGuid(speciesListItem.getClassification() != null
+                ? speciesListItem.getClassification().getTaxonConceptID() : null);
+        item.setDataResourceUid(speciesListID);
+
+        // Populate the abbreviated list details
+        AbbrListVersion1 list = new AbbrListVersion1();
+        Optional<SpeciesList> speciesList =
+                speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+        if (speciesList.isPresent()) {
+            SpeciesList sl = speciesList.get();
+            list.setListName(sl.getTitle());
+            list.setUsername(sl.getOwner());
+            list.setSds(sl.getIsSDS());
+            list.setIsBIE(sl.getIsBIE());
+            item.setDataResourceUid(sl.getDataResourceUid() != null ? sl.getDataResourceUid() : speciesListID);
+        } else {
+            logger.warn("SpeciesItemVersion1 transformToSpeciesItemVersion1() -> Species list not found for ID: " + speciesListID);
+        }
+        item.setList(list);
+
+        // Build KVP values from properties
+        List<KvpValueVersion1> kvps = new ArrayList<>();
+        if (speciesListItem.getProperties() != null) {
+            speciesListItem.getProperties()
+                    .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
+        }
+        item.setKvpValues(kvps);
+
+        return item;
     }
 
     private String replaceKnownKeys(String key) {

@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import au.org.ala.listsapi.model.QueryListItemVersion1;
 import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesItemVersion1;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.model.SpeciesListItemVersion1;
 import au.org.ala.listsapi.model.SpeciesListVersion1;
@@ -68,6 +69,19 @@ public class SpeciesListLegacyService {
     public List<SpeciesListItemVersion1> convertListItemToVersion1(List<SpeciesListItem> speciesListItems) {
         return IntStream.range(0, speciesListItems.size())
                 .mapToObj(i -> speciesListTransformer.transformToVersion1(speciesListItems.get(i), i))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Converts a list of SpeciesListItem to the SpeciesItemVersion1 format for the
+     * /v1/species/** endpoint.
+     *
+     * @param speciesListItems List of modern SpeciesListItem objects
+     * @return List of SpeciesItemVersion1 representations
+     */
+    public List<SpeciesItemVersion1> convertToSpeciesItemVersion1(List<SpeciesListItem> speciesListItems) {
+        return speciesListItems.stream()
+                .map(speciesListTransformer::transformToSpeciesItemVersion1)
                 .collect(Collectors.toList());
     }
 

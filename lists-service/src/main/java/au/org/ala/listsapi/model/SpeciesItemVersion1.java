@@ -15,21 +15,29 @@
 
 package au.org.ala.listsapi.model;
 
+import java.io.Serializable;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
+import org.springframework.data.annotation.Id;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
- * Model class representing a list kvp value for /v1 backwards compatibility.
- * This POJO is used for controller response serialization only.
+ * Model class representing a species list version for /v1 backwards compatibility. This POJO is
+ * used for controller response serialization only.
  */
-@NoArgsConstructor
 @Data
-@SuperBuilder
+@NoArgsConstructor
 @AllArgsConstructor
-public class KvpValueVersion1 {
-    private String key;
-    private String value;
-    private String vocabValue; // not populated but provided for backwards compatibility with v1 response structure
+public class SpeciesItemVersion1 implements Serializable {
+
+  private static final long serialVersionUID = 1L;
+  @JsonIgnore
+  @Id private Long id;
+  private String dataResourceUid;
+  private String guid;
+  private AbbrListVersion1 list;
+  private List<KvpValueVersion1> kvpValues;
 }
