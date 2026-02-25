@@ -478,10 +478,11 @@
   "region.ZW": "Zimbabwe",
   "region.AX": "Åland",
 
-  "TODO.CC.codes": "any code using these CC values below should be updated to use the Constraints API via `useConstraints()`, and these values should be removed from the locale file",
+  "TODO.CC.codes": "Any code using these CC values below should be updated to use the Constraints API via `useConstraints()`, and these values should be removed from the locale file",
   "licence.CC0": "Creative Commons Zero (Public Domain)",
   "licence.CC-BY": "Creative Commons By Attribution",
   "licence.CC-BY-NC": "Creative Commons Attribution-Noncommercial",
+  "licence.CC-BY-ND": "Creative Commons Attribution-No Derivative Works",
   "licence.CC-BY-NC-ND": "Creative Commons Attribution-Noncommercial-No Derivative Works",
   "licence.CC-BY-NC-SA": "Creative Commons Attribution-Noncommercial-Share Alike",
   "licence.CC-BY-SA": "Creative Commons Attribution-Share Alike",

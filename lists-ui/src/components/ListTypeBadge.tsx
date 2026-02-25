@@ -18,10 +18,13 @@ const listTypeValues: Record<string, React.ReactNode> = {
 export function ListTypeBadge({
   listTypeValue, 
   titleText,
+  tooltipText: tooltipTextProp,
   iconSide = 'left'
 } : {
   listTypeValue: string, 
   titleText?: string | React.ReactNode,
+  /** Explicit tooltip override. When provided, skips the i18n licence.* lookup. */
+  tooltipText?: string,
   iconSide?: 'left' | 'right'}) 
 {
   const intl = useIntl();
@@ -29,7 +32,12 @@ export function ListTypeBadge({
   // sanitise the listTypeValue to prevent XSS attacks
   const sanitisedListTypeValue = sanitiseText(listTypeValue);
   const message = <FormattedMessage id={sanitisedListTypeValue || 'filter.key.missing'} defaultMessage={sanitisedListTypeValue}/>;
-  const tooltipText = intl.formatMessage({ id: `licence.${titleText && typeof titleText === 'string' ? sanitiseText(titleText) : 'none'}`, defaultMessage: (typeof titleText === 'string' ? titleText : '') || '' });
+
+  // Use the explicit tooltip when provided; otherwise fall back to the i18n licence.* lookup
+  const resolvedTooltip = tooltipTextProp ?? intl.formatMessage({
+    id: `licence.${titleText && typeof titleText === 'string' ? sanitiseText(titleText) : 'none'}`,
+    defaultMessage: (typeof titleText === 'string' ? titleText : '') || ''
+  });
 
   return (
     <Box style={{ display: 'flex', alignItems: 'center', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100%' }}>
@@ -40,8 +48,8 @@ export function ListTypeBadge({
         pl={listIcon && iconSide === 'left' ? 5 : 0}
         component='span'
       >
-        {titleText && typeof titleText === 'string' && titleText.length > 1 && tooltipText !== titleText ? (
-          <Tooltip label={tooltipText} withArrow position="right">
+        {titleText && typeof titleText === 'string' && titleText.length > 1 && resolvedTooltip !== titleText ? (
+          <Tooltip label={resolvedTooltip} withArrow position="right">
             <span>{titleText}</span>
           </Tooltip>
         ) : (
