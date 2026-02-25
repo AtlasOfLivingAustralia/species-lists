@@ -212,7 +212,7 @@ public class SpeciesListTransformer {
         Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
 
         List<KvpValueVersion1> kvps = new ArrayList<>();
-        
+
         if (speciesListItem.getProperties() != null) {
             speciesListItem.getProperties()
                     .forEach(kvpValue -> kvps.add(new KvpValueVersion1(replaceKnownKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
@@ -233,12 +233,38 @@ public class SpeciesListTransformer {
 
     /**
      * Transforms a SpeciesListItem to a SpeciesItemVersion1 object, suitable for the
-     * /v1/species/** endpoint response.
+     * /v1/species/** endpoint response. Performs a per-item MongoDB lookup.
+     *
+     * <p>Prefer {@link #transformToSpeciesItemVersion1(SpeciesListItem, Map)} when converting a
+     * batch of items to avoid N+1 queries.
      *
      * @param speciesListItem The source SpeciesListItem object
      * @return A new SpeciesItemVersion1 populated with values from the source
      */
     public SpeciesItemVersion1 transformToSpeciesItemVersion1(SpeciesListItem speciesListItem) {
+        if (speciesListItem == null) {
+            return null;
+        }
+        String speciesListID = speciesListItem.getSpeciesListID();
+        Optional<SpeciesList> speciesList =
+                speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+        Map<String, SpeciesList> listCache = speciesList
+                .map(sl -> Map.of(speciesListID, sl))
+                .orElse(Map.of());
+        return transformToSpeciesItemVersion1(speciesListItem, listCache);
+    }
+
+    /**
+     * Transforms a SpeciesListItem to a SpeciesItemVersion1 object using a pre-fetched map of
+     * SpeciesList records, avoiding per-item MongoDB lookups.
+     *
+     * @param speciesListItem The source SpeciesListItem object
+     * @param listCache Map keyed by speciesListID (or dataResourceUid) to SpeciesList, pre-fetched
+     *     by the caller
+     * @return A new SpeciesItemVersion1 populated with values from the source
+     */
+    public SpeciesItemVersion1 transformToSpeciesItemVersion1(
+            SpeciesListItem speciesListItem, Map<String, SpeciesList> listCache) {
         if (speciesListItem == null) {
             return null;
         }
@@ -250,12 +276,10 @@ public class SpeciesListTransformer {
                 ? speciesListItem.getClassification().getTaxonConceptID() : null);
         item.setDataResourceUid(speciesListID);
 
-        // Populate the abbreviated list details
+        // Populate the abbreviated list details from the pre-fetched cache
         AbbrListVersion1 list = new AbbrListVersion1();
-        Optional<SpeciesList> speciesList =
-                speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
-        if (speciesList.isPresent()) {
-            SpeciesList sl = speciesList.get();
+        SpeciesList sl = listCache.get(speciesListID);
+        if (sl != null) {
             list.setListName(sl.getTitle());
             list.setUsername(sl.getOwner());
             list.setSds(sl.getIsSDS());

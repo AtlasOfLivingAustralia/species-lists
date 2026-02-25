@@ -16,6 +16,8 @@
 package au.org.ala.listsapi.service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -28,6 +30,7 @@ import au.org.ala.listsapi.model.SpeciesItemVersion1;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.model.SpeciesListItemVersion1;
 import au.org.ala.listsapi.model.SpeciesListVersion1;
+import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.util.SpeciesListTransformer;
 
 /**
@@ -37,6 +40,9 @@ import au.org.ala.listsapi.util.SpeciesListTransformer;
 public class SpeciesListLegacyService {
     @Autowired
     SpeciesListTransformer speciesListTransformer;
+
+    @Autowired
+    SpeciesListMongoRepository speciesListMongoRepository;
 
     /**
      * Converts a SpeciesList to the legacy SpeciesListVersion1 format.
@@ -76,12 +82,35 @@ public class SpeciesListLegacyService {
      * Converts a list of SpeciesListItem to the SpeciesItemVersion1 format for the
      * /v1/species/** endpoint.
      *
+     * <p>Fetches all required SpeciesList records in a single bulk query to avoid N+1
+     * MongoDB lookups when the list is large.
+     *
      * @param speciesListItems List of modern SpeciesListItem objects
      * @return List of SpeciesItemVersion1 representations
      */
     public List<SpeciesItemVersion1> convertToSpeciesItemVersion1(List<SpeciesListItem> speciesListItems) {
+        // Collect the distinct speciesListIDs referenced by the items
+        Set<String> listIDs = speciesListItems.stream()
+                .map(SpeciesListItem::getSpeciesListID)
+                .filter(id -> id != null && !id.isEmpty())
+                .collect(Collectors.toSet());
+
+        // Bulk-fetch all required SpeciesList records in a single query
+        List<SpeciesList> speciesLists = speciesListMongoRepository.findByDataResourceUidInOrIdIn(listIDs);
+
+        // Build a lookup map: both the raw speciesListID and the dataResourceUid are valid keys
+        Map<String, SpeciesList> listCache = speciesLists.stream()
+                .collect(Collectors.toMap(
+                        sl -> sl.getId() != null ? sl.getId() : sl.getDataResourceUid(),
+                        sl -> sl,
+                        (a, b) -> a)); // keep first on collision
+        // Also index by dataResourceUid so lookups work regardless of which ID the item stores
+        speciesLists.stream()
+                .filter(sl -> sl.getDataResourceUid() != null)
+                .forEach(sl -> listCache.putIfAbsent(sl.getDataResourceUid(), sl));
+
         return speciesListItems.stream()
-                .map(speciesListTransformer::transformToSpeciesItemVersion1)
+                .map(item -> speciesListTransformer.transformToSpeciesItemVersion1(item, listCache))
                 .collect(Collectors.toList());
     }
 
