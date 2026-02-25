@@ -698,31 +698,43 @@ public class LegacyController {
                 String userId = profile != null ? profile.getUserId() : null;
                 Boolean isAdmin = authUtils.hasAdminRole(profile);
 
-                // Fetch all matching lists (up to 10,000) — no text search, just boolean filters
-                Page<SpeciesList> matchingLists = searchHelperService.searchDocuments(
-                        speciesListQuery.convertTo(), userId, isAdmin, ".*", PageRequest.of(0, 10000));
+                // Fetch all matching lists by paging through results — no text search, just boolean filters
+                int pageIndex = 0;
+                int pageSize = 1000;
+                List<String> matchingListIds = new ArrayList<>();
 
-                String filteredListIDs = matchingLists.getContent().stream()
-                        .map(list -> list.getDataResourceUid() != null ? list.getDataResourceUid() : list.getId())
-                        .collect(java.util.stream.Collectors.joining(","));
+                while (true) {
+                    Page<SpeciesList> matchingListsPage = searchHelperService.searchDocuments(
+                            speciesListQuery.convertTo(), userId, isAdmin, ".*", PageRequest.of(pageIndex, pageSize));
 
-                if (filteredListIDs.isEmpty()) {
+                    matchingListIds.addAll(
+                            matchingListsPage.getContent().stream()
+                                    .map(list -> list.getDataResourceUid() != null ? list.getDataResourceUid() : list.getId())
+                                    .collect(java.util.stream.Collectors.toList())
+                    );
+
+                    if (!matchingListsPage.hasNext()) {
+                        break;
+                    }
+                    pageIndex++;
+                }
+
+                if (matchingListIds.isEmpty()) {
                     return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
                 }
 
                 // Intersect with caller-supplied speciesListIDs if present
                 if (StringUtils.isNotBlank(speciesListIDs)) {
                     Set<String> callerIDs = new java.util.HashSet<>(Arrays.asList(speciesListIDs.split(",")));
-                    filteredListIDs = Arrays.stream(filteredListIDs.split(","))
-                            .filter(callerIDs::contains)
-                            .collect(java.util.stream.Collectors.joining(","));
+                    matchingListIds.retainAll(callerIDs);
 
-                    if (filteredListIDs.isEmpty()) {
+                    if (matchingListIds.isEmpty()) {
                         return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
                     }
                 }
 
-                speciesListIDs = filteredListIDs;
+                speciesListIDs = matchingListIds.stream()
+                        .collect(java.util.stream.Collectors.joining(","));
             }
 
             List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(
