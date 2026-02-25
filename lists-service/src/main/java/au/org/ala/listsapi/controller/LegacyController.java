@@ -657,8 +657,8 @@ public class LegacyController {
                     schema = @Schema(type = "string")
             )
             @Nullable @RequestParam(name = "speciesListIDs") String speciesListIDs,
-            @Nullable @RequestParam(name = "page", defaultValue = "1") Integer page,
-            @Nullable @RequestParam(name = "pageSize", defaultValue = "999999")  Integer pageSize,
+            @Nullable @RequestParam(name = "page", defaultValue = "1") @Max(9990) Integer page,
+            @Nullable @RequestParam(name = "pageSize", defaultValue = "9999") @Max(10000) Integer pageSize,
             @RequestParam(name = "isAuthoritative", required = false) String isAuthoritative,
             @RequestParam(name = "isThreatened", required = false) String isThreatened,
             @RequestParam(name = "isInvasive", required = false) String isInvasive,
@@ -676,7 +676,7 @@ public class LegacyController {
 
         // Catch possible null values from unboxed page and pageSize
         int pageVal = Math.max((page != null ? page : 1), 1); // Ensure page is at least 1
-        int pageSizeVal = Math.max((pageSize != null ? pageSize : 999999), 1); // Ensure pageSize is at least 1
+        int pageSizeVal = Math.max((pageSize != null ? pageSize : 9999), 1); // Ensure pageSize is at least 1
 
         String inputGuids = (StringUtils.isNotBlank(guid) ? guid : (StringUtils.isNotBlank(guids) ? guids : ""));
 
