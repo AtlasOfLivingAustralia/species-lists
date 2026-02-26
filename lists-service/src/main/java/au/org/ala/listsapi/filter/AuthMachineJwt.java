@@ -12,7 +12,7 @@
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  */
-package au.org.ala.listsapi;
+package au.org.ala.listsapi.filter;
 
 import java.io.IOException;
 import java.security.Principal;

@@ -130,11 +130,7 @@ public class SpeciesListTransformer {
 
         SpeciesListItemVersion1 listItemVersion1 = new SpeciesListItemVersion1();
         String speciesListID = speciesListItem.getSpeciesListID();
-        BigInteger bigIntId = new BigInteger(speciesListItem.getId().toHexString(), 16);
-        // Legacy IDs were simple integers, so we convert the ObjectId to a BigInteger and then to int
-        // So this does not break any legacy systems that expect integer IDs
-        int fakeId = bigIntId.intValue(); // just needs to be unique and is not referenced anywhere
-        listItemVersion1.setId((long) fakeId);
+        listItemVersion1.setId(toLegacyId(speciesListItem));
         listItemVersion1.setLsid(speciesListItem.getClassification() != null ? speciesListItem.getClassification().getTaxonConceptID() : null);
         listItemVersion1.setScientificName(speciesListItem.getClassification() != null ? speciesListItem.getClassification().getScientificName() : speciesListItem.getScientificName());
         listItemVersion1.setCommonName(speciesListItem.getVernacularName() != null ? speciesListItem.getVernacularName() : speciesListItem.getClassification() != null ? speciesListItem.getClassification().getVernacularName() : null);
@@ -143,7 +139,6 @@ public class SpeciesListTransformer {
 
         // Get list details via MongoDB
         Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
-
         AbbrListVersion1 list = new AbbrListVersion1();
 
         if (speciesList.isPresent()) {
@@ -165,6 +160,27 @@ public class SpeciesListTransformer {
         listItemVersion1.setKvpValues(kvps);
 
         return listItemVersion1;
+    }
+
+    /**
+     * Converts the MongoDB ObjectId of a SpeciesListItem to a legacy integer ID for backward compatibility with v1 endpoints.
+     * <p>
+     * This is a deliberately <strong>lossy</strong> conversion that derives a 32-bit integer from the 96-bit
+     * MongoDB ObjectId by taking only the lower 32 bits of its hexadecimal representation. As a result:
+     * <ul>
+     *   <li>Information from the higher-order bits of the ObjectId is discarded.</li>
+     *   <li>Different ObjectIds may map to the same legacy integer ID (collisions are possible).</li>
+     * </ul>
+     * This method exists solely to satisfy legacy v1 contracts that expect integer IDs and should not be
+     * relied upon as a unique or stable identifier beyond that context.
+     *
+     * @param speciesListItem the source item whose ObjectId is used to derive the legacy ID
+     * @return a long value representing the legacy ID (containing the lower 32 bits of the ObjectId)
+     */
+    private long toLegacyId(SpeciesListItem speciesListItem) {
+        BigInteger bigIntId = new BigInteger(speciesListItem.getId().toHexString(), 16);
+        // Legacy IDs were simple integers; convert ObjectId to a numeric value to satisfy legacy expectations
+        return bigIntId.longValue();
     }
 
     private static String fixLegacyKeys(String key) {
@@ -200,7 +216,7 @@ public class SpeciesListTransformer {
         String speciesListID = speciesListItem.getSpeciesListID();
 
         // Map properties from SpeciesList to SpeciesListVersion1
-        queryListItemV1.setId(speciesListItem.getId().toString());
+        queryListItemV1.setId(toLegacyId(speciesListItem));
         queryListItemV1.setSpeciesListID(speciesListID);
         queryListItemV1.setDataResourceUid(speciesListID); // fallback - attempt to set actual DataResourceUid via lookup, below
         queryListItemV1.setLsid(speciesListItem.getClassification() != null ? speciesListItem.getClassification().getTaxonConceptID() : null);

@@ -13,7 +13,7 @@
  * rights and limitations under the License.
  */
 
-package au.org.ala.listsapi;
+package au.org.ala.listsapi.config;
 
 import java.io.IOException;
 import java.util.Arrays;

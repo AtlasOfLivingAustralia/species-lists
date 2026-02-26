@@ -45,6 +45,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.annotation.JsonView;
+
+import au.org.ala.listsapi.config.Views;
 import au.org.ala.listsapi.model.ErrorResponse;
 import au.org.ala.listsapi.model.QueryListItemVersion1;
 import au.org.ala.listsapi.model.RESTSpeciesListQuery;
@@ -340,6 +343,7 @@ public class LegacyController {
             @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
     })
+    @JsonView(Views.Narrow.class)
     @GetMapping({"/v1/speciesListItems/{druid}", "/v1/speciesListItems/{druid}/"})
     public ResponseEntity<Object> getSpeciesListItemsByPath(
             @Parameter(description = "The species list ID path parameter", example = "dr656") 
@@ -439,6 +443,7 @@ public class LegacyController {
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = SpeciesListItemVersion1.class)
+                            
                     )
             ),
             @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
@@ -446,6 +451,7 @@ public class LegacyController {
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
 
     })
+    @JsonView(Views.Narrow.class)
     @SecurityRequirement(name = "JWT")
     @GetMapping({"/v1/speciesListItemsInternal/{druid}", "/v1/speciesListItemsInternal/{druid}/"})
     public ResponseEntity<Object> speciesListInternal(
@@ -561,7 +567,7 @@ public class LegacyController {
                     )
             )
     })
-    @GetMapping({"/v1/listCommonKeys/{speciesListIDs}", "/v1/listCommonKeys/{speciesListIDs}/"})
+    @GetMapping({"/v1/listCommonKeys/{speciesListIDs}", "/v1/listCommonKeys/{speciesListIDs}/", "/v1/listCommonKeys", "/v1/listCommonKeys/"})
     public ResponseEntity<Object> speciesListCommonKeys(
             @Parameter(
                     name = "speciesListIDs",
@@ -569,8 +575,21 @@ public class LegacyController {
                     example = "dr18404,dr18457",
                     schema = @Schema(type = "string")
             )
-            @PathVariable("speciesListIDs") String speciesListIDs,
+            @PathVariable(value = "speciesListIDs", required = false) String speciesListIDs,
+            @Parameter(
+                    name = "druid",
+                    description = "List of species list IDs (comma-separated), alternative to path variable",
+                    example = "dr10637"
+            )
+            @RequestParam(value = "druid", required = false) String druid,
             @AuthenticationPrincipal Principal principal) {
+        if (speciesListIDs != null && druid != null) {
+            return ResponseEntity.badRequest().body("Provide either speciesListIDs as a path variable or druid as a query parameter, not both.");
+        }
+        if (speciesListIDs == null) speciesListIDs = druid;
+        if (speciesListIDs == null) {
+            return ResponseEntity.badRequest().body("speciesListIDs or druid parameter is required");
+        }
         try {
             List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
             List<SpeciesList> speciesLists = speciesListMongoRepository
@@ -642,6 +661,7 @@ public class LegacyController {
                     )
             )
     })
+    @JsonView(Views.Wide.class)
     @GetMapping("/v1/species/**")
     public ResponseEntity<Object> speciesListItemsForGuid(
             @Parameter(
@@ -780,6 +800,7 @@ public class LegacyController {
                     )
             )
     })
+    @JsonView(Views.Narrow.class)
     @GetMapping({"/v1/queryListItemOrKVP", "/v1/queryListItemOrKVP/"})
     public ResponseEntity<Object> queryListItemOrKVP(
             @Parameter(
@@ -816,7 +837,7 @@ public class LegacyController {
             }
 
             List<QueryListItemVersion1> legacySpeciesListItems = legacyService.convertQueryListItemToVersion1(speciesListItems);
-
+            
             return new ResponseEntity<>(legacySpeciesListItems, HttpStatus.OK);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());

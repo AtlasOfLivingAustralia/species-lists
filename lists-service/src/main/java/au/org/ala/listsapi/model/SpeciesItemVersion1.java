@@ -23,6 +23,9 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonView;
+
+import au.org.ala.listsapi.config.Views;
 
 /**
  * Model class representing a single species list item for /v1 backwards compatibility. This POJO
@@ -36,8 +39,12 @@ public class SpeciesItemVersion1 implements Serializable {
   private static final long serialVersionUID = 1L;
   @JsonIgnore
   @Id private Long id;
+  @JsonView(Views.Narrow.class)
   private String dataResourceUid;
+  @JsonView(Views.Narrow.class)
   private String guid;
+  @JsonView(Views.Narrow.class)
   private AbbrListVersion1 list;
+  @JsonView(Views.Narrow.class)
   private List<KvpValueVersion1> kvpValues;
 }
