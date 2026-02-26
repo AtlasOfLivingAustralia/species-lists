@@ -179,8 +179,8 @@ public class SpeciesListTransformer {
      */
     private long toLegacyId(SpeciesListItem speciesListItem) {
         BigInteger bigIntId = new BigInteger(speciesListItem.getId().toHexString(), 16);
-        // Legacy IDs were simple integers; convert ObjectId to int to satisfy legacy expectations
-        return bigIntId.intValue();
+        // Legacy IDs were simple integers; convert ObjectId to a numeric value to satisfy legacy expectations
+        return bigIntId.longValue();
     }
 
     private static String fixLegacyKeys(String key) {
