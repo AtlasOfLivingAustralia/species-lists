@@ -12,12 +12,13 @@
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  */
-package au.org.ala.listsapi;
+package au.org.ala.listsapi.config;
 
 import org.pac4j.core.config.Config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import au.org.ala.listsapi.filter.AuthMachineJwt;
 import au.org.ala.ws.security.client.AlaAuthClient;
 
 @Configuration

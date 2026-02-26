@@ -1,4 +1,4 @@
-package au.org.ala.listsapi;
+package au.org.ala.listsapi.filter;
 
 import java.io.IOException;
 import java.util.HashMap;

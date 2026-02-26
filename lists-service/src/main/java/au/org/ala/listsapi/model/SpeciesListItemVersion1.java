@@ -20,6 +20,9 @@ import java.util.List;
 
 import org.springframework.data.annotation.Id;
 
+import com.fasterxml.jackson.annotation.JsonView;
+
+import au.org.ala.listsapi.config.Views;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -36,10 +39,16 @@ public class SpeciesListItemVersion1 implements Serializable {
     private static final long serialVersionUID = 1L;
     @Id
     private Long id;
+    @JsonView(Views.Narrow.class)
     private String dataResourceUid;
+    @JsonView(Views.Narrow.class)
     private String lsid;
+    @JsonView(Views.Narrow.class)
     private String name;
+    @JsonView(Views.Narrow.class)
     private String scientificName;
+    @JsonView(Views.Narrow.class)
     private String commonName;
+    @JsonView(Views.Narrow.class)
     private List<KvpValueVersion1> kvpValues;
 }
