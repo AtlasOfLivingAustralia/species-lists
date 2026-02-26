@@ -164,11 +164,18 @@ public class SpeciesListTransformer {
 
     /**
      * Converts the MongoDB ObjectId of a SpeciesListItem to a legacy integer ID for backward compatibility with v1 endpoints.
-     * This is a lossy conversion and assumes that the ObjectId can be safely represented as an integer, 
-     * which should be true for the foreseeable future given the scale of data expected.
-     * 
-     * @param speciesListItem
-     * @return A long value representing the legacy ID, derived from the ObjectId of the SpeciesListItem
+     * <p>
+     * This is a deliberately <strong>lossy</strong> conversion that derives a 32-bit integer from the 96-bit
+     * MongoDB ObjectId by taking only the lower 32 bits of its hexadecimal representation. As a result:
+     * <ul>
+     *   <li>Information from the higher-order bits of the ObjectId is discarded.</li>
+     *   <li>Different ObjectIds may map to the same legacy integer ID (collisions are possible).</li>
+     * </ul>
+     * This method exists solely to satisfy legacy v1 contracts that expect integer IDs and should not be
+     * relied upon as a unique or stable identifier beyond that context.
+     *
+     * @param speciesListItem the source item whose ObjectId is used to derive the legacy ID
+     * @return a long value representing the legacy ID (containing the lower 32 bits of the ObjectId)
      */
     private long toLegacyId(SpeciesListItem speciesListItem) {
         BigInteger bigIntId = new BigInteger(speciesListItem.getId().toHexString(), 16);
