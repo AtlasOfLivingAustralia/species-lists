@@ -583,6 +583,9 @@ public class LegacyController {
             )
             @RequestParam(value = "druid", required = false) String druid,
             @AuthenticationPrincipal Principal principal) {
+        if (speciesListIDs != null && druid != null) {
+            return ResponseEntity.badRequest().body("Provide either speciesListIDs as a path variable or druid as a query parameter, not both.");
+        }
         if (speciesListIDs == null) speciesListIDs = druid;
         if (speciesListIDs == null) {
             return ResponseEntity.badRequest().body("speciesListIDs or druid parameter is required");
