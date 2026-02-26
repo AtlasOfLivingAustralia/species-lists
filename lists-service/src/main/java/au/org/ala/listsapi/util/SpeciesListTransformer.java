@@ -196,6 +196,8 @@ public class SpeciesListTransformer {
                 return "kingdom";
             case "rawfamily":
                 return "family";
+            case "taxonRank":
+                return "rank";
             default:
                 return key;
         }
@@ -231,7 +233,7 @@ public class SpeciesListTransformer {
 
         if (speciesListItem.getProperties() != null) {
             speciesListItem.getProperties()
-                    .forEach(kvpValue -> kvps.add(new KvpValueVersion1(replaceKnownKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
+                    .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
         } 
 
         queryListItemV1.setKvpValues(kvps);
@@ -315,17 +317,5 @@ public class SpeciesListTransformer {
         item.setKvpValues(kvps);
 
         return item;
-    }
-
-    private String replaceKnownKeys(String key) {
-        // Replace known keys with their new names
-        switch (key) {
-            case "taxonRank":
-                return "rank";
-            case "rawfamily":
-                return "family";
-            default:
-                return key;
-        }
     }
 }
