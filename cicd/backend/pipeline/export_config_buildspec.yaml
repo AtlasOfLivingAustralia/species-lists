@@ -205,6 +205,8 @@ phases:
             clientSecret: $SERVER_TO_SERVER_CLIENT_SECRET
           migrate:
             url: $MIGRATE_URL
+          cors:
+            domain: $CORS_DOMAIN
           oidc:
             enabled: $OIDC_ENABLED
             clientId: $CLIENT_ID
