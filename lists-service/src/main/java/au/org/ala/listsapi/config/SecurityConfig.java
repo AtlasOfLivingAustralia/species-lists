@@ -19,7 +19,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -62,16 +65,20 @@ import jakarta.servlet.http.HttpServletResponse;
 @Order(1)
 public class SecurityConfig {
 
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+    private static final Pattern DOMAIN_NAME_PATTERN = Pattern.compile(
+            "^(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(?:\\.(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*$");
+
     @Autowired
     protected AlaWebServiceAuthFilter alaWebServiceAuthFilter;
 
     @Value("${app.url}")
     private String appUrl;
 
-    @Value("${cors.domain:}")
+    @Value("${cors.domain}")
     private String corsDomain; 
 
-    @Value("${app.cookie.domain:}")
+    @Value("${app.cookie.domain}")
     private String cookieDomain;
 
     @Bean
@@ -91,8 +98,10 @@ public class SecurityConfig {
         // Note: If appUrl has a trailing slash (e.g. ...:5173/), remove it!
         // Multiple origins can be comma-separated; cors.domain adds a wildcard subdomain pattern
         List<String> allowedOrigins = new ArrayList<>(Arrays.asList(appUrl.split(",\\s*")));
-        if (corsDomain != null && !corsDomain.isBlank()) {
-            allowedOrigins.add("https://*." + corsDomain);
+        if (isValidDomain(corsDomain)) {
+            allowedOrigins.add("https://*." + corsDomain.trim());
+        } else if (corsDomain != null && !corsDomain.isBlank()) {
+            logger.warn("Ignoring invalid cors.domain value: {}", corsDomain);
         }
         configuration.setAllowedOriginPatterns(allowedOrigins);
         
@@ -197,5 +206,22 @@ public class SecurityConfig {
         // firewall.setAllowUrlEncodedPeriod(true); // Allows %2E
         // Add any other specific allowances you've identified as necessary
         return firewall;
+    }
+
+    private boolean isValidDomain(String domain) {
+        if (domain == null) {
+            return false;
+        }
+        String trimmed = domain.trim();
+        if (trimmed.isEmpty() || trimmed.length() > 253) {
+            return false;
+        }
+        if (trimmed.startsWith(".") || trimmed.endsWith(".")) {
+            return false;
+        }
+        if (trimmed.contains("..") || trimmed.contains("/") || trimmed.contains("\\")) {
+            return false;
+        }
+        return DOMAIN_NAME_PATTERN.matcher(trimmed).matches();
     }
 }
