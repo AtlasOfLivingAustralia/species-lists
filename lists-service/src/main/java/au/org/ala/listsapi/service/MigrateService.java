@@ -268,6 +268,12 @@ public class MigrateService {
         // Create a map to store already retrieved user info
         HashMap<String, Map> foundUsers = new HashMap<>();
 
+        if (speciesLists.isEmpty()) {
+            logger.info("No legacy lists found for migration.");
+            progressService.clearMigrationProgress();
+            return;
+        }
+
         speciesLists.forEach(
                 speciesList -> {
                     logger.info("Downloading file for {}", speciesList.getDataResourceUid());

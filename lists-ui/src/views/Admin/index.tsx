@@ -93,16 +93,28 @@ export function Component() {
   // Start polling for migration progress to appear
   const handleMigrationStart = useCallback(async () => {
     setMigrationDisabled(true);
+    let attempts = 0;
+    const maxAttempts = 5;
     const check = async () => {
       try {
         const progress = await ala.rest.admin!.migrateProgress();
         if (progress) {
           setMigrationProgress(progress);
-        } else {
+        } else if (attempts < maxAttempts) {
+          attempts++;
           setTimeout(check, 2000);
+        } else {
+          // Migration completed with nothing to import
+          setMigrationDisabled(false);
+          notifications.show({
+            message: 'Migration completed with no new lists to import. All lists are already up to date.',
+            position: 'bottom-left',
+            radius: 'md',
+          });
         }
       } catch (error) {
         console.log('Migration start error', error);
+        setMigrationDisabled(false);
       }
     };
 
