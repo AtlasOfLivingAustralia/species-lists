@@ -16,6 +16,7 @@
 package au.org.ala.listsapi.config;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -67,6 +68,9 @@ public class SecurityConfig {
     @Value("${app.url}")
     private String appUrl;
 
+    @Value("${cors.domain:}")
+    private String corsDomain; 
+
     @Value("${app.cookie.domain:}")
     private String cookieDomain;
 
@@ -79,18 +83,18 @@ public class SecurityConfig {
         registrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE); 
         return registrationBean;
     }
-
-    // 
     
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
         // Note: If appUrl has a trailing slash (e.g. ...:5173/), remove it!
-        // Mulitple origins can be comma-separated
-        configuration.setAllowedOriginPatterns(
-            Arrays.asList(appUrl.split(",\\s*"))
-        );
+        // Multiple origins can be comma-separated; cors.domain adds a wildcard subdomain pattern
+        List<String> allowedOrigins = new ArrayList<>(Arrays.asList(appUrl.split(",\\s*")));
+        if (corsDomain != null && !corsDomain.isBlank()) {
+            allowedOrigins.add("https://*." + corsDomain);
+        }
+        configuration.setAllowedOriginPatterns(allowedOrigins);
         
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of(
