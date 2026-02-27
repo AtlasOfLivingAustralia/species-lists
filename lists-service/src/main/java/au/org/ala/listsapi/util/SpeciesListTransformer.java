@@ -31,6 +31,7 @@ import au.org.ala.listsapi.model.AbbrListVersion1;
 import au.org.ala.listsapi.model.KvpValueVersion1;
 import au.org.ala.listsapi.model.QueryListItemVersion1;
 import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesItemVersion1;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.model.SpeciesListItemVersion1;
 import au.org.ala.listsapi.model.SpeciesListVersion1;
@@ -129,11 +130,7 @@ public class SpeciesListTransformer {
 
         SpeciesListItemVersion1 listItemVersion1 = new SpeciesListItemVersion1();
         String speciesListID = speciesListItem.getSpeciesListID();
-        BigInteger bigIntId = new BigInteger(speciesListItem.getId().toHexString(), 16);
-        // Legacy IDs were simple integers, so we convert the ObjectId to a BigInteger and then to int
-        // So this does not break any legacy systems that expect integer IDs
-        int fakeId = bigIntId.intValue(); // just needs to be unique and is not referenced anywhere
-        listItemVersion1.setId((long) fakeId);
+        listItemVersion1.setId(toLegacyId(speciesListItem));
         listItemVersion1.setLsid(speciesListItem.getClassification() != null ? speciesListItem.getClassification().getTaxonConceptID() : null);
         listItemVersion1.setScientificName(speciesListItem.getClassification() != null ? speciesListItem.getClassification().getScientificName() : speciesListItem.getScientificName());
         listItemVersion1.setCommonName(speciesListItem.getVernacularName() != null ? speciesListItem.getVernacularName() : speciesListItem.getClassification() != null ? speciesListItem.getClassification().getVernacularName() : null);
@@ -142,7 +139,6 @@ public class SpeciesListTransformer {
 
         // Get list details via MongoDB
         Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
-
         AbbrListVersion1 list = new AbbrListVersion1();
 
         if (speciesList.isPresent()) {
@@ -157,11 +153,34 @@ public class SpeciesListTransformer {
         }
 
         List<KvpValueVersion1> kvps = new ArrayList<>();
-        speciesListItem.getProperties()
-                .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue())));
+        if (speciesListItem.getProperties() != null) {
+            speciesListItem.getProperties()
+                    .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
+        }
         listItemVersion1.setKvpValues(kvps);
 
         return listItemVersion1;
+    }
+
+    /**
+     * Converts the MongoDB ObjectId of a SpeciesListItem to a legacy integer ID for backward compatibility with v1 endpoints.
+     * <p>
+     * This is a deliberately <strong>lossy</strong> conversion that derives a 32-bit integer from the 96-bit
+     * MongoDB ObjectId by taking only the lower 32 bits of its hexadecimal representation. As a result:
+     * <ul>
+     *   <li>Information from the higher-order bits of the ObjectId is discarded.</li>
+     *   <li>Different ObjectIds may map to the same legacy integer ID (collisions are possible).</li>
+     * </ul>
+     * This method exists solely to satisfy legacy v1 contracts that expect integer IDs and should not be
+     * relied upon as a unique or stable identifier beyond that context.
+     *
+     * @param speciesListItem the source item whose ObjectId is used to derive the legacy ID
+     * @return a long value representing the legacy ID (containing the lower 32 bits of the ObjectId)
+     */
+    private long toLegacyId(SpeciesListItem speciesListItem) {
+        BigInteger bigIntId = new BigInteger(speciesListItem.getId().toHexString(), 16);
+        // Legacy IDs were simple integers; convert ObjectId to a numeric value to satisfy legacy expectations
+        return bigIntId.longValue();
     }
 
     private static String fixLegacyKeys(String key) {
@@ -177,6 +196,8 @@ public class SpeciesListTransformer {
                 return "kingdom";
             case "rawfamily":
                 return "family";
+            case "taxonRank":
+                return "rank";
             default:
                 return key;
         }
@@ -197,7 +218,7 @@ public class SpeciesListTransformer {
         String speciesListID = speciesListItem.getSpeciesListID();
 
         // Map properties from SpeciesList to SpeciesListVersion1
-        queryListItemV1.setId(speciesListItem.getId().toString());
+        queryListItemV1.setId(toLegacyId(speciesListItem));
         queryListItemV1.setSpeciesListID(speciesListID);
         queryListItemV1.setDataResourceUid(speciesListID); // fallback - attempt to set actual DataResourceUid via lookup, below
         queryListItemV1.setLsid(speciesListItem.getClassification() != null ? speciesListItem.getClassification().getTaxonConceptID() : null);
@@ -209,8 +230,12 @@ public class SpeciesListTransformer {
         Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
 
         List<KvpValueVersion1> kvps = new ArrayList<>();
-        speciesListItem.getProperties()
-                .forEach(kvpValue -> kvps.add(new KvpValueVersion1(replaceKnownKeys(kvpValue.getKey()), kvpValue.getValue())));
+
+        if (speciesListItem.getProperties() != null) {
+            speciesListItem.getProperties()
+                    .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
+        } 
+
         queryListItemV1.setKvpValues(kvps);
 
         if (speciesList.isPresent()) {
@@ -224,15 +249,73 @@ public class SpeciesListTransformer {
         return queryListItemV1;
     }
 
-    private String replaceKnownKeys(String key) {
-        // Replace known keys with their new names
-        switch (key) {
-            case "taxonRank":
-                return "rank";
-            case "rawfamily":
-                return "family";
-            default:
-                return key;
+    /**
+     * Transforms a SpeciesListItem to a SpeciesItemVersion1 object, suitable for the
+     * /v1/species/** endpoint response. Performs a per-item MongoDB lookup.
+     *
+     * <p>Prefer {@link #transformToSpeciesItemVersion1(SpeciesListItem, Map)} when converting a
+     * batch of items to avoid N+1 queries.
+     *
+     * @param speciesListItem The source SpeciesListItem object
+     * @return A new SpeciesItemVersion1 populated with values from the source
+     */
+    public SpeciesItemVersion1 transformToSpeciesItemVersion1(SpeciesListItem speciesListItem) {
+        if (speciesListItem == null) {
+            return null;
         }
+        String speciesListID = speciesListItem.getSpeciesListID();
+        Optional<SpeciesList> speciesList =
+                speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+        Map<String, SpeciesList> listCache = speciesList
+                .map(sl -> Map.of(speciesListID, sl))
+                .orElse(Map.of());
+        return transformToSpeciesItemVersion1(speciesListItem, listCache);
+    }
+
+    /**
+     * Transforms a SpeciesListItem to a SpeciesItemVersion1 object using a pre-fetched map of
+     * SpeciesList records, avoiding per-item MongoDB lookups.
+     *
+     * @param speciesListItem The source SpeciesListItem object
+     * @param listCache Map keyed by speciesListID (or dataResourceUid) to SpeciesList, pre-fetched
+     *     by the caller
+     * @return A new SpeciesItemVersion1 populated with values from the source
+     */
+    public SpeciesItemVersion1 transformToSpeciesItemVersion1(
+            SpeciesListItem speciesListItem, Map<String, SpeciesList> listCache) {
+        if (speciesListItem == null) {
+            return null;
+        }
+
+        SpeciesItemVersion1 item = new SpeciesItemVersion1();
+        String speciesListID = speciesListItem.getSpeciesListID();
+
+        item.setGuid(speciesListItem.getClassification() != null
+                ? speciesListItem.getClassification().getTaxonConceptID() : null);
+        item.setDataResourceUid(speciesListID);
+
+        // Populate the abbreviated list details from the pre-fetched cache
+        AbbrListVersion1 list = new AbbrListVersion1();
+        SpeciesList sl = listCache.get(speciesListID);
+        if (sl != null) {
+            list.setListName(sl.getTitle());
+            list.setUsername(sl.getOwner());
+            list.setSds(sl.getIsSDS());
+            list.setIsBIE(sl.getIsBIE());
+            item.setDataResourceUid(sl.getDataResourceUid() != null ? sl.getDataResourceUid() : speciesListID);
+        } else {
+            logger.warn("SpeciesItemVersion1 transformToSpeciesItemVersion1() -> Species list not found for ID: " + speciesListID);
+        }
+        item.setList(list);
+
+        // Build KVP values from properties
+        List<KvpValueVersion1> kvps = new ArrayList<>();
+        if (speciesListItem.getProperties() != null) {
+            speciesListItem.getProperties()
+                    .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
+        }
+        item.setKvpValues(kvps);
+
+        return item;
     }
 }

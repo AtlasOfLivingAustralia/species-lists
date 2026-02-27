@@ -45,10 +45,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.annotation.JsonView;
+
+import au.org.ala.listsapi.config.Views;
 import au.org.ala.listsapi.model.ErrorResponse;
 import au.org.ala.listsapi.model.QueryListItemVersion1;
 import au.org.ala.listsapi.model.RESTSpeciesListQuery;
 import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesItemVersion1;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.model.SpeciesListItemVersion1;
 import au.org.ala.listsapi.model.SpeciesListPageVersion1;
@@ -60,6 +64,7 @@ import au.org.ala.ws.security.profile.AlaUserProfile;
 import io.micrometer.common.util.StringUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -338,6 +343,7 @@ public class LegacyController {
             @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
     })
+    @JsonView(Views.Narrow.class)
     @GetMapping({"/v1/speciesListItems/{druid}", "/v1/speciesListItems/{druid}/"})
     public ResponseEntity<Object> getSpeciesListItemsByPath(
             @Parameter(description = "The species list ID path parameter", example = "dr656") 
@@ -437,6 +443,7 @@ public class LegacyController {
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = SpeciesListItemVersion1.class)
+                            
                     )
             ),
             @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
@@ -444,6 +451,7 @@ public class LegacyController {
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
 
     })
+    @JsonView(Views.Narrow.class)
     @SecurityRequirement(name = "JWT")
     @GetMapping({"/v1/speciesListItemsInternal/{druid}", "/v1/speciesListItemsInternal/{druid}/"})
     public ResponseEntity<Object> speciesListInternal(
@@ -559,7 +567,7 @@ public class LegacyController {
                     )
             )
     })
-    @GetMapping({"/v1/listCommonKeys/{speciesListIDs}", "/v1/listCommonKeys/{speciesListIDs}/"})
+    @GetMapping({"/v1/listCommonKeys/{speciesListIDs}", "/v1/listCommonKeys/{speciesListIDs}/", "/v1/listCommonKeys", "/v1/listCommonKeys/"})
     public ResponseEntity<Object> speciesListCommonKeys(
             @Parameter(
                     name = "speciesListIDs",
@@ -567,8 +575,21 @@ public class LegacyController {
                     example = "dr18404,dr18457",
                     schema = @Schema(type = "string")
             )
-            @PathVariable("speciesListIDs") String speciesListIDs,
+            @PathVariable(value = "speciesListIDs", required = false) String speciesListIDs,
+            @Parameter(
+                    name = "druid",
+                    description = "List of species list IDs (comma-separated), alternative to path variable",
+                    example = "dr10637"
+            )
+            @RequestParam(value = "druid", required = false) String druid,
             @AuthenticationPrincipal Principal principal) {
+        if (speciesListIDs != null && druid != null) {
+            return ResponseEntity.badRequest().body("Provide either speciesListIDs as a path variable or druid as a query parameter, not both.");
+        }
+        if (speciesListIDs == null) speciesListIDs = druid;
+        if (speciesListIDs == null) {
+            return ResponseEntity.badRequest().body("speciesListIDs or druid parameter is required");
+        }
         try {
             List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
             List<SpeciesList> speciesLists = speciesListMongoRepository
@@ -612,7 +633,7 @@ public class LegacyController {
                     description = "Species list items found for GUID/s",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = SpeciesListItemVersion1.class)
+                            array = @ArraySchema(schema = @Schema(implementation = SpeciesItemVersion1.class))
                     )
             ),
             @ApiResponse(
@@ -640,6 +661,7 @@ public class LegacyController {
                     )
             )
     })
+    @JsonView(Views.Wide.class)
     @GetMapping("/v1/species/**")
     public ResponseEntity<Object> speciesListItemsForGuid(
             @Parameter(
@@ -658,6 +680,11 @@ public class LegacyController {
             @Nullable @RequestParam(name = "speciesListIDs") String speciesListIDs,
             @Nullable @RequestParam(name = "page", defaultValue = "1") @Max(9990) Integer page,
             @Nullable @RequestParam(name = "pageSize", defaultValue = "9999") @Max(10000) Integer pageSize,
+            @RequestParam(name = "isAuthoritative", required = false) String isAuthoritative,
+            @RequestParam(name = "isThreatened", required = false) String isThreatened,
+            @RequestParam(name = "isInvasive", required = false) String isInvasive,
+            @RequestParam(name = "isSDS", required = false) String isSDS,
+            @RequestParam(name = "isBIE", required = false) String isBIE,
             @AuthenticationPrincipal Principal principal,
             HttpServletRequest request) {
         String fullUrl = request.getRequestURL().toString();
@@ -670,22 +697,62 @@ public class LegacyController {
 
         // Catch possible null values from unboxed page and pageSize
         int pageVal = Math.max((page != null ? page : 1), 1); // Ensure page is at least 1
-        int pageSizeVal = Math.max((pageSize != null ? pageSize : 999999), 1); // Ensure pageSize is at least 1
+        int pageSizeVal = Math.max((pageSize != null ? pageSize : 9999), 1); // Ensure pageSize is at least 1
 
         String inputGuids = (StringUtils.isNotBlank(guid) ? guid : (StringUtils.isNotBlank(guids) ? guids : ""));
-        int pageIndex = (pageVal - 1); // spring data pageable is zero based
-        String searchQuery = (inputGuids != null) ? inputGuids.replaceAll(",", "|") : null; // convert to regex OR
-            
 
         try {
-            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs,
-                    searchQuery, null, null, pageIndex, pageSizeVal, null, null, principal);
+            // If any boolean list-level filters are set, resolve matching list IDs via MongoDB
+            // and intersect with any caller-supplied speciesListIDs
+            boolean hasBooleanFilters = StringUtils.isNotBlank(isAuthoritative)
+                    || StringUtils.isNotBlank(isThreatened)
+                    || StringUtils.isNotBlank(isInvasive)
+                    || StringUtils.isNotBlank(isSDS)
+                    || StringUtils.isNotBlank(isBIE);
+
+            if (hasBooleanFilters) {
+                RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
+                fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, isSDS, isBIE, null, speciesListQuery);
+
+                AlaUserProfile profile = authUtils.getUserProfile(principal);
+                String userId = profile != null ? profile.getUserId() : null;
+                Boolean isAdmin = authUtils.hasAdminRole(profile);
+
+                // Fetch all matching lists (up to 10,000) — no text search, just boolean filters
+                Page<SpeciesList> matchingLists = searchHelperService.searchDocuments(
+                        speciesListQuery.convertTo(), userId, isAdmin, ".*", PageRequest.of(0, 10000));
+
+                String filteredListIDs = matchingLists.getContent().stream()
+                        .map(list -> list.getDataResourceUid() != null ? list.getDataResourceUid() : list.getId())
+                        .collect(java.util.stream.Collectors.joining(","));
+
+                if (filteredListIDs.isEmpty()) {
+                    return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+                }
+
+                // Intersect with caller-supplied speciesListIDs if present
+                if (StringUtils.isNotBlank(speciesListIDs)) {
+                    Set<String> callerIDs = new java.util.HashSet<>(Arrays.asList(speciesListIDs.split(",")));
+                    filteredListIDs = Arrays.stream(filteredListIDs.split(","))
+                            .filter(callerIDs::contains)
+                            .collect(java.util.stream.Collectors.joining(","));
+
+                    if (filteredListIDs.isEmpty()) {
+                        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
+                    }
+                }
+
+                speciesListIDs = filteredListIDs;
+            }
+
+            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(
+                    inputGuids, speciesListIDs, pageVal, pageSizeVal, principal);
 
             if (speciesListItems.isEmpty()) {
                 return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK); // empty list
             }
 
-            List<SpeciesListItemVersion1> legacySpeciesListItems = legacyService.convertListItemToVersion1(speciesListItems);
+            List<SpeciesItemVersion1> legacySpeciesListItems = legacyService.convertToSpeciesItemVersion1(speciesListItems);
 
             return new ResponseEntity<>(legacySpeciesListItems, HttpStatus.OK);
         } catch (Exception e) {
@@ -733,6 +800,7 @@ public class LegacyController {
                     )
             )
     })
+    @JsonView(Views.Narrow.class)
     @GetMapping({"/v1/queryListItemOrKVP", "/v1/queryListItemOrKVP/"})
     public ResponseEntity<Object> queryListItemOrKVP(
             @Parameter(
@@ -769,7 +837,7 @@ public class LegacyController {
             }
 
             List<QueryListItemVersion1> legacySpeciesListItems = legacyService.convertQueryListItemToVersion1(speciesListItems);
-
+            
             return new ResponseEntity<>(legacySpeciesListItems, HttpStatus.OK);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());

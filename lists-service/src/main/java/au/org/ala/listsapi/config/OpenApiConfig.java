@@ -1,4 +1,4 @@
-package au.org.ala.listsapi;
+package au.org.ala.listsapi.config;
 
 import java.util.ArrayList;
 import java.util.List;

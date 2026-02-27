@@ -38,7 +38,7 @@ const ACCEPTED_TYPES: string[] = ['text/csv', 'application/zip'];
 
 type uploadTypes = 'upload' | 'reingest';
 
-export interface FileUploadDropzoneProps {
+interface FileUploadDropzoneProps {
   onUploadSuccess?: (result: UploadResult, originalName: string) => void;
   onReset?: () => void;
   uploadType: uploadTypes;
@@ -68,8 +68,9 @@ export const FileUploadDropzone = ({
   const ala = useALA();
   const intl = useIntl();
 
-  // Callback handler for upload
-  const handleUpload = useCallback(async (files: FileWithPath[]) => {
+  // Callback handler for upload - compiler will memoize this function and only 
+  // recreate it if `result` changes, preventing unnecessary re-renders
+  const handleUpload = async (files: FileWithPath[]) => {
     try {
       setError(null);
       setUploading(true);
@@ -86,7 +87,7 @@ export const FileUploadDropzone = ({
     }
 
     setUploading(false);
-  }, [onUploadSuccess]);
+  };
 
   const handleReset = useCallback(() => {
     setError(null);

@@ -42,6 +42,18 @@ export function ThEditable({
   const [deleting, setDeleting] = useState<boolean>(false);
   const [updating, setUpdating] = useState<boolean>(false);
 
+  const TRANSITION_MS = 200;
+  const ACTIONS_WIDTH_EDITING = 76;
+  const ACTIONS_WIDTH_NOT_EDITING = 96;
+  const ACTIONS_INNER_WIDTH_EDITING = 78;
+  const ACTIONS_INNER_WIDTH_NOT_EDITING = 0;
+  const ACTIONS_MARGIN_LEFT_EDITING = 10;
+  const ACTIONS_MARGIN_LEFT_NOT_EDITING = 0;
+  const ACTIONS_GAP = 10;
+  const INPUT_PADDING_EDITING = 10;
+  const INPUT_PADDING_NOT_EDITING = 0;
+  const TEXTINPUT_MIN_WIDTH_FALLBACK = 100;
+  
   const fieldChanged = field !== updatedField;
 
   // Handler to revert / delete the field
@@ -181,26 +193,31 @@ export function ThEditable({
         onChange={(event) => setUpdatedField(event.currentTarget.value)}
         disabled={!editing || updating || deleting}
         classNames={updating || deleting ? undefined : inputClasses}
-        miw={CSS.supports('field-sizing', 'content') ? undefined : 100}
+        miw={CSS.supports('field-sizing', 'content') ? undefined : TEXTINPUT_MIN_WIDTH_FALLBACK}
         styles={{
           input: {
             fieldSizing: 'content',
-            transition: 'all ease 200ms',
-            paddingLeft: editing ? 10 : 0,
-            paddingRight: editing ? 10 : 0,
+            transition: `all ease ${TRANSITION_MS}ms`,
+            paddingLeft: editing ? INPUT_PADDING_EDITING : INPUT_PADDING_NOT_EDITING,
+            paddingRight: editing ? INPUT_PADDING_EDITING : INPUT_PADDING_NOT_EDITING,
           },
         }}
       />
-      <div style={{ transition: 'all ease 200ms', width: editing ? 76 : 96 }}>
+      <div
+        style={{
+          transition: `all ease ${TRANSITION_MS}ms`,
+          width: editing ? ACTIONS_WIDTH_EDITING : ACTIONS_WIDTH_NOT_EDITING,
+        }}
+      >
         <div
           style={{
             display: 'flex',
-            transition: 'all ease 200ms',
+            transition: `all ease ${TRANSITION_MS}ms`,
             overflow: 'hidden',
             whiteSpace: 'nowrap',
-            width: editing ? 78 : 0,
-            marginLeft: editing ? 10 : 0,
-            gap: 10,
+            width: editing ? ACTIONS_INNER_WIDTH_EDITING : ACTIONS_INNER_WIDTH_NOT_EDITING,
+            marginLeft: editing ? ACTIONS_MARGIN_LEFT_EDITING : ACTIONS_MARGIN_LEFT_NOT_EDITING,
+            gap: ACTIONS_GAP,
             alignItems: 'center',
           }}
         >
@@ -217,7 +234,7 @@ export function ThEditable({
             <TickIcon size={14} />
           </ActionIcon>
           <ActionIcon
-            style={{ transition: 'all 200ms ease' }}
+            style={{ transition: `all ${TRANSITION_MS}ms ease` }}
             size='md'
             variant='light'
             radius='md'

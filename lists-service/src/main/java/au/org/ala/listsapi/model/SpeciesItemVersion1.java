@@ -17,39 +17,34 @@ package au.org.ala.listsapi.model;
 
 import java.io.Serializable;
 import java.util.List;
-
-import org.springframework.data.annotation.Id;
-
-import com.fasterxml.jackson.annotation.JsonView;
-
-import au.org.ala.listsapi.config.Views;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonView;
+
+import au.org.ala.listsapi.config.Views;
 
 /**
- * Model class representing a species list version for /v1 backwards compatibility.
- * This POJO is used for controller response serialization only.
+ * Model class representing a single species list item for /v1 backwards compatibility. This POJO
+ * is used for controller response serialization only (e.g. for /v1/species/** endpoints).
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class SpeciesListItemVersion1 implements Serializable {
+public class SpeciesItemVersion1 implements Serializable {
 
-    private static final long serialVersionUID = 1L;
-    @Id
-    @JsonView(Views.Narrow.class)
-    private Long id;
-    @JsonView(Views.Narrow.class)
-    private String dataResourceUid;
-    @JsonView(Views.Narrow.class)
-    private String lsid;
-    @JsonView(Views.Narrow.class)
-    private String name;
-    @JsonView(Views.Narrow.class)
-    private String scientificName;
-    @JsonView(Views.Narrow.class)
-    private String commonName;
-    @JsonView(Views.Narrow.class)
-    private List<KvpValueVersion1> kvpValues;
+  private static final long serialVersionUID = 1L;
+  @JsonIgnore
+  @Id private Long id;
+  @JsonView(Views.Narrow.class)
+  private String dataResourceUid;
+  @JsonView(Views.Narrow.class)
+  private String guid;
+  @JsonView(Views.Narrow.class)
+  private AbbrListVersion1 list;
+  @JsonView(Views.Narrow.class)
+  private List<KvpValueVersion1> kvpValues;
 }

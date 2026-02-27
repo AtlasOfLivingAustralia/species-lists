@@ -134,7 +134,10 @@ const router = createBrowserRouter([
           const token = getAccessToken();
           if (!token) return redirect('/');
 
-          // Ensure the user is an admin
+          // UI-only guard: jwtDecode does NOT verify the JWT signature — it only
+          // base64-decodes the payload. This check prevents unnecessary navigation
+          // for non-admin users but is NOT a security control. The server-side
+          // admin API endpoints must independently verify the token and roles.
           const parsed = jwtDecode(token) as any;
           if (!parsed[JWT_ROLES] || !parsed[JWT_ROLES].includes(JWT_ADMIN_ROLE))
             return redirect('/');

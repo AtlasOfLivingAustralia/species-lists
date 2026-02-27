@@ -62,8 +62,6 @@ export function Component() {
   const mounted = useMounted();
   const [runAction, setRunAction] = useState<string>('');
 
-  if (!ala.isAdmin) return <Navigate to='/' />;
-
   // Watch migration progress
   useEffect(() => {
     async function checkMigrationProgress() {
@@ -229,6 +227,8 @@ export function Component() {
     },
     [ala, migrationProgress]
   );
+
+  if (!ala.isAdmin) return <Navigate to='/' />;
 
   return (
     <>

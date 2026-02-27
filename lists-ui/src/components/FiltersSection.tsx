@@ -20,10 +20,12 @@ import {
   ThemeIcon,
   Tooltip
 } from '@mantine/core';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 
-import { Facet, KV } from '#/api';
+import { Constraint, Facet, KV } from '#/api';
+import { useConstraints } from '#/api/graphql/useConstraints';
+import { useALA } from '#/helpers/context/useALA';
 import sanitiseText from '#/helpers/utils/sanitiseText';
 import { ListTypeBadge } from './ListTypeBadge';
 
@@ -41,17 +43,16 @@ const BOOLEAN_FACETS = ['isAuthoritative', 'isSDS', 'isBIE', 'hasRegion', 'isThr
 const CORE_FACETS = ['listType'];
 
 // Helper function to render the entire Checkbox with its label
-const renderCheckbox = (
+function RenderCheckbox(
   facetName: string,
   key: string,
   countItem: { value: string; count: number } | undefined,
   isChecked: boolean,
   isBooleanFacet: boolean,
-  onChange: () => void // Accept the specific onChange handler
-) => {
-  if (!countItem) return null; // Handle case where countItem might be undefined
+  onChange: () => void, // Accept the specific onChange handler
+  facetConstraints?: Constraint[]
+) {
   const intl = useIntl();
-  // const licenseKey = 'licence.' + key;
 
   // Determine the correct message ID with fallback (needed for isPrivate facet)
   const primaryKey = `facet.${facetName}.${key}`; // isPrivate values only
@@ -59,6 +60,21 @@ const renderCheckbox = (
   const messages = intl.messages; // load all messages into an object
   const messageId = messages[primaryKey] ? primaryKey : fallbackKey; // check if primaryKey exists, else use fallbackKey
 
+  // For facets that have constraints (tags, licence), resolve label and tooltip from the
+  // constraints data rather than relying on i18n lookups with raw values.
+  const constraintMatch = facetConstraints?.find(c => c.value === key);
+
+  // tags:    display the human-readable label from constraints (e.g. "ALA Conservation")
+  // licence: keep displaying the raw value (e.g. "CC-BY") but use the constraint label
+  //          as the tooltip, replacing the old i18n licence.* lookup
+  // others:  fall back to i18n as before
+  const displayLabel = facetName === 'tags'
+    ? (constraintMatch?.label ?? intl.formatMessage({ id: messageId, defaultMessage: key }))
+    : intl.formatMessage({ id: messageId, defaultMessage: key });
+  const constraintTooltip = facetName === 'licence' ? constraintMatch?.label : undefined;
+
+  if (!countItem) return null; // Handle case where countItem might be undefined
+  
   return (
     <Checkbox
       key={key} // Use the provided key
@@ -78,7 +94,8 @@ const renderCheckbox = (
           <ListTypeBadge 
             listTypeValue={key} 
             iconSide='right' 
-            titleText={intl.formatMessage({ id: messageId, defaultMessage: key })} 
+            titleText={displayLabel}
+            tooltipText={constraintTooltip}
           />
           <Chip
             size="xs"
@@ -116,7 +133,7 @@ const removeFilterPrefix = (key: string) => {
   return key;
 }
 
-export const FacetComponent = memo(
+const FacetComponent = memo(
   ({
     facet,
     isExpanded,
@@ -125,6 +142,7 @@ export const FacetComponent = memo(
     onSelect,
     isShowFlagLabel,
     showExpand = true,
+    constraintMap,
   }: {
     facet: Facet;
     isExpanded: boolean;
@@ -133,8 +151,12 @@ export const FacetComponent = memo(
     onSelect: (item: KV) => void;
     isShowFlagLabel: boolean;
     showExpand?: boolean;
+    /** Map of facet key → Constraint[] for facets whose values need label resolution (e.g. tags, licence) */
+    constraintMap?: Map<string, Constraint[]>;
   }) => {
     const isTag = facet.key === 'tags';
+    // Constraints for this specific facet, if any
+    const facetConstraints = constraintMap?.get(facet.key);
     const handleToggle = useCallback(() => {
       handleFacetToggle(facet.key);
     }, [handleFacetToggle, facet.key]);
@@ -146,7 +168,6 @@ export const FacetComponent = memo(
     );
 
     const itemCount = sortedCounts.length;
-
     const intl = useIntl();
 
     // Determine if it's a boolean facet
@@ -207,7 +228,8 @@ export const FacetComponent = memo(
         )}
         { ((isBooleanFacet && isShowFlagLabel) || isTag) && (
             <Text size='md' span className={classes.facetHeader + ' ' + (isBooleanFacet ? classes.facetHeaderBoolean : classes.facetHeaderTags)} >
-              <FormattedMessage id='facet.flag.label' defaultMessage='List flags' />{' '}
+              { isTag ? <FormattedMessage id='facet.tag.label' defaultMessage='List tags' />
+                : <FormattedMessage id='facet.flag.label' defaultMessage='List flags' />}{' '} 
               <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.and.tooltip', defaultMessage: '' })} />
             </Text>
         )}
@@ -217,13 +239,14 @@ export const FacetComponent = memo(
           (() => {
             const booleanItem = sortedCounts[1];
             const isChecked = isValueActive(booleanItem?.value);
-            return renderCheckbox(
+            return RenderCheckbox(
               facet.key, // Pass the facet key for proper labeling
               facet.key, // Key for the single boolean checkbox
               booleanItem,
               isChecked,
               isBooleanFacet,
-              handleBooleanChange // Pass the specific handler
+              handleBooleanChange, // Pass the specific handler
+              facetConstraints
             );
           })()
         ) : (
@@ -231,13 +254,14 @@ export const FacetComponent = memo(
           <Collapse in={!showExpand || isExpanded} className={classes.collapse}>
             {sortedCounts.map((item) => {
               const isChecked = isValueActive(item.value);
-              return renderCheckbox(
+              return RenderCheckbox(
                 facet.key, // Key for the checkbox group
                 item.value, // Key is the item value
                 item,
                 isChecked,
                 isBooleanFacet,
-                handleItemChange(item.value) // Pass the specific handler for this item
+                handleItemChange(item.value), // Pass the specific handler for this item
+                facetConstraints
               );
             })}
           </Collapse>
@@ -250,7 +274,26 @@ export const FacetComponent = memo(
 
 export const FiltersSection = memo(
   ({ facets, active, onSelect, showExpand }: FiltersDrawerProps) => {
-    const [expanded, setExpanded] = useState<string[]>([]);
+    const ala = useALA();
+    const { constraints } = useConstraints(ala);
+
+    // Build a map of facet key → Constraint[] for facets whose values need label
+    // resolution from the server-supplied constraints (e.g. tags, licence).
+    const constraintMap = useMemo(() => {
+      const map = new Map<string, Constraint[]>();
+      if (constraints?.tags)    map.set('tags',    constraints.tags);
+      if (constraints?.licence) map.set('licence', constraints.licence);
+      return map;
+    }, [constraints?.tags, constraints?.licence]);
+
+    // Lazy initializer runs once on mount — replaces the useRef + useEffect
+    // "run once" pattern that was calling setState synchronously inside an effect.
+    const [expanded, setExpanded] = useState<string[]>(() =>
+      facets
+        .filter(facet => facet.counts.length > 2)
+        .slice(0, 1)
+        .map(facet => facet.key)
+    );
 
     // Sort facets to ensure boolean facets are at the bottom
     const sortedFacets = useMemo(
@@ -298,21 +341,6 @@ export const FiltersSection = memo(
       );
     }, []);
 
-    useEffect(() => {
-      // Set initial expanded facets
-      // Expand the first facet by default
-      if (facets.length > 0) {
-        setExpanded((prevExpanded) =>
-          prevExpanded.length === 0
-            ? facets
-          .filter((facet) => facet.counts.length > 2) // Only expand facets with more than 2 counts (e.g., not boolean facets)
-          .slice(0, 1) // Expand only the first one
-          .map((facet) => facet.key)
-            : prevExpanded
-        );
-      }
-    }, [facets]);
-
     return (
       <>
         <Text size='md' fw='bold' opacity={0.85} pb={2}>
@@ -328,7 +356,7 @@ export const FiltersSection = memo(
             const isFirst = index === firstBooleanIndex;
             return (
               <FacetComponent
-                key={facet.key}
+                key={`facet-${facet.key}-${index}`} // include index to ensure uniqueness even if keys are duplicated
                 facet={facet}
                 isExpanded={expanded.includes(facet.key)}
                 handleFacetToggle={handleFacetToggle}
@@ -336,6 +364,7 @@ export const FiltersSection = memo(
                 onSelect={onSelect}
                 isShowFlagLabel={isFirst}
                 showExpand={showExpand}
+                constraintMap={constraintMap}
               />
             );
           })}
@@ -366,43 +395,57 @@ export const ActiveFilters = memo((
     resetFilters: () => void;
 }) => {
   const intl = useIntl();
+  const ala = useALA();
+  const { constraints } = useConstraints(ala);
 
   return (
     <>
       <Text component='span' fs='xs' className={classes.activeFiltersText}>
         <FormattedMessage id='filters.active' defaultMessage='selected filters' />:{' '}
       </Text>
-      {active.map((filter) => (
-        <Paper 
-          key={filter.key} 
-          fs='sm' 
-          radius='sm' 
-          bd='1px solid var(--mantine-color-default-border)' 
-          className={classes.activeFiltersPaper}
-        >
-          <Text component='div' fs='xs' className={classes.activeFiltersText}>
-            <FormattedMessage id={sanitiseText(filter.key) || 'filter.key.missing'} defaultMessage={removeFilterPrefix(filter.key)}/>
-            { !BOOLEAN_FACETS.includes(filter.key) && (
-              <>
-                :{' '}
-                <FormattedMessage id={sanitiseText(filter.value) || 'filter.value.missing'} defaultMessage={sanitiseText(filter.value)}/>
-              </>
-            )}
-          </Text>
-          <ActionIcon
-            radius='sm'
-            opacity={0.8}
-            size='xs'
-            ml='xs'
-            mt={1}
-            title={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key || 'filter.key.missing', defaultMessage: removeFilterPrefix(filter.key) })}`}
-            aria-label={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key || 'filter.key.missing', defaultMessage: removeFilterPrefix(filter.key) })}`}
-            onClick={() => handleFilterClick(filter)}
+      {active.map((filter) => {
+        // tags:    display the human-readable label (e.g. "ALA Conservation")
+        // licence: keep the raw value as the chip text (e.g. "CC-BY") — the full
+        //          description is only shown as a tooltip in the facet checkbox list
+        const constraintLabel = filter.key === 'tags'
+          ? (constraints?.tags?.find(c => c.value === filter.value)?.label ?? sanitiseText(filter.value))
+          : undefined;
+
+        return (
+          <Paper 
+            key={filter.key} 
+            fs='sm' 
+            radius='sm' 
+            bd='1px solid var(--mantine-color-default-border)' 
+            className={classes.activeFiltersPaper}
           >
-            <FontAwesomeIcon icon={faClose} fontSize={14} />
-          </ActionIcon>
-        </Paper>
-      ))}
+            <Text component='div' fs='xs' className={classes.activeFiltersText}>
+              <FormattedMessage id={sanitiseText(filter.key) || 'filter.key.missing'} defaultMessage={removeFilterPrefix(filter.key)}/>
+              { !BOOLEAN_FACETS.includes(filter.key) && (
+                <>
+                  :{' '}
+                  {constraintLabel
+                    ? constraintLabel
+                    : <FormattedMessage id={sanitiseText(filter.value) || 'filter.value.missing'} defaultMessage={sanitiseText(filter.value)}/>
+                  }
+                </>
+              )}
+            </Text>
+            <ActionIcon
+              radius='sm'
+              opacity={0.8}
+              size='xs'
+              ml='xs'
+              mt={1}
+              title={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key || 'filter.key.missing', defaultMessage: removeFilterPrefix(filter.key) })}`}
+              aria-label={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key || 'filter.key.missing', defaultMessage: removeFilterPrefix(filter.key) })}`}
+              onClick={() => handleFilterClick(filter)}
+            >
+              <FontAwesomeIcon icon={faClose} fontSize={14} />
+            </ActionIcon>
+          </Paper>
+        );
+      })}
       <Paper 
         fs='sm'
         radius='sm'

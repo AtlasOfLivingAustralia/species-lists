@@ -98,27 +98,27 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
   const breadcrumbElements = items.map((item, index) => {
     // Skip rendering the 'Species lists' link if we are on the root '/'
     if (item.to === '/' && pathParts.length === 0) {
-      return <Text size='sm' key={index}>Species lists</Text>;
+      return <Text size='sm' key={`breadcrumb-${item.id}-${index}`}>Species lists</Text>;
     }
 
     // If the first path part is 'list' and this item is the 'Species lists' link and there are more parts,
     // render it as a link. Otherwise, if it's the '/list' page itself (pathParts.length === 1 && pathParts[0] === 'list'), render as text.
     if (item.to === '/' && pathParts[0] === 'list' && pathParts.length > 1) {
       return (
-        <Anchor component={Link} to={item.to} className={classes.link} size='sm' key={index}>
+        <Anchor component={Link} to={item.to} className={classes.link} size='sm' key={`breadcrumbLink-${item.id}-${index}`}>
           {item.label}
         </Anchor>
       );
     }
     if (item.isText) {
       return (
-        <Text size='sm' truncate='end' key={index}>
+        <Text size='sm' truncate='end' key={`breadcrumbText-${item.id}-${index}`}>
           <FormattedMessage id={`breadcrumb.${item.id}`} defaultMessage={item.label}/>
         </Text>
       );
     } else if (item.href) {
       return (
-        <Anchor href={item.href} className={classes.link} size='sm' key={index}>
+        <Anchor href={item.href} className={classes.link} size='sm' key={`breadcrumbHref-${item.id}-${index}`}>
           {item.label}
         </Anchor>
       );
@@ -126,13 +126,13 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
       // Prevent linking the 'Species lists' item if it's the last/current item displayed
       if (item.to === '/' && pathParts.length === 0) {
         return (
-          <Text size='sm' key={index}>
+          <Text size='sm' key={`breadcrumbText-${item.id}-${index}`}>
             {item.label}
           </Text>
         )
       }
       return (
-        <Anchor component={Link} to={item.to} className={classes.link} size='sm' key={index}>
+        <Anchor component={Link} to={item.to} className={classes.link} size='sm' key={`breadcrumbLink-${item.id}-${index}`}>
           <FormattedMessage id={`breadcrumb.${item.label}`} defaultMessage={item.label}/>
         </Anchor>
       );

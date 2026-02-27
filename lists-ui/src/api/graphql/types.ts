@@ -92,11 +92,6 @@ interface MigrateProgress {
   started: number;
 }
 
-interface Breadcrumb {
-  title: string;
-  href: string | undefined | null;
-}
-
 interface FacetCount {
   value: string;
   count: number;
@@ -196,7 +191,6 @@ interface SpeciesListConstraints {
 }
 
 export type {
-  Breadcrumb,
   Classification,
   Constraint,
   Facet,
