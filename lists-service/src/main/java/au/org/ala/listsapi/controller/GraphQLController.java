@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import graphql.GraphQLException;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.types.ObjectId;
 import org.jetbrains.annotations.NotNull;
@@ -373,7 +374,7 @@ public class GraphQLController {
             return speciesList;
         }
 
-        return null;
+        throw new GraphQLException("No list found for ID: " + speciesListID);
     }
 
     @SchemaMapping(typeName = "Mutation", field = "addField")

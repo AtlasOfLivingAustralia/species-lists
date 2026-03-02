@@ -181,7 +181,7 @@ function List() {
         );
 
         if (result.meta === null || result.list === null) {
-          throw new Error('List not found');
+          throw new Error(`No list found for ID: ${id}`);
         }
 
         setData(result);
@@ -245,6 +245,9 @@ function List() {
         } = result;
 
         controller.current = null;
+        if (updatedMeta === null || updatedList === null) {
+          throw new Error(`No list found for ID: ${id}`);
+        }
         setError(null);
         setMeta(updatedMeta);
         setList(updatedList);
