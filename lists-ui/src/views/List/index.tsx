@@ -65,7 +65,7 @@ import { ActiveFilters, FiltersSection, ToggleFiltersButton } from '#/components
 import { IngestProgress } from '#/components/IngestProgress';
 import { Message } from '#/components/Message';
 import PageLoader from '#/components/PageLoader';
-import { getErrorMessage, parseAsFilters } from '#/helpers';
+import { getErrorMessage, ListError, parseAsFilters } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
 import { getAccessToken } from '#/helpers/utils/getAccessToken';
 import { Actions } from './components/Actions';
@@ -153,11 +153,20 @@ function List() {
   const [lastProgress, setLastProgress] = useState<boolean>(false);
   const [pageTitle, setPageTitle] = useState<string | null>(null);
   const [paginationLoading, setPaginationLoading] = useState<boolean>(false);
+  const [fatalError, setFatalError] = useState<ListError | null>(null);
 
   const location = useLocation();
   const mounted = useMounted();
   const ala = useALA();
   const intl = useIntl();
+
+  const throwListNotFound = () => {
+    throw new ListError(
+      intl.formatMessage({ id: 'list.notFound', defaultMessage: 'List not found for requested ID: {id}' }, { id }),
+      intl.formatMessage({ id: 'list.notFound.title', defaultMessage: 'List not found' }),
+      intl.formatMessage({ id: 'list.notFound.breadcrumb', defaultMessage: 'Not found' }),
+    );
+  };
 
   // Selection drawer
   const [opened, { open, close }] = useDisclosure();
@@ -181,7 +190,7 @@ function List() {
         );
 
         if (result.meta === null || result.list === null) {
-          throw new Error(`No list found for ID: ${id}`);
+          throwListNotFound();
         }
 
         setData(result);
@@ -190,7 +199,8 @@ function List() {
         setPageTitle(result.meta.title);
         setFacets(result.facets);
       } catch (err) {
-        setError(err as Error);
+        if (err instanceof ListError) setFatalError(err);
+        else setError(err as Error);
       } finally {
         setLoading(false);
       }
@@ -246,14 +256,15 @@ function List() {
 
         controller.current = null;
         if (updatedMeta === null || updatedList === null) {
-          throw new Error(`No list found for ID: ${id}`);
+          throwListNotFound();
         }
         setError(null);
         setMeta(updatedMeta);
         setList(updatedList);
         setFacets(updatedFacets);
       } catch (error) {
-        if (error !== 'New GraphQL request invoked') {
+        if (error instanceof ListError) setFatalError(error);
+        else if (error !== 'New GraphQL request invoked') {
           setError(error as Error);
         }
       } finally {
@@ -457,6 +468,8 @@ function List() {
     }
   };
 
+  if (fatalError) throw fatalError;
+
   if (loading) {
     return <PageLoader />;
   }
@@ -467,11 +480,14 @@ function List() {
         <Container fluid className={classes.speciesHeader}>
           <Grid>
             <Grid.Col span={12}>
-              <Breadcrumbs listTitle={pageTitle ?? 'Error'} />
+              <Breadcrumbs listTitle={error instanceof ListError ? error.breadcrumb : (pageTitle ?? 'Error')} />
             </Grid.Col>
           </Grid>
         </Container>
-        <Message title={intl.formatMessage({ id: 'list.error.title', defaultMessage: 'An error occurred' })}  subtitle={getErrorMessage(error)} />
+        <Message
+          title={error instanceof ListError ? error.title : intl.formatMessage({ id: 'list.error.title', defaultMessage: 'An error occurred' })}
+          subtitle={getErrorMessage(error)}
+        />
       </>
     );
   }
