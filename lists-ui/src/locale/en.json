@@ -87,6 +87,9 @@
   "list.isSDS": "Sensitive data service",
   "list.isBIE": "Species pages",
   "list.properties": "List properties",
+  "list.notFound": "List not found for requested ID: {id}",
+  "list.notFound.title": "List not found",
+  "list.notFound.breadcrumb": "Not found",
 
   "login.required.title": "Login required",
   "login.required.message": "You need to login to view this page.",
