@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -317,6 +318,15 @@ public class UploadService {
         }
     }
 
+    /**
+     * Uploads and ingests a file, returning the IngestJob details.
+     * Called from the controller after upload.
+     * 
+     * @param fileIdentifier
+     * @param file
+     * @return
+     * @throws Exception
+     */
     public IngestJob upload(String fileIdentifier, MultipartFile file)
             throws Exception { 
 
@@ -498,6 +508,12 @@ public class UploadService {
 
     public IngestJob ingestCSV(String speciesListID, File file, boolean dryRun, boolean skipIndexing)
             throws Exception {
+        // Validate file path to prevent path traversal attacks
+        String canonicalPath = file.getCanonicalPath();
+        String expectedParentPath = new File(tempDir).getCanonicalPath();
+        if (!canonicalPath.startsWith(expectedParentPath)) {
+            throw new SecurityException("Invalid file path: potential path traversal detected");
+        }
         return loadCSV(speciesListID, new FileInputStream(file), dryRun, skipIndexing, false);
     }
 
@@ -541,7 +557,7 @@ public class UploadService {
         // store
         Map<String, Set<String>> facets = new HashMap<>();
         Set<String> notFacetable = new HashSet<>();
-        Set<String> fieldNames = new HashSet<>();
+        LinkedHashSet<String> fieldNames = new LinkedHashSet<>();
 
         int recordsWithoutScientificName = 0;
 
@@ -568,7 +584,7 @@ public class UploadService {
             String scientificName = values.remove(DwcTerm.scientificName.simpleName());
             String taxonID = values.remove(DwcTerm.taxonID.simpleName());
             String taxonConceptID = values.remove(DwcTerm.taxonConceptID.simpleName());
-            String vernacularName = values.remove(DwcTerm.vernacularName.simpleName());
+            String vernacularName = values.get(DwcTerm.vernacularName.simpleName()); // vernacularName added to KVP, as per legacy behaviour
 
             String suppliedName = values.remove("Supplied Name");
 
@@ -589,7 +605,7 @@ public class UploadService {
             String phylum = values.remove(DwcTerm.phylum.simpleName());
             String classs = values.remove(DwcTerm.class_.simpleName());
             String order = values.remove(DwcTerm.order.simpleName());
-            String family = values.remove(DwcTerm.family.simpleName());
+            String family = values.get(DwcTerm.family.simpleName()); // family added to KVP, as per legacy behaviour
             String genus = values.remove(DwcTerm.genus.simpleName());
 
             // process remaining fields (user supplied KVP data)

@@ -25,6 +25,7 @@ import handleSignout from '../../helpers/auth/handleSignout';
 function Dashboard() {
   const auth = useAuth();
   const { state } = useNavigation();
+  const isLegacySkin = import.meta.env.VITE_LEGACY_SKIN === 'true';
 
   // Effect handler for navigation process indicator
   useEffect(() => {
@@ -45,7 +46,7 @@ function Dashboard() {
       />
       <ExternalBanner
         url={import.meta.env.VITE_ALA_MESSAGES}
-        services={['species-lists']}
+        services={['species-lists']} // add `'test-warning'` to services array to test the warning banner
       />
       <Header
         isAuthenticated={auth.isAuthenticated}
@@ -53,7 +54,7 @@ function Dashboard() {
           if (auth.isAuthenticated) {
             handleSignout(auth);
           } else {
-            auth.signinRedirect();
+            auth.signinRedirect({ state: { targetUrl: window.location.pathname + window.location.search } });
           }
         }}
         homeUrl={import.meta.env.VITE_ALA_HOME_PAGE || ''}
@@ -62,6 +63,7 @@ function Dashboard() {
         fullWidth 
         compact
         myProfileUrl={import.meta.env.VITE_ALA_USER_PROFILE || ''}
+        isLegacySkin={isLegacySkin}
       />
       <Divider />
       <Outlet />

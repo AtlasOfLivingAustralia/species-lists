@@ -46,13 +46,52 @@ const notFoundLoader = () => {
 };
 const router = createBrowserRouter([
   {
+    // Redirect legacy SDS URL to new filter format
+    path: 'public/speciesLists',
+    loader: ({ request }) => {
+      const url = new URL(request.url);
+      const filters: string[] = [];
+      
+      // Handle all filter params: isSDS, isBIE, isAuthoritative, isThreatened, isInvasive
+      const filterParams = ['isSDS', 'isBIE', 'isAuthoritative', 'isThreatened', 'isInvasive'];
+      
+      filterParams.forEach((param) => {
+        const value = url.searchParams.get(param);
+        if (value === 'eq:true') {
+          filters.push(`${param}:true`);
+        }
+      });
+      
+      if (filters.length > 0) {
+        return redirect(`/?filters=${filters.join(',')}`);
+      }
+      
+      // Redirect to home if no matching filters
+      return redirect('/');
+    },
+  },
+  {
     path: '',
     element: <Dashboard />,
     errorElement: <PageError />,
     children: [
       {
         path: '',
-        element: <Home />,
+        element: <Home routeId="home"/>,
+      },
+      {
+        path: 'my-lists',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoader />}> 
+              <Home routeId="my-lists"/>
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'admin-lists',
+        element: <Home routeId="admin-lists"/>,
       },
       {
         path: 'list/:id',
@@ -73,9 +112,14 @@ const router = createBrowserRouter([
         ],
       },
       {
-        // Legacy lists redirect
+        // Legacy list with ID redirect
         path: 'speciesListItem/list/:id',
         loader: ({ params }) => redirect(`/list/${params.id}`),
+      },
+      {
+        // Legacy my lists redirect
+        path: 'speciesList/list',
+        loader: () => redirect(`/my-lists`),
       },
       {
         path: '/upload',
@@ -90,7 +134,10 @@ const router = createBrowserRouter([
           const token = getAccessToken();
           if (!token) return redirect('/');
 
-          // Ensure the user is an admin
+          // UI-only guard: jwtDecode does NOT verify the JWT signature — it only
+          // base64-decodes the payload. This check prevents unnecessary navigation
+          // for non-admin users but is NOT a security control. The server-side
+          // admin API endpoints must independently verify the token and roles.
           const parsed = jwtDecode(token) as any;
           if (!parsed[JWT_ROLES] || !parsed[JWT_ROLES].includes(JWT_ADMIN_ROLE))
             return redirect('/');

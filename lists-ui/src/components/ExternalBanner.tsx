@@ -3,6 +3,8 @@
 import { Flex, Stack, Text, useMantineTheme } from '@mantine/core';
 import { useMounted } from '@mantine/hooks';
 import { useEffect, useMemo, useState } from 'react';
+import TurndownService from 'turndown';
+import ReactMarkdown from 'react-markdown';
 import {
   StopIcon,
   InfoIcon,
@@ -29,6 +31,8 @@ function ExternalBanner({ url, services }: ExternalBannerProps) {
   const [rawMessages, setRawMessages] = useState<Messages | null>(null);
   const theme = useMantineTheme();
   const mounted = useMounted();
+  const turndownService = new TurndownService();
+  const containsHtml = (str) => /<[a-z][\s\S]*>/i.test(str);
 
   const styles = useMemo(
     () => ({
@@ -61,7 +65,16 @@ function ExternalBanner({ url, services }: ExternalBannerProps) {
                 ['global', ...(services || [])].includes(service) &&
                 message.length > 0
             )
-            .map(([_, message]) => message)
+            .map(([_, message]) => {
+              const rawMessage = message.message || '';
+              // Detect if the message contains HTML tags. 
+              // If it does, convert it to markdown using Turndown. 
+              // Otherwise, use the raw message as is, assuming markdown formatting is already present.
+              const markdown = containsHtml(rawMessage)
+                ? turndownService.turndown(rawMessage)
+                : rawMessage;
+              return { ...message, message: markdown };
+            })
         : null,
     [rawMessages, services]
   );
@@ -92,6 +105,7 @@ function ExternalBanner({ url, services }: ExternalBannerProps) {
         const Icon = styles[severity].icon;
         return (
           <Flex
+            key={message}
             bg={styles[severity].bg}
             align='center'
             justify='center'
@@ -104,10 +118,11 @@ function ExternalBanner({ url, services }: ExternalBannerProps) {
                 style={{ minWidth: 14, minHeight: 14 }}
               />
             }
-            <Text
-              c={styles[severity].fg}
-              dangerouslySetInnerHTML={{ __html: message }}
-            />
+            <Text c={styles[severity].fg}>
+              <ReactMarkdown components={{
+                p: ({ children }) => <>{children}</>,
+              }}>{message}</ReactMarkdown>
+            </Text>
           </Flex>
         );
       })}

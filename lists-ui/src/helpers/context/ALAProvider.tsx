@@ -22,7 +22,7 @@ export const ALAProvider = ({ children }: PropsWithChildren) => {
   // Extract the user
   const userid = (auth.user?.profile[JWT_USERID] || '') as string;
   const roles = (auth.user?.profile[JWT_ROLES] || []) as string[];
-  const isAdmin = auth.isAuthenticated && roles.includes(JWT_ADMIN_ROLE) || roles.includes(JWT_EDITOR_ROLE);
+  const isAdmin = auth.isAuthenticated && (roles.includes(JWT_ADMIN_ROLE) || roles.includes(JWT_EDITOR_ROLE));
 
   const isAuthorisedForList = (list: SpeciesList) =>
     auth.isAuthenticated && (isAdmin || list.owner === userid);
@@ -47,7 +47,6 @@ export const ALAProvider = ({ children }: PropsWithChildren) => {
   return (
     <ALAContext.Provider
       value={{
-        auth,
         token: auth.isAuthenticated ? auth.user?.access_token : undefined,
         userid,
         roles,

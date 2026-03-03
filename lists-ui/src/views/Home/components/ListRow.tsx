@@ -4,17 +4,18 @@ import { useALA } from '#/helpers/context/useALA';
 import { parseDate } from '#/helpers/utils/parseListDate';
 import { MapLayersIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { faCalendar, faEye, faEyeSlash } from '@fortawesome/free-regular-svg-icons';
+import { faHashtag } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Anchor, Badge, Group, Skeleton, Space, Stack, Table, Text } from '@mantine/core';
+import { Anchor, Badge, Box, Group, Skeleton, Space, Stack, Table, Text } from '@mantine/core';
 import { FormattedDate, FormattedMessage, FormattedNumber, IntlProvider } from 'react-intl';
 import { Link } from 'react-router';
 
 interface ListRowProps {
   list?: SpeciesList;
-  isUser?: boolean;
+  isMobile?: boolean;
 }
 
-export function ListRow({ list, isUser }: ListRowProps) {
+export function ListRow({ list, isMobile }: ListRowProps) {
   const loading = Boolean(list);
   const ala = useALA();
   const locale = import.meta.env.VITE_LOCALE || 'en-AU';
@@ -29,7 +30,7 @@ export function ListRow({ list, isUser }: ListRowProps) {
       <Table.Td>
         <Stack gap={4} pb={6} pt={6}>
           <Skeleton visible={!loading}>
-            <Anchor size='md' fw={600} component={Link} to={`list/${list?.id}`}>
+            <Anchor size='md' fw={600} component={Link} to={`/list/${list?.id}`}>
               {list?.title || 'List title'}
             </Anchor>
           </Skeleton>
@@ -49,49 +50,67 @@ export function ListRow({ list, isUser }: ListRowProps) {
               >
                 <FormattedMessage id={list?.listType || 'OTHER'} />
               </Badge>
-              {ala.isAuthenticated && (isUser || ala.isAdmin) && (
-                <>
-                  <Space w={3} />
+              { !isMobile ? ( 
+              <>
+                <Space w={3} />
+                <FontAwesomeIcon fontSize={15} color='grey' icon={list?.isPrivate ? faEyeSlash : faEye} />
+                <Text size='sm' fw='400'>
+                {list?.isPrivate ? (
+                  <FormattedMessage id="access.private" defaultMessage="Private" />
+                ) : (
+                  <FormattedMessage id="access.public" defaultMessage="Public" />
+                )}
+                </Text>
+                { list?.isAuthoritative && (
+                  <><Space w={3} /><ListTypeBadge listTypeValue='isAuthoritative'/></>
+                )}
+                { list?.isSDS && (
+                  <><Space w={3} /><ListTypeBadge listTypeValue='isSDS'/></>
+                )}
+                { list?.isBIE && (
+                  <><Space w={3} /><ListTypeBadge listTypeValue='isBIE'/></>
+                )}
+                { list?.isThreatened && (
+                  <><Space w={3} /><ListTypeBadge listTypeValue='isThreatened'/></>
+                )}
+                { list?.isInvasive && (
+                  <><Space w={3} /><ListTypeBadge listTypeValue='isInvasive'/></>
+                )}
+                { list?.region && list.region.trim() !== '' && (
+                  // Not currently used as GraphQL is not reuturning this field
+                  <><Space w={3} /><ListTypeBadge listTypeValue='hasRegion'/></>
+                )}
+                { !list?.isPrivate && (
+                    <>
+                      <Space w={3} />
+                      <Box style={{ display: 'flex', alignItems: 'center', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+                        <FontAwesomeIcon icon={faHashtag} fontSize={15} color='grey'/>
+                        <Text size='sm' pl={3} fw='400'>{list?.dataResourceUid}</Text>
+                      </Box>
+                    </>
+                  )}
+              </>
+              ) : (
+                <Text ml={4}>
                   <FontAwesomeIcon fontSize={15} color='grey' icon={list?.isPrivate ? faEyeSlash : faEye} />
-                  <Text size='sm' fw='400'>
-                  {list?.isPrivate ? (
+                  {/* { list?.isPrivate ? (
                     <FormattedMessage id="access.private" defaultMessage="Private" />
                   ) : (
                     <FormattedMessage id="access.public" defaultMessage="Public" />
-                  )}
-                  </Text>
-                </>
-              )}
-              { list?.isAuthoritative && (
-                <><Space w={3} /><ListTypeBadge listTypeValue='isAuthoritative'/></>
-              )}
-              { list?.isSDS && (
-                <><Space w={3} /><ListTypeBadge listTypeValue='isSDS'/></>
-              )}
-              { list?.isBIE && (
-                <><Space w={3} /><ListTypeBadge listTypeValue='isBIE'/></>
-              )}
-              { list?.isThreatened && (
-                <><Space w={3} /><ListTypeBadge listTypeValue='isThreatened'/></>
-              )}
-              { list?.isInvasive && (
-                <><Space w={3} /><ListTypeBadge listTypeValue='isInvasive'/></>
-              )}
-              { list?.region && list.region.trim() !== '' && (
-                // Not currently used as GraphQL is not reuturning this field
-                <><Space w={3} /><ListTypeBadge listTypeValue='hasRegion'/></>
+                  )} */}
+                </Text>
               )}
             </Group>
           </Skeleton>
         </Stack>
       </Table.Td>
-      <Table.Td width={150} style={{ verticalAlign: 'top' }}>
+      <Table.Td width={isMobile ? 120 : 150} style={{ verticalAlign: 'top', textAlign: 'right' }}>
         <Skeleton visible={!loading}>
           <Stack gap={4} pb={6} pt={6}>
             <Group gap='4'>
               <MapLayersIcon size={15} color='grey'/>
               <Text size='sm' fw='400' ml={3}><FormattedNumber value={list?.rowCount || 0} />{' '}</Text>
-              <Text size='sm' fw='400'>{ list?.rowCount === 1 ? <FormattedMessage id="taxon" /> : <FormattedMessage id="taxa" /> }</Text>
+              <Text size='sm' fw='400'>{ list?.rowCount === 1 ? <FormattedMessage id="record" /> : <FormattedMessage id="records" /> }</Text>
             </Group>
             <Group gap='4'>
               <FontAwesomeIcon icon={faCalendar} fontSize={15} color='grey'/>

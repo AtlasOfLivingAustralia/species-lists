@@ -60,8 +60,7 @@ export function Component() {
   const ala = useALA();
   const navigate = useNavigate();
   const mounted = useMounted();
-
-  if (!ala.isAdmin) return <Navigate to='/' />;
+  const [runAction, setRunAction] = useState<string>('');
 
   // Watch migration progress
   useEffect(() => {
@@ -94,16 +93,28 @@ export function Component() {
   // Start polling for migration progress to appear
   const handleMigrationStart = useCallback(async () => {
     setMigrationDisabled(true);
+    let attempts = 0;
+    const maxAttempts = 5;
     const check = async () => {
       try {
         const progress = await ala.rest.admin!.migrateProgress();
         if (progress) {
           setMigrationProgress(progress);
-        } else {
+        } else if (attempts < maxAttempts) {
+          attempts++;
           setTimeout(check, 2000);
+        } else {
+          // Migration completed with nothing to import
+          setMigrationDisabled(false);
+          notifications.show({
+            message: 'Migration completed with no new lists to import. All lists are already up to date.',
+            position: 'bottom-left',
+            radius: 'md',
+          });
         }
       } catch (error) {
         console.log('Migration start error', error);
+        setMigrationDisabled(false);
       }
     };
 
@@ -151,6 +162,7 @@ export function Component() {
 
   const handleClick = useCallback(
     (action: string, verb: string) => {
+      setRunAction(action);
       modals.openConfirmModal({
         title: (
           <Text fw='bold' size='lg'>
@@ -228,6 +240,8 @@ export function Component() {
     [ala, migrationProgress]
   );
 
+  if (!ala.isAdmin) return <Navigate to='/' />;
+
   return (
     <>
       <Container fluid className={classes.speciesHeader}>
@@ -257,11 +271,11 @@ export function Component() {
                         <Text>
                           {migrationProgress.currentSpeciesList ? (
                             <>
-                              <b>Migrating: </b>{' '}
+                              <b><FormattedMessage id={`admin.${runAction}`} defaultMessage="Migrating" />: </b>{' '}
                               {migrationProgress.currentSpeciesList.title}
                             </>
                           ) : (
-                            'Starting migration'
+                            `Starting ${intl.formatMessage({ id: `admin.${runAction}`, defaultMessage: "Migrating" })}`
                           )}
                         </Text>
                         <Badge miw={80} ml='xs'>

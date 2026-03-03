@@ -204,6 +204,8 @@ config:
     jwtScopes: "users/read ala/attrs ala/internal"
   migrate:
     url: https://lists-test.ala.org.au
+  cors:
+    domain: ""
   oidc:
     enabled: true
     clientId: ""

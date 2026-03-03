@@ -1,3 +1,17 @@
+/*
+ * Copyright (C) 2025 Atlas of Living Australia
+ * All Rights Reserved.
+ *
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ */
 package au.org.ala.listsapi.service;
 
 import java.io.File;
@@ -97,8 +111,8 @@ public class MigrateService {
     private List<SpeciesList> fetchLegacyLists(int offset) {
         try {
             logger.info("Fetching legacy species lists from {}", migrateUrl);
-            Map params = Map.of("offset", String.valueOf(offset), "max", "1000", "includePrivate", "true");
-            Map request = webService.get(
+            Map<String, Object> params = Map.of("offset", String.valueOf(offset), "max", "1000", "includePrivate", "true");
+            Map<String, Object> request = webService.get(
                     migrateUrl + "/ws/speciesListInternal",
                     params,
                     ContentType.APPLICATION_JSON,
@@ -144,6 +158,26 @@ public class MigrateService {
         logger.info("Retrieved {} new legacy lists for migration ({} total)", lists.size(), total);
 
         return lists;
+    }
+
+    /**
+     * Sanitize a string so it is safe to use as part of a filename.
+     * Allows only alphanumeric characters, dot, underscore and dash.
+     * All other characters are replaced with '_', and any remaining
+     * ".." sequences are removed to avoid directory traversal.
+     */
+    private String sanitizeForFilename(String input) {
+        if (input == null || input.isEmpty()) {
+            return "unknown";
+        }
+        String sanitized = input.replaceAll("[^a-zA-Z0-9._-]", "_");
+        if (sanitized.contains("..")) {
+            sanitized = sanitized.replace("..", "_");
+        }
+        if (sanitized.isEmpty()) {
+            return "unknown";
+        }
+        return sanitized;
     }
 
     private List<SpeciesList> filterExistingLists(List<SpeciesList> lists, boolean doesExist) {
@@ -234,6 +268,12 @@ public class MigrateService {
         // Create a map to store already retrieved user info
         HashMap<String, Map> foundUsers = new HashMap<>();
 
+        if (speciesLists.isEmpty()) {
+            logger.info("No legacy lists found for migration.");
+            progressService.clearMigrationProgress();
+            return;
+        }
+
         speciesLists.forEach(
                 speciesList -> {
                     logger.info("Downloading file for {}", speciesList.getDataResourceUid());
@@ -310,8 +350,14 @@ public class MigrateService {
                         }
                     } else {
                         try {
-                            File localFile = new File(
-                                    tempDir + "/species-list-migrate-" + speciesList.getDataResourceUid() + ".csv");
+                            String safeDataResourceUid = sanitizeForFilename(speciesList.getDataResourceUid());
+                            File tempDirectory = new File(tempDir);
+                            File localFile = new File(tempDirectory, "species-list-migrate-" + safeDataResourceUid + ".csv");
+                            
+                            // Validate that the resolved path is within the temp directory
+                            if (!localFile.getCanonicalPath().startsWith(tempDirectory.getCanonicalPath())) {
+                                throw new SecurityException("Invalid file path: potential path traversal detected");
+                            }
 
                             AccessToken token = tokenService.getAuthToken(false, null, null);
 

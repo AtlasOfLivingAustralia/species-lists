@@ -15,6 +15,9 @@
 
 package au.org.ala.listsapi.model;
 
+import com.fasterxml.jackson.annotation.JsonView;
+
+import au.org.ala.listsapi.config.Views;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -29,8 +32,12 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @AllArgsConstructor
 public class AbbrListVersion1 {
+    @JsonView(Views.Narrow.class)
     private String username;
+    @JsonView(Views.Narrow.class)
     private String listName;
+    @JsonView(Views.Narrow.class)
     private Boolean sds;
+    @JsonView(Views.Narrow.class)
     private Boolean isBIE;
 }

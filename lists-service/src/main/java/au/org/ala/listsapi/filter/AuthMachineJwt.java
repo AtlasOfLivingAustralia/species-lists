@@ -1,12 +1,29 @@
-package au.org.ala.listsapi;
+/*
+ * Copyright (C) 2025 Atlas of Living Australia
+ * All Rights Reserved.
+ *
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ */
+package au.org.ala.listsapi.filter;
 
-import au.org.ala.ws.security.AlaWebServiceAuthFilter;
-import au.org.ala.ws.security.client.AlaAuthClient;
-import au.org.ala.ws.security.profile.AlaUserProfile;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.security.Principal;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
 import org.pac4j.core.config.Config;
 import org.pac4j.core.context.WebContext;
 import org.pac4j.core.context.WebContextFactory;
@@ -27,9 +44,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import java.io.IOException;
-import java.security.Principal;
-import java.util.*;
+import au.org.ala.ws.security.AlaWebServiceAuthFilter;
+import au.org.ala.ws.security.client.AlaAuthClient;
+import au.org.ala.ws.security.profile.AlaUserProfile;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 public class AuthMachineJwt extends OncePerRequestFilter {
     public static final Logger log = LoggerFactory.getLogger(AlaWebServiceAuthFilter.class);

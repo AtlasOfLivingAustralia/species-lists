@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import {
   Facet,
   FilteredSpeciesList,
@@ -12,6 +11,7 @@ import {
 import {
   ActionIcon,
   Box,
+  Button,
   Center,
   Collapse,
   Container,
@@ -31,7 +31,6 @@ import {
   Title
 } from '@mantine/core';
 import {
-  useDebouncedValue,
   useDisclosure,
   useDocumentTitle,
   useMediaQuery,
@@ -47,10 +46,11 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 import { Outlet, useLocation, useParams } from 'react-router';
+import ReactMarkdown from 'react-markdown';
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { faAngleRight, faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import tableClasses from './classes/Table.module.css';
@@ -65,7 +65,7 @@ import { ActiveFilters, FiltersSection, ToggleFiltersButton } from '#/components
 import { IngestProgress } from '#/components/IngestProgress';
 import { Message } from '#/components/Message';
 import PageLoader from '#/components/PageLoader';
-import { getErrorMessage, parseAsFilters } from '#/helpers';
+import { getErrorMessage, ListError, parseAsFilters } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
 import { getAccessToken } from '#/helpers/utils/getAccessToken';
 import { Actions } from './components/Actions';
@@ -93,7 +93,7 @@ enum SortDirection {
 const maxEntries = 10000; // ES maximumDocuments limit (see elastic.maximumDocuments config in lists-service)
 const classificationFields = ['family', 'kingdom', 'vernacularName', 'matchType'];
 
-export function List() {
+function List() {
   const { id } = useParams();
   const [_data, setData] = useState<ListLoaderData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -109,7 +109,10 @@ export function List() {
     'search',
     parseAsString.withDefault('')
   );
-  const [searchDebounced] = useDebouncedValue(search, 300);
+
+  // Initialise from URL so the input reflects the current search on load/back-nav
+  const [inputSearchValue, setSearchInputValue] = useState(search);
+
 
   // Search params state
   const [page, setPage] = useQueryState<number>(
@@ -132,9 +135,14 @@ export function List() {
     )
   );
 
-  // Filters display state
-  const [hidefilters, setHideFilters] = useQueryState<boolean>('hideFilters', parseAsBoolean.withDefault(false)); 
-  const toggleFilters = () => setHideFilters((o) => !o);
+  // Filters display state — omit withDefault so null means "user hasn't set a preference".
+  // Compute the effective value inline: fall back to isMobile when not explicitly set.
+  const [hidefiltersRaw, setHideFilters] = useQueryState<boolean>(
+    'hideFilters',
+    parseAsBoolean
+  );
+  const hidefilters = hidefiltersRaw ?? isMobile;
+  const toggleFilters = () => setHideFilters(!hidefilters);
 
   // Internal state (not driven by search params)
   const [facets, setFacets] = useState<Facet[]>([]);
@@ -145,11 +153,20 @@ export function List() {
   const [lastProgress, setLastProgress] = useState<boolean>(false);
   const [pageTitle, setPageTitle] = useState<string | null>(null);
   const [paginationLoading, setPaginationLoading] = useState<boolean>(false);
+  const [fatalError, setFatalError] = useState<ListError | null>(null);
 
   const location = useLocation();
   const mounted = useMounted();
   const ala = useALA();
   const intl = useIntl();
+
+  const throwListNotFound = () => {
+    throw new ListError(
+      intl.formatMessage({ id: 'list.notFound', defaultMessage: 'List not found for requested ID: {id}' }, { id }),
+      intl.formatMessage({ id: 'list.notFound.title', defaultMessage: 'List not found' }),
+      intl.formatMessage({ id: 'list.notFound.breadcrumb', defaultMessage: 'Not found' }),
+    );
+  };
 
   // Selection drawer
   const [opened, { open, close }] = useDisclosure();
@@ -166,12 +183,14 @@ export function List() {
           {
             speciesListID: id,
             size,
+            filters,
+            searchQuery: search,
           },
           token
         );
 
         if (result.meta === null || result.list === null) {
-          throw new Error('List not found');
+          throwListNotFound();
         }
 
         setData(result);
@@ -180,7 +199,8 @@ export function List() {
         setPageTitle(result.meta.title);
         setFacets(result.facets);
       } catch (err) {
-        setError(err as Error);
+        if (err instanceof ListError) setFatalError(err);
+        else setError(err as Error);
       } finally {
         setLoading(false);
       }
@@ -212,18 +232,14 @@ export function List() {
           controller.current.abort('New GraphQL request invoked');
         controller.current = new AbortController();
 
-        const {
-          meta: updatedMeta,
-          list: updatedList,
-          facets: updatedFacets,
-        } = await performGQLQuery(
+        const result = await performGQLQuery(
           queries.QUERY_LISTS_GET,
           {
             speciesListID: id,
-            searchQuery: searchDebounced,
+            searchQuery: search,
             page,
             size,
-            filters, // filters: toKV(filters),
+            filters,
             isPrivate: false,
             sort,
             dir,
@@ -232,14 +248,23 @@ export function List() {
           controller.current.signal
         );
 
-        controller.current = null;
+        const {
+          meta: updatedMeta,
+          list: updatedList,
+          facets: updatedFacets,
+        } = result;
 
+        controller.current = null;
+        if (updatedMeta === null || updatedList === null) {
+          throwListNotFound();
+        }
         setError(null);
         setMeta(updatedMeta);
         setList(updatedList);
         setFacets(updatedFacets);
       } catch (error) {
-        if (error !== 'New GraphQL request invoked') {
+        if (error instanceof ListError) setFatalError(error);
+        else if (error !== 'New GraphQL request invoked') {
           setError(error as Error);
         }
       } finally {
@@ -248,8 +273,7 @@ export function List() {
     }
 
     if (mounted) runQuery();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, size, filters, searchDebounced, refresh, sort, dir, isReingest]);
+  }, [page, size, filters, search, refresh, sort, dir, isReingest, mounted, id, ala.token]);
 
   // Keep the current page in check
   useEffect(() => {
@@ -270,16 +294,17 @@ export function List() {
     [sort, dir]
   );
 
-  useEffect(() => {
-    // Hide filters for mobile devices
-    setHideFilters(isMobile);
-  }, [isMobile]);
+  // Handle search value changes and sort logic
+  const handleSearchChange = useCallback((newValue: string) => {
+    setPage(0); // Reset 'page' when search is changed
+    setSearch(newValue);
+  }, [setPage, setSearch]);
 
   const resetFilters = useCallback(
     () => {
       setPage(0); // Reset 'page' when filters are reset
       setFilters([]);
-    },[filters]
+    }, [setFilters, setPage]
   );
 
   const handleSizeChange = (newSize: string | null) => {
@@ -316,7 +341,7 @@ export function List() {
     []
   );
 
-  // Item edit handler
+  // Item delete handler
   const handleItemDeleted = useCallback(
     (id: string) => {
       close();
@@ -328,7 +353,7 @@ export function List() {
     []
   );
 
-  // Field deletion handler
+  // Field creation handler
   const handleFieldCreated = useCallback(
     (field: string, defaultValue?: string) => {
       setMeta((prevMeta) => ({
@@ -371,7 +396,7 @@ export function List() {
     []
   );
 
-  // Field deletion handler
+  // Field rename handler
   const handleFieldRenamed = useCallback(
     (from: string, to: string) => {
       // Update new list meta to update renamed field
@@ -433,6 +458,18 @@ export function List() {
     []
   );
 
+  // Handler for the Enter key press
+  interface KeyDownEvent extends React.KeyboardEvent<HTMLInputElement> {}
+
+  const handleKeyDown = (event: KeyDownEvent): void => {
+    if (event.key === 'Enter') {
+      event.preventDefault(); 
+      handleSearchChange(inputSearchValue);
+    }
+  };
+
+  if (fatalError) throw fatalError;
+
   if (loading) {
     return <PageLoader />;
   }
@@ -443,11 +480,14 @@ export function List() {
         <Container fluid className={classes.speciesHeader}>
           <Grid>
             <Grid.Col span={12}>
-              <Breadcrumbs listTitle={pageTitle ?? 'Error'} />
+              <Breadcrumbs listTitle={error instanceof ListError ? error.breadcrumb : (pageTitle ?? 'Error')} />
             </Grid.Col>
           </Grid>
         </Container>
-        <Message title={intl.formatMessage({ id: 'list.error.title', defaultMessage: 'An error occurred' })}  subtitle={getErrorMessage(error)} />
+        <Message
+          title={error instanceof ListError ? error.title : intl.formatMessage({ id: 'list.error.title', defaultMessage: 'An error occurred' })}
+          subtitle={getErrorMessage(error)}
+        />
       </>
     );
   }
@@ -457,6 +497,7 @@ export function List() {
   return (
     <>
       <SpeciesItemDrawer
+        key={selected?.id}
         opened={opened}
         item={selected}
         meta={meta!} 
@@ -466,29 +507,47 @@ export function List() {
         onDeleted={handleItemDeleted}
       />
       <Container fluid className={classes.speciesHeader}>
-        <Grid>
+        <Grid align="center">
           <Grid.Col span={12}>
             <Breadcrumbs listTitle={pageTitle ?? undefined} />
-          </Grid.Col>
-          <Grid.Col span={12}>
-            <Title order={4} classNames={{root: classes.title}}>
-              <Text classNames={{root: classes.listTitlePrefix}} span inherit>
-                <FormattedMessage id='list.title.prefix' defaultMessage='List details' />{' '}
-                <FontAwesomeIcon icon={faAngleRight} size="xs" className={classes.listTitleSeparator} />{' '}
-              </Text>
-              {meta?.title}
-            </Title>
           </Grid.Col>
         </Grid>
       </Container>
       <Container fluid className={classes.listDetails}>
         <Grid>
-          <Grid.Col span={12} pb={6} mt='lg'>
+          <Grid.Col span={12}>
+            <Title order={4} classNames={{root: classes.title}}>
+              <Text component='span' classNames={{root: classes.listTitlePrefix}} inherit>
+                <FormattedMessage id='list.title.prefix' defaultMessage='List details' />
+                <Text component='span' pl={8} pr={10} size='lg' className={classes.listTitlePrefix} inherit>{' '}➤{' '}</Text>
+              </Text>
+              {meta?.title}
+            </Title>
+          </Grid.Col>
+          <Grid.Col span={12} pt={6} >
             <Flex direction='row' justify='space-between' gap={16}>
               <Stack gap='xs' mb={14}>
                 {meta?.description && (
-                  <Text c='dark-grey-1' size='sm' mt='xs' opacity={0.75}>
-                    {meta.description}
+                  <Text component="div" c='dark-grey-1' size='sm' mt={4} opacity={0.75}>
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => <>{children}</>,
+                        blockquote: ({ node, ...props }) => (
+                          <blockquote
+                            style={{
+                              borderLeft: '4px solid #d0d7de',
+                              margin: '0',
+                              paddingLeft: '0.75rem',
+                            }}
+                            {...props}
+                          />
+                        ),
+                        ul: ({ node, ...props }) => (
+                          <ul style={{ marginTop: '4px', marginBottom: '4px' }} {...props} />
+                        ),
+                      }}>
+                      {meta.description}
+                    </ReactMarkdown>
                   </Text>
                 )}
                 <Summary meta={meta!} />
@@ -511,7 +570,6 @@ export function List() {
                 />
               )}
             </Flex>
-            
           </Grid.Col>
           { rematching && (
             <Grid.Col span={12}>
@@ -543,38 +601,75 @@ export function List() {
             </Grid.Col>
           ) : (
             <>
-              <Grid.Col span={12}>
-                <Group>
+              <Grid.Col span={isMobile ? 12 : 9}>
+                <Group justify={isMobile ? 'flex-start' : 'flex-end'}>
                   { !isMobile && (
                     <ToggleFiltersButton toggleFilters={toggleFilters} hidefilters={hidefilters} />
                   )}
-                  <TextInput
-                    style={{ flexGrow: 1 }}
-                    disabled={hasError}
-                    value={search}
-                    onChange={(event) => {
-                      setSearch(event.currentTarget.value);
-                      setPage(0);
-                    }}
-                    placeholder={intl.formatMessage({ id: 'search.input.placeholder', defaultMessage: 'Search within list' })}
-                    aria-label={intl.formatMessage({ id: 'search.input.label', defaultMessage: 'Search within list' })}
-                    w={200}
-                    leftSection={<FontAwesomeIcon icon={faMagnifyingGlass} fontSize={16} stroke='2' />}
-                    rightSection={
-                      <ActionIcon
-                        radius='sm'
-                        variant='transparent'
-                        size='xs'
-                        title={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
-                        aria-label={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
-                        disabled={search.length === 0}
-                        onClick={() => setSearch('')}
-                        style={{ marginLeft: 5, marginRight: 10 }}
-                      >
-                      <FontAwesomeIcon icon={faXmark} fontSize={20} />
-                      </ActionIcon>
-                    }
-                  />
+                  <Group gap={0} wrap="nowrap" style={{ flexGrow: 1 }}>
+                    <TextInput
+                      style={{ flex: 1 }}
+                      styles={{ 
+                        input: { 
+                          borderTopRightRadius: 0, 
+                          borderBottomRightRadius: 0,
+                          borderRight: 'none', 
+                        } 
+                      }}
+                      disabled={hasError}
+                      value={inputSearchValue}
+                      onChange={(event) => setSearchInputValue(event.currentTarget.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder={intl.formatMessage({ id: 'search.input.placeholder', defaultMessage: 'Search within list' })}
+                      aria-label={intl.formatMessage({ id: 'search.input.label', defaultMessage: 'Search within list' })}
+                      leftSection={<FontAwesomeIcon icon={faMagnifyingGlass} fontSize={16} stroke='2' />}
+                      rightSection={
+                        <ActionIcon
+                          radius='sm'
+                          variant='transparent'
+                          size='xs'
+                          title={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
+                          aria-label={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
+                          disabled={inputSearchValue.length === 0}
+                          onClick={() => {
+                            handleSearchChange('')
+                            setSearchInputValue('');
+                          }}
+                          style={{ marginLeft: 5, marginRight: 10 }}
+                        >
+                        <FontAwesomeIcon icon={faXmark} fontSize={20} />
+                        </ActionIcon>
+                      }
+                    />
+                    <Button
+                      variant="light"
+                      styles={{
+                        root: {
+                          borderTopLeftRadius: 0, 
+                          borderBottomLeftRadius: 0,
+                          borderColor: 'var(--mantine-color-default-border)',
+                        },
+                      }}
+                      style={{
+                        '--button-hover': 'var(--mantine-color-rust-filled-hover)',
+                        '--button-hover-color': 'white',
+                      }}
+                      radius="md"
+                      onClick={(event) => {
+                        event.preventDefault(); 
+                        handleSearchChange(inputSearchValue);
+                      }}
+                    >
+                      <FormattedMessage id='search.button.label' defaultMessage='Search' />
+                    </Button>
+                  </Group>
+                </Group>
+              </Grid.Col>
+              <Grid.Col span={isMobile ? 12 : 3}>
+                <Group gap={6} justify={isMobile ? 'space-between' : 'flex-end'}>
+                  { isMobile && (
+                    <ToggleFiltersButton toggleFilters={toggleFilters} hidefilters={hidefilters} isMobile={isMobile} />
+                  )}
                   <Select
                     disabled={hasError}
                     w={140}
@@ -586,9 +681,6 @@ export function List() {
                     }))}
                     aria-label={intl.formatMessage({ id: 'list.page.size.label', defaultMessage: 'Select number of results' })}
                   />
-                  { isMobile && (
-                    <ToggleFiltersButton toggleFilters={toggleFilters} hidefilters={hidefilters} />
-                  )}
                 </Group>
               </Grid.Col>
               {/* Filters appear here */}
@@ -611,7 +703,7 @@ export function List() {
                       <FormattedMessage id='results.showing' defaultMessage='Showing' /> {' '}
                         {startPage}-{endPage} of {' '}
                       <FormattedNumber value={totalEntries || 0} /> {' '}
-                      <FormattedMessage id='results.records' defaultMessage='records' /> {' '}
+                      <FormattedMessage id='results.records' defaultMessage='taxa' /> {' '}
                       { meta?.distinctMatchCount &&
                         <>
                           {'('}
@@ -672,7 +764,7 @@ export function List() {
                   ) : paginationLoading ? (
                     <Stack gap="xs" mt={4}>
                       {[...Array(size)].map((_, i) => (
-                      <Skeleton key={i} height={i === 0 ? 42 : 30} radius={4} />
+                      <Skeleton key={`skeleton-${i}-${size}`} height={i === 0 ? 42 : 30} radius={4} />
                       ))}
                     </Stack>
                   ) : (
@@ -703,7 +795,7 @@ export function List() {
                         defaultMessage='Scientific name'
                       />
                       </ThSortable>
-                      {meta!.fieldList.map((field) => (
+                      {meta?.fieldList && meta!.fieldList.map((field) => (
                       <ThEditable
                         key={field}
                         id={meta!.id}
@@ -758,7 +850,7 @@ export function List() {
                     disabled={(totalPages || 0) < 1 || hasError}
                     value={realPage}
                     onChange={(value) => {
-                      if (paginationLoading) return; // better than setting paginationLoading in disabled property as UI jitters when that is used
+                      if (paginationLoading) return;
                       setPaginationLoading(true);
                       setPage(value - 1);
                     }}
@@ -769,11 +861,8 @@ export function List() {
                       'aria-label': `${control} page`,
                     })}
                     getItemProps={(page) => {
-                      // Hide the last page number button (but keep navigation arrows)
                       if (page === totalPages) {
-                        return {
-                        style: { display: 'none' }
-                        };
+                        return { style: { display: 'none' } };
                       }
                       return {};
                     }}

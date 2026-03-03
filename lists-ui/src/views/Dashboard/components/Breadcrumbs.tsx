@@ -1,14 +1,15 @@
+import { ChevronRightIcon } from '@atlasoflivingaustralia/ala-mantine';
 import {
   Anchor,
   Breadcrumbs as Base,
-  Text,
-  Group,
+  Flex,
+  Text
 } from '@mantine/core';
-import { Link, useLocation } from 'react-router'; 
-import { ChevronRightIcon } from '@atlasoflivingaustralia/ala-mantine';
+import { Link, useLocation } from 'react-router';
 
-import classes from './Breadcrumbs.module.css';
 import { ActionButtons } from '#/components/ActionButtons';
+import { FormattedMessage } from 'react-intl';
+import classes from './Breadcrumbs.module.css';
 
 // Helper function to capitalize the first letter of a string
 const capitalize = (input?: string) =>
@@ -27,6 +28,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
   // Define the structure for breadcrumb items
   interface BreadcrumbItem {
     label: string;
+    id?: string;
     href?: string; // Use href for external links or simple anchors
     to?: string; // Use to for react-router Link
     isText?: boolean; // Flag to indicate if it should be a Text component
@@ -67,6 +69,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
       if (listTitle) {
         items.push({
           label: listTitle,
+          id: part,
           to: isLast ? undefined : currentPath, // Link unless it's the last item
           isText: isLast, // Text if it's the last item (the list details page itself)
         });
@@ -74,6 +77,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
         // Fallback to using the list ID if no title is provided
         items.push({
           label: part,
+          id: part,
           to: isLast ? undefined : currentPath, // Link unless it's the last item
           isText: isLast, // Text if it's the last item
         });
@@ -82,6 +86,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
       // Handle all other parts
       items.push({
         label: capitalize(part),
+        id: part,
         to: isLast ? undefined : currentPath, // Link unless it's the last item
         isText: isLast, // Text if it's the last item
       });
@@ -93,27 +98,27 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
   const breadcrumbElements = items.map((item, index) => {
     // Skip rendering the 'Species lists' link if we are on the root '/'
     if (item.to === '/' && pathParts.length === 0) {
-      return <Text size='sm' key={index}>Species lists</Text>;
+      return <Text size='sm' key={`breadcrumb-${item.id}-${index}`}>Species lists</Text>;
     }
 
     // If the first path part is 'list' and this item is the 'Species lists' link and there are more parts,
     // render it as a link. Otherwise, if it's the '/list' page itself (pathParts.length === 1 && pathParts[0] === 'list'), render as text.
     if (item.to === '/' && pathParts[0] === 'list' && pathParts.length > 1) {
       return (
-        <Anchor component={Link} to={item.to} className={classes.link} size='sm' key={index}>
+        <Anchor component={Link} to={item.to} className={classes.link} size='sm' key={`breadcrumbLink-${item.id}-${index}`}>
           {item.label}
         </Anchor>
       );
     }
     if (item.isText) {
       return (
-        <Text size='sm' truncate='end' key={index}>
-          {item.label}
+        <Text size='sm' truncate='end' key={`breadcrumbText-${item.id}-${index}`}>
+          <FormattedMessage id={`breadcrumb.${item.id}`} defaultMessage={item.label}/>
         </Text>
       );
     } else if (item.href) {
       return (
-        <Anchor href={item.href} className={classes.link} size='sm' key={index}>
+        <Anchor href={item.href} className={classes.link} size='sm' key={`breadcrumbHref-${item.id}-${index}`}>
           {item.label}
         </Anchor>
       );
@@ -121,14 +126,14 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
       // Prevent linking the 'Species lists' item if it's the last/current item displayed
       if (item.to === '/' && pathParts.length === 0) {
         return (
-          <Text size='sm' key={index}>
+          <Text size='sm' key={`breadcrumbText-${item.id}-${index}`}>
             {item.label}
           </Text>
         )
       }
       return (
-        <Anchor component={Link} to={item.to} className={classes.link} size='sm' key={index}>
-          {item.label}
+        <Anchor component={Link} to={item.to} className={classes.link} size='sm' key={`breadcrumbLink-${item.id}-${index}`}>
+          <FormattedMessage id={`breadcrumb.${item.label}`} defaultMessage={item.label}/>
         </Anchor>
       );
     }
@@ -138,8 +143,14 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
 
   return (
     <>
-      <Group justify='space-between'>
+      <Flex
+        direction={{ base: 'column', sm: 'row' }}
+        justify="space-between"
+        align="center"
+        gap="md"
+      >
         <Base
+          // style={{ alignSelf: 'flex-start' }}
           className={classes.breadcrumbs}
           separator={<ChevronRightIcon size={12} />}
           separatorMargin={5}
@@ -147,7 +158,7 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
           {breadcrumbElements}
         </Base>
         <ActionButtons />
-      </Group>
+      </Flex>
     </>
   );
 }

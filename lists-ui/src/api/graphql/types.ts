@@ -34,7 +34,7 @@ interface SpeciesList {
   owner: string;
   ownerName: string | null;
   wkt: string;
-  tags: string[];
+  tags: string[] | null;
 }
 
 type SpeciesListSubmit = Omit<
@@ -90,11 +90,6 @@ interface MigrateProgress {
   completed: number;
   total: number;
   started: number;
-}
-
-interface Breadcrumb {
-  title: string;
-  href: string | undefined | null;
 }
 
 interface FacetCount {
@@ -192,10 +187,10 @@ interface SpeciesListConstraints {
   listType: Constraint[];
   licence: Constraint[];
   region: Constraint[];
+  tags: Constraint[];
 }
 
 export type {
-  Breadcrumb,
   Classification,
   Constraint,
   Facet,

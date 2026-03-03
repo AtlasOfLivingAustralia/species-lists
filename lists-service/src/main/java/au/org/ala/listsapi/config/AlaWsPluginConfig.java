@@ -1,4 +1,4 @@
-package au.org.ala.listsapi;
+package au.org.ala.listsapi.config;
 
 import au.org.ala.ws.security.TokenClient;
 import au.org.ala.ws.security.TokenInterceptor;

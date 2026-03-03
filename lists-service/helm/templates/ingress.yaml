@@ -14,7 +14,7 @@ metadata:
     alb.ingress.kubernetes.io/wafv2-acl-arn: {{ .Values.ingress.wafArn }}
     alb.ingress.kubernetes.io/ssl-redirect: '443'
     alb.ingress.kubernetes.io/success-codes: 200,404,301,302
-    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-3-2021-06
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09
     alb.ingress.kubernetes.io/tags: >
       {{- range $key, $value := .Values.tags }}
       {{ $key }}={{ $value }},

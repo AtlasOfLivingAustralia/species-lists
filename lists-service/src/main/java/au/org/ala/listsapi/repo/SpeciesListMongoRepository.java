@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 
 import au.org.ala.listsapi.model.SpeciesList;
 
@@ -20,5 +21,6 @@ public interface SpeciesListMongoRepository extends MongoRepository<SpeciesList,
 
     List<SpeciesList> findAllByDataResourceUidIsIn(Collection<String> dataResourceUIDs);
 
-    List<SpeciesList> findAllByDataResourceUidIsInOrIdIsIn(Collection<String> dataResourceUid, Collection<String> id);
+    @Query("{ '$or': [ { 'dataResourceUid': { '$in': ?0 } }, { '_id': { '$in': ?0 } } ] }")
+    List<SpeciesList> findByDataResourceUidInOrIdIn(Collection<String> ids);
 }

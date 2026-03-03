@@ -20,7 +20,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 
-/** Admin REST API */
+/** 
+ * Admin REST API
+ */
 @CrossOrigin(origins = "*", maxAge = 3600)
 @SecurityScheme(
     name = "JWT",

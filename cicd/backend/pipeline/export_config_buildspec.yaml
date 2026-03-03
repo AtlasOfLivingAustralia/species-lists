@@ -145,6 +145,8 @@ phases:
           app:
             name: $APP_NAME
             url: $APP_URL
+            cookie:
+              domain: $APP_COOKIE_DOMAIN
           graphql:
             enabled: $GRAPHQL_ENABLED
             path: $GRAPHQL_PATH
@@ -204,6 +206,8 @@ phases:
             clientSecret: $SERVER_TO_SERVER_CLIENT_SECRET
           migrate:
             url: $MIGRATE_URL
+          cors:
+            domain: $CORS_DOMAIN
           oidc:
             enabled: $OIDC_ENABLED
             clientId: $CLIENT_ID

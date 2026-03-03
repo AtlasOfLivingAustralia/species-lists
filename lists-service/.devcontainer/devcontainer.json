@@ -1,0 +1,39 @@
+{
+  "name": "java-21-maven-devcontainer",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  "overrideCommand": true,
+  "remoteUser": "vscode",
+  "mounts": [
+    "source=/data/lists-service/config/lists-service-config.properties,target=/data/lists-service/config/lists-service-config.properties,type=bind,consistency=cached"
+  ],
+  "remoteEnv": {
+    "JAVA_HOME": "/usr/lib/jvm/msopenjdk-current"
+  },
+
+  "features": {
+    // Example: Install Maven (version "none" means use the default from the image/feature)
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "none",
+      "installMaven": "true",
+      "mavenVersion": "3.9.1",
+      "installGradle": "false"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-maven",
+        "redhat.java",
+        "oracle.oracle-java",
+        "vmware.vscode-spring-boot"
+      ]
+    }
+  },
+
+  "postCreateCommand": "java -version && mvn -version"
+}

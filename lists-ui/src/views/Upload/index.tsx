@@ -48,9 +48,9 @@ export default function Component() {
     setResult(uploadResult);
   }, []);
 
-  // Callback handler for ingestion
-  const handleIngest = useCallback(
-    async (list: SpeciesListSubmit) => {
+  // Callback handler for ingestion (compiler will memoize this 
+  // function and only recreate it if ala.rest.lists.ingest changes)
+  const handleIngest = async (list: SpeciesListSubmit) => {
       setIngesting(true);
       try {
         const { id } = await ala.rest.lists.ingest(
@@ -67,9 +67,7 @@ export default function Component() {
           radius: 'md',
         });
       }
-    },
-    [result?.localFile]
-  );
+    };
 
   const handleReset = useCallback(() => {
     setResult(null);

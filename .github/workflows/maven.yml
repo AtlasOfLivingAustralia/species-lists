@@ -18,6 +18,11 @@ on:
     paths:
       - 'lists-service/**'
     
+permissions:
+  contents: write           # Required to submit the Dependency Graph snapshot
+  checks: write             # Required for dorny/test-reporter to create "Maven Tests"
+  pull-requests: write      # Required for dorny/test-reporter to link to PRs
+
 env:
   # Customize these environment variables
   JAVA_APP_PATH: './lists-service'
