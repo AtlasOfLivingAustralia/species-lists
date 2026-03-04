@@ -15,12 +15,12 @@
   resolved "https://registry.npmjs.org/@atlasoflivingaustralia/ala-mantine/-/ala-mantine-1.0.5.tgz"
   integrity sha512-e4287fqf73ZlxV7OtHnw7uZiRtCtMq77DMMdZG8ZUMJmcw/92I625NA/QYjhLH0ScpSB2iFiL5Cht+uflIhVIQ==
 
-"@axe-core/react@^4.10.0":
-  version "4.10.1"
-  resolved "https://registry.npmjs.org/@axe-core/react/-/react-4.10.1.tgz"
-  integrity sha512-GRGx/3Gbce9WQYXgY0iZzqOaHIRXBNGyV+zoUhJzBuDeoTL+XoeY3u/9PzdIVyH0pbNs1n1RChfsmWBy6hzKPg==
+"@axe-core/react@^4.11.1":
+  version "4.11.1"
+  resolved "https://registry.yarnpkg.com/@axe-core/react/-/react-4.11.1.tgz#6eb2db1001faec6cd7d44aeb57826ee49f4a1d55"
+  integrity sha512-tjTsYVQw0YhmVDpayb/r55Xbda/Og3l6UCvBZ26C+MtmuSTyQ47PKzq8z3QMgKCJ0RB7lsdiDy4HwO2SKiNuHg==
   dependencies:
-    axe-core "~4.10.2"
+    axe-core "~4.11.1"
     requestidlecallback "^0.3.0"
 
 "@babel/code-frame@^7.0.0", "@babel/code-frame@^7.25.9", "@babel/code-frame@^7.26.0", "@babel/code-frame@^7.26.2":
@@ -1113,10 +1113,10 @@ argparse@^2.0.1:
   resolved "https://registry.npmjs.org/argparse/-/argparse-2.0.1.tgz"
   integrity sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==
 
-axe-core@~4.10.2:
-  version "4.10.2"
-  resolved "https://registry.npmjs.org/axe-core/-/axe-core-4.10.2.tgz"
-  integrity sha512-RE3mdQ7P3FRSe7eqCWoeQ/Z9QXrtniSjp1wUjt5nRC3WIpz5rSCve6o3fsZ2aCpJtrZjSZgjwXAoTO5k4tEI0w==
+axe-core@~4.11.1:
+  version "4.11.1"
+  resolved "https://registry.yarnpkg.com/axe-core/-/axe-core-4.11.1.tgz#052ff9b2cbf543f5595028b583e4763b40c78ea7"
+  integrity sha512-BASOg+YwO2C+346x3LZOeoovTIoTrRqEsqMa6fmfAV0P+U9mFr9NsyOEpiYvFjbc64NMrSswhV50WdXzdb/Z5A==
 
 babel-plugin-react-compiler@1.0.0:
   version "1.0.0"
