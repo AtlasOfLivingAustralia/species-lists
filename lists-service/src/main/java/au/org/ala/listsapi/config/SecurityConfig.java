@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -159,6 +160,16 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf
                 .csrfTokenRepository(repository)
                 .csrfTokenRequestHandler(requestHandler)
+                .requireCsrfProtectionMatcher(request -> {
+                    // Skip CSRF for server-to-server Bearer token requests
+                    String auth = request.getHeader("Authorization");
+                    if (auth != null && auth.startsWith("Bearer ")) {
+                        return false;
+                    }
+                    // Keep CSRF for browser requests (all non-safe methods)
+                    return !Set.of("GET", "HEAD", "TRACE", "OPTIONS")
+                               .contains(request.getMethod());
+                })
         );
 
         // 3. Force the cookie to be sent on every request so React can find it
