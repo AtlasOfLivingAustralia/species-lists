@@ -29,7 +29,7 @@
     "@mantine/notifications": "^7.17.8",
     "@mantine/nprogress": "^7.17.8",
     "date-fns": "^4.1.0",
-    "dompurify": "^3.3.1",
+    "dompurify": "^3.3.2",
     "jwt-decode": "^4.0.0",
     "lodash-es": "^4.17.23",
     "lottie-react": "^2.4.0",
