@@ -63,7 +63,7 @@ Resources:
           }
         GenerateStringKey: db-password
         PasswordLength: 12
-        ExcludeCharacters: "/@\"\\#<> "
+        ExcludeCharacters: "/@\"\\#<>: "
       Tags:
         - Key: Name
           Value: !Sub
