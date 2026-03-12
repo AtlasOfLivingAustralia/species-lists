@@ -544,11 +544,11 @@ public class SpeciesListItemService {
             ? Arrays.stream(speciesListIDs.split(",")).map(FieldValue::of).toList()
             : null;
 
-        if (page < 1 || (page * pageSize) > 10000) {
+        if (page < 0 || ((page + 1) * pageSize) > 10000) {
             return new ArrayList<>();
         }
 
-        Pageable pageableRequest = PageRequest.of(page - 1, pageSize);
+        Pageable pageableRequest = PageRequest.of(page, pageSize);
         NativeQueryBuilder builder = new NativeQueryBuilder().withPageable(pageableRequest);
 
         builder.withQuery(q -> q.bool(bq -> {
@@ -626,15 +626,15 @@ public class SpeciesListItemService {
             .map(list -> FieldValue.of(list.getId()))
             .toList();
 
-        if ((page - 1) * pageSize + pageSize > 10000 && pageSize > 0) {
+        if ((page) * pageSize + pageSize > 10000 && pageSize > 0) {
             return new ArrayList<>();
-        } else if ((page - 1) * pageSize + pageSize > 10000) {
+        } else if ((page) * pageSize + pageSize > 10000) {
             throw new IllegalArgumentException(
                 "Page size exceeds ElasticSearch limit of 10,000 documents."
             );
         }
 
-        if (page < 1 || validIDs.isEmpty()) {
+        if (page < 0 || validIDs.isEmpty()) {
             return new ArrayList<>();
         }
 
@@ -655,7 +655,7 @@ public class SpeciesListItemService {
             sortField
         );
 
-        Pageable pageableRequest = PageRequest.of(page - 1, pageSize, springSort);
+        Pageable pageableRequest = PageRequest.of(page, pageSize, springSort);
         NativeQueryBuilder builder = new NativeQueryBuilder().withPageable(pageableRequest);
 
         builder.withQuery(q -> q.bool(bq -> {

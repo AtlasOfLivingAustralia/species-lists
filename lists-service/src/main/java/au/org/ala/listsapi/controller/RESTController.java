@@ -137,11 +137,11 @@ public class RESTController {
     @GetMapping("/v2/speciesList")
     public ResponseEntity<Object> speciesLists(
             @ParameterObject RESTSpeciesListQuery speciesList,
-            @RequestParam(name = "page", defaultValue = "1", required = false) @Max(10000) int page,
+            @RequestParam(name = "page", defaultValue = "0", required = false) @Max(10000) int page,
             @RequestParam(name = "pageSize", defaultValue = "10", required = false) @Max(1000) int pageSize,
             @AuthenticationPrincipal Principal principal) {
         try {
-            Pageable paging = PageRequest.of(page - 1, pageSize);
+            Pageable paging = PageRequest.of(page, pageSize);
 
             if (!authUtils.isAuthenticated(principal)) {
                 if (eq(speciesList.getIsPrivate(), "true")) {
@@ -217,19 +217,19 @@ public class RESTController {
     public ResponseEntity<Object> speciesListsByGuid(
             @Parameter(description = "The taxon globally unique identifier (GUID)", example = "https://biodiversity.org.au/afd/taxa/0d382040-d26d-4009-921a-abf76013df3a", required = true)
             @RequestParam(name = "guid") String guid,
-            @Parameter(description = "The page number to return (starting from 1)", example = "1")
-            @RequestParam(name = "page", defaultValue = "1", required = false) @Max(10000) int page,
+            @Parameter(description = "The page number to return (zero-based)", example = "0")
+            @RequestParam(name = "page", defaultValue = "0", required = false) @Max(10000) int page,
             @Parameter(description = "The number of items per page", example = "10")
             @RequestParam(name = "pageSize", defaultValue = "10", required = false) @Max(1000) int pageSize,
             @AuthenticationPrincipal Principal principal) {
         try {
             AlaUserProfile profile = authUtils.getUserProfile(principal);
 
-            if (page < 1 || (page * pageSize) > 10000) {
+            if (page < 0 || ((page + 1) * pageSize) > 10000) {
                 return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
             }
 
-            Pageable pageableRequest = PageRequest.of(page - 1, pageSize);
+            Pageable pageableRequest = PageRequest.of(page, pageSize);
             NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
             builder.withQuery(
                     q -> q.bool(
@@ -308,8 +308,8 @@ public class RESTController {
             @Nullable @RequestParam(name = "q") String searchQuery,
             @Parameter(description = "Fields to include in the response", example = "scientificName,commonName", required = false)
             @Nullable @RequestParam(name = "fields") String fields,
-            @Parameter(description = "The page number to return (starting from 1)", example = "1", required = false)
-            @Nullable @RequestParam(name = "page", defaultValue = "1") Integer page,
+            @Parameter(description = "The page number to return (zero-based)", example = "0", required = false)
+            @Nullable @RequestParam(name = "page", defaultValue = "0") Integer page,
             @Parameter(description = "The number of items per page", example = "10", required = false)
             @Nullable @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
             @Parameter(description = "Field to sort by", example = "scientificName", required = false)
@@ -318,9 +318,8 @@ public class RESTController {
             @Nullable @RequestParam(name = "dir", defaultValue = "asc") String dir,
             @AuthenticationPrincipal Principal principal) {
         try {
-            int pageIndex = (page - 1); // spring data pageable is zero based
             List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs,
-                    searchQuery, fields, null, pageIndex, pageSize, sort, dir, principal);
+                    searchQuery, fields, null, page, pageSize, sort, dir, principal);
 
             if (speciesListItems.isEmpty()) {
                 return ResponseEntity.notFound().build();
@@ -345,16 +344,15 @@ public class RESTController {
             @Nullable @RequestParam(name = "speciesListIDs") String speciesListIDs,
             @Parameter(description = "One or more (comma separated) taxon globally unique identifiers (GUID)", example = "https://biodiversity.org.au/afd/taxa/083b413f-8746-4788-8dc1-3da495d78a79")
             @RequestParam(name = "guids") String guids,
-            @Parameter(description = "The page number to return (starting from 1)", example = "1")
-            @RequestParam(name = "page", defaultValue = "1", required = false) @Max(10000) int page,
+            @Parameter(description = "The page number to return (zero-based)", example = "0")
+            @RequestParam(name = "page", defaultValue = "0", required = false) @Max(10000) int page,
             @Parameter(description = "The number of items per page", example = "10")
             @RequestParam(name = "pageSize", defaultValue = "10", required = false) @Max(1000) int pageSize,
             @AuthenticationPrincipal Principal principal) {
         try {
-            int pageIndex = (page - 1); // spring data pageable is zero based
             String searchQuery = guids.replaceAll(",", "|"); // convert to regex OR
             List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs,
-                    searchQuery, null, null, pageIndex, pageSize, null, null, principal);
+                    searchQuery, null, null, page, pageSize, null, null, principal);
             // List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(guids, speciesListIDs,
             //         page, pageSize, principal);
             return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
