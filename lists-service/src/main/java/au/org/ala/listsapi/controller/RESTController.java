@@ -137,7 +137,9 @@ public class RESTController {
     @GetMapping("/v2/speciesList")
     public ResponseEntity<Object> speciesLists(
             @ParameterObject RESTSpeciesListQuery speciesList,
+            @Parameter(description = "The page number to return (zero-based)", example = "0")
             @RequestParam(name = "page", defaultValue = "0", required = false) @Max(10000) int page,
+            @Parameter(description = "The number of items per page", example = "10")
             @RequestParam(name = "pageSize", defaultValue = "10", required = false) @Max(1000) int pageSize,
             @AuthenticationPrincipal Principal principal) {
         try {

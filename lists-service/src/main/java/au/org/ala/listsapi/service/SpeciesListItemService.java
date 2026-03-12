@@ -79,6 +79,8 @@ import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 @Service
 public class SpeciesListItemService {
 
+    private static final int MAX_LIST_ENTRIES = 10000;
+
     private static final org.slf4j.Logger logger =
         org.slf4j.LoggerFactory.getLogger(SpeciesListItemService.class);
 
@@ -544,7 +546,7 @@ public class SpeciesListItemService {
             ? Arrays.stream(speciesListIDs.split(",")).map(FieldValue::of).toList()
             : null;
 
-        if (page < 0 || ((page + 1) * pageSize) > 10000) {
+        if (page < 0 || ((page + 1) * pageSize) > MAX_LIST_ENTRIES) {
             return new ArrayList<>();
         }
 
