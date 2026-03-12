@@ -698,6 +698,13 @@ public class LegacyController {
         // Catch possible null values from unboxed offset and max
         int effectiveMax = Math.max((max != null ? max : 9999), 1); // Ensure max is at least 1
         int effectiveOffset = Math.max((offset != null ? offset : 0), 0); // Ensure offset is non-negative
+
+        // Validate that the offset aligns with the page size; otherwise the computed page index
+        // would start at the wrong record. Return 400 for non-aligned offsets, consistent with
+        // other legacy endpoints.
+        if (effectiveOffset % effectiveMax != 0) {
+            return new ResponseEntity<>(new ArrayList<>(), HttpStatus.BAD_REQUEST);
+        }
         int pageVal = effectiveOffset / effectiveMax; // 0-based page index
         int pageSizeVal = effectiveMax;
 

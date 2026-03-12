@@ -174,7 +174,7 @@ public class SearchHelperService {
         List<FieldValue> listIDs = speciesListIDs != null ?
                 Arrays.stream(speciesListIDs.split(",")).map(FieldValue::of).toList() : null;
 
-        if (page < 0 || ((page + 1) * pageSize) > 10000) {
+        if (page < 0 || ((page + 1) * pageSize) > MAX_LIST_ENTRIES) {
             return new ArrayList<>();
         }
 
