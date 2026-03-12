@@ -260,32 +260,28 @@ public class SearchHelperService {
             restrictedFields.addAll(Arrays.stream(fields.split(",")).collect(Collectors.toSet()));
         }
 
-        if (!foundLists.isEmpty() || searchQuery != null && !searchQuery.isBlank()) {
-            // Determine valid list IDs based on user access rights
-            List<FieldValue> validIDs = foundLists.stream()
-                    .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal))
-                    .map(list -> FieldValue.of(list.getId())).toList();
+        // Determine valid list IDs based on user access rights
+        List<String> validListIDs = foundLists.stream()
+                .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal))
+                .map(SpeciesList::getId)
+                .collect(Collectors.toList());
 
-            String sortField = (sort != null && !sort.isBlank()) ? sort : "scientificName";
-            String sortDir = (dir != null && !dir.isBlank()) ? dir : "asc";
-
-            List<String> validListIDs = validIDs.stream()
-                    .map(FieldValue::stringValue)
-                    .collect(Collectors.toList());
-            String query = (searchQuery != null && !searchQuery.isBlank()) ? searchQuery : ".*";
-            Sort pageableSort = Sort.by(
-                sortDir.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC,
-                sortField
-            );
-            Pageable pageable = PageRequest.of(page, pageSize, pageableSort);
-            // For pagination, we use the repository method directly for better performance
-            Page<SpeciesListItem> itemsPage = speciesListItemMongoRepository.findNextBatch(validListIDs, query, pageable);
-            List<SpeciesListItem> items = itemsPage.getContent();
-
-            return items;
+        if (validListIDs.isEmpty()) {
+            return new ArrayList<>();
         }
 
-        return new ArrayList<>();
+        String sortField = (sort != null && !sort.isBlank()) ? sort : "scientificName";
+        String sortDir = (dir != null && !dir.isBlank()) ? dir : "asc";
+
+        String query = (searchQuery != null && !searchQuery.isBlank()) ? searchQuery : ".*";
+        Sort pageableSort = Sort.by(
+            sortDir.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC,
+            sortField
+        );
+        Pageable pageable = PageRequest.of(page, pageSize, pageableSort);
+        // For pagination, we use the repository method directly for better performance
+        Page<SpeciesListItem> itemsPage = speciesListItemMongoRepository.findNextBatch(validListIDs, query, pageable);
+        return itemsPage.getContent();
     }
 
     /**
