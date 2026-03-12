@@ -323,10 +323,6 @@ public class RESTController {
             List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs,
                     searchQuery, fields, null, page, pageSize, sort, dir, principal);
 
-            if (speciesListItems.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-
             return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
