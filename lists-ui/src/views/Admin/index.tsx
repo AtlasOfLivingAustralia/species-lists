@@ -376,7 +376,7 @@ export function Component() {
               />
             </Grid.Col>
           </Grid>
-          {['testing', 'development'].includes(import.meta.env.MODE) && (
+          {/* {['testing', 'development'].includes(import.meta.env.MODE) && ( */}
             <Grid>
               <Grid.Col span={12}>
                 <Stack>
@@ -420,7 +420,7 @@ export function Component() {
                 />
               </Grid.Col>
             </Grid>
-          )}
+          {/* )} */}
         </Stack>
       </Container>
     </>
