@@ -174,11 +174,11 @@ public class SearchHelperService {
         List<FieldValue> listIDs = speciesListIDs != null ?
                 Arrays.stream(speciesListIDs.split(",")).map(FieldValue::of).toList() : null;
 
-        if (page < 0 || ((page + 1) * pageSize) > MAX_LIST_ENTRIES) {
+        if (page < 1 || (page * pageSize) > 10000) {
             return new ArrayList<>();
         }
 
-        Pageable pageableRequest = PageRequest.of(page, pageSize);
+        Pageable pageableRequest = PageRequest.of(page - 1, pageSize);
         NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
         builder.withQuery(
                 q ->
