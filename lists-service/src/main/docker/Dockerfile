@@ -35,7 +35,7 @@ RUN apt-get install -y -q ca-certificates ca-certificates-java openjdk-21-jdk op
 
 # Directories and perms
 RUN mkdir -p /data/$APP_ARTIFACT && \
-    groupadd -r $USER -g 1000 && useradd -r -g $USER -u 1000 -m $USER && \
+    groupadd -r $USER && useradd -r -g $USER -m $USER && \
     chown -R $USER:$USER /data/$APP_ARTIFACT
 WORKDIR /opt/atlas/$APP_ARTIFACT
 
