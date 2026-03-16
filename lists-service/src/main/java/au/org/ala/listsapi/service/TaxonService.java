@@ -452,10 +452,16 @@ public class TaxonService {
         while (!finished) {
             long startTime = System.nanoTime();
 
-            List<SpeciesListItem> items = speciesListItemMongoRepository.findNextBatch(speciesList.getId(), lastId,
-                    PageRequest.of(0, bulkMatchBatchSize));
-            long elapsed = System.nanoTime() - startTime;
+            List<SpeciesListItem> items;
+            if (lastId == null) {
+                items = speciesListItemMongoRepository.findFirstBatch(
+                    speciesList.getId(), PageRequest.of(0, bulkMatchBatchSize));
+            } else {
+                items = speciesListItemMongoRepository.findNextBatchAfter(
+                    speciesList.getId(), lastId, PageRequest.of(0, bulkMatchBatchSize));
+            }
 
+            long elapsed = System.nanoTime() - startTime;
             logger.info("[{}|taxonMatch] Fetched {} items in {} ms",
                     speciesListID, items.size(), elapsed / 1_000_000);
 
