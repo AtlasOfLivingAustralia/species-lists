@@ -16,29 +16,34 @@ FROM ubuntu:noble
 ARG DEBIAN_FRONTEND=noninteractive
 ENV SERVER_PORT="8080"
 
-# Install initial dependencies
 RUN apt-get -y update && apt-get -y upgrade && \
-        apt-get install -y -q curl gpg software-properties-common
+    apt-get install -y -q curl gpg software-properties-common csplit
 
 ARG USER=lists-service
 ARG APP_ARTIFACT=lists-service
 
-# Add the apt.gbif.es repo and gpg key (modern apt-key replacement)
+# Add the apt.gbif.es repo and gpg key
 RUN curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF697D8D2ADB9E24A" \
     | gpg --dearmor -o /etc/apt/keyrings/ala.gpg && \
     echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/ala.gpg] https://apt.gbif.es/ bionic main" \
     > /etc/apt/sources.list.d/ala.list
 
 # Install main dependencies
-RUN apt-get install -y -q ca-certificates ca-certificates-java openjdk-21-jdk openjdk-21-jre
+RUN apt-get update && apt-get install -y -q ca-certificates ca-certificates-java openjdk-21-jdk openjdk-21-jre
 
-# Add missing Sectigo root cert and rebuild the Java truststore
+# Add Sectigo root cert + AWS DocumentDB CA bundle into Java truststore
 RUN curl -fsSL "https://crt.sh/?d=11405654892" -o /usr/local/share/ca-certificates/sectigo-root-r46.crt && \
-    update-ca-certificates
-
-RUN curl -fsSL "https://crt.sh/?d=11405654892" -o /usr/local/share/ca-certificates/sectigo-root-r46.crt && \
-    curl -fsSL "https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem" -o /usr/local/share/ca-certificates/aws-docdb-global-bundle.crt && \
-    update-ca-certificates
+    curl -fsSL "https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem" -o /tmp/aws-global-bundle.pem && \
+    update-ca-certificates && \
+    csplit -z -f /tmp/aws-cert- /tmp/aws-global-bundle.pem '/-----BEGIN CERTIFICATE-----/' '{*}' && \
+    for cert in /tmp/aws-cert-*; do \
+        keytool -import -noprompt -trustcacerts \
+            -keystore /etc/ssl/certs/java/cacerts \
+            -storepass changeit \
+            -alias "aws-rds-$(basename $cert)" \
+            -file "$cert"; \
+    done && \
+    rm /tmp/aws-cert-* /tmp/aws-global-bundle.pem
 
 # Directories and perms
 RUN mkdir -p /data/$APP_ARTIFACT && \
