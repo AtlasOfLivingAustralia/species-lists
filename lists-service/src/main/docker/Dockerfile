@@ -36,6 +36,10 @@ RUN apt-get install -y -q ca-certificates ca-certificates-java openjdk-21-jdk op
 RUN curl -fsSL "https://crt.sh/?d=11405654892" -o /usr/local/share/ca-certificates/sectigo-root-r46.crt && \
     update-ca-certificates
 
+RUN curl -fsSL "https://crt.sh/?d=11405654892" -o /usr/local/share/ca-certificates/sectigo-root-r46.crt && \
+    curl -fsSL "https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem" -o /usr/local/share/ca-certificates/aws-docdb-global-bundle.crt && \
+    update-ca-certificates
+
 # Directories and perms
 RUN mkdir -p /data/$APP_ARTIFACT && \
     groupadd -r $USER && useradd -r -g $USER -m $USER && \
