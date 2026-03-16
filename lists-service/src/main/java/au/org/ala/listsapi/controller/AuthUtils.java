@@ -103,7 +103,7 @@ public class AuthUtils {
         // 3) ROLE_USER and an editor of the list
         // 4) M2M token with ala/internal scope
         AlaUserProfile profile = getUserProfile(principal);
-        logger.info("User profile: " + profile);
+        
         if (profile == null) {
             return false;
         }

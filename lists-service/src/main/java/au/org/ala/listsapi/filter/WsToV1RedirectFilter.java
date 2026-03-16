@@ -73,7 +73,6 @@ public class WsToV1RedirectFilter extends OncePerRequestFilter {
         // Handle pre-version paths (Biocollect, etc.)
         for (Map.Entry<String, String> entry : preVersionPaths.entrySet()) {
             String path = entry.getKey();
-            logger.debug("Request URI: " + requestUri + "; with path: " + path + "; with query: " + request.getQueryString());
 
             if (requestUri.startsWith(path)) {
                 String queryString = request.getQueryString();
