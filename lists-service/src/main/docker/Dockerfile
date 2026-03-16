@@ -17,7 +17,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ENV SERVER_PORT="8080"
 
 RUN apt-get -y update && apt-get -y upgrade && \
-    apt-get install -y -q curl gpg software-properties-common csplit
+    apt-get install -y -q curl gpg software-properties-common coreutils
 
 ARG USER=lists-service
 ARG APP_ARTIFACT=lists-service
