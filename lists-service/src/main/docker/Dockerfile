@@ -79,7 +79,7 @@ WORKDIR /opt/atlas/$APP_ARTIFACT
 # -------------------------------
 # 5️⃣ Add your application JAR
 # -------------------------------
-COPY target/lists-service-*-SNAPSHOT.jar app.jar
+COPY --from=builder /app/target/lists-service-*-SNAPSHOT.jar app.jar
 
 # -------------------------------
 # 6️⃣ Expose port and run
