@@ -60,7 +60,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # 2️⃣ Prepare AWS DocumentDB bundle
 # -------------------------------
 # Pre-download or COPY the bundle for reproducible builds
-COPY certs/aws-global-bundle.pem /tmp/aws-global-bundle.pem
+COPY src/main/docker/certs/aws-global-bundle.pem /tmp/aws-global-bundle.pem
 
 # -------------------------------
 # 3️⃣ Create merged truststore
