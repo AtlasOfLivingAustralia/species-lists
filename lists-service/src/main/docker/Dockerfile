@@ -30,11 +30,7 @@ RUN curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF697D8D2
     > /etc/apt/sources.list.d/ala.list
 
 # Install main dependencies
-RUN apt-get install -y -q ca-certificates ca-certificates-java openjdk-21-jdk openjdk-21-jre
-
-# Add missing Sectigo root cert and rebuild the Java truststore
-RUN curl -fsSL "https://crt.sh/?d=11405654892" -o /usr/local/share/ca-certificates/sectigo-root-r46.crt && \
-    update-ca-certificates
+RUN apt-get install -y -q ca-certificates ca-certificates-java openjdk-21-jdk openjdk-21-jre  update-ca-certificates
 
 # Directories and perms
 RUN mkdir -p /data/$APP_ARTIFACT && \
