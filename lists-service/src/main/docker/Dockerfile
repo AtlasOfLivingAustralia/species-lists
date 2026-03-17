@@ -11,80 +11,40 @@ COPY src ./src
 # Build the Maven project and create a WAR file
 RUN mvn clean package -DskipTests
 
-# Build phase
 FROM ubuntu:noble
 
 ARG DEBIAN_FRONTEND=noninteractive
+ENV SERVER_PORT="8080"
 
-ENV SERVER_PORT=8080
-ENV APP_ARTIFACT=lists-service
-ENV JAVA_CACERTS=/etc/ssl/certs/java/cacerts
-ENV CUSTOM_TRUSTSTORE=/data/lists-service/config/lists-service-truststore.jks
-ENV TRUSTSTORE_PASS=changeme
+# Install initial dependencies
+RUN apt-get -y update && apt-get -y upgrade && \
+        apt-get install -y -q curl gpg software-properties-common
 
-# -------------------------------
-# 1️⃣ Install dependencies
-# -------------------------------
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl \
-        ca-certificates \
-        ca-certificates-java \
-        openjdk-21-jdk \
-        openjdk-21-jre \
-        gnupg \
-        coreutils \
-        bsdmainutils \
-    && rm -rf /var/lib/apt/lists/*
+ARG USER=lists-service
+ARG APP_ARTIFACT=lists-service
 
-# -------------------------------
-# 2️⃣ Add AWS DocumentDB bundle
-# -------------------------------
-COPY src/main/docker/certs/aws-global-bundle.pem /tmp/aws-global-bundle.pem
+# Add the apt.gbif.es repo and gpg key (modern apt-key replacement)
+RUN curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF697D8D2ADB9E24A" \
+    | gpg --dearmor -o /etc/apt/keyrings/ala.gpg && \
+    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/ala.gpg] https://apt.gbif.es/ bionic main" \
+    > /etc/apt/sources.list.d/ala.list
 
-# -------------------------------
-# 3️⃣ Create merged truststore (robust)
-# -------------------------------
-RUN test -s /tmp/aws-global-bundle.pem && \
-    mkdir -p /data/$APP_ARTIFACT/config && \
-    \
-    # Copy default Java truststore (includes Sectigo, DigiCert, etc.)
-    cp $JAVA_CACERTS $CUSTOM_TRUSTSTORE && \
-    \
-    # Split AWS bundle into individual certs (portable)
-    awk '/-----BEGIN CERTIFICATE-----/ {n++} {print > ("/tmp/aws-cert-" n ".pem")}' /tmp/aws-global-bundle.pem && \
-    \
-    # Import each cert safely
-    for cert in /tmp/aws-cert-*; do \
-        if [ -s "$cert" ]; then \
-            keytool -import -noprompt -trustcacerts \
-                -keystore $CUSTOM_TRUSTSTORE \
-                -storepass $TRUSTSTORE_PASS \
-                -alias "aws-$(basename $cert)" \
-                -file "$cert" || true; \
-        fi; \
-    done && \
-    \
-    # Cleanup temp cert files
-    rm -f /tmp/aws-cert-*
+# Install main dependencies
+RUN apt-get install -y -q ca-certificates ca-certificates-java openjdk-21-jdk openjdk-21-jre
 
-# -------------------------------
-# 4️⃣ Create application directories and user
-# -------------------------------
-RUN mkdir -p /opt/atlas/$APP_ARTIFACT && \
-    groupadd -r $APP_ARTIFACT && useradd -r -g $APP_ARTIFACT -m $APP_ARTIFACT && \
-    chown -R $APP_ARTIFACT:$APP_ARTIFACT /opt/atlas/$APP_ARTIFACT /data/$APP_ARTIFACT
+# Add missing Sectigo root cert and rebuild the Java truststore
+RUN curl -fsSL "https://crt.sh/?d=11405654892" -o /usr/local/share/ca-certificates/sectigo-root-r46.crt && \
+    update-ca-certificates
 
+# Directories and perms
+RUN mkdir -p /data/$APP_ARTIFACT && \
+    groupadd -r $USER && useradd -r -g $USER -m $USER && \
+    chown -R $USER:$USER /data/$APP_ARTIFACT
 WORKDIR /opt/atlas/$APP_ARTIFACT
 
-# -------------------------------
-# 5️⃣ Add your application JAR
-# -------------------------------
-COPY --from=builder /app/target/lists-service-*-SNAPSHOT.jar app.jar
+COPY --from=builder /app/target/lists-service-*-SNAPSHOT.jar /opt/atlas/$APP_ARTIFACT/app.jar
 
-# -------------------------------
-# 6️⃣ Expose port and run
-# -------------------------------
-USER $APP_ARTIFACT
+USER $USER
 EXPOSE $SERVER_PORT
 
 CMD ["java", "-jar", "app.jar"]
