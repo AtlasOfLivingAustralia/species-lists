@@ -46,7 +46,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         openjdk-21-jre \
         gnupg \
         coreutils \
-        csplit \
+        bsdmainutils \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
