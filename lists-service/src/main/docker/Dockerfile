@@ -28,22 +28,14 @@ RUN curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF697D8D2
     echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/ala.gpg] https://apt.gbif.es/ bionic main" \
     > /etc/apt/sources.list.d/ala.list
 
-# Install main dependencies
-RUN apt-get update && apt-get install -y -q ca-certificates ca-certificates-java openjdk-21-jdk openjdk-21-jre
-
-# Add Sectigo root cert + AWS DocumentDB CA bundle into Java truststore
-RUN curl -fsSL "https://crt.sh/?d=11405654892" -o /usr/local/share/ca-certificates/sectigo-root-r46.crt && \
-    curl -fsSL "https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem" -o /tmp/aws-global-bundle.pem && \
-    update-ca-certificates && \
-    csplit -z -f /tmp/aws-cert- /tmp/aws-global-bundle.pem '/-----BEGIN CERTIFICATE-----/' '{*}' && \
-    for cert in /tmp/aws-cert-*; do \
-        keytool -import -noprompt -trustcacerts \
-            -keystore /etc/ssl/certs/java/cacerts \
-            -storepass changeit \
-            -alias "aws-rds-$(basename $cert)" \
-            -file "$cert"; \
-    done && \
-    rm /tmp/aws-cert-* /tmp/aws-global-bundle.pem
+# Install Java 21 and update CA certificates
+RUN apt-get update && apt-get install -y -q \
+    ca-certificates \
+    ca-certificates-java \
+    openjdk-21-jdk \
+    openjdk-21-jre && \
+    update-ca-certificates -f && \
+    /var/lib/dpkg/info/ca-certificates-java.postinst configure
 
 # Directories and perms
 RUN mkdir -p /data/$APP_ARTIFACT && \
