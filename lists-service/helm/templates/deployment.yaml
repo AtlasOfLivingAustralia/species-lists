@@ -17,6 +17,54 @@ spec:
         {{ include "ala-species-lists.deploymentAnnotations" . | nindent 8 }}
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
+      initContainers:
+        - name: truststore-builder
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              # Locate the system cacerts
+              if [ -f /etc/ssl/certs/java/cacerts ]; then
+                CACERTS=/etc/ssl/certs/java/cacerts
+              elif [ -f $JAVA_HOME/lib/security/cacerts ]; then
+                CACERTS=$JAVA_HOME/lib/security/cacerts
+              else
+                # Fallback search
+                CACERTS=$(find /usr/lib/jvm -name cacerts -print -quit)
+              fi
+
+              if [ -z "$CACERTS" ]; then
+                echo "Could not find system cacerts"
+                exit 1
+              fi
+
+              echo "Using system truststore: $CACERTS"
+              
+              # Copy system cacerts to writable volume
+              cp "$CACERTS" /truststore/cacerts
+              chmod 664 /truststore/cacerts
+              
+              # Merge the custom truststore (containing AWS certs etc) into the system one
+              if [ -f /data/lists-service/config/lists-service-truststore.jks ]; then
+                echo "Importing custom truststore..."
+                keytool -importkeystore \
+                  -srckeystore /data/lists-service/config/lists-service-truststore.jks \
+                  -srcstorepass changeme \
+                  -destkeystore /truststore/cacerts \
+                  -deststorepass changeit \
+                  -noprompt
+              else
+                echo "No custom truststore found, using system truststore only."
+              fi
+          volumeMounts:
+            - name: shared-truststore
+              mountPath: /truststore
+            - name: config-volume
+              mountPath: /data/lists-service/config/lists-service-truststore.jks
+              subPath: lists-service-truststore.jks
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -80,13 +128,15 @@ spec:
             - "-XX:ConcGCThreads=2"
             - "-XX:+UseContainerSupport"
             - "-Xlog:gc*:file=/tmp/gc.log:time,uptime,level,tags"
-            - "-Djavax.net.ssl.trustStore=/data/lists-service/config/lists-service-truststore.jks"
-            - "-Djavax.net.ssl.trustStorePassword=changeme"
+            - "-Djavax.net.ssl.trustStore=/truststore/cacerts"
+            - "-Djavax.net.ssl.trustStorePassword=changeit"
             - "-Djavax.net.ssl.trustStoreType=jks"
             - "-jar"
             - "app.jar"
             - "--spring.config.location=file:/data/lists-service/config/lists-service-config.properties"
           volumeMounts:
+            - name: shared-truststore
+              mountPath: /truststore
             - name: config-volume
               mountPath: /data/lists-service/config/lists-service-config.properties
               subPath: lists-service-config.properties
@@ -100,3 +150,5 @@ spec:
         - name: config-volume
           configMap:
             name: {{ include "ala-species-lists.fullname" . }}
+        - name: shared-truststore
+          emptyDir: {}
