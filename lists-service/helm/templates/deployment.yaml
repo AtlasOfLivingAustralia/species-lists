@@ -80,9 +80,9 @@ spec:
             - "-XX:ConcGCThreads=2"
             - "-XX:+UseContainerSupport"
             - "-Xlog:gc*:file=/tmp/gc.log:time,uptime,level,tags"
-            # - "-Djavax.net.ssl.trustStore=/data/lists-service/config/lists-service-truststore.jks"
-            # - "-Djavax.net.ssl.trustStorePassword=changeme"
-            # - "-Djavax.net.ssl.trustStoreType=jks"
+            - "-Djavax.net.ssl.trustStore=/data/lists-service/config/lists-service-truststore.jks"
+            - "-Djavax.net.ssl.trustStorePassword=changeme"
+            - "-Djavax.net.ssl.trustStoreType=jks"
             - "-jar"
             - "app.jar"
             - "--spring.config.location=file:/data/lists-service/config/lists-service-config.properties"
@@ -93,9 +93,9 @@ spec:
             - name: config-volume
               mountPath: /data/lists-service/config/constraints.json
               subPath: constraints.json
-            - name: config-volume
-              mountPath: /data/lists-service/config/lists-service-truststore.jks
-              subPath: lists-service-truststore.jks
+            # - name: config-volume
+            #   mountPath: /data/lists-service/config/lists-service-truststore.jks
+            #   subPath: lists-service-truststore.jks
       volumes:
         - name: config-volume
           configMap:

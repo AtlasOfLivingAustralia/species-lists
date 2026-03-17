@@ -11,41 +11,88 @@ COPY src ./src
 # Build the Maven project and create a WAR file
 RUN mvn clean package -DskipTests
 
+# -------------------------------
+# Dockerfile: lists-service with merged truststore
+# -------------------------------
 FROM ubuntu:noble
 
 ARG DEBIAN_FRONTEND=noninteractive
-ENV SERVER_PORT="8080"
 
-RUN apt-get -y update && apt-get -y upgrade && \
-    apt-get install -y -q curl gpg software-properties-common coreutils
+# Install dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+        ca-certificates-java \
+        openjdk-21-jdk \
+        openjdk-21-jre \
+        gnupg \
+        coreutils \
+        csplit \
+    && rm -rf /var/lib/apt/lists/*
 
-ARG USER=lists-service
+# Set working directory
+WORKDIR /opt/atlas/lists-service
+
+FROM ubuntu:noble
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+        ca-certificates-java \
+        openjdk-21-jdk \
+        openjdk-21-jre \
+        gnupg \
+        coreutils \
+        csplit \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /opt/atlas/lists-service
+
+# -------------------------------
+# 1️⃣ Download certificates
+# -------------------------------
+RUN curl -fsSL https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -o /tmp/aws-global-bundle.pem && \
+    curl -fsSL "https://crt.sh/?d=1304325995" -o /tmp/sectigo-r36.crt
+
+# -------------------------------
+# 2️⃣ Create merged truststore in the same path as deployment.yaml expects
+# -------------------------------
+RUN mkdir -p /data/lists-service/config && \
+    keytool -genkey -alias dummy \
+        -keystore /data/lists-service/config/lists-service-truststore.jks \
+        -storepass changeme \
+        -keypass changeme \
+        -dname "CN=dummy" && \
+    keytool -delete -alias dummy \
+        -keystore /data/lists-service/config/lists-service-truststore.jks \
+        -storepass changeme && \
+    keytool -import -noprompt -trustcacerts \
+        -keystore /data/lists-service/config/lists-service-truststore.jks \
+        -storepass changeme \
+        -alias sectigo-r36 \
+        -file /tmp/sectigo-r36.crt && \
+    csplit -z -f /tmp/aws-cert- /tmp/aws-global-bundle.pem '/-----BEGIN CERTIFICATE-----/' '{*}' && \
+    for cert in /tmp/aws-cert-*; do \
+        keytool -import -noprompt -trustcacerts \
+            -keystore /data/lists-service/config/lists-service-truststore.jks \
+            -storepass changeme \
+            -alias "aws-$(basename $cert)" \
+            -file "$cert"; \
+    done && \
+    rm /tmp/aws-cert-* /tmp/aws-global-bundle.pem /tmp/sectigo-r36.crt
+
+# -------------------------------
+# 3️⃣ Add your application
+# -------------------------------
 ARG APP_ARTIFACT=lists-service
+COPY target/lists-service-*-SNAPSHOT.jar app.jar
 
-# Add the apt.gbif.es repo and gpg key
-RUN curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF697D8D2ADB9E24A" \
-    | gpg --dearmor -o /etc/apt/keyrings/ala.gpg && \
-    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/ala.gpg] https://apt.gbif.es/ bionic main" \
-    > /etc/apt/sources.list.d/ala.list
-
-# Install Java 21 and update CA certificates
-RUN apt-get update && apt-get install -y -q \
-    ca-certificates \
-    ca-certificates-java \
-    openjdk-21-jdk \
-    openjdk-21-jre && \
-    update-ca-certificates -f && \
-    /var/lib/dpkg/info/ca-certificates-java.postinst configure
-
-# Directories and perms
-RUN mkdir -p /data/$APP_ARTIFACT && \
-    groupadd -r $USER && useradd -r -g $USER -m $USER && \
-    chown -R $USER:$USER /data/$APP_ARTIFACT
-WORKDIR /opt/atlas/$APP_ARTIFACT
-
-COPY --from=builder /app/target/lists-service-*-SNAPSHOT.jar /opt/atlas/$APP_ARTIFACT/app.jar
-
-USER $USER
-EXPOSE $SERVER_PORT
-
+# -------------------------------
+# 4️⃣ Keep JVM flags unchanged (deployment.yaml still works)
+# -------------------------------
+EXPOSE 8080
 CMD ["java", "-jar", "app.jar"]
