@@ -11,29 +11,35 @@ COPY src ./src
 # Build the Maven project and create a WAR file
 RUN mvn clean package -DskipTests
 
-FROM ubuntu:jammy
+FROM ubuntu:noble
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV SERVER_PORT="8080"
 
-# Install initial dependencies
 RUN apt-get -y update && apt-get -y upgrade && \
-        apt-get install -y -q add-apt-key software-properties-common
+    apt-get install -y -q curl gpg software-properties-common coreutils
 
-ARG APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=DontWarn
 ARG USER=lists-service
 ARG APP_ARTIFACT=lists-service
 
 # Add the apt.gbif.es repo and gpg key
-RUN echo "deb [arch=amd64] https://apt.gbif.es/ bionic main" > /etc/apt/sources.list.d/ala.list && \
-        apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F697D8D2ADB9E24A
+RUN curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF697D8D2ADB9E24A" \
+    | gpg --dearmor -o /etc/apt/keyrings/ala.gpg && \
+    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/ala.gpg] https://apt.gbif.es/ bionic main" \
+    > /etc/apt/sources.list.d/ala.list
 
-# Install main dependencies
-RUN apt-get install -y -q openjdk-21-jdk openjdk-21-jre
+# Install Java 21 and update CA certificates
+RUN apt-get update && apt-get install -y -q \
+    ca-certificates \
+    ca-certificates-java \
+    openjdk-21-jdk \
+    openjdk-21-jre && \
+    update-ca-certificates -f && \
+    /var/lib/dpkg/info/ca-certificates-java.postinst configure
 
 # Directories and perms
 RUN mkdir -p /data/$APP_ARTIFACT && \
-    groupadd -r $USER -g 1000 && useradd -r -g $USER -u 1000 -m $USER && \
+    groupadd -r $USER && useradd -r -g $USER -m $USER && \
     chown -R $USER:$USER /data/$APP_ARTIFACT
 WORKDIR /opt/atlas/$APP_ARTIFACT
 

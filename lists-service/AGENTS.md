@@ -63,7 +63,7 @@ Imports should be ordered as follows (Google Style):
 Static imports should be placed at the top or bottom depending on the specific Google Style config, but `spotless:apply` will handle this automatically.
 
 ### Formatting
-- **Indentation:** 2 spaces (standard Google Java Style).
+- **Indentation:** 4 spaces (standard Google Java Style).
 - **Line Length:** 100-120 characters usually, but let Spotless decide.
 - **Braces:** K&R style (opening brace on the same line).
 
