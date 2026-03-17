@@ -93,9 +93,9 @@ spec:
             - name: config-volume
               mountPath: /data/lists-service/config/constraints.json
               subPath: constraints.json
-            # - name: config-volume
-            #   mountPath: /data/lists-service/config/lists-service-truststore.jks
-            #   subPath: lists-service-truststore.jks
+            - name: config-volume
+              mountPath: /data/lists-service/config/lists-service-truststore.jks
+              subPath: lists-service-truststore.jks
       volumes:
         - name: config-volume
           configMap:
