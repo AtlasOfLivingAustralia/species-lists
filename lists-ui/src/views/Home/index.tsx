@@ -39,8 +39,6 @@ import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
 import {
   faCode,
-  faEye,
-  faEyeSlash,
   faMagnifyingGlass,
   faXmark
 } from '@fortawesome/free-solid-svg-icons';
