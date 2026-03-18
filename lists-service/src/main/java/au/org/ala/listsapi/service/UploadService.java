@@ -1,20 +1,29 @@
 /**
- * Copyright (c) 2025 Atlas of Living Australia
- * All Rights Reserved.
- * 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Copyright (c) 2025 Atlas of Living Australia All Rights Reserved.
+ *
+ * <p>The contents of this file are subject to the Mozilla Public License Version 1.1 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at http://www.mozilla.org/MPL/
+ *
+ * <p>Software distributed under the License is distributed on an "AS IS" basis, WITHOUT WARRANTY OF
+ * ANY KIND, either express or implied. See the License for the specific language governing rights
+ * and limitations under the License.
  */
-
 package au.org.ala.listsapi.service;
 
+import au.org.ala.listsapi.controller.AuthUtils;
+import au.org.ala.listsapi.model.IngestJob;
+import au.org.ala.listsapi.model.InputSpeciesList;
+import au.org.ala.listsapi.model.KeyValue;
+import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesListItem;
+import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
+import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
+import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import au.org.ala.ws.security.profile.AlaUserProfile;
+import com.fasterxml.jackson.databind.MappingIterator;
+import com.fasterxml.jackson.dataformat.csv.CsvMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -34,7 +43,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-
 import org.apache.commons.lang3.StringUtils;
 import org.gbif.dwc.terms.DwcTerm;
 import org.gbif.dwc.terms.Term;
@@ -46,43 +54,20 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.fasterxml.jackson.databind.MappingIterator;
-import com.fasterxml.jackson.dataformat.csv.CsvMapper;
-import com.fasterxml.jackson.dataformat.csv.CsvSchema;
-
-import au.org.ala.listsapi.controller.AuthUtils;
-import au.org.ala.listsapi.model.IngestJob;
-import au.org.ala.listsapi.model.InputSpeciesList;
-import au.org.ala.listsapi.model.KeyValue;
-import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.model.SpeciesListItem;
-import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
-import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
-import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
-import au.org.ala.ws.security.profile.AlaUserProfile;
-
 @Service
 public class UploadService {
 
     private static final Logger logger = LoggerFactory.getLogger(UploadService.class);
-    @Autowired
-    protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
-    @Autowired
-    protected SpeciesListMongoRepository speciesListMongoRepository;
-    @Autowired
-    protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
-    @Autowired
-    protected TaxonService taxonService;
-    @Autowired
-    protected ReleaseService releaseService;
-    @Autowired
-    protected MetadataService metadataService;
-    @Autowired
-    protected AuthUtils authUtils;
-    @Autowired
-    protected ProgressService progressService;
-    @Autowired
-    protected SearchHelperService searchHelperService;
+    @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
+    @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
+    @Autowired protected SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
+    @Autowired protected TaxonService taxonService;
+    @Autowired protected ReleaseService releaseService;
+    @Autowired protected MetadataService metadataService;
+    @Autowired protected AuthUtils authUtils;
+    @Autowired protected ProgressService progressService;
+    @Autowired protected SearchHelperService searchHelperService;
+
     @Autowired(required = false)
     protected S3Service s3Service;
 
@@ -111,10 +96,7 @@ public class UploadService {
         return ACCEPTED_FILE_TYPES;
     }
 
-
-    /**
-     * Returns the first non-empty string from the provided arguments.
-     */
+    /** Returns the first non-empty string from the provided arguments. */
     private static String firstNonEmpty(String... values) {
         for (String value : values) {
             if (StringUtils.isNotEmpty(value)) {
@@ -126,9 +108,10 @@ public class UploadService {
 
     public boolean deleteList(String speciesListID, AlaUserProfile userProfile) throws Exception {
 
-        Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
-                speciesListID);
-        if (optionalSpeciesList.isPresent() && authUtils.isAuthorized(optionalSpeciesList.get(), userProfile)) {
+        Optional<SpeciesList> optionalSpeciesList =
+                speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+        if (optionalSpeciesList.isPresent()
+                && authUtils.isAuthorized(optionalSpeciesList.get(), userProfile)) {
             SpeciesList speciesList = optionalSpeciesList.get();
             String ID = speciesList.getId();
             logger.info("Deleting speciesListID " + speciesListID);
@@ -136,7 +119,7 @@ public class UploadService {
             speciesListItemMongoRepository.deleteBySpeciesListID(ID);
             speciesListMongoRepository.deleteById(ID);
             metadataService.deleteMeta(speciesList);
-            
+
             logger.info("Deleted speciesListID " + speciesListID);
             return true;
         } else {
@@ -145,7 +128,10 @@ public class UploadService {
     }
 
     public SpeciesList ingest(
-            AlaUserProfile user, InputSpeciesList speciesListMetadata, String fileIdentifier, boolean dryRun)
+            AlaUserProfile user,
+            InputSpeciesList speciesListMetadata,
+            String fileIdentifier,
+            boolean dryRun)
             throws Exception {
 
         // create the species list in mongo
@@ -195,7 +181,8 @@ public class UploadService {
     private void extractUpdates(InputSpeciesList speciesListMetadata, SpeciesList speciesList) {
         speciesList.setAuthority(speciesListMetadata.getAuthority());
         speciesList.setDescription(speciesListMetadata.getDescription());
-        speciesList.setIsAuthoritative(Boolean.parseBoolean(speciesListMetadata.getIsAuthoritative()));
+        speciesList.setIsAuthoritative(
+                Boolean.parseBoolean(speciesListMetadata.getIsAuthoritative()));
         speciesList.setIsInvasive(Boolean.parseBoolean(speciesListMetadata.getIsInvasive()));
         speciesList.setIsPrivate(Boolean.parseBoolean(speciesListMetadata.getIsPrivate()));
         speciesList.setIsThreatened(Boolean.parseBoolean(speciesListMetadata.getIsThreatened()));
@@ -246,8 +233,6 @@ public class UploadService {
         return determineContentTypeByFilename(file.getOriginalFilename());
     }
 
-
-
     public String uploadFile(MultipartFile file) throws Exception {
         if (s3Enabled) {
             logger.debug("Uploading file to S3: {}", file.getOriginalFilename());
@@ -266,7 +251,8 @@ public class UploadService {
                         + "/upload-"
                         + System.currentTimeMillis()
                         + "-"
-                        + Objects.requireNonNull(file.getOriginalFilename()).replaceAll("[^a-zA-Z0-9._-]", "_"));
+                        + Objects.requireNonNull(file.getOriginalFilename())
+                                .replaceAll("[^a-zA-Z0-9._-]", "_"));
     }
 
     public SpeciesList reload(String speciesListID, String fileIdentifier, boolean dryRun) {
@@ -274,13 +260,15 @@ public class UploadService {
             // remove any existing progress
             progressService.clearIngestProgress(speciesListID);
 
-            Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository
-                    .findByIdOrDataResourceUid(speciesListID, speciesListID);
+            Optional<SpeciesList> optionalSpeciesList =
+                    speciesListMongoRepository.findByIdOrDataResourceUid(
+                            speciesListID, speciesListID);
             if (optionalSpeciesList.isPresent()) {
                 SpeciesList speciesList = optionalSpeciesList.get();
 
                 // delete from index
-                speciesListIndexElasticRepository.deleteSpeciesListItemBySpeciesListID(speciesList.getId());
+                speciesListIndexElasticRepository.deleteSpeciesListItemBySpeciesListID(
+                        speciesList.getId());
 
                 // delete from mongo
                 speciesListItemMongoRepository.deleteBySpeciesListID(speciesList.getId());
@@ -319,16 +307,15 @@ public class UploadService {
     }
 
     /**
-     * Uploads and ingests a file, returning the IngestJob details.
-     * Called from the controller after upload.
-     * 
+     * Uploads and ingests a file, returning the IngestJob details. Called from the controller after
+     * upload.
+     *
      * @param fileIdentifier
      * @param file
      * @return
      * @throws Exception
      */
-    public IngestJob upload(String fileIdentifier, MultipartFile file)
-            throws Exception { 
+    public IngestJob upload(String fileIdentifier, MultipartFile file) throws Exception {
 
         IngestJob ingestJob = null;
 
@@ -351,7 +338,7 @@ public class UploadService {
                 ingestJob.setLocalFile(fileIdentifier);
                 return ingestJob;
             } else {
-                // Controller should handle this exception 
+                // Controller should handle this exception
                 throw new Exception("Ingest failed for file: " + fileIdentifier);
             }
         } else {
@@ -378,7 +365,7 @@ public class UploadService {
                 ingestJob.setLocalFile(fileToLoad.getName());
                 return ingestJob;
             } else {
-                // Controller should handle this exception 
+                // Controller should handle this exception
                 throw new Exception("Ingest failed for file: " + fileIdentifier);
             }
         }
@@ -468,7 +455,8 @@ public class UploadService {
         }
     }
 
-    public IngestJob ingestCSVS3(String speciesListID, String s3Key, boolean dryRun, boolean skipIndexing)
+    public IngestJob ingestCSVS3(
+            String speciesListID, String s3Key, boolean dryRun, boolean skipIndexing)
             throws Exception {
         var inputStreamOptional = s3Service.getFileStream(s3Key);
         if (inputStreamOptional.isEmpty()) {
@@ -497,7 +485,12 @@ public class UploadService {
             while (entries.hasMoreElements()) {
                 ZipEntry entry = entries.nextElement();
                 if (!entry.isDirectory() && entry.getName().endsWith(".csv")) {
-                    return loadCSV(speciesListID, zipFile.getInputStream(entry), dryRun, skipIndexing, false);
+                    return loadCSV(
+                            speciesListID,
+                            zipFile.getInputStream(entry),
+                            dryRun,
+                            skipIndexing,
+                            false);
                 }
             }
         } finally {
@@ -506,7 +499,8 @@ public class UploadService {
         return null;
     }
 
-    public IngestJob ingestCSV(String speciesListID, File file, boolean dryRun, boolean skipIndexing)
+    public IngestJob ingestCSV(
+            String speciesListID, File file, boolean dryRun, boolean skipIndexing)
             throws Exception {
         // Validate file path to prevent path traversal attacks
         String canonicalPath = file.getCanonicalPath();
@@ -525,7 +519,8 @@ public class UploadService {
         while (entries.hasMoreElements()) {
             ZipEntry entry = entries.nextElement();
             if (!entry.isDirectory() && entry.getName().endsWith(".csv")) {
-                return loadCSV(speciesListID, zipFile.getInputStream(entry), dryRun, skipIndexing, false);
+                return loadCSV(
+                        speciesListID, zipFile.getInputStream(entry), dryRun, skipIndexing, false);
             }
         }
         return null;
@@ -543,7 +538,8 @@ public class UploadService {
             long findByIdStart = System.nanoTime();
             Optional<SpeciesList> speciesList = speciesListMongoRepository.findById(speciesListID);
             long findByIdElapsed = (System.nanoTime() - findByIdStart) / 1000000;
-            logger.info("[{}|loadCSV] Fetching species list took {}ms", speciesListID, findByIdElapsed);
+            logger.info(
+                    "[{}|loadCSV] Fetching species list took {}ms", speciesListID, findByIdElapsed);
             if (speciesList.isEmpty()) {
                 throw new Exception("Species list not found");
             }
@@ -552,7 +548,8 @@ public class UploadService {
         int rowCount = 0;
         CsvMapper mapper = new CsvMapper();
         CsvSchema schema = CsvSchema.emptySchema().withHeader();
-        MappingIterator<Map<String, String>> iterator = mapper.reader(Map.class).with(schema).readValues(inputStream);
+        MappingIterator<Map<String, String>> iterator =
+                mapper.reader(Map.class).with(schema).readValues(inputStream);
 
         // store
         Map<String, Set<String>> facets = new HashMap<>();
@@ -584,14 +581,20 @@ public class UploadService {
             String scientificName = values.remove(DwcTerm.scientificName.simpleName());
             String taxonID = values.remove(DwcTerm.taxonID.simpleName());
             String taxonConceptID = values.remove(DwcTerm.taxonConceptID.simpleName());
-            String vernacularName = values.get(DwcTerm.vernacularName.simpleName()); // vernacularName added to KVP, as per legacy behaviour
+            String vernacularName =
+                    values.get(
+                            DwcTerm.vernacularName
+                                    .simpleName()); // vernacularName added to KVP, as per legacy
+            // behaviour
 
             String suppliedName = values.remove("Supplied Name");
 
             if (suppliedName != null) {
-                scientificName = suppliedName; // undocumented input field, left in for backward compatibility
+                scientificName = suppliedName; // undocumented input field, left in for backward
+                // compatibility
             } else {
-                suppliedName = firstNonEmpty(scientificName, taxonID, taxonConceptID, vernacularName);
+                suppliedName =
+                        firstNonEmpty(scientificName, taxonID, taxonConceptID, vernacularName);
             }
 
             if (StringUtils.isEmpty(scientificName)
@@ -605,7 +608,10 @@ public class UploadService {
             String phylum = values.remove(DwcTerm.phylum.simpleName());
             String classs = values.remove(DwcTerm.class_.simpleName());
             String order = values.remove(DwcTerm.order.simpleName());
-            String family = values.get(DwcTerm.family.simpleName()); // family added to KVP, as per legacy behaviour
+            String family =
+                    values.get(
+                            DwcTerm.family
+                                    .simpleName()); // family added to KVP, as per legacy behaviour
             String genus = values.remove(DwcTerm.genus.simpleName());
 
             // process remaining fields (user supplied KVP data)
@@ -626,8 +632,9 @@ public class UploadService {
                                                         + " has values greater than 30 characters. Marking as not facet-able. Example : "
                                                         + e.getValue());
                                     } else {
-                                        Set<String> distinctValues = facets.getOrDefault(cleanKey(e.getKey()),
-                                                new HashSet<>());
+                                        Set<String> distinctValues =
+                                                facets.getOrDefault(
+                                                        cleanKey(e.getKey()), new HashSet<>());
                                         distinctValues.add(e.getValue());
                                         facets.put(cleanKey(e.getKey()), distinctValues);
                                         if (distinctValues.size() > 30) {
@@ -643,33 +650,38 @@ public class UploadService {
             if (!dryRun && speciesListID != null) {
 
                 // write to mongo
-                SpeciesListItem speciesListItem = new SpeciesListItem(
-                        null,
-                        0,
-                        speciesListID,
-                        cleanField(taxonID),
-                        cleanField(suppliedName),
-                        cleanField(scientificName),
-                        cleanField(vernacularName),
-                        cleanField(kingdom),
-                        cleanField(phylum),
-                        cleanField(classs),
-                        cleanField(order),
-                        cleanField(family),
-                        cleanField(genus),
-                        keyValues,
-                        null, // classification
-                        new Date(), // dateCreated
-                        new Date(), // lastUpdated,
-                        null);
+                SpeciesListItem speciesListItem =
+                        new SpeciesListItem(
+                                null,
+                                0,
+                                speciesListID,
+                                cleanField(taxonID),
+                                cleanField(suppliedName),
+                                cleanField(scientificName),
+                                cleanField(vernacularName),
+                                cleanField(kingdom),
+                                cleanField(phylum),
+                                cleanField(classs),
+                                cleanField(order),
+                                cleanField(family),
+                                cleanField(genus),
+                                keyValues,
+                                null, // classification
+                                new Date(), // dateCreated
+                                new Date(), // lastUpdated,
+                                null);
 
                 batch.add(speciesListItem);
 
                 if (batch.size() == 10000) {
                     long iteratorSavingStart = System.nanoTime();
                     searchHelperService.speciesListItemsBulkSave(batch);
-                    long iteratorSavingElapsed = (System.nanoTime() - iteratorSavingStart) / 1000000;
-                    logger.info("[{}|loadCSV] Iterator saving took {}ms", speciesListID, iteratorSavingElapsed);
+                    long iteratorSavingElapsed =
+                            (System.nanoTime() - iteratorSavingStart) / 1000000;
+                    logger.info(
+                            "[{}|loadCSV] Iterator saving took {}ms",
+                            speciesListID,
+                            iteratorSavingElapsed);
                     batch.clear();
                 }
             }
@@ -737,11 +749,11 @@ public class UploadService {
 
     public static String cleanKey(String keyName) {
         try {
-            String cleanedName = keyName
-                    .replaceAll("[^\\w\\s-+^:,]", "")
-                    .replaceAll("__+", "_")
-                    .replaceAll(" ", "_")
-                    .trim();
+            String cleanedName =
+                    keyName.replaceAll("[^\\w\\s-+^:,]", "")
+                            .replaceAll("__+", "_")
+                            .replaceAll(" ", "_")
+                            .trim();
             Term term = TermFactory.instance().findTerm(cleanedName);
             return (term != null) ? term.simpleName() : keyName;
         } catch (Exception e) {

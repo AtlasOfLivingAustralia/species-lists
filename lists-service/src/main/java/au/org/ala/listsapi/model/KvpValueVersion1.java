@@ -15,17 +15,16 @@
 
 package au.org.ala.listsapi.model;
 
-import com.fasterxml.jackson.annotation.JsonView;
-
 import au.org.ala.listsapi.config.Views;
+import com.fasterxml.jackson.annotation.JsonView;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
- * Model class representing a list kvp value for /v1 backwards compatibility.
- * This POJO is used for controller response serialization only.
+ * Model class representing a list kvp value for /v1 backwards compatibility. This POJO is used for
+ * controller response serialization only.
  */
 @NoArgsConstructor
 @Data
@@ -34,8 +33,12 @@ import lombok.experimental.SuperBuilder;
 public class KvpValueVersion1 {
     @JsonView(Views.Narrow.class)
     private String key;
+
     @JsonView(Views.Narrow.class)
     private String value;
+
     @JsonView(Views.Wide.class)
-    private String vocabValue; // not populated but provided for backwards compatibility with v1 response structure
+    private String
+            vocabValue; // not populated but provided for backwards compatibility with v1 response
+    // structure
 }

@@ -1,26 +1,22 @@
 package au.org.ala.listsapi.filter;
 
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 /**
- * Redirects legacy requests to the new API version paths.
- * Handles redirects from:
- * - "/ws/" to "/v1/"
- * - "/upload", "/ingest", "/delete" to "/v2/upload", "/v2/ingest", "/v2/delete"
- * - Pre-versioned paths to their versioned equivalents
+ * Redirects legacy requests to the new API version paths. Handles redirects from: - "/ws/" to
+ * "/v1/" - "/upload", "/ingest", "/delete" to "/v2/upload", "/v2/ingest", "/v2/delete" -
+ * Pre-versioned paths to their versioned equivalents
  */
 @Component
 public class WsToV1RedirectFilter extends OncePerRequestFilter {
@@ -44,7 +40,7 @@ public class WsToV1RedirectFilter extends OncePerRequestFilter {
         this.v1Prefix = v1Prefix;
         this.v2Prefix = v2Prefix;
 
-        // Create a map of preversion paths 
+        // Create a map of preversion paths
         this.preVersionPaths = new HashMap<>();
         this.preVersionPaths.put(preversionUpload, preversionUpload);
         this.preVersionPaths.put(preversionIngest, preversionIngest);
@@ -53,9 +49,9 @@ public class WsToV1RedirectFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
         String requestUri = request.getRequestURI();
 
@@ -76,8 +72,11 @@ public class WsToV1RedirectFilter extends OncePerRequestFilter {
 
             if (requestUri.startsWith(path)) {
                 String queryString = request.getQueryString();
-                String newUriWithParams = requestUri.replaceFirst(path, v2Prefix + path) + (queryString != null ? "?" + queryString : "");
-                logger.debug("Redirecting pre-version path: " + requestUri + " to " + newUriWithParams);
+                String newUriWithParams =
+                        requestUri.replaceFirst(path, v2Prefix + path)
+                                + (queryString != null ? "?" + queryString : "");
+                logger.debug(
+                        "Redirecting pre-version path: " + requestUri + " to " + newUriWithParams);
                 redirect(response, newUriWithParams);
                 return;
             }
@@ -88,7 +87,11 @@ public class WsToV1RedirectFilter extends OncePerRequestFilter {
             String queryString = request.getQueryString();
             // Get the path variable 'listId' from the request path
             String pathVariable = requestUri.substring(requestUri.lastIndexOf('/') + 1);
-            String newUri = v2Prefix + "/download/" + pathVariable + (queryString != null ? "?" + queryString : "");
+            String newUri =
+                    v2Prefix
+                            + "/download/"
+                            + pathVariable
+                            + (queryString != null ? "?" + queryString : "");
             redirect(response, newUri);
             return;
         }

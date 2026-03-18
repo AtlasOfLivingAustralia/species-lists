@@ -14,12 +14,11 @@
  */
 package au.org.ala.listsapi.config;
 
+import au.org.ala.listsapi.filter.AuthMachineJwt;
+import au.org.ala.ws.security.client.AlaAuthClient;
 import org.pac4j.core.config.Config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import au.org.ala.listsapi.filter.AuthMachineJwt;
-import au.org.ala.ws.security.client.AlaAuthClient;
 
 @Configuration
 public class AuthMachineJwtConfiguration {

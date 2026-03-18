@@ -12,6 +12,6 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @AllArgsConstructor
 public class Location {
-  private String isoCode;
-  private String name;
+    private String isoCode;
+    private String name;
 }

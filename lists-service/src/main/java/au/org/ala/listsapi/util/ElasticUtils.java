@@ -1,35 +1,15 @@
 /**
- * Copyright (c) 2025 Atlas of Living Australia
- * All Rights Reserved.
- * 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Copyright (c) 2025 Atlas of Living Australia All Rights Reserved.
+ *
+ * <p>The contents of this file are subject to the Mozilla Public License Version 1.1 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at http://www.mozilla.org/MPL/
+ *
+ * <p>Software distributed under the License is distributed on an "AS IS" basis, WITHOUT WARRANTY OF
+ * ANY KIND, either express or implied. See the License for the specific language governing rights
+ * and limitations under the License.
  */
-
 package au.org.ala.listsapi.util;
-
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import org.apache.commons.lang3.StringUtils;
-import org.bson.types.ObjectId;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.stereotype.Component;
 
 import au.org.ala.listsapi.controller.AuthUtils;
 import au.org.ala.listsapi.model.Filter;
@@ -45,6 +25,20 @@ import au.org.ala.listsapi.service.ValidationService;
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.ChildScoreMode;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
+import org.bson.types.ObjectId;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.stereotype.Component;
 
 /** GraphQL API for lists */
 @Component
@@ -73,39 +67,46 @@ public class ElasticUtils {
                     "tags");
 
     public static final List<String> CORE_BOOL_FIELDS =
-            List.of("isBIE", "isAuthoritative", "hasRegion", "isSDS", 
-                    "isThreatened", "isInvasive", "isPrivate");
+            List.of(
+                    "isBIE",
+                    "isAuthoritative",
+                    "hasRegion",
+                    "isSDS",
+                    "isThreatened",
+                    "isInvasive",
+                    "isPrivate");
 
-    private static final Set<String> TOP_LEVEL_SEARCHABLE_FIELDS = Set.of(
-            // Root-level fields that have a ".search" subfield
-            "classs",            // top-level "classs.search"
-            "dataResourceUid",   // dataResourceUid.search
-            "family",            // family.search
-            "genus",             // genus.search
-            "kingdom",           // kingdom.search
-            "listType",          // listType.search
-            "order",             // order.search
-            "owner",             // owner.search
-            "phylum",            // phylum.search
-            "scientificName",    // scientificName.search
-            "speciesListName",   // speciesListName.search
-            "tags",              // tags.search
+    private static final Set<String> TOP_LEVEL_SEARCHABLE_FIELDS =
+            Set.of(
+                    // Root-level fields that have a ".search" subfield
+                    "classs", // top-level "classs.search"
+                    "dataResourceUid", // dataResourceUid.search
+                    "family", // family.search
+                    "genus", // genus.search
+                    "kingdom", // kingdom.search
+                    "listType", // listType.search
+                    "order", // order.search
+                    "owner", // owner.search
+                    "phylum", // phylum.search
+                    "scientificName", // scientificName.search
+                    "speciesListName", // speciesListName.search
+                    "tags", // tags.search
 
-            // classification.* subfields that have a ".search" subfield
-            "classification.classs",                 // classification.classs.search
-            "classification.family",                 // classification.family.search
-            "classification.genus",                  // classification.genus.search
-            "classification.kingdom",                // classification.kingdom.search
-            "classification.order",                  // classification.order.search
-            "classification.phylum",                 // classification.phylum.search
-            "classification.rank",                   // classification.rank.search
-            "classification.scientificName",         // classification.scientificName.search
-            "classification.scientificNameAuthorship", // classification.scientificNameAuthorship.search
-            "classification.species",                // classification.species.search
-            "classification.speciesGroup",           // classification.speciesGroup.search
-            "classification.taxonConceptID",         // classification.taxonConceptID.search
-            "classification.vernacularName"          // classification.vernacularName.search
-    );
+                    // classification.* subfields that have a ".search" subfield
+                    "classification.classs", // classification.classs.search
+                    "classification.family", // classification.family.search
+                    "classification.genus", // classification.genus.search
+                    "classification.kingdom", // classification.kingdom.search
+                    "classification.order", // classification.order.search
+                    "classification.phylum", // classification.phylum.search
+                    "classification.rank", // classification.rank.search
+                    "classification.scientificName", // classification.scientificName.search
+                    "classification.scientificNameAuthorship", // classification.scientificNameAuthorship.search
+                    "classification.species", // classification.species.search
+                    "classification.speciesGroup", // classification.speciesGroup.search
+                    "classification.taxonConceptID", // classification.taxonConceptID.search
+                    "classification.vernacularName" // classification.vernacularName.search
+                    );
 
     public static final String SPECIES_LIST_ID = "speciesListID";
     @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
@@ -155,13 +156,13 @@ public class ElasticUtils {
     }
 
     public static BoolQuery.Builder buildQuery(
-        String searchQuery,
-        String speciesListID,
-        String userId,
-        Boolean isAdmin,
-        Boolean isPrivate,
-        List<Filter> filters,
-        BoolQuery.Builder bq) {
+            String searchQuery,
+            String speciesListID,
+            String userId,
+            Boolean isAdmin,
+            Boolean isPrivate,
+            List<Filter> filters,
+            BoolQuery.Builder bq) {
 
         // Add common query logic
         addCommonQueryLogic(searchQuery, userId, isAdmin, isPrivate, bq);
@@ -178,26 +179,25 @@ public class ElasticUtils {
     }
 
     /**
-     * Build a query specifically for searching species lists with prioritized
-     * relevance scoring.
-     * This method prioritizes matches in the speciesListName field over matches in
-     * the general 'all' field.
+     * Build a query specifically for searching species lists with prioritized relevance scoring.
+     * This method prioritizes matches in the speciesListName field over matches in the general
+     * 'all' field.
      *
      * @param searchQuery The search query string
-     * @param userId      The user ID for authorization filtering
-     * @param isAdmin     Whether the user is an admin
-     * @param isPrivate   Whether to search private lists
-     * @param filters     Additional filters to apply
-     * @param bq          The BoolQuery.Builder to build upon
+     * @param userId The user ID for authorization filtering
+     * @param isAdmin Whether the user is an admin
+     * @param isPrivate Whether to search private lists
+     * @param filters Additional filters to apply
+     * @param bq The BoolQuery.Builder to build upon
      * @return The BoolQuery.Builder with the search query applied
      */
     public static BoolQuery.Builder buildListSearchQuery(
-        String searchQuery,
-        String userId,
-        Boolean isAdmin,
-        Boolean isPrivate,
-        List<Filter> filters,
-        BoolQuery.Builder bq) {
+            String searchQuery,
+            String userId,
+            Boolean isAdmin,
+            Boolean isPrivate,
+            List<Filter> filters,
+            BoolQuery.Builder bq) {
 
         // Add search query logic with prioritized relevance scoring
         addListSearchQueryLogic(searchQuery, userId, isAdmin, isPrivate, bq);
@@ -222,19 +222,34 @@ public class ElasticUtils {
 
         // Add speciesListIDs filter
         if (speciesListIDs != null && !speciesListIDs.isEmpty()) {
-            bq.filter(f -> f.terms(t -> t.field("speciesListID").terms(ta -> ta.value(speciesListIDs))));
+            bq.filter(
+                    f ->
+                            f.terms(
+                                    t ->
+                                            t.field("speciesListID")
+                                                    .terms(ta -> ta.value(speciesListIDs))));
         }
 
         // Add filters
         addFilters(filters, bq);
     }
 
-    private static void addCommonQueryLogic(String searchQuery, String userId, Boolean isAdmin, Boolean isPrivate,
+    private static void addCommonQueryLogic(
+            String searchQuery,
+            String userId,
+            Boolean isAdmin,
+            Boolean isPrivate,
             BoolQuery.Builder bq) {
         // Add search query logic
         if (StringUtils.isNotBlank(searchQuery)) {
             // Prioritize phrase prefix matches in the 'all' field
-            bq.should(m -> m.matchPhrasePrefix(mpq -> mpq.field("all").query(searchQuery.toLowerCase()).boost(2.0f)));
+            bq.should(
+                    m ->
+                            m.matchPhrasePrefix(
+                                    mpq ->
+                                            mpq.field("all")
+                                                    .query(searchQuery.toLowerCase())
+                                                    .boost(2.0f)));
         } else {
             bq.must(m -> m.matchAll(ma -> ma));
         }
@@ -260,58 +275,68 @@ public class ElasticUtils {
     }
 
     /**
-    * Adds a new filter or updates an existing filter with the same key
-    * 
-    * @param filters The list of filters to modify
-    * @param newFilter The filter to add or update
-    * @return The updated list of filters
-    */
+     * Adds a new filter or updates an existing filter with the same key
+     *
+     * @param filters The list of filters to modify
+     * @param newFilter The filter to add or update
+     * @return The updated list of filters
+     */
     public static List<Filter> addOrUpdateFilter(List<Filter> filters, Filter newFilter) {
         if (filters == null) {
             filters = new ArrayList<>();
         }
-        
+
         // Remove any existing filter with the same key
         filters.removeIf(f -> f.getKey().equals(newFilter.getKey()));
-        
+
         // Add the new filter
         filters.add(newFilter);
-        
+
         return filters;
     }
 
     /**
-     * Add search query logic specifically for list searches with prioritized
-     * relevance scoring.
-     * This method prioritizes matches in the speciesListName field over matches in
-     * the general 'all' field.
+     * Add search query logic specifically for list searches with prioritized relevance scoring.
+     * This method prioritizes matches in the speciesListName field over matches in the general
+     * 'all' field.
      */
-    private static void addListSearchQueryLogic(String searchQuery, String userId, Boolean isAdmin, Boolean isPrivate,
+    private static void addListSearchQueryLogic(
+            String searchQuery,
+            String userId,
+            Boolean isAdmin,
+            Boolean isPrivate,
             BoolQuery.Builder bq) {
         if (StringUtils.trimToNull(searchQuery) != null && searchQuery.length() > 1) {
             // Primary priority: exact match on speciesListName field
-            bq.should(s -> s.matchPhrase(mp -> mp
-                    .field("speciesListName.search")
-                    .query(searchQuery.toLowerCase())
-                    .boost(100.0f)));
+            bq.should(
+                    s ->
+                            s.matchPhrase(
+                                    mp ->
+                                            mp.field("speciesListName.search")
+                                                    .query(searchQuery.toLowerCase())
+                                                    .boost(100.0f)));
 
             // Secondary priority: prefix match on speciesListName field
-            bq.should(s -> s.prefix(p -> p
-                    .field("speciesListName.keyword")
-                    .value(searchQuery)
-                    .boost(75.0f)));
+            bq.should(
+                    s ->
+                            s.prefix(
+                                    p ->
+                                            p.field("speciesListName.keyword")
+                                                    .value(searchQuery)
+                                                    .boost(75.0f)));
 
             // Tertiary priority: fuzzy match on speciesListName field
-            bq.should(s -> s.fuzzy(f -> f
-                    .field("speciesListName.search")
-                    .value(searchQuery.toLowerCase())
-                    .fuzziness("AUTO")
-                    .boost(50.0f)));
+            bq.should(
+                    s ->
+                            s.fuzzy(
+                                    f ->
+                                            f.field("speciesListName.search")
+                                                    .value(searchQuery.toLowerCase())
+                                                    .fuzziness("AUTO")
+                                                    .boost(50.0f)));
 
             // Lower priority: search across all fields (existing behavior)
-            bq.should(s -> s.matchPhrase(mp -> mp
-                    .field("all")
-                    .query(searchQuery + "*")));
+            bq.should(s -> s.matchPhrase(mp -> mp.field("all").query(searchQuery + "*")));
 
             bq.minimumShouldMatch("1");
         }
@@ -344,65 +369,147 @@ public class ElasticUtils {
     private static void addFilters(List<Filter> filters, BoolQuery.Builder bq) {
         if (filters != null && !filters.isEmpty()) {
             // Group filters by key
-            Map<String, List<Filter>> filtersByKey = filters.stream()
-                .collect(Collectors.groupingBy(Filter::getKey));
+            Map<String, List<Filter>> filtersByKey =
+                    filters.stream().collect(Collectors.groupingBy(Filter::getKey));
 
             // For each key, create a sub-bool query with OR logic
-            filtersByKey.forEach((key, filtersForKey) -> {
-                // For handling properties filters specifically
-                if (key.startsWith("properties.")) {
-                    String propertyField = key.substring("properties.".length());
-                    Filter filter = filtersForKey.get(0);
-                    List<String> values = filtersForKey.stream().map(Filter::getValue).toList();
-                    // Add nested query for properties
-                    bq.must(m -> m.nested(n -> n
-                        .path("properties")
-                        .query(nq -> nq
-                            .bool(nbq -> nbq
-                                .must(nm -> nm.term(t -> t.field("properties.key.keyword").value(propertyField)))
-                                .must(nm -> nm.term(t -> t.field("properties.value.keyword").value(filter.getValue())))
-                            )
-                        )
-                        .query(q -> q.bool(propBq -> {
-                            // First match the property key
-                            propBq.must(pm -> pm.term(pt -> pt.field("properties.key.keyword").value(propertyField)));
+            filtersByKey.forEach(
+                    (key, filtersForKey) -> {
+                        // For handling properties filters specifically
+                        if (key.startsWith("properties.")) {
+                            String propertyField = key.substring("properties.".length());
+                            Filter filter = filtersForKey.get(0);
+                            List<String> values =
+                                    filtersForKey.stream().map(Filter::getValue).toList();
+                            // Add nested query for properties
+                            bq.must(
+                                    m ->
+                                            m.nested(
+                                                    n ->
+                                                            n.path("properties")
+                                                                    .query(
+                                                                            nq ->
+                                                                                    nq.bool(
+                                                                                            nbq ->
+                                                                                                    nbq.must(
+                                                                                                                    nm ->
+                                                                                                                            nm
+                                                                                                                                    .term(
+                                                                                                                                            t ->
+                                                                                                                                                    t.field(
+                                                                                                                                                                    "properties.key.keyword")
+                                                                                                                                                            .value(
+                                                                                                                                                                    propertyField)))
+                                                                                                            .must(
+                                                                                                                    nm ->
+                                                                                                                            nm
+                                                                                                                                    .term(
+                                                                                                                                            t ->
+                                                                                                                                                    t.field(
+                                                                                                                                                                    "properties.value.keyword")
+                                                                                                                                                            .value(
+                                                                                                                                                                    filter
+                                                                                                                                                                            .getValue())))))
+                                                                    .query(
+                                                                            q ->
+                                                                                    q.bool(
+                                                                                            propBq -> {
+                                                                                                // First match the property key
+                                                                                                propBq
+                                                                                                        .must(
+                                                                                                                pm ->
+                                                                                                                        pm
+                                                                                                                                .term(
+                                                                                                                                        pt ->
+                                                                                                                                                pt.field(
+                                                                                                                                                                "properties.key.keyword")
+                                                                                                                                                        .value(
+                                                                                                                                                                propertyField)));
 
-                            // Then match any of the values (OR)
-                            if (values.size() == 1) {
-                                propBq.must(pm -> pm.term(pt -> pt.field("properties.value.keyword").value(filter.getValue())));
-                            } else {
-                                propBq.must(pm -> pm.bool(valuesBq -> {
-                                    for (String value : values) {
-                                        valuesBq.should(s -> s.term(t -> t.field("properties.value.keyword").value(value)));
-                                    }
-                                    return valuesBq;
-                                }));
-                            }
-                            return propBq;
-                        }))
-                    ));
-                }
-                // Handle other filters as normal
-                else {
-                    // Existing filter handling code
-                    bq.must(keyQuery ->
-                        keyQuery.bool(keyBool -> {
-                            if (filtersForKey.size() == 1) {
-                                // Single filter for this key
-                                Filter filter = filtersForKey.get(0);
-                                keyBool.must(m -> m.term(t -> t.field(getPropertiesFacetField(filter.getKey())).value(filter.getValue())));
-                            } else {
-                                // Multiple filters with OR logic
-                                filtersForKey.forEach(filter ->
-                                    keyBool.should(m -> m.term(t -> t.field(getPropertiesFacetField(filter.getKey())).value(filter.getValue())))
-                                );
-                                keyBool.minimumShouldMatch("1");
-                            }
-                            return keyBool;
-                        })
-                    );
-                }
-            });
+                                                                                                // Then match any of the values (OR)
+                                                                                                if (values
+                                                                                                                .size()
+                                                                                                        == 1) {
+                                                                                                    propBq
+                                                                                                            .must(
+                                                                                                                    pm ->
+                                                                                                                            pm
+                                                                                                                                    .term(
+                                                                                                                                            pt ->
+                                                                                                                                                    pt.field(
+                                                                                                                                                                    "properties.value.keyword")
+                                                                                                                                                            .value(
+                                                                                                                                                                    filter
+                                                                                                                                                                            .getValue())));
+                                                                                                } else {
+                                                                                                    propBq
+                                                                                                            .must(
+                                                                                                                    pm ->
+                                                                                                                            pm
+                                                                                                                                    .bool(
+                                                                                                                                            valuesBq -> {
+                                                                                                                                                for (String
+                                                                                                                                                        value :
+                                                                                                                                                                values) {
+                                                                                                                                                    valuesBq
+                                                                                                                                                            .should(
+                                                                                                                                                                    s ->
+                                                                                                                                                                            s
+                                                                                                                                                                                    .term(
+                                                                                                                                                                                            t ->
+                                                                                                                                                                                                    t.field(
+                                                                                                                                                                                                                    "properties.value.keyword")
+                                                                                                                                                                                                            .value(
+                                                                                                                                                                                                                    value)));
+                                                                                                                                                }
+                                                                                                                                                return valuesBq;
+                                                                                                                                            }));
+                                                                                                }
+                                                                                                return propBq;
+                                                                                            }))));
+                        }
+                        // Handle other filters as normal
+                        else {
+                            // Existing filter handling code
+                            bq.must(
+                                    keyQuery ->
+                                            keyQuery.bool(
+                                                    keyBool -> {
+                                                        if (filtersForKey.size() == 1) {
+                                                            // Single filter for this key
+                                                            Filter filter = filtersForKey.get(0);
+                                                            keyBool.must(
+                                                                    m ->
+                                                                            m.term(
+                                                                                    t ->
+                                                                                            t.field(
+                                                                                                            getPropertiesFacetField(
+                                                                                                                    filter
+                                                                                                                            .getKey()))
+                                                                                                    .value(
+                                                                                                            filter
+                                                                                                                    .getValue())));
+                                                        } else {
+                                                            // Multiple filters with OR logic
+                                                            filtersForKey.forEach(
+                                                                    filter ->
+                                                                            keyBool.should(
+                                                                                    m ->
+                                                                                            m.term(
+                                                                                                    t ->
+                                                                                                            t.field(
+                                                                                                                            getPropertiesFacetField(
+                                                                                                                                    filter
+                                                                                                                                            .getKey()))
+                                                                                                                    .value(
+                                                                                                                            filter
+                                                                                                                                    .getValue()))));
+                                                            keyBool.minimumShouldMatch("1");
+                                                        }
+                                                        return keyBool;
+                                                    }));
+                        }
+                    });
         }
     }
 
@@ -415,12 +522,12 @@ public class ElasticUtils {
     /**
      * Filter results based on "query" being present in the provided fields param.
      *
-     * @param searchQuery      The search query string.
+     * @param searchQuery The search query string.
      * @param restrictedFields The fields to restrict the search to.
-     * @param mainBq           The main BoolQuery.Builder to which the restrictions
-     *                         will be added.
+     * @param mainBq The main BoolQuery.Builder to which the restrictions will be added.
      */
-    public static void restrictFields(String searchQuery, HashSet<String> restrictedFields, BoolQuery.Builder mainBq) {
+    public static void restrictFields(
+            String searchQuery, HashSet<String> restrictedFields, BoolQuery.Builder mainBq) {
         String search = cleanRawQuery(searchQuery);
 
         if (restrictedFields == null || restrictedFields.isEmpty() || search.trim().isEmpty()) {
@@ -437,27 +544,46 @@ public class ElasticUtils {
                 String actualFieldToSearch = field + ".search";
 
                 // Add this field as a should clause
-                outerDisjunctionBq.should(s ->
-                        s.matchPhrase(mp -> mp.field(actualFieldToSearch).query(search))
-                );
+                outerDisjunctionBq.should(
+                        s -> s.matchPhrase(mp -> mp.field(actualFieldToSearch).query(search)));
             } else {
                 // For nested properties
-                outerDisjunctionBq.should(s -> s.nested(n -> n
-                        .path("properties")
-                        .scoreMode(ChildScoreMode.Avg)
-                        .query(nq -> nq.bool(nb -> {
-                            // Key must match
-                            nb.must(m1 -> m1.term(t -> t
-                                    .field("properties.key")
-                                    .value(field)));
+                outerDisjunctionBq.should(
+                        s ->
+                                s.nested(
+                                        n ->
+                                                n.path("properties")
+                                                        .scoreMode(ChildScoreMode.Avg)
+                                                        .query(
+                                                                nq ->
+                                                                        nq.bool(
+                                                                                nb -> {
+                                                                                    // Key must
+                                                                                    // match
+                                                                                    nb.must(
+                                                                                            m1 ->
+                                                                                                    m1
+                                                                                                            .term(
+                                                                                                                    t ->
+                                                                                                                            t.field(
+                                                                                                                                            "properties.key")
+                                                                                                                                    .value(
+                                                                                                                                            field)));
 
-                            // Value must match exactly
-                            nb.must(m2 -> m2.matchPhrase(mp -> mp
-                                    .field("properties.value")
-                                    .query(search)));
+                                                                                    // Value must
+                                                                                    // match exactly
+                                                                                    nb.must(
+                                                                                            m2 ->
+                                                                                                    m2
+                                                                                                            .matchPhrase(
+                                                                                                                    mp ->
+                                                                                                                            mp.field(
+                                                                                                                                            "properties.value")
+                                                                                                                                    .query(
+                                                                                                                                            search)));
 
-                            return nb;
-                        }))));
+                                                                                    return nb;
+                                                                                }))));
             }
         }
 

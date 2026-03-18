@@ -31,161 +31,171 @@ import org.springframework.stereotype.Service;
 @Service
 public class ReleaseService {
 
-  private static final Logger logger = LoggerFactory.getLogger(ReleaseService.class);
+    private static final Logger logger = LoggerFactory.getLogger(ReleaseService.class);
 
-  @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
-  @Autowired protected SpeciesListMongoRepository speciesItemMongoRepository;
+    @Autowired protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
+    @Autowired protected SpeciesListMongoRepository speciesItemMongoRepository;
 
-  @Autowired protected ReleaseMongoRepository releaseMongoRepository;
+    @Autowired protected ReleaseMongoRepository releaseMongoRepository;
 
-  @Value("${release.s3.enabled:false}")
-  private Boolean s3Enabled;
+    @Value("${release.s3.enabled:false}")
+    private Boolean s3Enabled;
 
-  @Value("${release.s3.bucket}")
-  private String s3Bucket;
+    @Value("${release.s3.bucket}")
+    private String s3Bucket;
 
-  @Value("${release.directory:/tmp/}")
-  private String releaseDirectory;
+    @Value("${release.directory:/tmp/}")
+    private String releaseDirectory;
 
-  public Release release(String speciesListID) throws Exception {
-    return release(speciesListID, false);
-  }
-
-  @Async("processExecutor")
-  public void asyncRelease(String speciesListID) throws Exception {
-    release(speciesListID, false);
-  }
-
-  /**
-   * Write the speciesList to file and upload to S3
-   *
-   * @param speciesListID
-   */
-  public Release release(String speciesListID, boolean ignoreCurrentVersion) throws Exception {
-
-    logger.info("Releasing " + speciesListID);
-    int size = 10;
-    int page = 0;
-    boolean done = false;
-
-    Optional<SpeciesList> speciesList = speciesItemMongoRepository.findById(speciesListID);
-    if (speciesList.isEmpty()) {
-      throw new Exception("No list for this ID");
+    public Release release(String speciesListID) throws Exception {
+        return release(speciesListID, false);
     }
 
-    // do we need to release the list ? check version numbers of lists....
-    Release lastRelease = getLastRelease(speciesListID);
-    if (!ignoreCurrentVersion
-        && lastRelease != null
-        && lastRelease.getReleasedVersion() == speciesList.get().getVersion()) {
-      // dont re-release, there are no changes...
-      logger.info("Not re-releasing, there are no changes for " + speciesListID);
-      return lastRelease;
+    @Async("processExecutor")
+    public void asyncRelease(String speciesListID) throws Exception {
+        release(speciesListID, false);
     }
 
-    final List<String> fieldList = speciesList.get().getFieldList();
-    final CsvMapper csvMapper = new CsvMapper();
+    /**
+     * Write the speciesList to file and upload to S3
+     *
+     * @param speciesListID
+     */
+    public Release release(String speciesListID, boolean ignoreCurrentVersion) throws Exception {
 
-    String storedLocation =
-        releaseDirectory + "/" + speciesListID + "-" + (speciesList.get().getVersion()) + ".csv";
-    File csvFile = new File(storedLocation);
+        logger.info("Releasing " + speciesListID);
+        int size = 10;
+        int page = 0;
+        boolean done = false;
 
-    try (FileWriter fileWriter = new FileWriter(csvFile)) {
-
-      SequenceWriter seqW = csvMapper.writer().writeValues(fileWriter);
-      // construct headers
-      String[] combinedHdrs = generateHeaders(fieldList);
-      seqW.write(combinedHdrs);
-
-      while (!done) {
-        Pageable paging = PageRequest.of(page, size);
-        /*
-          TODO: Before re-implementing releases, this part must be
-           updated to use speciesListMongoRepository.findNextBatch()!! (see TaxonService.java for example)
-         */
-        Page<SpeciesListItem> speciesListItems =
-            speciesListItemMongoRepository.findBySpeciesListIDOrderById(speciesListID, paging);
-        if (!speciesListItems.getContent().isEmpty()) {
-          speciesListItems.forEach(
-              speciesListItem -> {
-                writeSpeciesItem(fieldList, seqW, speciesListItem);
-              });
-        } else {
-          done = true;
+        Optional<SpeciesList> speciesList = speciesItemMongoRepository.findById(speciesListID);
+        if (speciesList.isEmpty()) {
+            throw new Exception("No list for this ID");
         }
-        page++;
-      }
-      seqW.flush();
-      seqW.close();
+
+        // do we need to release the list ? check version numbers of lists....
+        Release lastRelease = getLastRelease(speciesListID);
+        if (!ignoreCurrentVersion
+                && lastRelease != null
+                && lastRelease.getReleasedVersion() == speciesList.get().getVersion()) {
+            // dont re-release, there are no changes...
+            logger.info("Not re-releasing, there are no changes for " + speciesListID);
+            return lastRelease;
+        }
+
+        final List<String> fieldList = speciesList.get().getFieldList();
+        final CsvMapper csvMapper = new CsvMapper();
+
+        String storedLocation =
+                releaseDirectory
+                        + "/"
+                        + speciesListID
+                        + "-"
+                        + (speciesList.get().getVersion())
+                        + ".csv";
+        File csvFile = new File(storedLocation);
+
+        try (FileWriter fileWriter = new FileWriter(csvFile)) {
+
+            SequenceWriter seqW = csvMapper.writer().writeValues(fileWriter);
+            // construct headers
+            String[] combinedHdrs = generateHeaders(fieldList);
+            seqW.write(combinedHdrs);
+
+            while (!done) {
+                Pageable paging = PageRequest.of(page, size);
+                /*
+                 TODO: Before re-implementing releases, this part must be
+                  updated to use speciesListMongoRepository.findNextBatch()!! (see TaxonService.java for example)
+                */
+                Page<SpeciesListItem> speciesListItems =
+                        speciesListItemMongoRepository.findBySpeciesListIDOrderById(
+                                speciesListID, paging);
+                if (!speciesListItems.getContent().isEmpty()) {
+                    speciesListItems.forEach(
+                            speciesListItem -> {
+                                writeSpeciesItem(fieldList, seqW, speciesListItem);
+                            });
+                } else {
+                    done = true;
+                }
+                page++;
+            }
+            seqW.flush();
+            seqW.close();
+        }
+
+        // release repo
+        Release release = new Release();
+        release.setSpeciesListID(speciesListID);
+        release.setReleasedVersion(speciesList.get().getVersion());
+        release.setStoredLocation(storedLocation);
+        release.setMetadata(speciesList.get());
+        releaseMongoRepository.save(release);
+        logger.info("Released " + speciesListID);
+        return release;
     }
 
-    // release repo
-    Release release = new Release();
-    release.setSpeciesListID(speciesListID);
-    release.setReleasedVersion(speciesList.get().getVersion());
-    release.setStoredLocation(storedLocation);
-    release.setMetadata(speciesList.get());
-    releaseMongoRepository.save(release);
-    logger.info("Released " + speciesListID);
-    return release;
-  }
-
-  private Release getLastRelease(String speciesListID) {
-    Pageable paging = PageRequest.of(0, 1, Sort.Direction.DESC, "version");
-    Page<Release> release = releaseMongoRepository.findBySpeciesListID(speciesListID, paging);
-    if (!release.getContent().isEmpty()) {
-      return release.getContent().get(0);
+    private Release getLastRelease(String speciesListID) {
+        Pageable paging = PageRequest.of(0, 1, Sort.Direction.DESC, "version");
+        Page<Release> release = releaseMongoRepository.findBySpeciesListID(speciesListID, paging);
+        if (!release.getContent().isEmpty()) {
+            return release.getContent().get(0);
+        }
+        return null;
     }
-    return null;
-  }
 
-  private void writeSpeciesItem(
-      List<String> fieldList, SequenceWriter seqW, SpeciesListItem speciesListItem) {
-    try {
+    private void writeSpeciesItem(
+            List<String> fieldList, SequenceWriter seqW, SpeciesListItem speciesListItem) {
+        try {
 
-      Map<String, String> map = new HashMap<>();
-      speciesListItem.getProperties().forEach(kv -> map.put(kv.getKey(), kv.getValue()));
+            Map<String, String> map = new HashMap<>();
+            speciesListItem.getProperties().forEach(kv -> map.put(kv.getKey(), kv.getValue()));
 
-      // write the data to Elasticsearch
-      String[] originalClassification = {
-        speciesListItem.getId() != null ? speciesListItem.getId().toString() : "",
-        speciesListItem.getScientificName() != null ? speciesListItem.getScientificName() : "",
-        speciesListItem.getTaxonID() != null ? speciesListItem.getTaxonID() : "",
-        speciesListItem.getKingdom() != null ? speciesListItem.getKingdom() : "",
-        speciesListItem.getPhylum() != null ? speciesListItem.getPhylum() : "",
-        speciesListItem.getClasss() != null ? speciesListItem.getClasss() : "",
-        speciesListItem.getOrder() != null ? speciesListItem.getOrder() : "",
-        speciesListItem.getFamily() != null ? speciesListItem.getFamily() : "",
-        speciesListItem.getGenus() != null ? speciesListItem.getGenus() : "",
-      };
+            // write the data to Elasticsearch
+            String[] originalClassification = {
+                speciesListItem.getId() != null ? speciesListItem.getId().toString() : "",
+                speciesListItem.getScientificName() != null
+                        ? speciesListItem.getScientificName()
+                        : "",
+                speciesListItem.getTaxonID() != null ? speciesListItem.getTaxonID() : "",
+                speciesListItem.getKingdom() != null ? speciesListItem.getKingdom() : "",
+                speciesListItem.getPhylum() != null ? speciesListItem.getPhylum() : "",
+                speciesListItem.getClasss() != null ? speciesListItem.getClasss() : "",
+                speciesListItem.getOrder() != null ? speciesListItem.getOrder() : "",
+                speciesListItem.getFamily() != null ? speciesListItem.getFamily() : "",
+                speciesListItem.getGenus() != null ? speciesListItem.getGenus() : "",
+            };
 
-      List<String> fields = new ArrayList<>();
-      for (String field : fieldList) {
-        fields.add(map.getOrDefault(field, ""));
-      }
+            List<String> fields = new ArrayList<>();
+            for (String field : fieldList) {
+                fields.add(map.getOrDefault(field, ""));
+            }
 
-      String[] combined = ArrayUtils.addAll(originalClassification, fields.toArray(new String[0]));
-      seqW.write(combined);
-    } catch (Exception e) {
-      logger.error(e.getMessage(), e);
+            String[] combined =
+                    ArrayUtils.addAll(originalClassification, fields.toArray(new String[0]));
+            seqW.write(combined);
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+        }
     }
-  }
 
-  private String[] generateHeaders(List<String> fieldList) {
-    String[] classficationHdrs =
-        new String[] {
-          "id",
-          DwcTerm.scientificName.simpleName(),
-          DwcTerm.taxonID.simpleName(),
-          DwcTerm.kingdom.simpleName(),
-          DwcTerm.phylum.simpleName(),
-          DwcTerm.class_.simpleName(),
-          DwcTerm.order.simpleName(),
-          DwcTerm.family.simpleName(),
-          DwcTerm.genus.simpleName(),
-        };
+    private String[] generateHeaders(List<String> fieldList) {
+        String[] classficationHdrs =
+                new String[] {
+                    "id",
+                    DwcTerm.scientificName.simpleName(),
+                    DwcTerm.taxonID.simpleName(),
+                    DwcTerm.kingdom.simpleName(),
+                    DwcTerm.phylum.simpleName(),
+                    DwcTerm.class_.simpleName(),
+                    DwcTerm.order.simpleName(),
+                    DwcTerm.family.simpleName(),
+                    DwcTerm.genus.simpleName(),
+                };
 
-    String[] combinedHdrs = ArrayUtils.addAll(classficationHdrs, fieldList.toArray(new String[0]));
-    return combinedHdrs;
-  }
+        String[] combinedHdrs =
+                ArrayUtils.addAll(classficationHdrs, fieldList.toArray(new String[0]));
+        return combinedHdrs;
+    }
 }

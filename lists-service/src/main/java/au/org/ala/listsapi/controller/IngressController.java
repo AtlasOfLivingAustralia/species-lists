@@ -14,31 +14,6 @@
  */
 package au.org.ala.listsapi.controller;
 
-import java.io.File;
-import java.security.Principal;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.multipart.MultipartFile;
-
 import au.org.ala.listsapi.model.IngestJob;
 import au.org.ala.listsapi.model.IngestProgressItem;
 import au.org.ala.listsapi.model.InputSpeciesList;
@@ -64,42 +39,58 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import java.io.File;
+import java.security.Principal;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 
-/** 
- * Ingress REST API
- */
+/** Ingress REST API */
 @CrossOrigin(origins = "*", maxAge = 3600)
-@SecurityScheme(name = "JWT", type = SecuritySchemeType.HTTP, scheme = "bearer", bearerFormat = "JWT")
+@SecurityScheme(
+        name = "JWT",
+        type = SecuritySchemeType.HTTP,
+        scheme = "bearer",
+        bearerFormat = "JWT")
 @org.springframework.web.bind.annotation.RestController
 public class IngressController {
 
     private static final Logger logger = LoggerFactory.getLogger(IngressController.class);
 
     public static final String SPECIES_LIST_ID = "speciesListID";
-    @Autowired
-    protected SpeciesListMongoRepository speciesListMongoRepository;
-    @Autowired
-    protected ElasticsearchOperations elasticsearchOperations;
+    @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
+    @Autowired protected ElasticsearchOperations elasticsearchOperations;
 
-    @Autowired
-    protected TaxonService taxonService;
-    @Autowired
-    protected ReleaseService releaseService;
-    @Autowired
-    protected UploadService uploadService;
-    @Autowired
-    protected MigrateService migrateService;
-    @Autowired
-    protected ValidationService validationService;
-    @Autowired
-    protected ProgressService progressService;
-    @Autowired
-    protected UserdetailsService userdetailsService;
+    @Autowired protected TaxonService taxonService;
+    @Autowired protected ReleaseService releaseService;
+    @Autowired protected UploadService uploadService;
+    @Autowired protected MigrateService migrateService;
+    @Autowired protected ValidationService validationService;
+    @Autowired protected ProgressService progressService;
+    @Autowired protected UserdetailsService userdetailsService;
+
     @Autowired(required = false)
     protected S3Service s3Service;
 
-    @Autowired
-    protected AuthUtils authUtils;
+    @Autowired protected AuthUtils authUtils;
 
     @Value("${aws.s3.enabled:false}")
     private boolean s3Enabled;
@@ -107,10 +98,8 @@ public class IngressController {
     @Value("${temp.dir:/tmp}")
     private String tempDir;
 
-
     private CompletableFuture<Void> asyncTask;
     private String taskName;
-
 
     // @SecurityRequirement(name = "JWT")
     // @Operation(tags = "Ingress", summary = "Release a version of a species list")
@@ -131,17 +120,28 @@ public class IngressController {
     // }
 
     @SecurityRequirement(name = "JWT")
-    @Operation(tags = "Ingress", summary = "Delete a species list. Deletions are final and cannot be undone.")
+    @Operation(
+            tags = "Ingress",
+            summary = "Delete a species list. Deletions are final and cannot be undone.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species list deleted", content = @Content),
-            @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameter"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
-            @ApiResponse(responseCode = "404", description = "Not found - Species list ID was not found")
+        @ApiResponse(
+                responseCode = "200",
+                description = "Species list deleted",
+                content = @Content),
+        @ApiResponse(responseCode = "400", description = "Bad Request - Invalid parameter"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(
+                responseCode = "404",
+                description = "Not found - Species list ID was not found")
     })
     @DeleteMapping("/v2/delete/{speciesListID}")
     public ResponseEntity<Object> delete(
-            @Parameter(description = "The species list ID or data resource ID to delete", example = "dr656", required = true)
-            @PathVariable("speciesListID") String speciesListID,
+            @Parameter(
+                            description = "The species list ID or data resource ID to delete",
+                            example = "dr656",
+                            required = true)
+                    @PathVariable("speciesListID")
+                    String speciesListID,
             @AuthenticationPrincipal Principal principal) {
         try {
             ResponseEntity<Object> errorResponse = checkAuthorized(speciesListID, principal);
@@ -164,11 +164,19 @@ public class IngressController {
 
     @Hidden
     @SecurityRequirement(name = "JWT")
-    @Operation(tags = "Ingress", description = "Rematch the taxonomy for a species list. This is a long running process.", summary = "Rematch the taxonomy for a species list")
+    @Operation(
+            tags = "Ingress",
+            description =
+                    "Rematch the taxonomy for a species list. This is a long running process.",
+            summary = "Rematch the taxonomy for a species list")
     @GetMapping("/v2/rematch/{speciesListID}")
     public ResponseEntity<Object> rematch(
-            @Parameter(description = "The species list ID or data resource ID to rematch", example = "dr656", required = true)
-            @PathVariable("speciesListID") String speciesListID,
+            @Parameter(
+                            description = "The species list ID or data resource ID to rematch",
+                            example = "dr656",
+                            required = true)
+                    @PathVariable("speciesListID")
+                    String speciesListID,
             @AuthenticationPrincipal Principal principal) {
         try {
             ResponseEntity<Object> errorResponse = checkAuthorized(speciesListID, principal);
@@ -177,8 +185,9 @@ public class IngressController {
                 return errorResponse;
             }
 
-            Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository
-                    .findByIdOrDataResourceUid(speciesListID, speciesListID);
+            Optional<SpeciesList> optionalSpeciesList =
+                    speciesListMongoRepository.findByIdOrDataResourceUid(
+                            speciesListID, speciesListID);
 
             if (optionalSpeciesList.isEmpty()) {
                 return ResponseEntity.badRequest().body("Species list does not exist!");
@@ -202,7 +211,11 @@ public class IngressController {
 
     @Hidden
     @SecurityRequirement(name = "JWT")
-    @Operation(tags = "Ingress", description = "Rematch the taxonomy for all species lists. This is a long running process.", summary = "Rematch the taxonomy for all species lists")
+    @Operation(
+            tags = "Ingress",
+            description =
+                    "Rematch the taxonomy for all species lists. This is a long running process.",
+            summary = "Rematch the taxonomy for all species lists")
     @GetMapping("/admin/rematch")
     public ResponseEntity<Object> rematch(@AuthenticationPrincipal Principal principal) {
         try {
@@ -222,7 +235,10 @@ public class IngressController {
 
     @Hidden
     @SecurityRequirement(name = "JWT")
-    @Operation(summary = "Reindex a species list", description = "Reindex a species list into the ElasticSearch index", tags = "Ingress")
+    @Operation(
+            summary = "Reindex a species list",
+            description = "Reindex a species list into the ElasticSearch index",
+            tags = "Ingress")
     @GetMapping("/reindex/{speciesListID}")
     public ResponseEntity<Object> reindex(
             @PathVariable("speciesListID") String speciesListID,
@@ -237,13 +253,17 @@ public class IngressController {
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {
             logger.error("Error while reindexing dataset " + e.getMessage(), e);
-            return ResponseEntity.badRequest().body("Error while reindexing dataset: " + e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body("Error while reindexing dataset: " + e.getMessage());
         }
     }
 
     @Hidden
     @SecurityRequirement(name = "JWT")
-    @Operation(summary = "Reindex all species lists", description = "Reindex all species lists into the ElasticSearch index.", tags = "Ingress")
+    @Operation(
+            summary = "Reindex all species lists",
+            description = "Reindex all species lists into the ElasticSearch index.",
+            tags = "Ingress")
     @GetMapping("/admin/reindex")
     public ResponseEntity<Object> reindex(@AuthenticationPrincipal Principal principal) {
         try {
@@ -265,39 +285,36 @@ public class IngressController {
 
     @SecurityRequirement(name = "JWT")
     @Operation(
-        summary = "Upload a CSV species list", 
-        tags = "Ingress", 
-        description = "Upload a CSV species list. This is step 1 of a 2 step process. "
-            + "The file is uploaded to the server and then ingested. "
-            + "The second step is to `ingest` the species list. For a new list, use the `/v2/ingest` endpoint. "
-            + "For an existing list, use the `/v2/ingest/{speciesListID}` endpoint. "
-    )
+            summary = "Upload a CSV species list",
+            tags = "Ingress",
+            description =
+                    "Upload a CSV species list. This is step 1 of a 2 step process. "
+                            + "The file is uploaded to the server and then ingested. "
+                            + "The second step is to `ingest` the species list. For a new list, use the `/v2/ingest` endpoint. "
+                            + "For an existing list, use the `/v2/ingest/{speciesListID}` endpoint. ")
     @PostMapping(path = "/v2/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200", 
-            description = "Successfully uploaded", 
-            content = @Content(
-                mediaType = "application/json", 
-                schema = @Schema(implementation = IngestJob.class)
-            )
-        ),
-        @ApiResponse(
-            responseCode = "400", 
-            description = "Bad Request", 
-            content = @Content(mediaType = "text/plain")
-        ),
-        @ApiResponse(
-            responseCode = "415", 
-            description = "Unsupported Media Type", 
-            content = @Content(mediaType = "text/plain")
-        )
-    })
+    @ApiResponses(
+            value = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Successfully uploaded",
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        schema = @Schema(implementation = IngestJob.class))),
+                @ApiResponse(
+                        responseCode = "400",
+                        description = "Bad Request",
+                        content = @Content(mediaType = "text/plain")),
+                @ApiResponse(
+                        responseCode = "415",
+                        description = "Unsupported Media Type",
+                        content = @Content(mediaType = "text/plain"))
+            })
     public ResponseEntity<Object> handleFileUpload(
-        @Parameter(description = "The CSV file to upload", required = true)
-        @RequestPart("file") MultipartFile file,
-        @AuthenticationPrincipal AlaUserProfile profile
-    ) {
+            @Parameter(description = "The CSV file to upload", required = true) @RequestPart("file")
+                    MultipartFile file,
+            @AuthenticationPrincipal AlaUserProfile profile) {
         // check user logged in
         if (profile == null) {
             return ResponseEntity.badRequest().body("User not found");
@@ -307,60 +324,65 @@ public class IngressController {
             return ResponseEntity.badRequest().body("File is empty");
         } else if (!uploadService.isAcceptedFileType(file)) {
             return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                    .body("Unsupported file type. Accepted file types" 
-                        + " are " + String.join(", ", UploadService.getAcceptedFileTypes()) + "."
-                );
+                    .body(
+                            "Unsupported file type. Accepted file types"
+                                    + " are "
+                                    + String.join(", ", UploadService.getAcceptedFileTypes())
+                                    + ".");
         }
 
         try {
-            logger.info(s3Enabled 
-                ? "Upload to S3 started..." 
-                : "Upload to temporary local storage started..."
-            );
+            logger.info(
+                    s3Enabled
+                            ? "Upload to S3 started..."
+                            : "Upload to temporary local storage started...");
             String fileIdentifier = uploadService.uploadFile(file);
             IngestJob ingestJob = uploadService.upload(fileIdentifier, file);
             return ResponseEntity.ok(ingestJob);
         } catch (Exception e) {
             logger.error("Error while uploading the file: " + e.getMessage(), e);
             return ResponseEntity.badRequest()
-                .body("Error while uploading the file: " + e.getMessage());
+                    .body("Error while uploading the file: " + e.getMessage());
         }
     }
 
     @SecurityRequirement(name = "JWT")
     @Operation(
-        summary = "Asynchronously ingest a new species list", 
-        tags = "Ingress", 
-        description = "Asynchronously ingest a _new_ species list. This is step 2 of a 2 step process. "
-            + "The file is uploaded to the server and then ingested. "
-            + "The first step is to upload the species list CSV file via the `/v2/upload` endpoint. The ID of the list being ingested will be returned, "
-            + "where you can then use `/v2/ingest/{ID}/progress` to track ingestion progress. "
-            + "The ingested list is validated against the constraints returned from the `/v2/constraints` endpoint, "
-            + "where each key is a list property that will be validated, and the value is all of the possible values for that key."
-    )
+            summary = "Asynchronously ingest a new species list",
+            tags = "Ingress",
+            description =
+                    "Asynchronously ingest a _new_ species list. This is step 2 of a 2 step process. "
+                            + "The file is uploaded to the server and then ingested. "
+                            + "The first step is to upload the species list CSV file via the `/v2/upload` endpoint. The ID of the list being ingested will be returned, "
+                            + "where you can then use `/v2/ingest/{ID}/progress` to track ingestion progress. "
+                            + "The ingested list is validated against the constraints returned from the `/v2/constraints` endpoint, "
+                            + "where each key is a list property that will be validated, and the value is all of the possible values for that key.")
     @PostMapping("/v2/ingest")
-    @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200", 
-            description = "Successfully ingested", 
-            content = @Content(
-                mediaType = "application/json", 
-                schema = @Schema(implementation = InputSpeciesList.class)
-            )
-        ),
-        @ApiResponse(
-            responseCode = "400", 
-            description = "Bad Request", 
-            content = @Content(mediaType = "text/plain")
-        )
-    })
+    @ApiResponses(
+            value = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Successfully ingested",
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        schema = @Schema(implementation = InputSpeciesList.class))),
+                @ApiResponse(
+                        responseCode = "400",
+                        description = "Bad Request",
+                        content = @Content(mediaType = "text/plain"))
+            })
     public ResponseEntity<Object> ingest(
-        @Parameter(description = "Value should be the `localFile` property returned from the `/v2/upload` endpoint")
-        @RequestParam("file") String fileIdentifier,
-        @Parameter(description = "Species list metadata. See the `InputSpeciesList` model for details.")
-        InputSpeciesList speciesList,
-        @AuthenticationPrincipal Principal principal
-    ) {
+            @Parameter(
+                            description =
+                                    "Value should be the `localFile` property returned from the `/v2/upload` endpoint")
+                    @RequestParam("file")
+                    String fileIdentifier,
+            @Parameter(
+                            description =
+                                    "Species list metadata. See the `InputSpeciesList` model for details.")
+                    InputSpeciesList speciesList,
+            @AuthenticationPrincipal Principal principal) {
         try {
 
             // check user logged in
@@ -371,14 +393,16 @@ public class IngressController {
 
             // check that the supplied list type, region and license is valid
             if (!validationService.isListValid(speciesList)) {
-                return ResponseEntity.badRequest().body(
-                        "Supplied list contains invalid properties for a controlled value (list type, license, region)");
+                return ResponseEntity.badRequest()
+                        .body(
+                                "Supplied list contains invalid properties for a controlled value (list type, license, region)");
             }
 
             // Verify the file exists
             if (s3Enabled) {
                 if (!s3Service.fileExists(fileIdentifier)) {
-                    return ResponseEntity.badRequest().body("File not found in S3. Please upload the file first.");
+                    return ResponseEntity.badRequest()
+                            .body("File not found in S3. Please upload the file first.");
                 }
                 logger.info("Async ingestion started for S3 key: {}", fileIdentifier);
             } else {
@@ -388,7 +412,9 @@ public class IngressController {
                 // Ensure the resolved file is within the expected temp directory
                 File canonicalTempDir = tempDirFile.getCanonicalFile();
                 File canonicalTempFile = tempFile.getCanonicalFile();
-                if (!canonicalTempFile.getPath().startsWith(canonicalTempDir.getPath() + File.separator)) {
+                if (!canonicalTempFile
+                        .getPath()
+                        .startsWith(canonicalTempDir.getPath() + File.separator)) {
                     return ResponseEntity.badRequest().body("Invalid file identifier");
                 }
 
@@ -398,28 +424,45 @@ public class IngressController {
                 logger.info("Async ingestion started for local file: {}", fileIdentifier);
             }
 
-            SpeciesList updatedSpeciesList = uploadService.ingest(alaUserProfile, speciesList, fileIdentifier, false);
+            SpeciesList updatedSpeciesList =
+                    uploadService.ingest(alaUserProfile, speciesList, fileIdentifier, false);
 
             return ResponseEntity.ok(updatedSpeciesList);
         } catch (Exception e) {
             logger.error("Error while ingesting the file: " + e.getMessage(), e);
-            return ResponseEntity.badRequest().body("Error while ingesting the file: " + e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body("Error while ingesting the file: " + e.getMessage());
         }
     }
 
     @SecurityRequirement(name = "JWT")
-    @Operation(summary = "Gets the progress of a current ingestion job, and whether it has completed.", tags = "Ingress")
+    @Operation(
+            summary = "Gets the progress of a current ingestion job, and whether it has completed.",
+            tags = "Ingress")
     @GetMapping("/v2/ingest/{speciesListID}/progress")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Ingestion is progressing", content = {
-                    @Content(mediaType = "application/json", schema = @Schema(implementation = IngestProgressItem.class))
-            }),
-            @ApiResponse(responseCode = "401", description = "Unauthorized", content = {
-                    @Content(mediaType = "text/plain") })
-    })
+    @ApiResponses(
+            value = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Ingestion is progressing",
+                        content = {
+                            @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = IngestProgressItem.class))
+                        }),
+                @ApiResponse(
+                        responseCode = "401",
+                        description = "Unauthorized",
+                        content = {@Content(mediaType = "text/plain")})
+            })
     public ResponseEntity<Object> ingestProgress(
-            @Parameter(description = "The species list ID or data resource ID to check progress for", example = "dr656", required = true)
-            @PathVariable("speciesListID") String speciesListID,
+            @Parameter(
+                            description =
+                                    "The species list ID or data resource ID to check progress for",
+                            example = "dr656",
+                            required = true)
+                    @PathVariable("speciesListID")
+                    String speciesListID,
             @AuthenticationPrincipal Principal principal) {
         // check user logged in
         AlaUserProfile alaUserProfile = (AlaUserProfile) principal;
@@ -434,26 +477,43 @@ public class IngressController {
     }
 
     @SecurityRequirement(name = "JWT")
-    @Operation(summary = "Asynchronously ingest an existing species list", 
-            description = "Asynchronously re-ingest an _existing_ species list. This is step 2 of a 2 step process. "
-            + "The file is uploaded to the server and then ingested. "
-            + "The first step is to upload the species list CSV file via the `/v2/upload` endpoint. The ID of the list being ingested will be returned, "
-            + "where you can then use `/v2/ingest/{ID}/progress` to track ingestion progress. "
-            + "The ingested list is validated against the constraints returned from the `/v2/constraints` endpoint, "
-            + "where each key is a list property that will be validated, and the value is all of the possible values for that key.", tags = "Ingress")
+    @Operation(
+            summary = "Asynchronously ingest an existing species list",
+            description =
+                    "Asynchronously re-ingest an _existing_ species list. This is step 2 of a 2 step process. "
+                            + "The file is uploaded to the server and then ingested. "
+                            + "The first step is to upload the species list CSV file via the `/v2/upload` endpoint. The ID of the list being ingested will be returned, "
+                            + "where you can then use `/v2/ingest/{ID}/progress` to track ingestion progress. "
+                            + "The ingested list is validated against the constraints returned from the `/v2/constraints` endpoint, "
+                            + "where each key is a list property that will be validated, and the value is all of the possible values for that key.",
+            tags = "Ingress")
     @PostMapping("/v2/ingest/{speciesListID}")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully ingested", content = {
-                    @Content(mediaType = "application/json", schema = @Schema(implementation = SpeciesList.class))
-            }),
-            @ApiResponse(responseCode = "400", description = "Bad Request", content = {
-                    @Content(mediaType = "text/plain") })
-    })
+    @ApiResponses(
+            value = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Successfully ingested",
+                        content = {
+                            @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = SpeciesList.class))
+                        }),
+                @ApiResponse(
+                        responseCode = "400",
+                        description = "Bad Request",
+                        content = {@Content(mediaType = "text/plain")})
+            })
     public ResponseEntity<Object> ingest(
-            @Parameter(description = "Value should be the `localFile` property returned from the `/v2/upload` endpoint")
-            @RequestParam("file") String fileIdentifier,
-            @Parameter(description = "Value should be the `speciesListID` for the existing species list to be reloaded")
-            @PathVariable("speciesListID") String speciesListID,
+            @Parameter(
+                            description =
+                                    "Value should be the `localFile` property returned from the `/v2/upload` endpoint")
+                    @RequestParam("file")
+                    String fileIdentifier,
+            @Parameter(
+                            description =
+                                    "Value should be the `speciesListID` for the existing species list to be reloaded")
+                    @PathVariable("speciesListID")
+                    String speciesListID,
             @AuthenticationPrincipal Principal principal) {
         try {
 
@@ -466,12 +526,16 @@ public class IngressController {
             // Verify the file exists
             if (s3Enabled) {
                 if (!s3Service.fileExists(fileIdentifier)) {
-                    return ResponseEntity.badRequest().body("File not found in S3. Please upload the file first.");
+                    return ResponseEntity.badRequest()
+                            .body("File not found in S3. Please upload the file first.");
                 }
                 logger.info("Re-Ingestion started for S3 key: {}", fileIdentifier);
             } else {
-                // Ensure the file identifier is a simple filename and cannot escape the temp directory
-                if (fileIdentifier.contains("..") || fileIdentifier.contains("/") || fileIdentifier.contains("\\")) {
+                // Ensure the file identifier is a simple filename and cannot escape the temp
+                // directory
+                if (fileIdentifier.contains("..")
+                        || fileIdentifier.contains("/")
+                        || fileIdentifier.contains("\\")) {
                     return ResponseEntity.badRequest().body("Invalid file identifier");
                 }
                 File tempFile = new File(tempDir, fileIdentifier);
@@ -490,7 +554,8 @@ public class IngressController {
             return ResponseEntity.badRequest().body("Error while reloading the species list");
         } catch (Exception e) {
             logger.error("Error while ingesting the file: " + e.getMessage(), e);
-            return ResponseEntity.badRequest().body("Error while ingesting the file: " + e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body("Error while ingesting the file: " + e.getMessage());
         }
     }
 
@@ -503,8 +568,8 @@ public class IngressController {
         }
 
         // check it exists
-        Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
-                speciesListID);
+        Optional<SpeciesList> optionalSpeciesList =
+                speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
         if (optionalSpeciesList.isEmpty()) {
             return ResponseEntity.badRequest().body("Species list not found");
         }
@@ -584,7 +649,8 @@ public class IngressController {
             return new ResponseEntity<>(HttpStatus.OK);
         } else {
             logger.warn("Task {} is already running.", taskName);
-            return new ResponseEntity<>("Task " + taskName + " is already running.", HttpStatus.CONFLICT);
+            return new ResponseEntity<>(
+                    "Task " + taskName + " is already running.", HttpStatus.CONFLICT);
         }
     }
 }

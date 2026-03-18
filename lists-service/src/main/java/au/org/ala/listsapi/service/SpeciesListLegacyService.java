@@ -15,34 +15,28 @@
 
 package au.org.ala.listsapi.service;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import au.org.ala.listsapi.model.QueryListItemVersion1;
-import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesItemVersion1;
+import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.model.SpeciesListItemVersion1;
 import au.org.ala.listsapi.model.SpeciesListVersion1;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.util.SpeciesListTransformer;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-/**
- * Service for providing legacy compatibility for species lists.
- */
+/** Service for providing legacy compatibility for species lists. */
 @Service
 public class SpeciesListLegacyService {
-    @Autowired
-    SpeciesListTransformer speciesListTransformer;
+    @Autowired SpeciesListTransformer speciesListTransformer;
 
-    @Autowired
-    SpeciesListMongoRepository speciesListMongoRepository;
+    @Autowired SpeciesListMongoRepository speciesListMongoRepository;
 
     /**
      * Converts a SpeciesList to the legacy SpeciesListVersion1 format.
@@ -72,38 +66,48 @@ public class SpeciesListLegacyService {
      * @param speciesListItems List of modern SpeciesListItem objects
      * @return List of legacy SpeciesListItemVersion1 representations
      */
-    public List<SpeciesListItemVersion1> convertListItemToVersion1(List<SpeciesListItem> speciesListItems) {
+    public List<SpeciesListItemVersion1> convertListItemToVersion1(
+            List<SpeciesListItem> speciesListItems) {
         return IntStream.range(0, speciesListItems.size())
-                .mapToObj(i -> speciesListTransformer.transformToVersion1(speciesListItems.get(i), i))
+                .mapToObj(
+                        i -> speciesListTransformer.transformToVersion1(speciesListItems.get(i), i))
                 .collect(Collectors.toList());
     }
 
     /**
-     * Converts a list of SpeciesListItem to the SpeciesItemVersion1 format for the
-     * /v1/species/** endpoint.
+     * Converts a list of SpeciesListItem to the SpeciesItemVersion1 format for the /v1/species/**
+     * endpoint.
      *
-     * <p>Fetches all required SpeciesList records in a single bulk query to avoid N+1
-     * MongoDB lookups when the list is large.
+     * <p>Fetches all required SpeciesList records in a single bulk query to avoid N+1 MongoDB
+     * lookups when the list is large.
      *
      * @param speciesListItems List of modern SpeciesListItem objects
      * @return List of SpeciesItemVersion1 representations
      */
-    public List<SpeciesItemVersion1> convertToSpeciesItemVersion1(List<SpeciesListItem> speciesListItems) {
+    public List<SpeciesItemVersion1> convertToSpeciesItemVersion1(
+            List<SpeciesListItem> speciesListItems) {
         // Collect the distinct speciesListIDs referenced by the items
-        Set<String> listIDs = speciesListItems.stream()
-                .map(SpeciesListItem::getSpeciesListID)
-                .filter(id -> id != null && !id.isEmpty())
-                .collect(Collectors.toSet());
+        Set<String> listIDs =
+                speciesListItems.stream()
+                        .map(SpeciesListItem::getSpeciesListID)
+                        .filter(id -> id != null && !id.isEmpty())
+                        .collect(Collectors.toSet());
 
         // Bulk-fetch all required SpeciesList records in a single query
-        List<SpeciesList> speciesLists = speciesListMongoRepository.findByDataResourceUidInOrIdIn(listIDs);
+        List<SpeciesList> speciesLists =
+                speciesListMongoRepository.findByDataResourceUidInOrIdIn(listIDs);
 
         // Build a lookup map: both the raw speciesListID and the dataResourceUid are valid keys
-        Map<String, SpeciesList> listCache = speciesLists.stream()
-                .collect(Collectors.toMap(
-                        sl -> sl.getId() != null ? sl.getId() : sl.getDataResourceUid(),
-                        sl -> sl,
-                        (a, b) -> a)); // keep first on collision
+        Map<String, SpeciesList> listCache =
+                speciesLists.stream()
+                        .collect(
+                                Collectors.toMap(
+                                        sl ->
+                                                sl.getId() != null
+                                                        ? sl.getId()
+                                                        : sl.getDataResourceUid(),
+                                        sl -> sl,
+                                        (a, b) -> a)); // keep first on collision
         // Also index by dataResourceUid so lookups work regardless of which ID the item stores
         speciesLists.stream()
                 .filter(sl -> sl.getDataResourceUid() != null)
@@ -120,7 +124,8 @@ public class SpeciesListLegacyService {
      * @param queryListItems The modern SpeciesListItem object
      * @return The legacy SpeciesListItemVersion1 representation
      */
-    public List<QueryListItemVersion1> convertQueryListItemToVersion1(List<SpeciesListItem> queryListItems) {
+    public List<QueryListItemVersion1> convertQueryListItemToVersion1(
+            List<SpeciesListItem> queryListItems) {
         return queryListItems.stream()
                 .map(speciesListTransformer::transformToQueryListVersion1)
                 .collect(Collectors.toList());

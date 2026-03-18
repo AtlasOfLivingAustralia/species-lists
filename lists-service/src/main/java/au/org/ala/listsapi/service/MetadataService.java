@@ -14,18 +14,16 @@
  */
 package au.org.ala.listsapi.service;
 
+import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.service.auth.WebService;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.http.entity.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.service.auth.WebService;
 
 @Service
 public class MetadataService {
@@ -41,13 +39,20 @@ public class MetadataService {
 
     private Map listToDataResourceJSON(SpeciesList speciesList) {
         return Map.of(
-            "name", speciesList.getTitle(),
-            "pubDescription", speciesList.getDescription(),
-            "licenseType", speciesList.getLicence(),
-            "websiteUrl", appUrl + "/list/" + speciesList.getId(),
-            "isPrivate", speciesList.getIsPrivate() != null && speciesList.getIsPrivate() == true ? "true" : "", // Collectory expects "true" or "" (Groovy truth bug)
-            "resourceType", "species-list"
-        );
+                "name",
+                speciesList.getTitle(),
+                "pubDescription",
+                speciesList.getDescription(),
+                "licenseType",
+                speciesList.getLicence(),
+                "websiteUrl",
+                appUrl + "/list/" + speciesList.getId(),
+                "isPrivate",
+                speciesList.getIsPrivate() != null && speciesList.getIsPrivate() == true
+                        ? "true"
+                        : "", // Collectory expects "true" or "" (Groovy truth bug)
+                "resourceType",
+                "species-list");
     }
 
     public void setMeta(SpeciesList speciesList) throws Exception {
@@ -56,17 +61,17 @@ public class MetadataService {
         String entityUid = dataResourceUid != null ? "/" + dataResourceUid : "";
         Map metaDataJsonMap = listToDataResourceJSON(speciesList);
 
-        Map response = webService.post(
-                collectoryUrl + "/ws/dataResource" + entityUid,
-                metaDataJsonMap,
-                null,
-                ContentType.APPLICATION_JSON,
-                true,
-                false,
-                null
-        );
+        Map response =
+                webService.post(
+                        collectoryUrl + "/ws/dataResource" + entityUid,
+                        metaDataJsonMap,
+                        null,
+                        ContentType.APPLICATION_JSON,
+                        true,
+                        false,
+                        null);
 
-        int statusCode = (int)response.get("statusCode");
+        int statusCode = (int) response.get("statusCode");
         if (statusCode < 200 || statusCode > 299) {
             logger.error(response.get("error").toString());
             throw new Exception("Failed to create metadata entry for species list");
@@ -93,16 +98,16 @@ public class MetadataService {
             return;
         }
 
-        Map response = webService.delete(
-                collectoryUrl + "/ws/dataResource/" + dataResourceUid,
-                null,
-                ContentType.APPLICATION_JSON,
-                true,
-                false,
-                null
-        );
+        Map response =
+                webService.delete(
+                        collectoryUrl + "/ws/dataResource/" + dataResourceUid,
+                        null,
+                        ContentType.APPLICATION_JSON,
+                        true,
+                        false,
+                        null);
 
-        int statusCode = (int)response.get("statusCode");
+        int statusCode = (int) response.get("statusCode");
         if (statusCode < 200 || statusCode > 299) {
             logger.error(response.get("error").toString());
             throw new Exception("Failed to delete metadata entry for species list");

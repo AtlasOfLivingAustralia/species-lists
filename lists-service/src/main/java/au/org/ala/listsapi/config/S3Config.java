@@ -5,8 +5,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
-import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
 import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.regions.Region;
@@ -29,8 +29,9 @@ public class S3Config {
     @Bean
     public AwsCredentialsProvider awsCredentialsProvider() {
         // Set system property to resolve HTTP client implementation conflict
-        System.setProperty("software.amazon.awssdk.http.service.impl",
-                          "software.amazon.awssdk.http.urlconnection.UrlConnectionSdkHttpService");
+        System.setProperty(
+                "software.amazon.awssdk.http.service.impl",
+                "software.amazon.awssdk.http.urlconnection.UrlConnectionSdkHttpService");
 
         String webIdentityTokenFile = System.getenv("AWS_WEB_IDENTITY_TOKEN_FILE");
         String roleArn = System.getenv("AWS_ROLE_ARN");
@@ -43,7 +44,8 @@ public class S3Config {
     }
 
     @Bean
-    public StsClient stsClient(SdkHttpClient httpClient, AwsCredentialsProvider credentialsProvider) {
+    public StsClient stsClient(
+            SdkHttpClient httpClient, AwsCredentialsProvider credentialsProvider) {
         return StsClient.builder()
                 .region(Region.of(region))
                 .httpClient(httpClient)

@@ -1,3 +1,17 @@
+/*
+ * Copyright (C) 2025 Atlas of Living Australia
+ * All Rights Reserved.
+ *
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ */
 package au.org.ala.listsapi.config;
 
 import au.org.ala.ws.security.TokenClient;
@@ -28,9 +42,7 @@ class AlaWsPluginConfig {
     boolean cacheTokens;
 
     @Bean
-    TokenClient tokenClient(
-            @Autowired(required = false) OidcConfiguration oidcConfiguration
-    ) {
+    TokenClient tokenClient(@Autowired(required = false) OidcConfiguration oidcConfiguration) {
         return new TokenClient(oidcConfiguration);
     }
 
@@ -40,14 +52,17 @@ class AlaWsPluginConfig {
             @Autowired(required = false) SessionStore sessionStore,
             @Autowired TokenClient tokenClient) {
         // note not injecting PAC4j Config here due to potential circular dependency
-        return new TokenService(oidcConfiguration,
-                sessionStore, tokenClient, clientId, clientSecret, jwtScopes, cacheTokens);
+        return new TokenService(
+                oidcConfiguration,
+                sessionStore,
+                tokenClient,
+                clientId,
+                clientSecret,
+                jwtScopes,
+                cacheTokens);
     }
 
-
-    /**
-     * OK HTTP Interceptor that injects a client credentials Bearer token into a request
-     */
+    /** OK HTTP Interceptor that injects a client credentials Bearer token into a request */
     @ConditionalOnProperty(prefix = "webservice", name = "jwt")
     @ConditionalOnMissingBean(name = "jwtInterceptor")
     @Bean

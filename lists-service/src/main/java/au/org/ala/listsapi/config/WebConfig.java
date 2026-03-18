@@ -1,16 +1,13 @@
 /**
- * Copyright (c) 2025 Atlas of Living Australia
- * All Rights Reserved.
- * 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Copyright (c) 2025 Atlas of Living Australia All Rights Reserved.
+ *
+ * <p>The contents of this file are subject to the Mozilla Public License Version 1.1 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at http://www.mozilla.org/MPL/
+ *
+ * <p>Software distributed under the License is distributed on an "AS IS" basis, WITHOUT WARRANTY OF
+ * ANY KIND, either express or implied. See the License for the specific language governing rights
+ * and limitations under the License.
  */
 package au.org.ala.listsapi.config;
 
@@ -26,19 +23,17 @@ import org.springframework.web.util.UrlPathHelper;
 @EnableWebMvc
 public class WebConfig implements WebMvcConfigurer {
     /**
-     * The URL of the application, used for CORS configuration.
-     * This should be set to the URL of the application in production.
-     * This property is loaded from the lists-service-config.properties file but if
-     * there is an
-     * entry in application.properties, it will override the value in the ext.
-     * config file.
+     * The URL of the application, used for CORS configuration. This should be set to the URL of the
+     * application in production. This property is loaded from the lists-service-config.properties
+     * file but if there is an entry in application.properties, it will override the value in the
+     * ext. config file.
      */
     @Value("${app.url}")
     private String appUrl;
 
     /**
      * CORS configuration for the application.
-     * 
+     *
      * @param registry the CORS registry to configure
      */
     // @Override

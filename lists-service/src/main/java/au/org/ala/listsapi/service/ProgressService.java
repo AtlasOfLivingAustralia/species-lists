@@ -1,20 +1,18 @@
 package au.org.ala.listsapi.service;
 
-import java.util.Date;
-import java.util.Optional;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-
 import au.org.ala.listsapi.model.IngestProgressItem;
 import au.org.ala.listsapi.model.MigrateProgressItem;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.repo.IngestProgressMongoRepository;
 import au.org.ala.listsapi.repo.MigrateProgressMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import java.util.Date;
+import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
 
 @Service
 public class ProgressService {
@@ -58,7 +56,8 @@ public class ProgressService {
     }
 
     public IngestProgressItem getIngestProgress(String speciesListId) {
-        Optional<IngestProgressItem> item = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListID(speciesListId);
+        Optional<IngestProgressItem> item =
+                ingestProgressMongoRepository.findIngestProgressItemBySpeciesListID(speciesListId);
         return item.orElseGet(() -> new IngestProgressItem(speciesListId, 0));
     }
 
@@ -67,7 +66,8 @@ public class ProgressService {
     }
 
     public void setupIngestProgress(String speciesListID, long rowCount) {
-        Optional<IngestProgressItem> existingItem = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListID(speciesListID);
+        Optional<IngestProgressItem> existingItem =
+                ingestProgressMongoRepository.findIngestProgressItemBySpeciesListID(speciesListID);
         if (existingItem.isPresent()) {
             IngestProgressItem item = existingItem.get();
             item.setRowCount(rowCount);
@@ -82,24 +82,29 @@ public class ProgressService {
     }
 
     public void addIngestMongoProgress(String speciesListId, long count) {
-        Optional<IngestProgressItem> item = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListID(speciesListId);
+        Optional<IngestProgressItem> item =
+                ingestProgressMongoRepository.findIngestProgressItemBySpeciesListID(speciesListId);
         if (item.isPresent()) {
             IngestProgressItem currentItem = item.get();
             currentItem.setMongoTotal(currentItem.getMongoTotal() + count);
 
             ingestProgressMongoRepository.save(currentItem);
         } else {
-            Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListId, speciesListId);
+            Optional<SpeciesList> optionalSpeciesList =
+                    speciesListMongoRepository.findByIdOrDataResourceUid(
+                            speciesListId, speciesListId);
             if (optionalSpeciesList.isPresent()) {
                 SpeciesList list = optionalSpeciesList.get();
-                IngestProgressItem newItem = new IngestProgressItem(list.getId(), list.getRowCount(), count, 0);
+                IngestProgressItem newItem =
+                        new IngestProgressItem(list.getId(), list.getRowCount(), count, 0);
                 ingestProgressMongoRepository.save(newItem);
             }
         }
     }
 
     public void addIngestElasticProgress(String speciesListId, long count) {
-        Optional<IngestProgressItem> item = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListID(speciesListId);
+        Optional<IngestProgressItem> item =
+                ingestProgressMongoRepository.findIngestProgressItemBySpeciesListID(speciesListId);
         if (item.isPresent()) {
             IngestProgressItem currentItem = item.get();
             currentItem.setElasticTotal(currentItem.getElasticTotal() + count);
@@ -114,7 +119,9 @@ public class ProgressService {
 
     public void resetIngestProgress(String speciesListId) {
         try {
-            Optional<IngestProgressItem> item = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListID(speciesListId);
+            Optional<IngestProgressItem> item =
+                    ingestProgressMongoRepository.findIngestProgressItemBySpeciesListID(
+                            speciesListId);
             if (item.isPresent()) {
                 IngestProgressItem currentItem = item.get();
                 currentItem.setMongoTotal(0);

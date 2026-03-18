@@ -15,21 +15,18 @@
 
 package au.org.ala.listsapi.model;
 
-import java.io.Serializable;
-import java.util.Date;
-
-import org.springframework.data.annotation.Id;
-
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
+import java.io.Serializable;
+import java.util.Date;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
 
 /**
- * Model class representing a species list version for /v1 backwards compatibility.
- * This POJO is used for controller response serialization only.
+ * Model class representing a species list version for /v1 backwards compatibility. This POJO is
+ * used for controller response serialization only.
  */
 @Data
 @NoArgsConstructor
@@ -37,17 +34,18 @@ import lombok.NoArgsConstructor;
 public class SpeciesListVersion1 implements Serializable {
 
     private static final long serialVersionUID = 1L;
-    @Id
-    @JsonIgnore
-    private String id;
+    @Id @JsonIgnore private String id;
     private String dataResourceUid;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
     private Date dateCreated;
+
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
     private Date lastUpdated;
+
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
     private Date lastUploaded;
+
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
     private Date lastMatched;
 
@@ -57,7 +55,7 @@ public class SpeciesListVersion1 implements Serializable {
     private String category;
     private String username;
     private String fullName;
-    private String authority; 
+    private String authority;
     private String region;
     private String sdsType;
     private String generalisation;

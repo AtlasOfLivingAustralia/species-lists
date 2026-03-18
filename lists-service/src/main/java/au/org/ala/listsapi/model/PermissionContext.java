@@ -17,9 +17,7 @@ package au.org.ala.listsapi.model;
 import lombok.Builder;
 import lombok.Data;
 
-/**
- * Permission context for access control (Controller internal use)
- */
+/** Permission context for access control (Controller internal use) */
 @Data
 @Builder
 public class PermissionContext {

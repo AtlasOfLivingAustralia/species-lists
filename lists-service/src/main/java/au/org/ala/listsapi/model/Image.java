@@ -11,5 +11,5 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 public class Image {
 
-  private String url;
+    private String url;
 }

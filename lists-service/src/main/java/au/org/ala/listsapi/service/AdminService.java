@@ -14,19 +14,17 @@
  */
 package au.org.ala.listsapi.service;
 
+import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
+import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
+import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import java.util.HashMap;
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.index.IndexInfo;
 import org.springframework.stereotype.Service;
-
-import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
-import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
-import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 
 @Service
 public class AdminService {
@@ -49,7 +47,11 @@ public class AdminService {
         HashMap<String, List<IndexInfo>> indexData = new HashMap<>();
         mongoTemplate
                 .getCollectionNames()
-                .forEach(collection -> indexData.put(collection, mongoTemplate.indexOps(collection).getIndexInfo()));
+                .forEach(
+                        collection ->
+                                indexData.put(
+                                        collection,
+                                        mongoTemplate.indexOps(collection).getIndexInfo()));
 
         return indexData;
     }

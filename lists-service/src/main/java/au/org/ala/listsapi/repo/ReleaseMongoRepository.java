@@ -7,5 +7,5 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 public interface ReleaseMongoRepository extends MongoRepository<Release, String> {
 
-  Page<Release> findBySpeciesListID(String speciesListID, Pageable pageable);
+    Page<Release> findBySpeciesListID(String speciesListID, Pageable pageable);
 }

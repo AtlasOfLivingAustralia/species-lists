@@ -7,6 +7,12 @@ import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.http.HttpMethod.PUT;
 
+import au.org.ala.web.UserDetails;
+import au.org.ala.ws.security.TokenService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.net.HttpHeaders;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
@@ -18,7 +24,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpStatus;
@@ -30,14 +35,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.net.HttpHeaders;
-import com.nimbusds.oauth2.sdk.token.AccessToken;
-
-import au.org.ala.web.UserDetails;
-import au.org.ala.ws.security.TokenService;
-import jakarta.servlet.http.HttpServletResponse;
-
 // TODO: move this and related classes into ala-security-project
 @Service
 public class WebService {
@@ -48,23 +45,29 @@ public class WebService {
 
     @Value("${webservice.connect.timeout:600000}")
     private Integer connectTimeout;
+
     @Value("${webservice.read.timeout:600000}")
     private Integer readTimeout;
+
     @Value("${webservice.jwt:true}")
     private Boolean webserviceJwt;
+
     @Value("${app.name}")
     private String infoAppName;
+
     @Value("${app.version}")
     private String infoAppVersion;
 
     private static String appendQueryString(String url, Map<String, Object> params) {
         if (params != null) {
             StringBuilder sb = new StringBuilder();
-            params.forEach((k, v) -> {
+            params.forEach(
+                    (k, v) -> {
                         sb.append(sb.isEmpty() ? "?" : "&");
-                        sb.append(enc(String.valueOf(k))).append("=").append(enc(String.valueOf(v)));
-                    }
-            );
+                        sb.append(enc(String.valueOf(k)))
+                                .append("=")
+                                .append(enc(String.valueOf(v)));
+                    });
             return url + sb;
         }
 
@@ -76,158 +79,318 @@ public class WebService {
     }
 
     /**
-     * Sends an HTTP GET request to the specified URL. The URL must already be URL-encoded (if necessary).
-     * <p>
-     * Note: by default, the Accept header will be set to the same content type as the ContentType provided. To override
-     * this default behaviour, include an 'Accept' header in the 'customHeaders' parameter.
+     * Sends an HTTP GET request to the specified URL. The URL must already be URL-encoded (if
+     * necessary).
      *
-     * @param url           The url-encoded URL to send the request to
-     * @param params        Map of parameters to be appended to the query string. Parameters will be URL-encoded automatically.
-     * @param contentType   the desired content type for the request. Defaults to application/json
-     * @param includeApiKey true to include the service's API Key in the request headers (uses property 'service.apiKey').  If using JWTs, instead sends a JWT Bearer tokens Default = true.
-     * @param includeUser   true to include the userId and email in the request headers and the ALA-Auth cookie.  If using JWTs sends the current user's access token, if false only sends a ClientCredentials grant token for this apps client id Default = true.
-     * @param customHeaders Map of [headerName:value] for any extra HTTP headers to be sent with the request. Default = [:].
+     * <p>Note: by default, the Accept header will be set to the same content type as the
+     * ContentType provided. To override this default behaviour, include an 'Accept' header in the
+     * 'customHeaders' parameter.
+     *
+     * @param url The url-encoded URL to send the request to
+     * @param params Map of parameters to be appended to the query string. Parameters will be
+     *     URL-encoded automatically.
+     * @param contentType the desired content type for the request. Defaults to application/json
+     * @param includeApiKey true to include the service's API Key in the request headers (uses
+     *     property 'service.apiKey'). If using JWTs, instead sends a JWT Bearer tokens Default =
+     *     true.
+     * @param includeUser true to include the userId and email in the request headers and the
+     *     ALA-Auth cookie. If using JWTs sends the current user's access token, if false only sends
+     *     a ClientCredentials grant token for this apps client id Default = true.
+     * @param customHeaders Map of [headerName:value] for any extra HTTP headers to be sent with the
+     *     request. Default = [:].
      * @return [statusCode: int, resp: [:]] on success, or [statusCode: int, error: string] on error
      */
-    public Map<String, Object> get(String url, Map<String,Object> params, ContentType contentType, boolean includeApiKey, boolean includeUser, Map<String, Object> customHeaders) {
-        return send(GET, url, params, contentType, null, null, includeApiKey, includeUser, customHeaders);
+    public Map<String, Object> get(
+            String url,
+            Map<String, Object> params,
+            ContentType contentType,
+            boolean includeApiKey,
+            boolean includeUser,
+            Map<String, Object> customHeaders) {
+        return send(
+                GET,
+                url,
+                params,
+                contentType,
+                null,
+                null,
+                includeApiKey,
+                includeUser,
+                customHeaders);
     }
 
     /**
-     * Sends an HTTP PUT request to the specified URL. The URL must already be URL-encoded (if necessary).
-     * <p>
-     * Note: by default, the Accept header will be set to the same content type as the ContentType provided. To override
-     * this default behaviour, include an 'Accept' header in the 'customHeaders' parameter.
-     * <p>
-     * The body map will be sent as the JSON body of the request (i.e. use request.getJSON() on the receiving end).
+     * Sends an HTTP PUT request to the specified URL. The URL must already be URL-encoded (if
+     * necessary).
      *
-     * @param url           The url-encoded url to send the request to
-     * @param body          Object containing the data to be sent as the post body. e.g. Map, Array
-     * @param params        Map of parameters to be appended to the query string. Parameters will be URL-encoded automatically.
-     * @param contentType   the desired content type for the request. Defaults to application/json
-     * @param includeApiKey true to include the service's API Key in the request headers (uses property 'service.apiKey').  If using JWTs, instead sends a JWT Bearer tokens Default = true.
-     * @param includeUser   true to include the userId and email in the request headers and the ALA-Auth cookie.  If using JWTs sends the current user's access token, if false only sends a ClientCredentials grant token for this apps client id Default = true.
-     * @param customHeaders Map of [headerName:value] for any extra HTTP headers to be sent with the request. Default = [:].
+     * <p>Note: by default, the Accept header will be set to the same content type as the
+     * ContentType provided. To override this default behaviour, include an 'Accept' header in the
+     * 'customHeaders' parameter.
+     *
+     * <p>The body map will be sent as the JSON body of the request (i.e. use request.getJSON() on
+     * the receiving end).
+     *
+     * @param url The url-encoded url to send the request to
+     * @param body Object containing the data to be sent as the post body. e.g. Map, Array
+     * @param params Map of parameters to be appended to the query string. Parameters will be
+     *     URL-encoded automatically.
+     * @param contentType the desired content type for the request. Defaults to application/json
+     * @param includeApiKey true to include the service's API Key in the request headers (uses
+     *     property 'service.apiKey'). If using JWTs, instead sends a JWT Bearer tokens Default =
+     *     true.
+     * @param includeUser true to include the userId and email in the request headers and the
+     *     ALA-Auth cookie. If using JWTs sends the current user's access token, if false only sends
+     *     a ClientCredentials grant token for this apps client id Default = true.
+     * @param customHeaders Map of [headerName:value] for any extra HTTP headers to be sent with the
+     *     request. Default = [:].
      * @return [statusCode: int, resp: [:]] on success, or [statusCode: int, error: string] on error
      */
-    Map put(String url, Object body, Map params, ContentType contentType, boolean includeApiKey, boolean includeUser, Map customHeaders) {
-        return send(PUT, url, params, contentType, body, null, includeApiKey, includeUser, customHeaders);
+    Map put(
+            String url,
+            Object body,
+            Map params,
+            ContentType contentType,
+            boolean includeApiKey,
+            boolean includeUser,
+            Map customHeaders) {
+        return send(
+                PUT,
+                url,
+                params,
+                contentType,
+                body,
+                null,
+                includeApiKey,
+                includeUser,
+                customHeaders);
     }
 
     /**
-     * Sends an HTTP POST request to the specified URL. The URL must already be URL-encoded (if necessary).
-     * <p>
-     * Note: by default, the Accept header will be set to the same content type as the ContentType provided. To override
-     * this default behaviour, include an 'Accept' header in the 'customHeaders' parameter.
-     * <p>
-     * The body map will be sent as the body of the request (i.e. use request.getJSON() on the receiving end).
+     * Sends an HTTP POST request to the specified URL. The URL must already be URL-encoded (if
+     * necessary).
      *
-     * @param url           The url-encoded url to send the request to
-     * @param body          Object containing the data to be sent as the post body. e.g. Map, Array
-     * @param params        Map of parameters to be appended to the query string. Parameters will be URL-encoded automatically.
-     * @param contentType   the desired content type for the request. Defaults to application/json
-     * @param includeApiKey true to include the service's API Key in the request headers (uses property 'service.apiKey').  If using JWTs, instead sends a JWT Bearer tokens Default = true.
-     * @param includeUser   true to include the userId and email in the request headers and the ALA-Auth cookie.  If using JWTs sends the current user's access token, if false only sends a ClientCredentials grant token for this apps client id Default = true.
-     * @param customHeaders Map of [headerName:value] for any extra HTTP headers to be sent with the request. Default = [:].
+     * <p>Note: by default, the Accept header will be set to the same content type as the
+     * ContentType provided. To override this default behaviour, include an 'Accept' header in the
+     * 'customHeaders' parameter.
+     *
+     * <p>The body map will be sent as the body of the request (i.e. use request.getJSON() on the
+     * receiving end).
+     *
+     * @param url The url-encoded url to send the request to
+     * @param body Object containing the data to be sent as the post body. e.g. Map, Array
+     * @param params Map of parameters to be appended to the query string. Parameters will be
+     *     URL-encoded automatically.
+     * @param contentType the desired content type for the request. Defaults to application/json
+     * @param includeApiKey true to include the service's API Key in the request headers (uses
+     *     property 'service.apiKey'). If using JWTs, instead sends a JWT Bearer tokens Default =
+     *     true.
+     * @param includeUser true to include the userId and email in the request headers and the
+     *     ALA-Auth cookie. If using JWTs sends the current user's access token, if false only sends
+     *     a ClientCredentials grant token for this apps client id Default = true.
+     * @param customHeaders Map of [headerName:value] for any extra HTTP headers to be sent with the
+     *     request. Default = [:].
      * @return [statusCode: int, resp: [:]] on success, or [statusCode: int, error: string] on error
      */
-    public Map<String, Object> post(String url, Object body, Map<String, Object> params, ContentType contentType, boolean includeApiKey, boolean includeUser, Map<String, Object> customHeaders) {
-        return send(POST, url, params, contentType, body, null, includeApiKey, includeUser, customHeaders);
+    public Map<String, Object> post(
+            String url,
+            Object body,
+            Map<String, Object> params,
+            ContentType contentType,
+            boolean includeApiKey,
+            boolean includeUser,
+            Map<String, Object> customHeaders) {
+        return send(
+                POST,
+                url,
+                params,
+                contentType,
+                body,
+                null,
+                includeApiKey,
+                includeUser,
+                customHeaders);
     }
 
     /**
-     * Sends a multipart HTTP POST request to the specified URL. The URL must already be URL-encoded (if necessary).
-     * <p>
-     * Note: by default, the Accept header will be set to the same content type as the ContentType provided. To override
-     * this default behaviour, include an 'Accept' header in the 'customHeaders' parameter.
-     * <p>
-     * Each item in the body map will be sent as a separate Part in the Multipart Request. To send the entire map as a
-     * single part, you will need too use the format [data: body].
-     * <p>
-     * Files can be one of the following types:
+     * Sends a multipart HTTP POST request to the specified URL. The URL must already be URL-encoded
+     * (if necessary).
+     *
+     * <p>Note: by default, the Accept header will be set to the same content type as the
+     * ContentType provided. To override this default behaviour, include an 'Accept' header in the
+     * 'customHeaders' parameter.
+     *
+     * <p>Each item in the body map will be sent as a separate Part in the Multipart Request. To
+     * send the entire map as a single part, you will need too use the format [data: body].
+     *
+     * <p>Files can be one of the following types:
+     *
      * <ul>
-     * <li>byte[]</li>
-     * <li>CommonsMultipartFile</li>
-     * <li>InputStream</li>
-     * <li>File</li>
-     * <li>Anything that supports the .bytes accessor</li>
+     *   <li>byte[]
+     *   <li>CommonsMultipartFile
+     *   <li>InputStream
+     *   <li>File
+     *   <li>Anything that supports the .bytes accessor
      * </ul>
      *
-     * @param url             The url-encoded url to send the request to
-     * @param body            Object containing the data to be sent as the post body. e.g. Map, Array
-     * @param params          Map of parameters to be appended to the query string. Parameters will be URL-encoded automatically.
-     * @param files           List of 0 or more files to be included in the multipart request (note: if files is null, then the request will NOT be multipart)
-     * @param partContentType the desired content type for the request PARTS (the request itself will always be sent as multipart/form-data). Defaults to application/json. All non-file parts will have the same content type.
-     * @param includeApiKey   true to include the service's API Key in the request headers (uses property 'service.apiKey').  If using JWTs, instead sends a JWT Bearer tokens Default = true.
-     * @param includeUser     true to include the userId and email in the request headers and the ALA-Auth cookie.  If using JWTs sends the current user's access token, if false only sends a ClientCredentials grant token for this apps client id Default = true.
-     * @param customHeaders   Map of [headerName:value] for any extra HTTP headers to be sent with the request. Default = [:].
+     * @param url The url-encoded url to send the request to
+     * @param body Object containing the data to be sent as the post body. e.g. Map, Array
+     * @param params Map of parameters to be appended to the query string. Parameters will be
+     *     URL-encoded automatically.
+     * @param files List of 0 or more files to be included in the multipart request (note: if files
+     *     is null, then the request will NOT be multipart)
+     * @param partContentType the desired content type for the request PARTS (the request itself
+     *     will always be sent as multipart/form-data). Defaults to application/json. All non-file
+     *     parts will have the same content type.
+     * @param includeApiKey true to include the service's API Key in the request headers (uses
+     *     property 'service.apiKey'). If using JWTs, instead sends a JWT Bearer tokens Default =
+     *     true.
+     * @param includeUser true to include the userId and email in the request headers and the
+     *     ALA-Auth cookie. If using JWTs sends the current user's access token, if false only sends
+     *     a ClientCredentials grant token for this apps client id Default = true.
+     * @param customHeaders Map of [headerName:value] for any extra HTTP headers to be sent with the
+     *     request. Default = [:].
      * @return [statusCode: int, resp: [:]] on success, or [statusCode: int, error: string] on error
      */
-    Map postMultipart(String url, Object body, Map params, List files, ContentType partContentType, boolean includeApiKey, boolean includeUser, Map customHeaders) {
-        return send(POST, url, params, partContentType, body, files, includeApiKey, includeUser, customHeaders);
+    Map postMultipart(
+            String url,
+            Object body,
+            Map params,
+            List files,
+            ContentType partContentType,
+            boolean includeApiKey,
+            boolean includeUser,
+            Map customHeaders) {
+        return send(
+                POST,
+                url,
+                params,
+                partContentType,
+                body,
+                files,
+                includeApiKey,
+                includeUser,
+                customHeaders);
     }
 
     /**
-     * Sends a multipart HTTP POST request to the specified URL. The URL must already be URL-encoded (if necessary).
-     * <p>
-     * Note: by default, the Accept header will be set to the same content type as the ContentType provided. To override
-     * this default behaviour, include an 'Accept' header in the 'customHeaders' parameter.
-     * <p>
-     * Each item in the body map will be sent as a separate Part in the Multipart Request. To send the entire map as a
-     * single part, you will need too use the format [data: body].
-     * <p>
-     * Files map is [String: Object] that can be one of the following types:
+     * Sends a multipart HTTP POST request to the specified URL. The URL must already be URL-encoded
+     * (if necessary).
+     *
+     * <p>Note: by default, the Accept header will be set to the same content type as the
+     * ContentType provided. To override this default behaviour, include an 'Accept' header in the
+     * 'customHeaders' parameter.
+     *
+     * <p>Each item in the body map will be sent as a separate Part in the Multipart Request. To
+     * send the entire map as a single part, you will need too use the format [data: body].
+     *
+     * <p>Files map is [String: Object] that can be one of the following types:
+     *
      * <ul>
-     * <li>byte[]</li>
-     * <li>CommonsMultipartFile</li>
-     * <li>InputStream</li>
-     * <li>File</li>
-     * <li>Anything that supports the .bytes accessor</li>
+     *   <li>byte[]
+     *   <li>CommonsMultipartFile
+     *   <li>InputStream
+     *   <li>File
+     *   <li>Anything that supports the .bytes accessor
      * </ul>
      *
-     * @param url             The url-encoded url to send the request to
-     * @param body            Object containing the data to be sent as the post body. e.g. Map, Array
-     * @param params          Map of parameters to be appended to the query string. Parameters will be URL-encoded automatically.
-     * @param files           Map of 0 or more names and files to be included in the multipart request (note: if files is null, then the request will NOT be multipart)
-     * @param partContentType the desired content type for the request PARTS (the request itself will always be sent as multipart/form-data). Defaults to application/json. All non-file parts will have the same content type.
-     * @param includeApiKey   true to include the service's API Key in the request headers (uses property 'service.apiKey').  If using JWTs, instead sends a JWT Bearer tokens Default = true.
-     * @param includeUser     true to include the userId and email in the request headers and the ALA-Auth cookie.  If using JWTs sends the current user's access token, if false only sends a ClientCredentials grant token for this apps client id Default = true.
-     * @param customHeaders   Map of [headerName:value] for any extra HTTP headers to be sent with the request. Default = [:].
+     * @param url The url-encoded url to send the request to
+     * @param body Object containing the data to be sent as the post body. e.g. Map, Array
+     * @param params Map of parameters to be appended to the query string. Parameters will be
+     *     URL-encoded automatically.
+     * @param files Map of 0 or more names and files to be included in the multipart request (note:
+     *     if files is null, then the request will NOT be multipart)
+     * @param partContentType the desired content type for the request PARTS (the request itself
+     *     will always be sent as multipart/form-data). Defaults to application/json. All non-file
+     *     parts will have the same content type.
+     * @param includeApiKey true to include the service's API Key in the request headers (uses
+     *     property 'service.apiKey'). If using JWTs, instead sends a JWT Bearer tokens Default =
+     *     true.
+     * @param includeUser true to include the userId and email in the request headers and the
+     *     ALA-Auth cookie. If using JWTs sends the current user's access token, if false only sends
+     *     a ClientCredentials grant token for this apps client id Default = true.
+     * @param customHeaders Map of [headerName:value] for any extra HTTP headers to be sent with the
+     *     request. Default = [:].
      * @return [statusCode: int, resp: [:]] on success, or [statusCode: int, error: string] on error
      */
-    Map postMultipart(String url, Object body, Map params, Map files, ContentType partContentType, boolean includeApiKey, boolean includeUser, Map customHeaders) {
-        return send(POST, url, params, partContentType, body, files, includeApiKey, includeUser, customHeaders);
+    Map postMultipart(
+            String url,
+            Object body,
+            Map params,
+            Map files,
+            ContentType partContentType,
+            boolean includeApiKey,
+            boolean includeUser,
+            Map customHeaders) {
+        return send(
+                POST,
+                url,
+                params,
+                partContentType,
+                body,
+                files,
+                includeApiKey,
+                includeUser,
+                customHeaders);
     }
 
     /**
-     * Sends a HTTP DELETE request to the specified URL. The URL must already be URL-encoded (if necessary).
-     * <p>
-     * Note: by default, the Accept header will be set to the same content type as the ContentType provided. To override
-     * this default behaviour, include an 'Accept' header in the 'customHeaders' parameter.
+     * Sends a HTTP DELETE request to the specified URL. The URL must already be URL-encoded (if
+     * necessary).
      *
-     * @param url           The url-encoded url to send the request to
-     * @param params        Map of parameters to be appended to the query string. Parameters will be URL-encoded automatically.
-     * @param contentType   the desired content type for the request. Defaults to application/json
-     * @param includeApiKey true to include the service's API Key in the request headers (uses property 'service.apiKey').  If using JWTs, instead sends a JWT Bearer tokens Default = true.
-     * @param includeUser   true to include the userId and email in the request headers and the ALA-Auth cookie.  If using JWTs sends the current user's access token, if false only sends a ClientCredentials grant token for this apps client id Default = true.
-     * @param customHeaders Map of [headerName:value] for any extra HTTP headers to be sent with the request. Default = [:].
+     * <p>Note: by default, the Accept header will be set to the same content type as the
+     * ContentType provided. To override this default behaviour, include an 'Accept' header in the
+     * 'customHeaders' parameter.
+     *
+     * @param url The url-encoded url to send the request to
+     * @param params Map of parameters to be appended to the query string. Parameters will be
+     *     URL-encoded automatically.
+     * @param contentType the desired content type for the request. Defaults to application/json
+     * @param includeApiKey true to include the service's API Key in the request headers (uses
+     *     property 'service.apiKey'). If using JWTs, instead sends a JWT Bearer tokens Default =
+     *     true.
+     * @param includeUser true to include the userId and email in the request headers and the
+     *     ALA-Auth cookie. If using JWTs sends the current user's access token, if false only sends
+     *     a ClientCredentials grant token for this apps client id Default = true.
+     * @param customHeaders Map of [headerName:value] for any extra HTTP headers to be sent with the
+     *     request. Default = [:].
      * @return [statusCode: int, resp: [:]] on success, or [statusCode: int, error: string] on error
      */
-    public Map delete(String url, Map params, ContentType contentType, boolean includeApiKey, boolean includeUser, Map customHeaders) {
-        return send(DELETE, url, params, contentType, null, null, includeApiKey, includeUser, customHeaders);
+    public Map delete(
+            String url,
+            Map params,
+            ContentType contentType,
+            boolean includeApiKey,
+            boolean includeUser,
+            Map customHeaders) {
+        return send(
+                DELETE,
+                url,
+                params,
+                contentType,
+                null,
+                null,
+                includeApiKey,
+                includeUser,
+                customHeaders);
     }
 
     /**
      * Proxies a request URL but doesn't assume the response is text based.
-     * <p>
-     * Used for operations like proxying a download request from one application to another.
      *
-     * @param response      The HttpServletResponse of the calling request: the response from the proxied request will be written to this object
-     * @param url           The URL of the service to proxy to
-     * @param includeApiKey true to include the service's API Key in the request headers (uses property 'service.apiKey').  If using JWTs, instead sends a JWT Bearer tokens Default = true.
-     * @param includeUser   true to include the userId and email in the request headers and the ALA-Auth cookie.  If using JWTs sends the current user's access token, if false only sends a ClientCredentials grant token for this apps client id Default = true.
+     * <p>Used for operations like proxying a download request from one application to another.
+     *
+     * @param response The HttpServletResponse of the calling request: the response from the proxied
+     *     request will be written to this object
+     * @param url The URL of the service to proxy to
+     * @param includeApiKey true to include the service's API Key in the request headers (uses
+     *     property 'service.apiKey'). If using JWTs, instead sends a JWT Bearer tokens Default =
+     *     true.
+     * @param includeUser true to include the userId and email in the request headers and the
+     *     ALA-Auth cookie. If using JWTs sends the current user's access token, if false only sends
+     *     a ClientCredentials grant token for this apps client id Default = true.
      */
-    void proxyGetRequest(HttpServletResponse response, String url, boolean includeApiKey, boolean includeUser) {
+    void proxyGetRequest(
+            HttpServletResponse response, String url, boolean includeApiKey, boolean includeUser) {
         logger.debug("Proxying GET request to " + url);
         HttpURLConnection conn = null;
 
@@ -264,14 +427,27 @@ public class WebService {
     /**
      * Proxies a request URL with post data but doesn't assume the response is text based.
      *
-     * @param response      The HttpServletResponse of the calling request: the response from the proxied request will be written to this object
-     * @param url           The URL of the service to proxy to
-     * @param postBody      The POST data to send with the proxied request. If it is a Collection, then it will be converted to JSON, otherwise it will be sent as a String.
-     * @param contentType   the desired content type for the request. Defaults to application/json.
-     * @param includeApiKey true to include the service's API Key in the request headers (uses property 'service.apiKey').  If using JWTs, instead sends a JWT Bearer tokens Default = true.
-     * @param includeUser   true to include the userId and email in the request headers and the ALA-Auth cookie.  If using JWTs sends the current user's access token, if false only sends a ClientCredentials grant token for this apps client id Default = true.
+     * @param response The HttpServletResponse of the calling request: the response from the proxied
+     *     request will be written to this object
+     * @param url The URL of the service to proxy to
+     * @param postBody The POST data to send with the proxied request. If it is a Collection, then
+     *     it will be converted to JSON, otherwise it will be sent as a String.
+     * @param contentType the desired content type for the request. Defaults to application/json.
+     * @param includeApiKey true to include the service's API Key in the request headers (uses
+     *     property 'service.apiKey'). If using JWTs, instead sends a JWT Bearer tokens Default =
+     *     true.
+     * @param includeUser true to include the userId and email in the request headers and the
+     *     ALA-Auth cookie. If using JWTs sends the current user's access token, if false only sends
+     *     a ClientCredentials grant token for this apps client id Default = true.
      */
-    void proxyPostRequest(HttpServletResponse response, String url, Object postBody, ContentType contentType, boolean includeApiKey, boolean includeUser, Map<String, String> cookies) {
+    void proxyPostRequest(
+            HttpServletResponse response,
+            String url,
+            Object postBody,
+            ContentType contentType,
+            boolean includeApiKey,
+            boolean includeUser,
+            Map<String, String> cookies) {
         logger.debug("Proxying POST request to " + url);
 
         HttpURLConnection conn = null;
@@ -291,20 +467,25 @@ public class WebService {
                 }
             }
 
-            OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream(), StandardCharsets.UTF_8);
+            OutputStreamWriter wr =
+                    new OutputStreamWriter(conn.getOutputStream(), StandardCharsets.UTF_8);
             if (contentType == ContentType.APPLICATION_JSON && postBody instanceof Collection) {
                 wr.write(new ObjectMapper().writer().writeValueAsString(postBody));
             } else if (contentType == ContentType.APPLICATION_FORM_URLENCODED) {
                 StringBuilder formData = new StringBuilder();
                 if (postBody instanceof Map) {
-                    ((Map<?, ?>) postBody).forEach((k, v) -> {
-                        formData.append(formData.isEmpty() ? "" : "&").append(enc(String.valueOf(k))).append("=");
-                        if (v instanceof Collection || v instanceof String[]) {
-                            formData.append(enc(StringUtils.join(v, ", ")));
-                        } else {
-                            formData.append(enc(String.valueOf(v)));
-                        }
-                    });
+                    ((Map<?, ?>) postBody)
+                            .forEach(
+                                    (k, v) -> {
+                                        formData.append(formData.isEmpty() ? "" : "&")
+                                                .append(enc(String.valueOf(k)))
+                                                .append("=");
+                                        if (v instanceof Collection || v instanceof String[]) {
+                                            formData.append(enc(StringUtils.join(v, ", ")));
+                                        } else {
+                                            formData.append(enc(String.valueOf(v)));
+                                        }
+                                    });
                 }
                 wr.write(formData.toString());
             } else {
@@ -335,9 +516,16 @@ public class WebService {
         }
     }
 
-    private Map<String, Object> send(HttpMethod method, String url, Map<String, Object> params, ContentType contentType,
-                    Object body, Object files, boolean includeApiKey, boolean includeUser,
-                    Map<String, Object> customHeaders) {
+    private Map<String, Object> send(
+            HttpMethod method,
+            String url,
+            Map<String, Object> params,
+            ContentType contentType,
+            Object body,
+            Object files,
+            boolean includeApiKey,
+            boolean includeUser,
+            Map<String, Object> customHeaders) {
         logger.debug(method.name() + " request to " + url);
 
         Map<String, Object> result = new HashMap<String, Object>();
@@ -381,7 +569,8 @@ public class WebService {
             result.put("statusCode", statusCode);
             result.put("headers", conn.getHeaderFields());
 
-            if (statusCode == HttpURLConnection.HTTP_OK || statusCode == HttpURLConnection.HTTP_CREATED) {
+            if (statusCode == HttpURLConnection.HTTP_OK
+                    || statusCode == HttpURLConnection.HTTP_CREATED) {
                 // TODO: detect non JSON response
                 String text = IOUtils.toString(conn.getInputStream(), StandardCharsets.UTF_8);
                 try {
@@ -392,12 +581,24 @@ public class WebService {
                 }
             } else {
                 logger.error(url + " return statusCode: " + statusCode);
-                result.put("error", "Failed calling web service - service returned HTTP " + statusCode);
+                result.put(
+                        "error",
+                        "Failed calling web service - service returned HTTP " + statusCode);
             }
         } catch (Exception e) {
             logger.error("Failed sending " + method.name() + "request to " + url, e);
             result.put("statusCode", HttpStatus.SC_INTERNAL_SERVER_ERROR);
-            result.put("error", "Failed calling web service. " + e.getClass().getName() + " " + e.getMessage() + " URL= " + url + ", method " + method.name() + ".");
+            result.put(
+                    "error",
+                    "Failed calling web service. "
+                            + e.getClass().getName()
+                            + " "
+                            + e.getMessage()
+                            + " URL= "
+                            + url
+                            + ", method "
+                            + method.name()
+                            + ".");
         }
 
         return result;
@@ -408,15 +609,21 @@ public class WebService {
         conn.setReadTimeout(readTimeout);
     }
 
-    private void configureRequestHeaders(HttpURLConnection conn, boolean includeApiKey, boolean includeUser, Map<String, Object> customHeaders) {
+    private void configureRequestHeaders(
+            HttpURLConnection conn,
+            boolean includeApiKey,
+            boolean includeUser,
+            Map<String, Object> customHeaders) {
         UserDetails user = null;
         // We can only get the user id from the auth service if we are running in a http request.
         // The Sprint RequestContextHolder's requestAttributes will be null if there is no request.
-        // The #currentRequestAttributes method, which is used by the authService, throws an IllegalStateException if
-        // there is no request, so we need to check if requestAttributes exist before trying to get the user details.
-//        if (includeUser && RequestContextHolder.getRequestAttributes() != null) {
+        // The #currentRequestAttributes method, which is used by the authService, throws an
+        // IllegalStateException if
+        // there is no request, so we need to check if requestAttributes exist before trying to get
+        // the user details.
+        //        if (includeUser && RequestContextHolder.getRequestAttributes() != null) {
         // TODO enable authService; user = authService.userDetails();
-//        }
+        //        }
 
         conn.setRequestProperty(HttpHeaders.USER_AGENT, getUserAgent());
 
@@ -429,62 +636,77 @@ public class WebService {
         }
     }
 
-    /**
-     * Files is a List<Object> or Map<String, Object>.
-     */
-//    private static HttpEntity constructMultiPartEntity(Object parts, Object files, ContentType partContentType) {
-//        MultipartEntityBuilder entityBuilder = MultipartEntityBuilder.create();
-//        entityBuilder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
-//
-//        if (parts instanceof Map) {
-//            parts?.each { key, value ->
-//                def val = partContentType == ContentType.APPLICATION_JSON && !(value instanceof net.sf.json.JSON) ? value as JSON : value
-//                entityBuilder.addPart(key?.toString(), new StringBody((val) as String, partContentType))
-//            }
-//        } else if (parts != null) {
-//            def val = partContentType == ContentType.APPLICATION_JSON && !(parts instanceof net.sf.json.JSON) ? parts as JSON : parts
-//            entityBuilder.addTextBody("json", val as String, partContentType);
-//        }
-//
-//        if (files instanceof List) {
-//            files.eachWithIndex { it, index ->
-//                if (it instanceof byte[]) {
-//                    entityBuilder.addPart("file${index}", new ByteArrayBody(it, "file${index}"));
-//                }
-//                // Grails 3.3 multipart file is instance of org.springframework.web.multipart.support.StandardMultipartHttpServletRequest.StandardMultipartFile
-//                // But StandardMultipartFile and CommonMultipartFile are both inherited from MultipartFile
-//                else if (it instanceof MultipartFile) {
-//                    entityBuilder.addPart(it.originalFilename, new InputStreamBody(it.inputStream, it.contentType, it.originalFilename))
-//                } else if (it instanceof InputStream) {
-//                    entityBuilder.addPart("file${index}", new InputStreamBody(it, "file${index}"));
-//                } else if (it instanceof File) {
-//                    entityBuilder.addPart(it.getName(), new FileBody(it, it.getName()));
-//                } else {
-//                    entityBuilder.addPart("file${index}", new ByteArrayBody(it.bytes, "file${index}"));
-//                }
-//            }
-//        } else if (files instanceof Map) {
-//            files.eachWithIndex { it, index ->
-//                if (it.value instanceof byte[]) {
-//                    entityBuilder.addPart(it.key, new ByteArrayBody(it.value, "file${index}"));
-//                }
-//                // Grails 3.3 multipart file is instance of org.springframework.web.multipart.support.StandardMultipartHttpServletRequest.StandardMultipartFile
-//                // But StandardMultipartFile and CommonMultipartFile are both inherited from MultipartFile
-//                else if (it.value instanceof MultipartFile) {
-//                    entityBuilder.addPart(it.key, new InputStreamBody(it.value.inputStream, it.value.contentType, it.value.originalFilename));
-//                } else if (it.value instanceof InputStream) {
-//                    entityBuilder.addPart(it.key, new InputStreamBody(it.value, "file${index}"));
-//                } else if (it.value instanceof File) {
-//                    entityBuilder.addPart(it.key, new FileBody(it.value, it.value.getName()));
-//                } else {
-//                    entityBuilder.addPart(it.key, new ByteArrayBody(it.value.bytes, "file${index}"));
-//                }
-//            }
-//        }
-//
-//        entityBuilder.build();
-//    }
-    private URLConnection configureConnection(String url, boolean includeApiKey, boolean includeUser) throws IOException {
+    /** Files is a List<Object> or Map<String, Object>. */
+    //    private static HttpEntity constructMultiPartEntity(Object parts, Object files, ContentType
+    // partContentType) {
+    //        MultipartEntityBuilder entityBuilder = MultipartEntityBuilder.create();
+    //        entityBuilder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+    //
+    //        if (parts instanceof Map) {
+    //            parts?.each { key, value ->
+    //                def val = partContentType == ContentType.APPLICATION_JSON && !(value
+    // instanceof net.sf.json.JSON) ? value as JSON : value
+    //                entityBuilder.addPart(key?.toString(), new StringBody((val) as String,
+    // partContentType))
+    //            }
+    //        } else if (parts != null) {
+    //            def val = partContentType == ContentType.APPLICATION_JSON && !(parts instanceof
+    // net.sf.json.JSON) ? parts as JSON : parts
+    //            entityBuilder.addTextBody("json", val as String, partContentType);
+    //        }
+    //
+    //        if (files instanceof List) {
+    //            files.eachWithIndex { it, index ->
+    //                if (it instanceof byte[]) {
+    //                    entityBuilder.addPart("file${index}", new ByteArrayBody(it,
+    // "file${index}"));
+    //                }
+    //                // Grails 3.3 multipart file is instance of
+    // org.springframework.web.multipart.support.StandardMultipartHttpServletRequest.StandardMultipartFile
+    //                // But StandardMultipartFile and CommonMultipartFile are both inherited from
+    // MultipartFile
+    //                else if (it instanceof MultipartFile) {
+    //                    entityBuilder.addPart(it.originalFilename, new
+    // InputStreamBody(it.inputStream, it.contentType, it.originalFilename))
+    //                } else if (it instanceof InputStream) {
+    //                    entityBuilder.addPart("file${index}", new InputStreamBody(it,
+    // "file${index}"));
+    //                } else if (it instanceof File) {
+    //                    entityBuilder.addPart(it.getName(), new FileBody(it, it.getName()));
+    //                } else {
+    //                    entityBuilder.addPart("file${index}", new ByteArrayBody(it.bytes,
+    // "file${index}"));
+    //                }
+    //            }
+    //        } else if (files instanceof Map) {
+    //            files.eachWithIndex { it, index ->
+    //                if (it.value instanceof byte[]) {
+    //                    entityBuilder.addPart(it.key, new ByteArrayBody(it.value,
+    // "file${index}"));
+    //                }
+    //                // Grails 3.3 multipart file is instance of
+    // org.springframework.web.multipart.support.StandardMultipartHttpServletRequest.StandardMultipartFile
+    //                // But StandardMultipartFile and CommonMultipartFile are both inherited from
+    // MultipartFile
+    //                else if (it.value instanceof MultipartFile) {
+    //                    entityBuilder.addPart(it.key, new InputStreamBody(it.value.inputStream,
+    // it.value.contentType, it.value.originalFilename));
+    //                } else if (it.value instanceof InputStream) {
+    //                    entityBuilder.addPart(it.key, new InputStreamBody(it.value,
+    // "file${index}"));
+    //                } else if (it.value instanceof File) {
+    //                    entityBuilder.addPart(it.key, new FileBody(it.value, it.value.getName()));
+    //                } else {
+    //                    entityBuilder.addPart(it.key, new ByteArrayBody(it.value.bytes,
+    // "file${index}"));
+    //                }
+    //            }
+    //        }
+    //
+    //        entityBuilder.build();
+    //    }
+    private URLConnection configureConnection(
+            String url, boolean includeApiKey, boolean includeUser) throws IOException {
         URLConnection conn = URI.create(url).toURL().openConnection();
 
         conn.setConnectTimeout(connectTimeout);
@@ -497,17 +719,20 @@ public class WebService {
         return conn;
     }
 
-    void includeAuthTokens(HttpURLConnection conn, Boolean includeUser, Boolean includeApiKey, UserDetails user) {
+    void includeAuthTokens(
+            HttpURLConnection conn, Boolean includeUser, Boolean includeApiKey, UserDetails user) {
         includeAuthTokensInternal(conn, includeUser, includeApiKey, user);
     }
 
-    private void includeAuthTokensInternal(HttpURLConnection conn, Boolean includeUser, Boolean includeApiKey, UserDetails user) {
+    private void includeAuthTokensInternal(
+            HttpURLConnection conn, Boolean includeUser, Boolean includeApiKey, UserDetails user) {
         if (webserviceJwt) {
             includeAuthTokensJwt(conn, includeUser, includeApiKey, user);
         }
     }
 
-    void includeAuthTokensJwt(HttpURLConnection conn, Boolean includeUser, Boolean includeApiKey, UserDetails user) {
+    void includeAuthTokensJwt(
+            HttpURLConnection conn, Boolean includeUser, Boolean includeApiKey, UserDetails user) {
         if ((user != null && includeUser) || (includeApiKey)) {
             AccessToken token = tokenService.getAuthToken(user != null && includeUser, null, null);
             if (token != null) {

@@ -10,6 +10,6 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @AllArgsConstructor
 public class FacetCount {
-  private String value;
-  private Long count;
+    private String value;
+    private Long count;
 }

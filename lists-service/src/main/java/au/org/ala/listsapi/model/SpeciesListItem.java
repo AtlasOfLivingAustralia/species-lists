@@ -1,26 +1,23 @@
 package au.org.ala.listsapi.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.index.Indexed;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
 
 @org.springframework.data.mongodb.core.mapping.Document(collection = "listItems")
 @NoArgsConstructor
@@ -31,10 +28,9 @@ public class SpeciesListItem {
     @JsonSerialize(using = ToStringSerializer.class)
     @Id
     private ObjectId id;
-    @Version
-    private Integer version;
-    @Indexed
-    private String speciesListID;
+
+    @Version private Integer version;
+    @Indexed private String speciesListID;
     private String taxonID;
     private String suppliedName;
     private String scientificName;
@@ -48,10 +44,8 @@ public class SpeciesListItem {
     private List<KeyValue> properties;
     private Classification classification;
 
-    @CreatedDate
-    public Date dateCreated;
-    @LastModifiedDate
-    public Date lastUpdated;
+    @CreatedDate public Date dateCreated;
+    @LastModifiedDate public Date lastUpdated;
     private String lastUpdatedBy;
 
     public Map<String, String> toTaxonMap() {
@@ -59,25 +53,41 @@ public class SpeciesListItem {
         taxon.put("taxonID", this.taxonID);
         taxon.put("scientificName", this.scientificName);
         taxon.put("vernacularName", this.vernacularName);
-        taxon.put("kingdom", this.kingdom != null ? this.kingdom : this.properties != null ? this.properties.stream()
-                .filter(kv -> "rawkingdom".equals(kv.getKey()))
-                .map(KeyValue::getValue)
-                .findFirst()
-                .orElse(null) : null);
+        taxon.put(
+                "kingdom",
+                this.kingdom != null
+                        ? this.kingdom
+                        : this.properties != null
+                                ? this.properties.stream()
+                                        .filter(kv -> "rawkingdom".equals(kv.getKey()))
+                                        .map(KeyValue::getValue)
+                                        .findFirst()
+                                        .orElse(null)
+                                : null);
         taxon.put("phylum", this.phylum);
         taxon.put("class", this.classs);
         taxon.put("order", this.order);
-        taxon.put("family", this.family != null ? this.family : this.properties != null ? this.properties.stream()
-                .filter(kv -> "rawfamily".equals(kv.getKey()))
-                .map(KeyValue::getValue)
-                .findFirst()
-                .orElse(null) : null);
+        taxon.put(
+                "family",
+                this.family != null
+                        ? this.family
+                        : this.properties != null
+                                ? this.properties.stream()
+                                        .filter(kv -> "rawfamily".equals(kv.getKey()))
+                                        .map(KeyValue::getValue)
+                                        .findFirst()
+                                        .orElse(null)
+                                : null);
         taxon.put("genus", this.genus);
-        taxon.put("rank", this.properties != null ? this.properties.stream()
-            .filter(kv -> "taxonRank".equals(kv.getKey()))
-            .map(KeyValue::getValue)
-            .findFirst()
-            .orElse(null) : this.classification != null ? this.classification.getRank() : null);
+        taxon.put(
+                "rank",
+                this.properties != null
+                        ? this.properties.stream()
+                                .filter(kv -> "taxonRank".equals(kv.getKey()))
+                                .map(KeyValue::getValue)
+                                .findFirst()
+                                .orElse(null)
+                        : this.classification != null ? this.classification.getRank() : null);
         return taxon;
     }
 
@@ -142,5 +152,4 @@ public class SpeciesListItem {
     public String getClasss() {
         return this.classs;
     }
-
 }

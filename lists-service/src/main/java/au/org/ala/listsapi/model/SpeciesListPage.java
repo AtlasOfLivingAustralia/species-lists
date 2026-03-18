@@ -15,16 +15,15 @@
 
 package au.org.ala.listsapi.model;
 
+import java.io.Serializable;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.io.Serializable;
-import java.util.List;
-
 /**
- * Model class representing a species list page model
- * This POJO is used for controller response serialization only.
+ * Model class representing a species list page model This POJO is used for controller response
+ * serialization only.
  */
 @Data
 @NoArgsConstructor
