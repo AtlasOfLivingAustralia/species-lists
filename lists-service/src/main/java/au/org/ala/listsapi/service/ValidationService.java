@@ -44,8 +44,7 @@ public class ValidationService {
                     objectMapper.readValue(
                             inputStream,
                             new TypeReference<HashMap<String, List<ConstraintListItem>>>() {});
-            System.out.println(
-                    "Constraints loaded successfully: " + constraints.size() + " categories.");
+            log.info("Constraints loaded successfully: {} categories.", constraints.size());
 
         } catch (IOException e) {
             // Handle exceptions appropriately (e.g., logging, re-throwing a custom exception)

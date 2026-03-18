@@ -81,7 +81,7 @@ public class MigrateService {
                 validationService.getConstraintsByKey(ConstraintType.licence);
         // Get the second licence value (first is CC0) if it exists, otherwise default to "CC-BY"
         defaultLicence =
-                (licenceValues != null && !licenceValues.isEmpty())
+                (licenceValues != null && licenceValues.size() > 1)
                         ? licenceValues.get(1).getValue()
                         : "CC-BY";
     }
@@ -399,10 +399,12 @@ public class MigrateService {
                                             tempDirectory,
                                             "species-list-migrate-" + safeDataResourceUid + ".csv");
 
-                            // Validate that the resolved path is within the temp directory
-                            if (!localFile
-                                    .getCanonicalPath()
-                                    .startsWith(tempDirectory.getCanonicalPath())) {
+                            // Validate that the resolved path is within the temp directory.
+                            // Append File.separator so that a directory like /tmp/foo cannot
+                            // pass a check against a canonical prefix of /tmp/f.
+                            String canonicalTempDir =
+                                    tempDirectory.getCanonicalPath() + File.separator;
+                            if (!localFile.getCanonicalPath().startsWith(canonicalTempDir)) {
                                 throw new SecurityException(
                                         "Invalid file path: potential path traversal detected");
                             }

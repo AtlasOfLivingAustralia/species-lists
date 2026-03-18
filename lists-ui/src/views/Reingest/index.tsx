@@ -30,6 +30,7 @@ export default function Reingest() {
   const [ingesting, setIngesting] = useState<boolean>(false);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [meta, setMeta] = useState<SpeciesList | null>(null);
+  const [metaError, setMetaError] = useState<boolean>(false);
 
   useDocumentTitle(meta?.title + ' reingest' || 'Loading...');
   const ala = useALA();
@@ -54,6 +55,16 @@ export default function Reingest() {
         setMeta(result.meta);
       } catch (err) {
         console.error('Failed to load list metadata', err);
+        setMetaError(true);
+        notifications.show({
+          message: intl.formatMessage({
+            id: 'reingest.error.load',
+            defaultMessage: 'Failed to load list metadata. Please refresh and try again.',
+          }),
+          color: 'red',
+          position: 'bottom-left',
+          radius: 'md',
+        });
       }
     };
 
@@ -79,8 +90,7 @@ export default function Reingest() {
         radius: 'md',
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [result?.localFile, meta?.id]);
+  }, [ala, result?.localFile, meta?.id]);
 
   const handleReset = useCallback(() => {
     setResult(null);
@@ -110,7 +120,7 @@ export default function Reingest() {
               </Text>
             </Stack>
             <Group>
-              <Button onClick={handleIngest}><FormattedMessage id='reingest.confirm.reingestion' defaultMessage='Confirm re-ingestion'/></Button>
+              <Button onClick={handleIngest} disabled={!meta || metaError}><FormattedMessage id='reingest.confirm.reingestion' defaultMessage='Confirm re-ingestion'/></Button>
               <Button onClick={handleReset}><FormattedMessage id='reingest.cacel.reingestion' defaultMessage='Cancel'/></Button>
             </Group>
           </Group>
