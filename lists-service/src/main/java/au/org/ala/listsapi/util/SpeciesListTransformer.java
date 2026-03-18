@@ -92,7 +92,7 @@ public class SpeciesListTransformer {
         version1.setDescription(speciesList.getDescription());
         version1.setListType(speciesList.getListType());
         version1.setRegion(speciesList.getRegion());
-        version1.setSdsType(null); // Not implemented in SpeciesList
+        version1.setSdsType(Boolean.TRUE.equals(speciesList.getIsSDS()) ? "CONSERVATION" : null);
         version1.setGeneralisation(null); // Not implemented in SpeciesList
         version1.setWkt(speciesList.getWkt());
 

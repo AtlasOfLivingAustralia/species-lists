@@ -11,6 +11,10 @@
   "OTHER": "Other",
   "SPATIAL_PORTAL": "Spatial Portal",
 
+  "ingest.step.setup": "Setting up list",
+  "ingest.step.matching": "Matching taxa",
+  "ingest.step.finalising": "Finalising list",
+
   "breadcrumb.home": "Home",
   "breadcrumb.my-lists": "My Lists",
 

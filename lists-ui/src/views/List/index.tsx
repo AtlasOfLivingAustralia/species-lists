@@ -579,8 +579,9 @@ function List() {
                 disableNavigation={true}
                 onProgress={(progress) => {
                   if (
-                    progress.elasticTotal === progress.rowCount &&
-                    lastProgress
+                    progress.completed ||
+                    (progress.elasticTotal === progress.rowCount &&
+                      lastProgress)
                   ) {
                     setRematching(false);
                     setRefresh(!refresh);
