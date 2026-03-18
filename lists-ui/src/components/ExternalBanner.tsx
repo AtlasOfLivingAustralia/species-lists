@@ -65,7 +65,7 @@ function ExternalBanner({ url, services }: ExternalBannerProps) {
                 ['global', ...(services || [])].includes(service) &&
                 message.length > 0
             )
-            .map(([_, message]) => {
+            .map(([, message]) => {
               const rawMessage = message.message || '';
               // Detect if the message contains HTML tags. 
               // If it does, convert it to markdown using Turndown. 
@@ -76,6 +76,7 @@ function ExternalBanner({ url, services }: ExternalBannerProps) {
               return { ...message, message: markdown };
             })
         : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [rawMessages, services]
   );
 

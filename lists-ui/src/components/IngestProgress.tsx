@@ -97,6 +97,7 @@ export function IngestProgress({
       }
     }
     if (id && ingesting) getStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, ingesting, update]);
 
   return (

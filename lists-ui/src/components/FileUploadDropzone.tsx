@@ -1,7 +1,6 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import '@mantine/dropzone/styles.css';
 
-import { ReactNode, useCallback, useState } from 'react';
+import { ReactNode, useState } from 'react';
 import {
   Alert,
   Anchor,
@@ -89,13 +88,11 @@ export const FileUploadDropzone = ({
     setUploading(false);
   };
 
-  const handleReset = useCallback(() => {
+  const handleReset = () => {
     setError(null);
     setResult(null);
-    if (onReset) {
-      onReset();
-    }
-  }, [onReset]);
+    if (onReset) onReset();
+  };
 
   let idle: { title: ReactNode; content: ReactNode; icon: ReactNode } = {
     title: intl.formatMessage({ id: 'upload.list.description', defaultMessage: 'Drag list here, or click to select' }),
@@ -245,7 +242,7 @@ export const FileUploadDropzone = ({
               ml='sm'
               variant='outline'
               color='dark'
-              onClick={() => setResult(null)}
+              onClick={handleReset}
             >
               <FormattedMessage id='upload.tryAgain' defaultMessage='Try again' />
             </Button>

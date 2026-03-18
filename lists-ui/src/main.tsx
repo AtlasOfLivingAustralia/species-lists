@@ -23,6 +23,7 @@ import en from './locale/en.json';
 import App from './App';
 import router from './Router';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const userManager = new UserManager({
   authority: import.meta.env.VITE_AUTH_AUTHORITY,
   client_id: import.meta.env.VITE_AUTH_CLIENT_ID,
@@ -37,7 +38,7 @@ function Main() {
   async function handleCallback(user: User | void) {
     // If there's a user, it's a sign-in callback
     if (user) {
-      const targetUrl = (user?.state as any)?.targetUrl || '/';
+      const targetUrl = (user?.state as Record<string, unknown>)?.targetUrl as string || '/';
       await router.navigate(targetUrl, { replace: true });
     } else {
       window.history.replaceState({}, document.title, '/');

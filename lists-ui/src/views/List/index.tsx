@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   Facet,
   FilteredSpeciesList,
@@ -95,7 +96,7 @@ const classificationFields = ['family', 'kingdom', 'vernacularName', 'matchType'
 
 function List() {
   const { id } = useParams();
-  const [_data, setData] = useState<ListLoaderData | null>(null);
+  const [, setData] = useState<ListLoaderData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [list, setList] = useState<FilteredSpeciesList | null>(null);
@@ -207,6 +208,7 @@ function List() {
     };
 
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // Destructure results & calculate the real page offset
@@ -273,11 +275,13 @@ function List() {
     }
 
     if (mounted) runQuery();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, size, filters, search, refresh, sort, dir, isReingest, mounted, id, ala.token]);
 
   // Keep the current page in check
   useEffect(() => {
     if (totalPages && page >= totalPages) setPage(totalPages - 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, totalPages]);
 
   const handleSortClick = useCallback(
@@ -291,6 +295,7 @@ function List() {
         setDir(SortDirection.DESC);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [sort, dir]
   );
 
@@ -323,6 +328,7 @@ function List() {
     setSize(20);
     setSearch('');
     setRefresh(!refresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh]);
 
   // Item edit handler
@@ -350,6 +356,7 @@ function List() {
         content: prevList!.content.filter((item) => item.id !== id),
       }));
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
@@ -422,11 +429,13 @@ function List() {
   const handleRowClick = useCallback((item: SpeciesListItem) => {
     setSelected(item);
     open();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAddClick = useCallback(() => {
     setSelected(null);
     open();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleFilterClick = useCallback(
@@ -445,6 +454,7 @@ function List() {
         setFilters([...(filters || []), filter]);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [filters]
   );
   
@@ -459,7 +469,7 @@ function List() {
   );
 
   // Handler for the Enter key press
-  interface KeyDownEvent extends React.KeyboardEvent<HTMLInputElement> {}
+  type KeyDownEvent = React.KeyboardEvent<HTMLInputElement>;
 
   const handleKeyDown = (event: KeyDownEvent): void => {
     if (event.key === 'Enter') {
@@ -532,7 +542,7 @@ function List() {
                     <ReactMarkdown
                       components={{
                         p: ({ children }) => <>{children}</>,
-                        blockquote: ({ node, ...props }) => (
+                        blockquote: ({ node: _node, ...props }) => (
                           <blockquote
                             style={{
                               borderLeft: '4px solid #d0d7de',
@@ -542,7 +552,7 @@ function List() {
                             {...props}
                           />
                         ),
-                        ul: ({ node, ...props }) => (
+                        ul: ({ node: _node, ...props }) => (
                           <ul style={{ marginTop: '4px', marginBottom: '4px' }} {...props} />
                         ),
                       }}>

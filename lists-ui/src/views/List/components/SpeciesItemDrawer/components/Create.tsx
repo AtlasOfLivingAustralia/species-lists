@@ -1,14 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { InputSpeciesList, KV, SpeciesList } from '#/api';
 import { Group, Table, Textarea, TextInput, Title } from '@mantine/core';
 
 import { FormattedMessage } from 'react-intl';
 import { useForm } from '@mantine/form';
 import { useEffect } from 'react';
-
-interface ListLoaderData {
-  meta: SpeciesList;
-}
 
 interface SpeciesItemCreateProps {
   onItemUpdated: (item: InputSpeciesList | null) => void;

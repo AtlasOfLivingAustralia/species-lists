@@ -1,3 +1,4 @@
+import React from 'react';
 import sanitiseText from "#/helpers/utils/sanitiseText";
 import AlaIcon from '#/static/ala-logo-grey.svg?react';
 import { faMap, faStar } from '@fortawesome/free-regular-svg-icons';

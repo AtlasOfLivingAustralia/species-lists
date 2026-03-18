@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useEffect, useState } from 'react';
 import {
   Button,
@@ -29,10 +28,8 @@ import { FileUploadDropzone } from '#/components/FileUploadDropzone';
 export default function Reingest() {
   const { id } = useParams();
   const [ingesting, setIngesting] = useState<boolean>(false);
-  const [error, setError] = useState<string | Error | null>(null);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [meta, setMeta] = useState<SpeciesList | null>(null);
-  const [_loading, setLoading] = useState(true);
 
   useDocumentTitle(meta?.title + ' reingest' || 'Loading...');
   const ala = useALA();
@@ -56,13 +53,12 @@ export default function Reingest() {
 
         setMeta(result.meta);
       } catch (err) {
-        setError(err as Error);
-      } finally {
-        setLoading(false);
+        console.error('Failed to load list metadata', err);
       }
     };
 
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // Handler for successful file upload
@@ -83,10 +79,10 @@ export default function Reingest() {
         radius: 'md',
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result?.localFile, meta?.id]);
 
   const handleReset = useCallback(() => {
-    setError(null);
     setResult(null);
   }, []);
 

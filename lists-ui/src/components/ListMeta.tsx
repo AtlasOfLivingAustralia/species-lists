@@ -410,7 +410,7 @@ export function ListMeta({
         <Grid.Col span={12}>
           <Divider variant='dashed' my='md' />
         </Grid.Col>
-        {filteredFlags.map(({ flag, admin, ...props }) => (
+        {filteredFlags.map(({ flag, admin: _admin, ...props }) => (
           <Grid.Col key={flag} span={{ base: 12, xs: 12, sm: 6, md: 4, lg: 3 }}>
             <FlagCard
               key={form.key(flag)}

@@ -32,7 +32,7 @@ export function FetchInfo({ fetcher }: FetchInfoProps) {
 
   return (
     <>
-      <LoadingOverlay visible={!Boolean(info)} />
+      <LoadingOverlay visible={!info} />
       <Code h={500} block>
         {info ? JSON.stringify(info, null, 2) : ''}
       </Code>

@@ -158,6 +158,7 @@ export function Component() {
         },
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
 
   const handleClick = useCallback(
@@ -237,6 +238,7 @@ export function Component() {
         },
       });
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [ala, migrationProgress]
   );
 

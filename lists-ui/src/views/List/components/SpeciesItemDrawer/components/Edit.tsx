@@ -1,14 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { InputSpeciesList, KV, SpeciesList, SpeciesListItem } from '#/api';
 import { Group, Table, Textarea, TextInput, Title } from '@mantine/core';
 
 import { FormattedMessage } from 'react-intl';
 import { useForm } from '@mantine/form';
 import { useEffect } from 'react';
-
-interface ListLoaderData {
-  meta: SpeciesList;
-}
 
 interface SpeciesItemEditProps {
   item: SpeciesListItem;
@@ -33,6 +28,7 @@ export function Edit({ item, onItemUpdated, meta }: SpeciesItemEditProps) {
     initialValues: classificationFields.reduce(
       (prev, cur) => ({
         ...prev,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         [cur]: (item as any)[cur] || '',
       }),
       {}

@@ -24,6 +24,7 @@ const UploadPage = lazy(() => import('./views/Upload'));
 const ReingestPage = lazy(() => import('./views/Reingest'));
 
 // Wrap the Upload component with ProtectedRoute and Suspense
+// eslint-disable-next-line react-refresh/only-export-components
 const ProtectedUpload = () => (
   <ProtectedRoute>
     <Suspense fallback={<div>Loading...</div>}>
@@ -33,6 +34,7 @@ const ProtectedUpload = () => (
 );
 
 // Create a protected and suspended wrapper for the Reingest page
+// eslint-disable-next-line react-refresh/only-export-components
 const ProtectedReingest = () => (
   <ProtectedRoute>
     <Suspense fallback={<PageLoader />}> {/* Use PageLoader for better consistency */}
@@ -138,7 +140,7 @@ const router = createBrowserRouter([
           // base64-decodes the payload. This check prevents unnecessary navigation
           // for non-admin users but is NOT a security control. The server-side
           // admin API endpoints must independently verify the token and roles.
-          const parsed = jwtDecode(token) as any;
+          const parsed = jwtDecode(token) as Record<string, unknown>;
           if (!parsed[JWT_ROLES] || !parsed[JWT_ROLES].includes(JWT_ADMIN_ROLE))
             return redirect('/');
           try {
