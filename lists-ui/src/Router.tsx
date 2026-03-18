@@ -141,7 +141,8 @@ const router = createBrowserRouter([
           // for non-admin users but is NOT a security control. The server-side
           // admin API endpoints must independently verify the token and roles.
           const parsed = jwtDecode(token) as Record<string, unknown>;
-          if (!parsed[JWT_ROLES] || !parsed[JWT_ROLES].includes(JWT_ADMIN_ROLE))
+          const roles = parsed[JWT_ROLES];
+          if (!Array.isArray(roles) || !(roles as string[]).includes(JWT_ADMIN_ROLE))
             return redirect('/');
           try {
             const admin = adminApi(token);
