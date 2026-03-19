@@ -1,6 +1,8 @@
 # This docker-compose file is used to run Elasticsearch and MongoDB for local development.
 # It was copied from src/main/docker/docker-compose.yml in the spring boot project root.
 # Any changes should be reflected in both files.
+# If running just the docker-compose file in the spring boot project root, 
+# rund `docker-compose up -d` from the root of the project.
 # TODO: Consider merging these two files into one to avoid duplication and potential inconsistencies.
 version: "3.7"
 services:
@@ -37,10 +39,10 @@ services:
       - ${HOME}/dev/species-lists/elastic:/usr/share/elasticsearch/data
     restart: on-failure
     ports:
-      - "9200:9200"
-      - "9300:9300"
+      - "127.0.0.1:9200:9200"
+      - "127.0.0.1:9300:9300"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://elasticsearch:9200"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9200"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -49,7 +51,7 @@ services:
     container_name: species-lists-mongo
     restart: on-failure
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - ${HOME}/dev/species-lists/mongo/db:/data/db
 volumes:
