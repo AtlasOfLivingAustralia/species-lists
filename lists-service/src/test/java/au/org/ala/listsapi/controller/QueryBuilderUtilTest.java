@@ -1,12 +1,10 @@
 package au.org.ala.listsapi.controller;
 
-import static au.org.ala.listsapi.util.ElasticsearchQueryBuilder.buildQuery;
 import static org.junit.jupiter.api.Assertions.*;
 
 import au.org.ala.listsapi.model.Filter;
-import co.elastic.clients.elasticsearch._types.FieldValue;
+import au.org.ala.listsapi.util.ElasticsearchQueryBuilder;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
-// Assuming you use Apache Commons Lang
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -16,13 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// Assume your class containing buildQuery is named QueryBuilderUtil
-// import static your.package.QueryBuilderUtil.buildQuery;
-
-// --- Mock Filter class (if not already defined) ---
-// (Add the Filter class definition from above here if needed)
-// --- End Mock Filter class ---
-
 class QueryBuilderUtilTest {
 
     private BoolQuery.Builder bq;
@@ -30,227 +21,349 @@ class QueryBuilderUtilTest {
 
     @BeforeEach
     void setUp() {
-        // Start with a fresh builder for each test
         bq = new BoolQuery.Builder();
     }
 
+    /**
+     * Non-blank searchQuery → matchPhrasePrefix in should, minimumShouldMatch="1". isAdmin=null
+     * treated as non-admin: userId=null + non-admin → isPrivate=false filter. speciesListID=null →
+     * no speciesListID filter.
+     */
     @Test
     void testBuildQuery_withSearchQuery() {
         String searchQuery = "Test Query";
-        buildQuery(searchQuery, "", null, null, null, null, bq);
+        ElasticsearchQueryBuilder.buildQuery(
+                searchQuery, (String) null, null, null, null, null, bq);
         BoolQuery query = bq.build();
         logger.info("filters = {}", query.filter());
 
         assertNotNull(query.should());
         assertEquals(1, query.should().size());
-        assertTrue(query.should().get(0).isMatchPhrase());
-        assertEquals("all", query.should().get(0).matchPhrase().field());
-        assertEquals("test query*", query.should().get(0).matchPhrase().query());
-        assertEquals(2.0f, query.should().get(0).matchPhrase().boost());
-        assertEquals("1", query.minimumShouldMatch()); // Because length > 1
-        assertEquals(1, query.filter().size());
+        assertTrue(query.should().get(0).isMatchPhrasePrefix());
+        assertEquals("all", query.should().get(0).matchPhrasePrefix().field());
+        assertEquals("test query", query.should().get(0).matchPhrasePrefix().query());
+        assertEquals(2.0f, query.should().get(0).matchPhrasePrefix().boost());
+        assertEquals("1", query.minimumShouldMatch());
         assertTrue(query.must().isEmpty());
+
+        // isPrivate=false filter (null userId + non-admin), no speciesListID filter
+        assertEquals(1, query.filter().size());
+        assertTrue(query.filter().get(0).isTerm());
+        assertEquals("isPrivate", query.filter().get(0).term().field());
+        assertFalse(query.filter().get(0).term().value().booleanValue());
     }
 
+    /**
+     * Short searchQuery (length ≤ 1) → matchPhrasePrefix in should, no minimumShouldMatch.
+     * isAdmin=null treated as non-admin: userId=null + non-admin → isPrivate=false filter.
+     */
     @Test
     void testBuildQuery_withShortSearchQuery() {
-        String searchQuery = "T"; // Length is 1
-        buildQuery(searchQuery, "", null, null, null, null, bq);
+        String searchQuery = "T";
+        ElasticsearchQueryBuilder.buildQuery(
+                searchQuery, (String) null, null, null, null, null, bq);
         BoolQuery query = bq.build();
 
         assertNotNull(query.should());
         assertEquals(1, query.should().size());
-        assertTrue(query.should().get(0).isMatchPhrase());
-        assertEquals("t*", query.should().get(0).matchPhrase().query());
-        assertNull(query.minimumShouldMatch()); // Because length <= 1
-        assertEquals(1, query.filter().size());
+        assertTrue(query.should().get(0).isMatchPhrasePrefix());
+        assertEquals("all", query.should().get(0).matchPhrasePrefix().field());
+        assertEquals("t", query.should().get(0).matchPhrasePrefix().query());
+        assertNull(query.minimumShouldMatch());
         assertTrue(query.must().isEmpty());
+
+        assertEquals(1, query.filter().size());
+        assertTrue(query.filter().get(0).isTerm());
+        assertEquals("isPrivate", query.filter().get(0).term().field());
+        assertFalse(query.filter().get(0).term().value().booleanValue());
     }
 
+    /**
+     * Blank searchQuery → matchAll in must (not should). No minimumShouldMatch. isAdmin=null
+     * treated as non-admin: userId=null + non-admin → isPrivate=false filter.
+     */
     @Test
     void testBuildQuery_withEmptySearchQuery() {
-        String searchQuery = "";
-        buildQuery(searchQuery, "", null, null, null, null, bq);
+        ElasticsearchQueryBuilder.buildQuery("", (String) null, null, null, null, null, bq);
         BoolQuery query = bq.build();
 
-        assertEquals(1, query.should().size());
+        assertTrue(query.should().isEmpty());
         assertNull(query.minimumShouldMatch());
+        assertEquals(1, query.must().size());
+        assertTrue(query.must().get(0).isMatchAll());
+
         assertEquals(1, query.filter().size());
-        assertTrue(query.must().isEmpty());
+        assertEquals("isPrivate", query.filter().get(0).term().field());
+        assertFalse(query.filter().get(0).term().value().booleanValue());
     }
 
+    /** Null searchQuery behaves identically to blank: matchAll in must. */
     @Test
     void testBuildQuery_withNullSearchQuery() {
-        buildQuery(null, "", null, null, null, null, bq);
+        ElasticsearchQueryBuilder.buildQuery(null, (String) null, null, null, null, null, bq);
         BoolQuery query = bq.build();
 
-        assertEquals(1, query.should().size());
+        assertTrue(query.should().isEmpty());
         assertNull(query.minimumShouldMatch());
+        assertEquals(1, query.must().size());
+        assertTrue(query.must().get(0).isMatchAll());
+
         assertEquals(1, query.filter().size());
-        assertTrue(query.must().isEmpty());
+        assertEquals("isPrivate", query.filter().get(0).term().field());
+        assertFalse(query.filter().get(0).term().value().booleanValue());
     }
 
+    /**
+     * Non-null userId → owner filter added; no isPrivate filter (userId!=null, isPrivate=null).
+     * Null searchQuery → matchAll in must.
+     */
     @Test
     void testBuildQuery_withUserId() {
         String userId = "user123";
-        buildQuery(null, "", userId, null, null, null, bq);
+        ElasticsearchQueryBuilder.buildQuery(null, (String) null, userId, null, null, null, bq);
         BoolQuery query = bq.build();
 
-        assertEquals(1, query.should().size());
+        assertTrue(query.should().isEmpty());
         assertNull(query.minimumShouldMatch());
-        assertNotNull(query.filter());
+        assertEquals(1, query.must().size());
+        assertTrue(query.must().get(0).isMatchAll());
+
+        // owner filter only (no isPrivate because userId!=null, no speciesListID)
         assertEquals(1, query.filter().size());
         assertTrue(query.filter().get(0).isTerm());
         assertEquals("owner", query.filter().get(0).term().field());
-        assertEquals(FieldValue.of(userId), query.filter().get(0).term().value());
-        assertTrue(query.must().isEmpty());
+        assertEquals(userId, query.filter().get(0).term().value().stringValue());
     }
 
+    /**
+     * isAdmin=true, isPrivate=true → isPrivate=true filter (via else-if branch). Blank search →
+     * matchAll in must. No owner filter (userId=null, isAdmin=true).
+     */
     @Test
     void testBuildQuery_withIsPrivateTrue() {
-        buildQuery("", "", null, true, null, null, bq);
+        ElasticsearchQueryBuilder.buildQuery("", (String) null, null, true, true, null, bq);
         BoolQuery query = bq.build();
 
-        assertEquals(1, query.should().size());
+        assertTrue(query.should().isEmpty());
         assertNull(query.minimumShouldMatch());
-        assertNotNull(query.filter());
+        assertEquals(1, query.must().size());
+        assertTrue(query.must().get(0).isMatchAll());
+
         assertEquals(1, query.filter().size());
         assertTrue(query.filter().get(0).isTerm());
         assertEquals("isPrivate", query.filter().get(0).term().field());
-        assertEquals(FieldValue.of(true), query.filter().get(0).term().value());
-        assertTrue(query.must().isEmpty());
+        assertTrue(query.filter().get(0).term().value().booleanValue());
     }
 
+    /**
+     * isAdmin=false (explicit), userId=null → non-admin path: isPrivate=false filter added. Blank
+     * search → matchAll in must.
+     */
     @Test
     void testBuildQuery_withIsPrivateFalse() {
-        buildQuery("", "", null, false, null, null, bq);
+        ElasticsearchQueryBuilder.buildQuery("", (String) null, null, false, null, null, bq);
         BoolQuery query = bq.build();
 
-        assertEquals(1, query.should().size());
+        assertTrue(query.should().isEmpty());
         assertNull(query.minimumShouldMatch());
-        assertNotNull(query.filter());
+        assertEquals(1, query.must().size());
+        assertTrue(query.must().get(0).isMatchAll());
+
         assertEquals(1, query.filter().size());
         assertTrue(query.filter().get(0).isTerm());
         assertEquals("isPrivate", query.filter().get(0).term().field());
-        assertEquals(FieldValue.of(false), query.filter().get(0).term().value());
-        assertTrue(query.must().isEmpty());
+        assertFalse(query.filter().get(0).term().value().booleanValue());
     }
 
+    /**
+     * Non-null speciesListID → speciesListID filter added. Null userId + non-admin →
+     * isPrivate=false filter.
+     */
     @Test
     void testBuildQuery_withSpeciesListId() {
         String speciesListId = "list-abc";
-        buildQuery(null, speciesListId, null, null, null, null, bq);
+        ElasticsearchQueryBuilder.buildQuery(null, speciesListId, null, null, null, null, bq);
         BoolQuery query = bq.build();
 
-        assertEquals(1, query.should().size());
+        assertTrue(query.should().isEmpty());
         assertNull(query.minimumShouldMatch());
-        assertNotNull(query.filter());
-        assertEquals(1, query.filter().size());
-        assertTrue(query.filter().get(0).isTerm());
-        assertEquals("speciesListID", query.filter().get(0).term().field());
-        assertEquals(FieldValue.of(speciesListId), query.filter().get(0).term().value());
-        assertTrue(query.must().isEmpty());
+        assertEquals(1, query.must().size());
+        assertTrue(query.must().get(0).isMatchAll());
+
+        assertEquals(2, query.filter().size());
+        assertTrue(
+                query.filter().stream()
+                        .anyMatch(
+                                f ->
+                                        f.isTerm()
+                                                && "speciesListID".equals(f.term().field())
+                                                && speciesListId.equals(
+                                                        f.term().value().stringValue())));
+        assertTrue(
+                query.filter().stream()
+                        .anyMatch(
+                                f ->
+                                        f.isTerm()
+                                                && "isPrivate".equals(f.term().field())
+                                                && !f.term().value().booleanValue()));
     }
 
+    /**
+     * Single filter with a non-core key → standard filter → must clause with inner bool having one
+     * must term. Null searchQuery → matchAll in must. So total must = 2 (matchAll + filter clause).
+     */
     @Test
     void testBuildQuery_withSingleFilter() {
         List<Filter> filters = Collections.singletonList(new Filter("attr1", "value1"));
-        buildQuery(null, "", null, null, null, filters, bq);
+        ElasticsearchQueryBuilder.buildQuery(null, (String) null, null, null, null, filters, bq);
         BoolQuery query = bq.build();
 
-        assertEquals(1, query.should().size());
+        assertTrue(query.should().isEmpty());
         assertNull(query.minimumShouldMatch());
-        assertTrue(query.filter().isEmpty());
+
+        // isPrivate=false filter only (null userId + non-admin, no speciesListID)
+        assertEquals(1, query.filter().size());
+
+        // matchAll + one filter-derived must clause
         assertNotNull(query.must());
-        assertEquals(1, query.must().size());
+        assertEquals(2, query.must().size());
 
-        // Must clause contains a bool query
-        assertTrue(query.must().get(0).isBool());
-        BoolQuery innerBool = query.must().get(0).bool();
+        // Find the filter-derived must clause (a bool query, not matchAll)
+        Query filterMust =
+                query.must().stream().filter(q -> !q.isMatchAll()).findFirst().orElse(null);
+        assertNotNull(filterMust);
+        assertTrue(filterMust.isBool());
+        BoolQuery innerBool = filterMust.bool();
 
-        // Inner bool query has one must clause which is a term query
-        assertTrue(innerBool.should().isEmpty()); // No should in inner bool
+        assertTrue(innerBool.should().isEmpty());
         assertNull(innerBool.minimumShouldMatch());
         assertTrue(innerBool.filter().isEmpty());
-        assertNotNull(innerBool.must());
         assertEquals(1, innerBool.must().size());
         assertTrue(innerBool.must().get(0).isTerm());
-        assertEquals("attr1", innerBool.must().get(0).term().field());
-        assertEquals(FieldValue.of("value1"), innerBool.must().get(0).term().value());
+        // attr1 is not a core field → mapped to "properties.attr1.keyword"
+        assertEquals("properties.attr1.keyword", innerBool.must().get(0).term().field());
+        assertEquals("value1", innerBool.must().get(0).term().value().stringValue());
     }
 
+    /**
+     * Two filters with different keys → two filter-derived must clauses. Blank search → matchAll in
+     * must. Total must = 3 (matchAll + 2 filter clauses).
+     */
     @Test
     void testBuildQuery_withMultipleFilters_DifferentKeys() {
         List<Filter> filters =
-                Arrays.asList(
-                        //        new Filter("attr1", "value1"),
-                        //        new Filter("attr2", "value2")
-                        );
-        BoolQuery query = buildQuery("", "", null, null, null, filters, bq).build();
-        //    BoolQuery query = bq.build();
+                Arrays.asList(new Filter("attr1", "value1"), new Filter("attr2", "value2"));
+        BoolQuery query =
+                ElasticsearchQueryBuilder.buildQuery(
+                                "", (String) null, null, null, null, filters, bq)
+                        .build();
 
-        assertEquals(1, query.should().size());
+        assertTrue(query.should().isEmpty());
         assertNull(query.minimumShouldMatch());
-        assertTrue(query.filter().isEmpty());
-        assertNotNull(query.must());
-        assertEquals(2, query.must().size()); // One must clause per key
 
-        // Check first must clause (for attr1)
-        assertTrue(query.must().get(0).isBool());
-        BoolQuery innerBool1 = query.must().get(0).bool();
+        // isPrivate=false filter (null userId + non-admin)
+        assertEquals(1, query.filter().size());
+
+        // matchAll + 2 filter-derived must clauses
+        assertNotNull(query.must());
+        assertEquals(3, query.must().size());
+
+        // Find must clause for attr1
+        Query attr1Clause =
+                query.must().stream()
+                        .filter(
+                                q ->
+                                        q.isBool()
+                                                && q.bool().must().stream()
+                                                        .anyMatch(
+                                                                t ->
+                                                                        t.term()
+                                                                                .field()
+                                                                                .equals(
+                                                                                        "properties.attr1.keyword")))
+                        .findFirst()
+                        .orElse(null);
+        assertNotNull(attr1Clause);
+        BoolQuery innerBool1 = attr1Clause.bool();
         assertEquals(1, innerBool1.must().size());
         assertTrue(innerBool1.must().get(0).isTerm());
-        assertEquals("attr1", innerBool1.must().get(0).term().field());
-        assertEquals(FieldValue.of("value1"), innerBool1.must().get(0).term().value());
+        assertEquals("properties.attr1.keyword", innerBool1.must().get(0).term().field());
+        assertEquals("value1", innerBool1.must().get(0).term().value().stringValue());
         assertTrue(innerBool1.should().isEmpty());
         assertNull(innerBool1.minimumShouldMatch());
 
-        // Check second must clause (for attr2)
-        assertTrue(query.must().get(1).isBool());
-        BoolQuery innerBool2 = query.must().get(1).bool();
+        // Find must clause for attr2
+        Query attr2Clause =
+                query.must().stream()
+                        .filter(
+                                q ->
+                                        q.isBool()
+                                                && q.bool().must().stream()
+                                                        .anyMatch(
+                                                                t ->
+                                                                        t.term()
+                                                                                .field()
+                                                                                .equals(
+                                                                                        "properties.attr2.keyword")))
+                        .findFirst()
+                        .orElse(null);
+        assertNotNull(attr2Clause);
+        BoolQuery innerBool2 = attr2Clause.bool();
         assertEquals(1, innerBool2.must().size());
         assertTrue(innerBool2.must().get(0).isTerm());
-        assertEquals("attr2", innerBool2.must().get(0).term().field());
-        assertEquals(FieldValue.of("value2"), innerBool2.must().get(0).term().value());
+        assertEquals("properties.attr2.keyword", innerBool2.must().get(0).term().field());
+        assertEquals("value2", innerBool2.must().get(0).term().value().stringValue());
         assertTrue(innerBool2.should().isEmpty());
         assertNull(innerBool2.minimumShouldMatch());
     }
 
+    /**
+     * Two filters with the same key → one filter-derived must clause with inner bool using should
+     * (OR logic). Blank search → matchAll in must. Total must = 2 (matchAll + same-key clause).
+     */
     @Test
     void testBuildQuery_withMultipleFilters_SameKey() {
         List<Filter> filters =
                 Arrays.asList(new Filter("attr1", "value1"), new Filter("attr1", "value2"));
-        buildQuery("", "", null, null, null, filters, bq);
+        ElasticsearchQueryBuilder.buildQuery("", (String) null, null, null, null, filters, bq);
         BoolQuery query = bq.build();
 
-        assertEquals(1, query.should().size());
+        assertTrue(query.should().isEmpty());
         assertNull(query.minimumShouldMatch());
+
+        // isPrivate=false filter
         assertEquals(1, query.filter().size());
+
+        // matchAll + one filter-derived must clause
         assertNotNull(query.must());
-        assertEquals(1, query.must().size()); // Only one must clause for the key "attr1"
+        assertEquals(2, query.must().size());
 
-        // Must clause contains a bool query
-        assertTrue(query.must().get(0).isBool());
-        BoolQuery innerBool = query.must().get(0).bool();
+        // Find the filter-derived must clause
+        Query filterMust =
+                query.must().stream().filter(q -> !q.isMatchAll()).findFirst().orElse(null);
+        assertNotNull(filterMust);
+        assertTrue(filterMust.isBool());
+        BoolQuery innerBool = filterMust.bool();
 
-        // Inner bool query has two should clauses (OR logic)
-        assertTrue(innerBool.must().isEmpty()); // No must in inner bool
+        assertTrue(innerBool.must().isEmpty());
         assertTrue(innerBool.filter().isEmpty());
         assertNotNull(innerBool.should());
         assertEquals(2, innerBool.should().size());
-        assertEquals("1", innerBool.minimumShouldMatch()); // OR requires minimum 1 match
+        assertEquals("1", innerBool.minimumShouldMatch());
 
-        // Check first should clause
         assertTrue(innerBool.should().get(0).isTerm());
-        assertEquals("attr1", innerBool.should().get(0).term().field());
+        assertEquals("properties.attr1.keyword", innerBool.should().get(0).term().field());
         assertEquals("value1", innerBool.should().get(0).term().value().stringValue());
 
-        // Check second should clause
         assertTrue(innerBool.should().get(1).isTerm());
-        assertEquals("attr1", innerBool.should().get(1).term().field());
+        assertEquals("properties.attr1.keyword", innerBool.should().get(1).term().field());
         assertEquals("value2", innerBool.should().get(1).term().value().stringValue());
     }
 
+    /**
+     * Mixed filters: attr1 (x2, same key → OR), attr2 (x1), attr3 (x1). Null search → matchAll in
+     * must. Total must = 4 (matchAll + 3 filter clauses).
+     */
     @Test
     void testBuildQuery_withMixedFilters() {
         List<Filter> filters =
@@ -259,16 +372,20 @@ class QueryBuilderUtilTest {
                         new Filter("attr2", "valueA"),
                         new Filter("attr1", "value2"),
                         new Filter("attr3", "valueX"));
-        buildQuery(null, "", null, null, null, filters, bq);
+        ElasticsearchQueryBuilder.buildQuery(null, (String) null, null, null, null, filters, bq);
         BoolQuery query = bq.build();
 
-        assertEquals(1, query.should().size());
+        assertTrue(query.should().isEmpty());
         assertNull(query.minimumShouldMatch());
-        assertTrue(query.filter().isEmpty());
-        assertNotNull(query.must());
-        assertEquals(3, query.must().size()); // One must clause per key (attr1, attr2, attr3)
 
-        // Find and verify the bool query for attr1 (which should have OR logic)
+        // isPrivate=false filter
+        assertEquals(1, query.filter().size());
+
+        // matchAll + 3 filter-derived must clauses
+        assertNotNull(query.must());
+        assertEquals(4, query.must().size());
+
+        // Find and verify attr1 (OR logic)
         Query attr1Query =
                 query.must().stream()
                         .filter(
@@ -277,9 +394,10 @@ class QueryBuilderUtilTest {
                                                 && q.bool().should().stream()
                                                         .anyMatch(
                                                                 t ->
-                                                                        t.term()
-                                                                                .field()
-                                                                                .equals("attr1")))
+                                                                        "properties.attr1.keyword"
+                                                                                .equals(
+                                                                                        t.term()
+                                                                                                .field())))
                         .findFirst()
                         .orElse(null);
         assertNotNull(attr1Query);
@@ -289,12 +407,12 @@ class QueryBuilderUtilTest {
         assertTrue(innerBoolAttr1.must().isEmpty());
         assertTrue(
                 innerBoolAttr1.should().stream()
-                        .anyMatch(t -> t.term().value().equals(FieldValue.of("value1"))));
+                        .anyMatch(t -> "value1".equals(t.term().value().stringValue())));
         assertTrue(
                 innerBoolAttr1.should().stream()
-                        .anyMatch(t -> t.term().value().equals(FieldValue.of("value2"))));
+                        .anyMatch(t -> "value2".equals(t.term().value().stringValue())));
 
-        // Find and verify the bool query for attr2 (single term)
+        // Find and verify attr2 (single term)
         Query attr2Query =
                 query.must().stream()
                         .filter(
@@ -303,21 +421,22 @@ class QueryBuilderUtilTest {
                                                 && q.bool().must().stream()
                                                         .anyMatch(
                                                                 t ->
-                                                                        t.term()
-                                                                                .field()
-                                                                                .equals("attr2")))
+                                                                        "properties.attr2.keyword"
+                                                                                .equals(
+                                                                                        t.term()
+                                                                                                .field())))
                         .findFirst()
                         .orElse(null);
         assertNotNull(attr2Query);
         BoolQuery innerBoolAttr2 = attr2Query.bool();
         assertEquals(1, innerBoolAttr2.must().size());
         assertTrue(innerBoolAttr2.must().get(0).isTerm());
-        assertEquals("attr2", innerBoolAttr2.must().get(0).term().field());
-        assertEquals(FieldValue.of("valueA"), innerBoolAttr2.must().get(0).term().value());
+        assertEquals("properties.attr2.keyword", innerBoolAttr2.must().get(0).term().field());
+        assertEquals("valueA", innerBoolAttr2.must().get(0).term().value().stringValue());
         assertTrue(innerBoolAttr2.should().isEmpty());
         assertNull(innerBoolAttr2.minimumShouldMatch());
 
-        // Find and verify the bool query for attr3 (single term)
+        // Find and verify attr3 (single term)
         Query attr3Query =
                 query.must().stream()
                         .filter(
@@ -326,47 +445,101 @@ class QueryBuilderUtilTest {
                                                 && q.bool().must().stream()
                                                         .anyMatch(
                                                                 t ->
-                                                                        t.term()
-                                                                                .field()
-                                                                                .equals("attr3")))
+                                                                        "properties.attr3.keyword"
+                                                                                .equals(
+                                                                                        t.term()
+                                                                                                .field())))
                         .findFirst()
                         .orElse(null);
         assertNotNull(attr3Query);
         BoolQuery innerBoolAttr3 = attr3Query.bool();
         assertEquals(1, innerBoolAttr3.must().size());
         assertTrue(innerBoolAttr3.must().get(0).isTerm());
-        assertEquals("attr3", innerBoolAttr3.must().get(0).term().field());
-        assertEquals(FieldValue.of("valueX"), innerBoolAttr3.must().get(0).term().value());
+        assertEquals("properties.attr3.keyword", innerBoolAttr3.must().get(0).term().field());
+        assertEquals("valueX", innerBoolAttr3.must().get(0).term().value().stringValue());
         assertTrue(innerBoolAttr3.should().isEmpty());
         assertNull(innerBoolAttr3.minimumShouldMatch());
     }
 
+    /**
+     * Null filters → no filter-derived must clauses. userId="user1" + isAdmin=true +
+     * speciesListID="list1" → owner filter + speciesListID filter (isPrivate=null → no isPrivate
+     * filter). Non-blank search → matchPhrasePrefix in should.
+     */
     @Test
     void testBuildQuery_withNullFilters() {
-        buildQuery("search", "list1", "user1", true, null, null, bq);
+        ElasticsearchQueryBuilder.buildQuery("search", "list1", "user1", true, null, null, bq);
         BoolQuery query = bq.build();
 
-        // Check other clauses are present
         assertEquals(1, query.should().size());
+        assertTrue(query.should().get(0).isMatchPhrasePrefix());
         assertEquals("1", query.minimumShouldMatch());
-        assertEquals(3, query.filter().size());
-        // Must clause should be empty as no list filters were added
+
+        // owner (userId!=null) + speciesListID (no isPrivate because userId!=null, isPrivate=null)
+        assertEquals(2, query.filter().size());
+        assertTrue(
+                query.filter().stream()
+                        .anyMatch(
+                                f ->
+                                        f.isTerm()
+                                                && "owner".equals(f.term().field())
+                                                && "user1".equals(f.term().value().stringValue())));
+        assertTrue(
+                query.filter().stream()
+                        .anyMatch(
+                                f ->
+                                        f.isTerm()
+                                                && "speciesListID".equals(f.term().field())
+                                                && "list1".equals(f.term().value().stringValue())));
+
         assertTrue(query.must().isEmpty());
     }
 
+    /**
+     * Empty filters list → no filter-derived must clauses. userId="user1" + isAdmin=false +
+     * isPrivate=false → owner + isPrivate=false + speciesListID filters.
+     */
     @Test
     void testBuildQuery_withEmptyFilters() {
-        buildQuery("search", "list1", "user1", false, false, new ArrayList<Filter>(), bq);
+        ElasticsearchQueryBuilder.buildQuery(
+                "search", "list1", "user1", false, false, new ArrayList<Filter>(), bq);
         BoolQuery query = bq.build();
 
-        // Check other clauses are present
         assertEquals(1, query.should().size());
+        assertTrue(query.should().get(0).isMatchPhrasePrefix());
         assertEquals("1", query.minimumShouldMatch());
+
+        // owner + isPrivate=false (userId!=null, isPrivate!=null) + speciesListID
         assertEquals(3, query.filter().size());
-        // Must clause should be empty as no list filters were added
+        assertTrue(
+                query.filter().stream()
+                        .anyMatch(
+                                f ->
+                                        f.isTerm()
+                                                && "owner".equals(f.term().field())
+                                                && "user1".equals(f.term().value().stringValue())));
+        assertTrue(
+                query.filter().stream()
+                        .anyMatch(
+                                f ->
+                                        f.isTerm()
+                                                && "isPrivate".equals(f.term().field())
+                                                && !f.term().value().booleanValue()));
+        assertTrue(
+                query.filter().stream()
+                        .anyMatch(
+                                f ->
+                                        f.isTerm()
+                                                && "speciesListID".equals(f.term().field())
+                                                && "list1".equals(f.term().value().stringValue())));
+
         assertTrue(query.must().isEmpty());
     }
 
+    /**
+     * Full scenario: searchQuery + speciesListID + userId + isAdmin=false + isPrivate=false + mixed
+     * filters (tag x2, status x1).
+     */
     @Test
     void testBuildQuery_withAllParameters() {
         String searchQuery = "Complex Search";
@@ -379,47 +552,46 @@ class QueryBuilderUtilTest {
                         new Filter("status", "active"),
                         new Filter("tag", "urgent"));
 
-        buildQuery(searchQuery, speciesListId, userId, false, isPrivate, filters, bq);
+        ElasticsearchQueryBuilder.buildQuery(
+                searchQuery, speciesListId, userId, false, isPrivate, filters, bq);
         BoolQuery query = bq.build();
 
-        // Check search query part
-        assertNotNull(query.should());
+        // matchPhrasePrefix in should (length > 1)
         assertEquals(1, query.should().size());
-        assertTrue(query.should().get(0).isMatchPhrase());
-        assertEquals("complex search*", query.should().get(0).matchPhrase().query());
+        assertTrue(query.should().get(0).isMatchPhrasePrefix());
+        assertEquals("all", query.should().get(0).matchPhrasePrefix().field());
+        assertEquals("complex search", query.should().get(0).matchPhrasePrefix().query());
         assertEquals("1", query.minimumShouldMatch());
 
-        // Check filter part
-        assertNotNull(query.filter());
-        assertEquals(3, query.filter().size()); // owner, isPrivate, speciesListID
+        // owner + isPrivate=false (userId!=null, isPrivate!=null) + speciesListID
+        assertEquals(3, query.filter().size());
         assertTrue(
                 query.filter().stream()
                         .anyMatch(
                                 f ->
-                                        f.term().field().equals("owner")
-                                                && f.term().value().equals(FieldValue.of(userId))));
+                                        f.isTerm()
+                                                && "owner".equals(f.term().field())
+                                                && userId.equals(f.term().value().stringValue())));
         assertTrue(
                 query.filter().stream()
                         .anyMatch(
                                 f ->
-                                        f.term().field().equals("isPrivate")
-                                                && f.term()
-                                                        .value()
-                                                        .equals(FieldValue.of(isPrivate))));
+                                        f.isTerm()
+                                                && "isPrivate".equals(f.term().field())
+                                                && !f.term().value().booleanValue()));
         assertTrue(
                 query.filter().stream()
                         .anyMatch(
                                 f ->
-                                        f.term().field().equals("speciesListID")
-                                                && f.term()
-                                                        .value()
-                                                        .equals(FieldValue.of(speciesListId))));
+                                        f.isTerm()
+                                                && "speciesListID".equals(f.term().field())
+                                                && speciesListId.equals(
+                                                        f.term().value().stringValue())));
 
-        // Check must part (from filters list)
-        assertNotNull(query.must());
-        assertEquals(2, query.must().size()); // One for "tag", one for "status"
+        // Two filter-derived must clauses: "tag" (OR) and "status" (single)
+        assertEquals(2, query.must().size());
 
-        // Check "tag" must clause (should have OR logic)
+        // "tag" must clause (OR logic)
         Query tagQuery =
                 query.must().stream()
                         .filter(
@@ -428,9 +600,10 @@ class QueryBuilderUtilTest {
                                                 && q.bool().should().stream()
                                                         .anyMatch(
                                                                 t ->
-                                                                        t.term()
-                                                                                .field()
-                                                                                .equals("tag")))
+                                                                        "properties.tag.keyword"
+                                                                                .equals(
+                                                                                        t.term()
+                                                                                                .field())))
                         .findFirst()
                         .orElse(null);
         assertNotNull(tagQuery);
@@ -440,12 +613,12 @@ class QueryBuilderUtilTest {
         assertTrue(innerBoolTag.must().isEmpty());
         assertTrue(
                 innerBoolTag.should().stream()
-                        .anyMatch(t -> t.term().value().equals(FieldValue.of("important"))));
+                        .anyMatch(t -> "important".equals(t.term().value().stringValue())));
         assertTrue(
                 innerBoolTag.should().stream()
-                        .anyMatch(t -> t.term().value().equals(FieldValue.of("urgent"))));
+                        .anyMatch(t -> "urgent".equals(t.term().value().stringValue())));
 
-        // Check "status" must clause (single term)
+        // "status" must clause (single term)
         Query statusQuery =
                 query.must().stream()
                         .filter(
@@ -454,47 +627,57 @@ class QueryBuilderUtilTest {
                                                 && q.bool().must().stream()
                                                         .anyMatch(
                                                                 t ->
-                                                                        t.term()
-                                                                                .field()
-                                                                                .equals("status")))
+                                                                        "properties.status.keyword"
+                                                                                .equals(
+                                                                                        t.term()
+                                                                                                .field())))
                         .findFirst()
                         .orElse(null);
         assertNotNull(statusQuery);
         BoolQuery innerBoolStatus = statusQuery.bool();
         assertEquals(1, innerBoolStatus.must().size());
         assertTrue(innerBoolStatus.must().get(0).isTerm());
-        assertEquals("status", innerBoolStatus.must().get(0).term().field());
-        assertEquals(FieldValue.of("active"), innerBoolStatus.must().get(0).term().value());
+        assertEquals("properties.status.keyword", innerBoolStatus.must().get(0).term().field());
+        assertEquals("active", innerBoolStatus.must().get(0).term().value().stringValue());
         assertTrue(innerBoolStatus.should().isEmpty());
         assertNull(innerBoolStatus.minimumShouldMatch());
     }
 
+    /**
+     * Pre-populated builder: existing clauses are preserved. buildQuery(null, "", userId, ...) adds
+     * matchAll to must + owner filter + speciesListID="" filter (non-null ""). Total must = 2
+     * (initial term + matchAll), filter = 3 (initial + owner + speciesListID="").
+     */
     @Test
     void testBuildQuery_withExistingBuilder() {
-        // Pre-populate the builder
         bq.must(m -> m.term(t -> t.field("initial_must").value("value")));
         bq.filter(f -> f.term(t -> t.field("initial_filter").value("value")));
 
         String userId = "user123";
-        buildQuery(null, "", userId, null, null, null, bq); // Add only userId filter
+        // speciesListID="" is non-null → adds speciesListID filter
+        ElasticsearchQueryBuilder.buildQuery(null, "", userId, null, null, null, bq);
         BoolQuery query = bq.build();
 
-        // Verify existing clauses are still there
-        assertEquals(1, query.must().size());
-        assertTrue(query.must().get(0).isTerm());
-        assertEquals("initial_must", query.must().get(0).term().field());
-
-        assertEquals(2, query.filter().size()); // initial_filter + owner filter
+        // initial term + matchAll
+        assertEquals(2, query.must().size());
         assertTrue(
-                query.filter().stream().anyMatch(f -> f.term().field().equals("initial_filter")));
+                query.must().stream()
+                        .anyMatch(m -> m.isTerm() && "initial_must".equals(m.term().field())));
+        assertTrue(query.must().stream().anyMatch(Query::isMatchAll));
+
+        // initial_filter + owner + speciesListID=""
+        assertEquals(3, query.filter().size());
+        assertTrue(
+                query.filter().stream()
+                        .anyMatch(f -> f.isTerm() && "initial_filter".equals(f.term().field())));
         assertTrue(
                 query.filter().stream()
                         .anyMatch(
                                 f ->
-                                        f.term().field().equals("owner")
-                                                && f.term().value().equals(FieldValue.of(userId))));
+                                        f.isTerm()
+                                                && "owner".equals(f.term().field())
+                                                && userId.equals(f.term().value().stringValue())));
 
-        // Verify no should clauses were added
         assertTrue(query.should().isEmpty());
         assertNull(query.minimumShouldMatch());
     }

@@ -191,12 +191,12 @@ public final class ElasticsearchQueryBuilder {
         }
 
         // Add userId filter for my-lists view
-        if (userId != null || (!isAdmin && isPrivate != null && isPrivate)) {
+        if (userId != null || (!Boolean.TRUE.equals(isAdmin) && isPrivate != null && isPrivate)) {
             bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
         }
 
         // Add isPrivate filter
-        if (userId == null && !isAdmin) {
+        if (userId == null && !Boolean.TRUE.equals(isAdmin)) {
             bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
         } else if (isPrivate != null) {
             bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
@@ -247,11 +247,11 @@ public final class ElasticsearchQueryBuilder {
         }
 
         // Add userId filter
-        if (userId != null || (!isAdmin && isPrivate != null && isPrivate)) {
+        if (userId != null || (!Boolean.TRUE.equals(isAdmin) && isPrivate != null && isPrivate)) {
             bq.filter(f -> f.term(t -> t.field("owner").value(userId)));
         }
 
-        if (userId == null && !isAdmin) {
+        if (userId == null && !Boolean.TRUE.equals(isAdmin)) {
             bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
         } else if (isPrivate != null) {
             bq.filter(f -> f.term(t -> t.field("isPrivate").value(isPrivate)));
