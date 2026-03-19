@@ -46,9 +46,9 @@ class SpeciesListTransformerTest {
 
         SpeciesListVersion1 result = transformer.transformToVersion1(speciesList);
 
-        assertNull(result.getSdsType());
-        assertEquals(Boolean.FALSE, result.getIsSDS());
-    }
+    assertEquals("", result.getSdsType());
+    assertEquals(Boolean.FALSE, result.getIsSDS());
+  }
 
     @Test
     void testTransformToVersion1_SdsNull() {
@@ -58,7 +58,36 @@ class SpeciesListTransformerTest {
 
         SpeciesListVersion1 result = transformer.transformToVersion1(speciesList);
 
-        assertNull(result.getSdsType());
-        assertNull(result.getIsSDS());
-    }
+    assertEquals("", result.getSdsType());
+    assertNull(result.getIsSDS());
+  }
+
+  @Test
+  void testTransformToVersion1_Authority() {
+    SpeciesList speciesList = new SpeciesList();
+    speciesList.setAuthority("Test Authority");
+    speciesList.setTitle("Test List");
+
+    SpeciesListVersion1 result = transformer.transformToVersion1(speciesList);
+
+    assertEquals("Test Authority", result.getAuthority());
+  }
+
+  @Test
+  void testTransformToVersion1_EmptyDefaults() {
+    SpeciesList speciesList = new SpeciesList();
+    speciesList.setTitle("Test List");
+    // Ensure these fields are null
+    speciesList.setCategory(null);
+    speciesList.setAuthority(null);
+    speciesList.setIsSDS(null);
+    // Generalisation is not in SpeciesList model but is in Version1
+
+    SpeciesListVersion1 result = transformer.transformToVersion1(speciesList);
+
+    assertEquals("", result.getCategory());
+    assertEquals("", result.getAuthority());
+    assertEquals("", result.getSdsType());
+    assertEquals("", result.getGeneralisation());
+  }
 }

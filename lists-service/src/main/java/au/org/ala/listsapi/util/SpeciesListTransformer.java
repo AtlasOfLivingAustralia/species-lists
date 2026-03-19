@@ -93,9 +93,11 @@ public class SpeciesListTransformer {
         version1.setListName(speciesList.getTitle());
         version1.setDescription(speciesList.getDescription());
         version1.setListType(speciesList.getListType());
+        version1.setAuthority(speciesList.getAuthority() != null ? speciesList.getAuthority() : "");
+        version1.setCategory(speciesList.getCategory() != null ? speciesList.getCategory() : "");
         version1.setRegion(speciesList.getRegion());
-        version1.setSdsType(Boolean.TRUE.equals(speciesList.getIsSDS()) ? "CONSERVATION" : null);
-        version1.setGeneralisation(null); // Not implemented in SpeciesList
+        version1.setSdsType(Boolean.TRUE.equals(speciesList.getIsSDS()) ? "CONSERVATION" : "");
+        version1.setGeneralisation(Boolean.TRUE.equals(speciesList.getIsSDS()) ? "10km" : ""); // Not implemented in SpeciesList but returning empty string for legacy support
         version1.setWkt(speciesList.getWkt());
 
         // Fetch user details using the userdetailsService if enabled, and the owner is not an email
