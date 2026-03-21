@@ -1,6 +1,7 @@
 package au.org.ala.listsapi.service;
 
 import au.org.ala.listsapi.model.Classification;
+import au.org.ala.listsapi.model.KeyValue;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListIndex;
 import au.org.ala.listsapi.model.SpeciesListItem;
@@ -51,26 +52,6 @@ import org.springframework.data.elasticsearch.core.query.IndexQuery;
 import org.springframework.data.elasticsearch.core.query.IndexQueryBuilder;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import au.org.ala.listsapi.model.Classification;
-import au.org.ala.listsapi.model.KeyValue;
-import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.model.SpeciesListIndex;
-import au.org.ala.listsapi.model.SpeciesListItem;
-import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
-import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
-import au.org.ala.names.ws.api.NameMatchService;
-import au.org.ala.names.ws.api.NameSearch;
-import au.org.ala.names.ws.api.NameUsageMatch;
-import au.org.ala.names.ws.client.ALANameUsageMatchServiceClient;
-import au.org.ala.ws.ClientConfiguration;
-import au.org.ala.ws.DataCacheConfiguration;
-import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 
 @Service
 public class TaxonService {
@@ -427,7 +408,8 @@ public class TaxonService {
             long startTime = System.nanoTime();
 
             List<SpeciesListItem> speciesListItems;
-            // Use optimized batch fetching methods due to DocumentDB performance issues with $expr
+            // Use optimized batch fetching methods due to DocumentDB performance issues
+            // with $expr
             // queries
             if (lastId == null) {
                 speciesListItems =
@@ -977,17 +959,21 @@ public class TaxonService {
         }
 
         if (item.getProperties() != null) {
-            String rank = item.getProperties().stream()
-                    .filter(kv -> "taxonRank".equalsIgnoreCase(kv.getKey()) || "rank".equalsIgnoreCase(kv.getKey()))
-                    .map(KeyValue::getValue)
-                    .filter(StringUtils::isNotBlank)
-                    .findFirst()
-                    .orElse(null);
+            String rank =
+                    item.getProperties().stream()
+                            .filter(
+                                    kv ->
+                                            "taxonRank".equalsIgnoreCase(kv.getKey())
+                                                    || "rank".equalsIgnoreCase(kv.getKey()))
+                            .map(KeyValue::getValue)
+                            .filter(StringUtils::isNotBlank)
+                            .findFirst()
+                            .orElse(null);
             if (rank != null) {
                 builder.rank(StringUtils.trimToNull(rank));
             }
         }
-        
+
         return builder.build();
     }
 
