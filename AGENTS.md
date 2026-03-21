@@ -52,10 +52,11 @@ mvn -Dtest=SpeciesListTransformerTest test
 # Check for formatting violations
 mvn spotless:check
 
-# Auto-fix all formatting issues
+# Check with user before performing auto-fix all formatting issues
 mvn spotless:apply
 ```
-> Always run `mvn spotless:apply` before committing Java changes.
+> Always ask user before running  `mvn spotless:apply` 
+> Alwats ask user before committing any code to Git
 
 ---
 
