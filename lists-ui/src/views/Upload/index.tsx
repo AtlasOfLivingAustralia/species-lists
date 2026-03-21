@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import { SpeciesListSubmit, UploadResult } from '#/api';
 import { getErrorMessage } from '#/helpers';
 import {

@@ -1,14 +1,12 @@
 package au.org.ala.listsapi.repo;
 
+import au.org.ala.listsapi.model.SpeciesListItem;
 import java.util.List;
-
 import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
-
-import au.org.ala.listsapi.model.SpeciesListItem;
 
 public interface SpeciesListItemMongoRepository extends MongoRepository<SpeciesListItem, String> {
     Page<SpeciesListItem> findBySpeciesListIDOrderById(String speciesListID, Pageable pageable);
@@ -16,19 +14,17 @@ public interface SpeciesListItemMongoRepository extends MongoRepository<SpeciesL
     /**
      * Fetches up to `batchSize` items for the given `speciesListId`.
      *
-     * The OR condition handles two cases:
-     *  1) lastId == null -> match everything (i.e. first batch).
-     *  2) lastId != null -> match only _id > lastId.
+     * <p>The OR condition handles two cases: 1) lastId == null -> match everything (i.e. first
+     * batch). 2) lastId != null -> match only _id > lastId.
      *
-     * We combine them with "speciesListID = ?0 AND ($or: [...])".
-     * 
-     * Update: This appears to be slow in DocumentDB (AWS), with 
-     * bulk taxon matching taking much longer than expected.
-     * As DocumentDB's query optimizer doesn't handle $expr well, causing full collection scans.
-     * 
-     * So we have split this into two separate queries:
-     *  - findFirstBatch() for the first batch (no lastId)
-     *  - findNextBatchAfter() for subsequent batches (with lastId)
+     * <p>We combine them with "speciesListID = ?0 AND ($or: [...])".
+     *
+     * <p>Update: This appears to be slow in DocumentDB (AWS), with bulk taxon matching taking much
+     * longer than expected. As DocumentDB's query optimizer doesn't handle $expr well, causing full
+     * collection scans.
+     *
+     * <p>So we have split this into two separate queries: - findFirstBatch() for the first batch
+     * (no lastId) - findNextBatchAfter() for subsequent batches (with lastId)
      *
      * @param speciesListId The species list ID
      * @param lastId The last _id from the previous batch (or null for first batch)
@@ -36,21 +32,22 @@ public interface SpeciesListItemMongoRepository extends MongoRepository<SpeciesL
      * @return List of SpeciesListItem objects for the given batch
      */
     @Query(
-        value = "{" +
-                "  'speciesListID': ?0," +
-                "  '$or': [" +
-                "    { '_id': { '$gt': ?1 } }," +
-                "    { '$expr': { '$eq': [ ?1, null ] } }" +
-                "  ]" +
-                "}",
-        sort  = "{ '_id': 1 }" // sort ascending by _id
-    )
+            value =
+                    "{"
+                            + "  'speciesListID': ?0,"
+                            + "  '$or': ["
+                            + "    { '_id': { '$gt': ?1 } },"
+                            + "    { '$expr': { '$eq': [ ?1, null ] } }"
+                            + "  ]"
+                            + "}",
+            sort = "{ '_id': 1 }" // sort ascending by _id
+            )
     List<SpeciesListItem> findNextBatch(String speciesListId, ObjectId lastId, Pageable pageable);
 
     /**
      * Fetches up to `batchSize` items for the given list of `speciesListIds`.
      *
-     * Uses offset-based pagination via the Pageable parameter.
+     * <p>Uses offset-based pagination via the Pageable parameter.
      *
      * @param speciesListIds The list of species list IDs
      * @param queryString The query string to filter results (searches across common fields)
@@ -59,7 +56,9 @@ public interface SpeciesListItemMongoRepository extends MongoRepository<SpeciesL
      * @param pageable Pageable object with the desired batch size and offset
      * @return List of SpeciesListItem objects for the given batch
      */
-    @Query(value = """
+    @Query(
+            value =
+                    """
         {
             'speciesListID': ?#{ [0].isEmpty() ? { '$exists': true } : { '$in': [0] } },
             '$or': [
@@ -81,33 +80,31 @@ public interface SpeciesListItemMongoRepository extends MongoRepository<SpeciesL
         }
     """)
     Page<SpeciesListItem> findNextBatch(
-            List<String> speciesListIds,
-            String queryString,
-            Pageable pageable
-    );
+            List<String> speciesListIds, String queryString, Pageable pageable);
 
     /**
-     * For the first batch (no lastId)
-     * Used by bulk operations like taxon matching for better performance in DocumentDB (AWS)
-     *  
+     * For the first batch (no lastId) Used by bulk operations like taxon matching for better
+     * performance in DocumentDB (AWS)
+     *
      * @param speciesListId
      * @param pageable
      * @return
      */
     @Query(value = "{ 'speciesListID': ?0 }", sort = "{ '_id': 1 }")
     List<SpeciesListItem> findFirstBatch(String speciesListId, Pageable pageable);
-    
+
     /**
-     * For subsequent batches (with lastId)
-     * Used by bulk operations like taxon matching for better performance in DocumentDB (AWS)
-     * 
+     * For subsequent batches (with lastId) Used by bulk operations like taxon matching for better
+     * performance in DocumentDB (AWS)
+     *
      * @param speciesListId
      * @param lastId
      * @param pageable
      * @return
      */
     @Query(value = "{ 'speciesListID': ?0, '_id': { '$gt': ?1 } }", sort = "{ '_id': 1 }")
-    List<SpeciesListItem> findNextBatchAfter(String speciesListId, ObjectId lastId, Pageable pageable);
-    
+    List<SpeciesListItem> findNextBatchAfter(
+            String speciesListId, ObjectId lastId, Pageable pageable);
+
     void deleteBySpeciesListID(String speciesListID);
 }

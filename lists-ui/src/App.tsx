@@ -25,6 +25,7 @@ function App() {
 
       return () => clearInterval(refreshInterval);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.isAuthenticated]);
 
   // If the user hasn't been authenticated, show a page loader instead

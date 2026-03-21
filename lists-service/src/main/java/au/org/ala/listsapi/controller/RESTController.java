@@ -15,13 +15,31 @@
 
 package au.org.ala.listsapi.controller;
 
+import au.org.ala.listsapi.model.RESTSpeciesListQuery;
+import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesListIndex;
+import au.org.ala.listsapi.model.SpeciesListItem;
+import au.org.ala.listsapi.model.SpeciesListPage;
+import au.org.ala.listsapi.repo.SpeciesListCustomRepository;
+import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import au.org.ala.listsapi.service.BiocacheService;
+import au.org.ala.listsapi.service.SearchHelperService;
+import au.org.ala.listsapi.util.ElasticUtils;
+import au.org.ala.ws.security.profile.AlaUserProfile;
+import co.elastic.clients.elasticsearch.core.search.FieldCollapse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.constraints.Max;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
@@ -49,29 +67,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import au.org.ala.listsapi.model.RESTSpeciesListQuery;
-import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.model.SpeciesListIndex;
-import au.org.ala.listsapi.model.SpeciesListItem;
-import au.org.ala.listsapi.model.SpeciesListPage;
-import au.org.ala.listsapi.repo.SpeciesListCustomRepository;
-import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
-import au.org.ala.listsapi.service.BiocacheService;
-import au.org.ala.listsapi.service.SearchHelperService;
-import au.org.ala.listsapi.util.ElasticUtils;
-import au.org.ala.ws.security.profile.AlaUserProfile;
-import co.elastic.clients.elasticsearch.core.search.FieldCollapse;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.validation.constraints.Max;
-
-/** 
- * REST API controller for species lists. 
- */
+/** REST API controller for species lists. */
 @CrossOrigin(origins = "*", maxAge = 3600)
 @Validated
 @org.springframework.web.bind.annotation.RestController
@@ -79,39 +75,64 @@ public class RESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(RESTController.class);
 
-    @Autowired
-    protected SpeciesListMongoRepository speciesListMongoRepository;
+    @Autowired protected SpeciesListMongoRepository speciesListMongoRepository;
 
-    @Autowired
-    protected SpeciesListCustomRepository speciesListCustomRepository;
+    @Autowired protected SpeciesListCustomRepository speciesListCustomRepository;
 
-    @Autowired
-    protected BiocacheService biocacheService;
+    @Autowired protected BiocacheService biocacheService;
 
-    @Autowired
-    protected AuthUtils authUtils;
+    @Autowired protected AuthUtils authUtils;
 
-    @Autowired
-    protected SearchHelperService searchHelperService;
+    @Autowired protected SearchHelperService searchHelperService;
 
-    @Autowired
-    protected ElasticsearchOperations elasticsearchOperations;
+    @Autowired protected ElasticsearchOperations elasticsearchOperations;
 
     @Operation(tags = "REST v2", summary = "Get species list metadata")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesList.class))),
-            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "User does not have permission to view species list: dr123"))),
-            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found: dr123"))),
+        @ApiResponse(
+                responseCode = "200",
+                description = "Species list found",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema = @Schema(implementation = SpeciesList.class))),
+        @ApiResponse(
+                responseCode = "403",
+                description = "Forbidden - user is not authorized to view this species list",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example =
+                                                        "User does not have permission to view species list: dr123"))),
+        @ApiResponse(
+                responseCode = "404",
+                description = "Species list not found",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example = "Species list not found: dr123"))),
     })
     @GetMapping("/v2/speciesList/{speciesListID}")
     public ResponseEntity<SpeciesList> speciesList(
-            @Parameter(description = "The species list ID or data resource ID", example = "dr656", required = true)
-            @PathVariable("speciesListID") String speciesListID,
+            @Parameter(
+                            description = "The species list ID or data resource ID",
+                            example = "dr656",
+                            required = true)
+                    @PathVariable("speciesListID")
+                    String speciesListID,
             @AuthenticationPrincipal Principal principal) {
-        Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
-                speciesListID);
+        Optional<SpeciesList> speciesList =
+                speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
 
-        if (speciesList.isPresent() && speciesList.get().getIsPrivate() && !authUtils.isAuthorized(speciesList.get(), principal)) {
+        if (speciesList.isPresent()
+                && speciesList.get().getIsPrivate()
+                && !authUtils.isAuthorized(speciesList.get(), principal)) {
             // If the list is private and the user is not authorized, return 403 Forbidden
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
@@ -120,25 +141,59 @@ public class RESTController {
     }
 
     private boolean eq(String value, String equals) {
-        if (value == null)
-            return false;
-        if (value.isEmpty())
-            return false;
+        if (value == null) return false;
+        if (value.isEmpty()) return false;
         return value.equals(equals);
     }
 
     @Operation(tags = "REST v2", summary = "Get a list of species lists matching the query")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
-            @ApiResponse(responseCode = "400", description = "Bad Request - invalid query parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Cannot query private lists without a user ID"))),
-            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view private species lists", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "You must be authenticated to query private lists"))),
-            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found")))
-        })
+        @ApiResponse(
+                responseCode = "200",
+                description = "Species list found",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema = @Schema(implementation = SpeciesListPage.class))),
+        @ApiResponse(
+                responseCode = "400",
+                description = "Bad Request - invalid query parameters",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example =
+                                                        "Cannot query private lists without a user ID"))),
+        @ApiResponse(
+                responseCode = "403",
+                description = "Forbidden - user is not authorized to view private species lists",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example =
+                                                        "You must be authenticated to query private lists"))),
+        @ApiResponse(
+                responseCode = "404",
+                description = "Species list not found",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example = "Species list not found")))
+    })
     @GetMapping("/v2/speciesList")
     public ResponseEntity<Object> speciesLists(
             @ParameterObject RESTSpeciesListQuery speciesList,
             @RequestParam(name = "page", defaultValue = "1", required = false) @Max(10000) int page,
-            @RequestParam(name = "pageSize", defaultValue = "10", required = false) @Max(1000) int pageSize,
+            @RequestParam(name = "pageSize", defaultValue = "10", required = false) @Max(1000)
+                    int pageSize,
             @AuthenticationPrincipal Principal principal) {
         try {
             Pageable paging = PageRequest.of(page - 1, pageSize);
@@ -159,7 +214,9 @@ public class RESTController {
                     if (speciesList.getIsPrivate() == null) {
                         // If no owner is supplied, or the owner is the current user,
                         // query all the user's private lists, and all public lists
-                        if (speciesList.getOwner() == null || (profile.getUserId() != null && speciesList.getOwner().equals(profile.getUserId()))) {
+                        if (speciesList.getOwner() == null
+                                || (profile.getUserId() != null
+                                        && speciesList.getOwner().equals(profile.getUserId()))) {
                             RESTSpeciesListQuery privateLists = speciesList.copy();
                             privateLists.setIsPrivate("true");
                             privateLists.setOwner(profile.getUserId());
@@ -167,23 +224,31 @@ public class RESTController {
                             RESTSpeciesListQuery publicLists = speciesList.copy();
                             publicLists.setIsPrivate("false");
 
-                            Page<SpeciesList> results = speciesListCustomRepository
-                                    .findByMultipleExamples(privateLists.convertTo(), publicLists.convertTo(), paging);
-                            return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
+                            Page<SpeciesList> results =
+                                    speciesListCustomRepository.findByMultipleExamples(
+                                            privateLists.convertTo(),
+                                            publicLists.convertTo(),
+                                            paging);
+                            return new ResponseEntity<>(
+                                    getLegacyFormatModel(results), HttpStatus.OK);
                         } else { // Otherwise, only query public lists with that userid
                             speciesList.setIsPrivate("false");
                         }
                     } else if (eq(speciesList.getIsPrivate(), "true")) {
                         if (profile.getUserId() == null) {
-                            return ResponseEntity.badRequest().body("Cannot query private lists without a user ID");
+                            return ResponseEntity.badRequest()
+                                    .body("Cannot query private lists without a user ID");
                         }
-                        if (speciesList.getOwner() != null && !speciesList.getOwner().equals(profile.getUserId())) {
-                            return ResponseEntity.badRequest().body("You can only query your own private lists");
+                        if (speciesList.getOwner() != null
+                                && !speciesList.getOwner().equals(profile.getUserId())) {
+                            return ResponseEntity.badRequest()
+                                    .body("You can only query your own private lists");
                         }
                         speciesList.setOwner(profile.getUserId());
                     }
                 }
-                // If the user is an admin or has internal scope, they can query any lists without restrictions
+                // If the user is an admin or has internal scope, they can query any lists without
+                // restrictions
             }
 
             if (speciesList == null || speciesList.isEmpty()) {
@@ -191,10 +256,11 @@ public class RESTController {
                 return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
             }
 
-            ExampleMatcher matcher = ExampleMatcher.matching()
-                    .withIgnoreCase()
-                    .withIgnoreNullValues()
-                    .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
+            ExampleMatcher matcher =
+                    ExampleMatcher.matching()
+                            .withIgnoreCase()
+                            .withIgnoreNullValues()
+                            .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
 
             // Create an Example from the exampleProduct with the matcher
             Example<SpeciesList> example = Example.of(speciesList.convertTo(), matcher);
@@ -206,21 +272,67 @@ public class RESTController {
         }
     }
 
-    @Operation(tags = "REST v2", summary = "Get a list of species lists that contain the specified taxon GUID")
+    @Operation(
+            tags = "REST v2",
+            summary = "Get a list of species lists that contain the specified taxon GUID")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
-            @ApiResponse(responseCode = "400", description = "Bad Request - invalid query parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Cannot query private lists without a user ID"))),
-            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view private species lists", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "You must be authenticated to query private lists"))),
-            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found")))
+        @ApiResponse(
+                responseCode = "200",
+                description = "Species list found",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema = @Schema(implementation = SpeciesListPage.class))),
+        @ApiResponse(
+                responseCode = "400",
+                description = "Bad Request - invalid query parameters",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example =
+                                                        "Cannot query private lists without a user ID"))),
+        @ApiResponse(
+                responseCode = "403",
+                description = "Forbidden - user is not authorized to view private species lists",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example =
+                                                        "You must be authenticated to query private lists"))),
+        @ApiResponse(
+                responseCode = "404",
+                description = "Species list not found",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example = "Species list not found")))
     })
     @GetMapping("/v2/speciesList/byGuid")
     public ResponseEntity<Object> speciesListsByGuid(
-            @Parameter(description = "The taxon globally unique identifier (GUID)", example = "https://biodiversity.org.au/afd/taxa/0d382040-d26d-4009-921a-abf76013df3a", required = true)
-            @RequestParam(name = "guid") String guid,
+            @Parameter(
+                            description = "The taxon globally unique identifier (GUID)",
+                            example =
+                                    "https://biodiversity.org.au/afd/taxa/0d382040-d26d-4009-921a-abf76013df3a",
+                            required = true)
+                    @RequestParam(name = "guid")
+                    String guid,
             @Parameter(description = "The page number to return (starting from 1)", example = "1")
-            @RequestParam(name = "page", defaultValue = "1", required = false) @Max(10000) int page,
+                    @RequestParam(name = "page", defaultValue = "1", required = false)
+                    @Max(10000)
+                    int page,
             @Parameter(description = "The number of items per page", example = "10")
-            @RequestParam(name = "pageSize", defaultValue = "10", required = false) @Max(1000) int pageSize,
+                    @RequestParam(name = "pageSize", defaultValue = "10", required = false)
+                    @Max(1000)
+                    int pageSize,
             @AuthenticationPrincipal Principal principal) {
         try {
             AlaUserProfile profile = authUtils.getUserProfile(principal);
@@ -232,95 +344,251 @@ public class RESTController {
             Pageable pageableRequest = PageRequest.of(page - 1, pageSize);
             NativeQueryBuilder builder = NativeQuery.builder().withPageable(pageableRequest);
             builder.withQuery(
-                    q -> q.bool(
-                            bq -> {
-                                // Require at least one of these conditions to match using minimumShouldMatch
-                                bq.minimumShouldMatch("1");
+                            q ->
+                                    q.bool(
+                                            bq -> {
+                                                // Require at least one of these conditions to match
+                                                // using minimumShouldMatch
+                                                bq.minimumShouldMatch("1");
 
-                                // classification.taxonConceptID.keyword == guid
-                                bq.should(s -> s.term(t -> t
-                                        .field("classification.taxonConceptID.keyword")
-                                        .value(guid)));
+                                                // classification.taxonConceptID.keyword == guid
+                                                bq.should(
+                                                        s ->
+                                                                s.term(
+                                                                        t ->
+                                                                                t.field(
+                                                                                                "classification.taxonConceptID.keyword")
+                                                                                        .value(
+                                                                                                guid)));
 
-                                // taxonID.keyword == guid
-                                bq.should(s -> s.term(t -> t
-                                        .field("taxonID.keyword")
-                                        .value(guid)));
+                                                // taxonID.keyword == guid
+                                                bq.should(
+                                                        s ->
+                                                                s.term(
+                                                                        t ->
+                                                                                t.field(
+                                                                                                "taxonID.keyword")
+                                                                                        .value(
+                                                                                                guid)));
 
-                                // If the user is not an admin or doesn't have internal scope, only query their private lists, and all other
-                                // public lists
-                                if (!authUtils.isAuthenticated(principal)) {
-                                    bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
-                                } else if (!authUtils.hasAdminRole(profile) && !authUtils.hasInternalScope(profile)) {
-                                    if (profile.getUserId() != null) {
-                                        bq.filter(f -> f.bool(b -> b
-                                                .should(s -> s.bool(b2 -> b2
-                                                        .must(m -> m.term(t -> t.field("owner").value(profile.getUserId())))
-                                                        .must(m -> m.term(t -> t.field("isPrivate").value(true)))))
-                                                .should(s -> s.term(t -> t.field("isPrivate").value(false)))));
-                                    } else {
-                                        // If user has no userId (e.g., M2M token without internal scope), only show public lists
-                                        bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
-                                    }
-                                }
-                                // If user is admin or has internal scope, no additional filters are applied (can see all lists)
+                                                // If the user is not an admin or doesn't have
+                                                // internal scope, only query their private lists,
+                                                // and all other
+                                                // public lists
+                                                if (!authUtils.isAuthenticated(principal)) {
+                                                    bq.filter(
+                                                            f ->
+                                                                    f.term(
+                                                                            t ->
+                                                                                    t.field(
+                                                                                                    "isPrivate")
+                                                                                            .value(
+                                                                                                    false)));
+                                                } else if (!authUtils.hasAdminRole(profile)
+                                                        && !authUtils.hasInternalScope(profile)) {
+                                                    if (profile.getUserId() != null) {
+                                                        bq.filter(
+                                                                f ->
+                                                                        f.bool(
+                                                                                b ->
+                                                                                        b.should(
+                                                                                                        s ->
+                                                                                                                s
+                                                                                                                        .bool(
+                                                                                                                                b2 ->
+                                                                                                                                        b2.must(
+                                                                                                                                                        m ->
+                                                                                                                                                                m
+                                                                                                                                                                        .term(
+                                                                                                                                                                                t ->
+                                                                                                                                                                                        t.field(
+                                                                                                                                                                                                        "owner")
+                                                                                                                                                                                                .value(
+                                                                                                                                                                                                        profile
+                                                                                                                                                                                                                .getUserId())))
+                                                                                                                                                .must(
+                                                                                                                                                        m ->
+                                                                                                                                                                m
+                                                                                                                                                                        .term(
+                                                                                                                                                                                t ->
+                                                                                                                                                                                        t.field(
+                                                                                                                                                                                                        "isPrivate")
+                                                                                                                                                                                                .value(
+                                                                                                                                                                                                        true)))))
+                                                                                                .should(
+                                                                                                        s ->
+                                                                                                                s
+                                                                                                                        .term(
+                                                                                                                                t ->
+                                                                                                                                        t.field(
+                                                                                                                                                        "isPrivate")
+                                                                                                                                                .value(
+                                                                                                                                                        false)))));
+                                                    } else {
+                                                        // If user has no userId (e.g., M2M token
+                                                        // without internal scope), only show public
+                                                        // lists
+                                                        bq.filter(
+                                                                f ->
+                                                                        f.term(
+                                                                                t ->
+                                                                                        t.field(
+                                                                                                        "isPrivate")
+                                                                                                .value(
+                                                                                                        false)));
+                                                    }
+                                                }
+                                                // If user is admin or has internal scope, no
+                                                // additional filters are applied (can see all
+                                                // lists)
 
-                                return bq;
-                            }))
+                                                return bq;
+                                            }))
                     .withFieldCollapse(FieldCollapse.of(fc -> fc.field("speciesListID.keyword")));
 
             Query query = builder.build();
             query.setPageable(pageableRequest);
 
-            SearchHits<SpeciesListIndex> results = elasticsearchOperations.search(
-                    query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
+            SearchHits<SpeciesListIndex> results =
+                    elasticsearchOperations.search(
+                            query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
 
-            List<SpeciesListItem> speciesListItems = ElasticUtils
-                    .convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
+            List<SpeciesListItem> speciesListItems =
+                    ElasticUtils.convertList(
+                            (List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
 
             // If no results matching the guid were found, return an empty list
             if (results.getTotalHits() == 0) {
-                return new ResponseEntity<>(getLegacyFormatModel(new ArrayList<>(), 0, page, pageSize), HttpStatus.OK);
+                return new ResponseEntity<>(
+                        getLegacyFormatModel(new ArrayList<>(), 0, page, pageSize), HttpStatus.OK);
             }
 
-            List<SpeciesList> speciesLists = speciesListMongoRepository
-                    .findAllById(speciesListItems.stream().map(SpeciesListItem::getSpeciesListID).toList());
+            List<SpeciesList> speciesLists =
+                    speciesListMongoRepository.findAllById(
+                            speciesListItems.stream()
+                                    .map(SpeciesListItem::getSpeciesListID)
+                                    .toList());
 
-            return new ResponseEntity<>(getLegacyFormatModel(speciesLists, results.getTotalHits(), page, pageSize),
+            return new ResponseEntity<>(
+                    getLegacyFormatModel(speciesLists, results.getTotalHits(), page, pageSize),
                     HttpStatus.OK);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-    @Operation(tags = "REST v2", summary = "Get species lists items for a list. List IDs can be a single value, or comma separated IDs.")
+    @Operation(
+            tags = "REST v2",
+            summary =
+                    "Get species lists items for a list. List IDs can be a single value, or comma separated IDs.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
-            @ApiResponse(responseCode = "400", description = "Bad Request - invalid query parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Cannot query private lists without a user ID"))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - user must be authenticated to view private species lists", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "You must be authenticated to query private lists"))),
-            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view private species lists", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "You are not authorized to query private lists")))
+        @ApiResponse(
+                responseCode = "200",
+                description = "Species list found",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema = @Schema(implementation = SpeciesListPage.class))),
+        @ApiResponse(
+                responseCode = "400",
+                description = "Bad Request - invalid query parameters",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example =
+                                                        "Cannot query private lists without a user ID"))),
+        @ApiResponse(
+                responseCode = "401",
+                description =
+                        "Unauthorized - user must be authenticated to view private species lists",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example =
+                                                        "You must be authenticated to query private lists"))),
+        @ApiResponse(
+                responseCode = "403",
+                description = "Forbidden - user is not authorized to view private species lists",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example =
+                                                        "You are not authorized to query private lists")))
     })
     @GetMapping("/v2/speciesListItems/{speciesListIDs}")
     public ResponseEntity<Object> speciesListItems(
-            @Parameter(description = "Comma separated list of species list IDs or data resource IDs", example = "dr18404,dr18457,dr18706", required = true)
-            @PathVariable("speciesListIDs") String speciesListIDs,
-            @Parameter(description = "Search query for filtering species list items", example = "Eucalyptus", required = false)
-            @Nullable @RequestParam(name = "q") String searchQuery,
-            @Parameter(description = "Fields to include in the response", example = "scientificName,commonName", required = false)
-            @Nullable @RequestParam(name = "fields") String fields,
-            @Parameter(description = "The page number to return (starting from 1)", example = "1", required = false)
-            @Nullable @RequestParam(name = "page", defaultValue = "1") Integer page,
-            @Parameter(description = "The number of items per page", example = "10", required = false)
-            @Nullable @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
-            @Parameter(description = "Field to sort by", example = "scientificName", required = false)
-            @Nullable @RequestParam(name = "sort", defaultValue = "scientificName") String sort,
-            @Parameter(description = "Sort direction (asc or desc)", example = "asc", required = false)
-            @Nullable @RequestParam(name = "dir", defaultValue = "asc") String dir,
+            @Parameter(
+                            description =
+                                    "Comma separated list of species list IDs or data resource IDs",
+                            example = "dr18404,dr18457,dr18706",
+                            required = true)
+                    @PathVariable("speciesListIDs")
+                    String speciesListIDs,
+            @Parameter(
+                            description = "Search query for filtering species list items",
+                            example = "Eucalyptus",
+                            required = false)
+                    @Nullable
+                    @RequestParam(name = "q")
+                    String searchQuery,
+            @Parameter(
+                            description = "Fields to include in the response",
+                            example = "scientificName,commonName",
+                            required = false)
+                    @Nullable
+                    @RequestParam(name = "fields")
+                    String fields,
+            @Parameter(
+                            description = "The page number to return (starting from 1)",
+                            example = "1",
+                            required = false)
+                    @Nullable
+                    @RequestParam(name = "page", defaultValue = "1")
+                    Integer page,
+            @Parameter(
+                            description = "The number of items per page",
+                            example = "10",
+                            required = false)
+                    @Nullable
+                    @RequestParam(name = "pageSize", defaultValue = "10")
+                    Integer pageSize,
+            @Parameter(
+                            description = "Field to sort by",
+                            example = "scientificName",
+                            required = false)
+                    @Nullable
+                    @RequestParam(name = "sort", defaultValue = "scientificName")
+                    String sort,
+            @Parameter(
+                            description = "Sort direction (asc or desc)",
+                            example = "asc",
+                            required = false)
+                    @Nullable
+                    @RequestParam(name = "dir", defaultValue = "asc")
+                    String dir,
             @AuthenticationPrincipal Principal principal) {
         try {
             int pageIndex = (page - 1); // spring data pageable is zero based
-            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs,
-                    searchQuery, fields, null, pageIndex, pageSize, sort, dir, principal);
+            List<SpeciesListItem> speciesListItems =
+                    searchHelperService.fetchSpeciesListItems(
+                            speciesListIDs,
+                            searchQuery,
+                            fields,
+                            null,
+                            pageIndex,
+                            pageSize,
+                            sort,
+                            dir,
+                            principal);
 
             return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
         } catch (Exception e) {
@@ -328,30 +596,91 @@ public class RESTController {
         }
     }
 
-    @Operation(tags = "REST v2", summary = "Get details of species list items i.e species for a list of guid(s)")
+    @Operation(
+            tags = "REST v2",
+            summary = "Get details of species list items i.e species for a list of guid(s)")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
-            @ApiResponse(responseCode = "400", description = "Bad Request - invalid query parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Cannot query private lists without a user ID"))),
-            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view private species lists", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "You must be authenticated to query private lists"))),
-            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found")))
+        @ApiResponse(
+                responseCode = "200",
+                description = "Species list found",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema = @Schema(implementation = SpeciesListPage.class))),
+        @ApiResponse(
+                responseCode = "400",
+                description = "Bad Request - invalid query parameters",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example =
+                                                        "Cannot query private lists without a user ID"))),
+        @ApiResponse(
+                responseCode = "403",
+                description = "Forbidden - user is not authorized to view private species lists",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example =
+                                                        "You must be authenticated to query private lists"))),
+        @ApiResponse(
+                responseCode = "404",
+                description = "Species list not found",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example = "Species list not found")))
     })
     @GetMapping("/v2/species")
     public ResponseEntity<Object> species(
-            @Parameter(description = "One or more (comma separated) species list IDs or data resource IDs", example = "dr18404,dr18457,dr18706")
-            @Nullable @RequestParam(name = "speciesListIDs") String speciesListIDs,
-            @Parameter(description = "One or more (comma separated) taxon globally unique identifiers (GUID)", example = "https://biodiversity.org.au/afd/taxa/083b413f-8746-4788-8dc1-3da495d78a79")
-            @RequestParam(name = "guids") String guids,
+            @Parameter(
+                            description =
+                                    "One or more (comma separated) species list IDs or data resource IDs",
+                            example = "dr18404,dr18457,dr18706")
+                    @Nullable
+                    @RequestParam(name = "speciesListIDs")
+                    String speciesListIDs,
+            @Parameter(
+                            description =
+                                    "One or more (comma separated) taxon globally unique identifiers (GUID)",
+                            example =
+                                    "https://biodiversity.org.au/afd/taxa/083b413f-8746-4788-8dc1-3da495d78a79")
+                    @RequestParam(name = "guids")
+                    String guids,
             @Parameter(description = "The page number to return (starting from 1)", example = "1")
-            @RequestParam(name = "page", defaultValue = "1", required = false) @Max(10000) int page,
+                    @RequestParam(name = "page", defaultValue = "1", required = false)
+                    @Max(10000)
+                    int page,
             @Parameter(description = "The number of items per page", example = "10")
-            @RequestParam(name = "pageSize", defaultValue = "10", required = false) @Max(1000) int pageSize,
+                    @RequestParam(name = "pageSize", defaultValue = "10", required = false)
+                    @Max(1000)
+                    int pageSize,
             @AuthenticationPrincipal Principal principal) {
         try {
             int pageIndex = (page - 1); // spring data pageable is zero based
             String searchQuery = guids.replaceAll(",", "|"); // convert to regex OR
-            List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs,
-                    searchQuery, null, null, pageIndex, pageSize, null, null, principal);
-            // List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(guids, speciesListIDs,
+            List<SpeciesListItem> speciesListItems =
+                    searchHelperService.fetchSpeciesListItems(
+                            speciesListIDs,
+                            searchQuery,
+                            null,
+                            null,
+                            pageIndex,
+                            pageSize,
+                            null,
+                            null,
+                            principal);
+            // List<SpeciesListItem> speciesListItems =
+            // searchHelperService.fetchSpeciesListItems(guids, speciesListIDs,
             //         page, pageSize, principal);
             return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
         } catch (Exception e) {
@@ -360,18 +689,41 @@ public class RESTController {
         }
     }
 
-    @Operation(tags = "REST v2", summary = "Generate a Biocache query ID (QID) for up to 4000 taxa from a given species list")
+    @Operation(
+            tags = "REST v2",
+            summary =
+                    "Generate a Biocache query ID (QID) for up to 4000 taxa from a given species list")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
-            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found")))
+        @ApiResponse(
+                responseCode = "200",
+                description = "Species list found",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema = @Schema(implementation = SpeciesListPage.class))),
+        @ApiResponse(
+                responseCode = "404",
+                description = "Species list not found",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example = "Species list not found")))
     })
     @GetMapping("/v2/speciesListQid/{speciesListID}")
     public ResponseEntity<Object> speciesListQid(
-            @Parameter(description = "The species list ID or data resource ID", example = "dr656", required = true)
-            @PathVariable("speciesListID") String speciesListID) {
+            @Parameter(
+                            description = "The species list ID or data resource ID",
+                            example = "dr656",
+                            required = true)
+                    @PathVariable("speciesListID")
+                    String speciesListID) {
         try {
-            Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
-                    speciesListID);
+            Optional<SpeciesList> speciesList =
+                    speciesListMongoRepository.findByIdOrDataResourceUid(
+                            speciesListID, speciesListID);
 
             // Ensure the species list exists
             if (speciesList.isPresent()) {
@@ -385,31 +737,71 @@ public class RESTController {
         }
     }
 
-    @Operation(tags = "REST v2", summary = "Get a list of keys from (user provided) key value pairs (KVP) that are common across multiple species lists")
+    @Operation(
+            tags = "REST v2",
+            summary =
+                    "Get a list of keys from (user provided) key value pairs (KVP) that are common across multiple species lists")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
-            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view private species lists", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "You must be authenticated to query private lists"))),
-            @ApiResponse(responseCode = "404", description = "Species lists not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found")))
+        @ApiResponse(
+                responseCode = "200",
+                description = "Species list found",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema = @Schema(implementation = SpeciesListPage.class))),
+        @ApiResponse(
+                responseCode = "403",
+                description = "Forbidden - user is not authorized to view private species lists",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example =
+                                                        "You must be authenticated to query private lists"))),
+        @ApiResponse(
+                responseCode = "404",
+                description = "Species lists not found",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example = "Species list not found")))
     })
     @GetMapping("/v2/listCommonKeys/{speciesListIDs}")
     public ResponseEntity<Object> listCommonKeys(
-            @Parameter(description = "Comma separated list of species list IDs or data resource IDs", example = "dr18404,dr18457,dr18706", required = true)
-            @PathVariable("speciesListIDs") String speciesListIDs,
+            @Parameter(
+                            description =
+                                    "Comma separated list of species list IDs or data resource IDs",
+                            example = "dr18404,dr18457,dr18706",
+                            required = true)
+                    @PathVariable("speciesListIDs")
+                    String speciesListIDs,
             @AuthenticationPrincipal Principal principal) {
         try {
             List<String> IDs = Arrays.stream(speciesListIDs.split(",")).toList();
-            List<SpeciesList> speciesLists = speciesListMongoRepository.findByDataResourceUidInOrIdIn(IDs);
+            List<SpeciesList> speciesLists =
+                    speciesListMongoRepository.findByDataResourceUidInOrIdIn(IDs);
 
             // Ensure that some species lists were returned with the query
             if (!speciesLists.isEmpty()) {
-                List<SpeciesList> validLists = speciesLists.stream()
-                        .filter(list -> !list.getIsPrivate() || authUtils.isAuthorized(list, principal)).toList();
+                List<SpeciesList> validLists =
+                        speciesLists.stream()
+                                .filter(
+                                        list ->
+                                                !list.getIsPrivate()
+                                                        || authUtils.isAuthorized(list, principal))
+                                .toList();
 
                 if (validLists.isEmpty()) {
                     return new ResponseEntity<>(new ArrayList<>(), HttpStatus.OK);
                 }
 
-                return new ResponseEntity<>(searchHelperService.findCommonKeys(speciesLists), HttpStatus.OK);
+                return new ResponseEntity<>(
+                        searchHelperService.findCommonKeys(speciesLists), HttpStatus.OK);
             }
 
             return ResponseEntity.status(404).body("Species list(s) not found");
@@ -419,11 +811,10 @@ public class RESTController {
     }
 
     /**
-     * Convert the results to a legacy format
-     * Note: this is not 100% backwards compatible with the old API, see the
-     * 
-     * @au.org.ala.listsapi.LegacyController
+     * Convert the results to a legacy format Note: this is not 100% backwards compatible with the
+     * old API, see the
      *
+     * @au.org.ala.listsapi.LegacyController
      * @param results
      * @return
      */
@@ -436,7 +827,8 @@ public class RESTController {
         return legacyFormat;
     }
 
-    public SpeciesListPage getLegacyFormatModel(List<SpeciesList> results, long totalRecords, int max, int offset) {
+    public SpeciesListPage getLegacyFormatModel(
+            List<SpeciesList> results, long totalRecords, int max, int offset) {
         SpeciesListPage legacyFormat = new SpeciesListPage();
         legacyFormat.setListCount(totalRecords);
         legacyFormat.setOffset(offset);

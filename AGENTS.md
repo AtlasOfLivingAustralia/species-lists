@@ -117,7 +117,7 @@ yarn lint
 Static imports appear in their own block. `spotless:apply` will enforce this automatically.
 
 ### Formatting
-- **Indentation:** 2 spaces (Google Java Format default – let Spotless manage it)
+- **Indentation:** 4 spaces (`google-java-format` AOSP style – let Spotless manage it)
 - **Line length:** managed by Spotless
 - **Braces:** K&R style (opening brace on the same line)
 

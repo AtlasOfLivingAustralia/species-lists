@@ -2,18 +2,16 @@ package au.org.ala.listsapi.model;
 
 import java.util.Date;
 import java.util.List;
-
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.annotation.Version;
-import org.springframework.data.mongodb.core.index.Indexed;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.jackson.Jacksonized;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.annotation.Version;
+import org.springframework.data.mongodb.core.index.Indexed;
 
 @NoArgsConstructor
 @Data
@@ -21,7 +19,7 @@ import lombok.extern.jackson.Jacksonized;
 @AllArgsConstructor
 @Jacksonized
 @org.springframework.data.mongodb.core.mapping.Document(collection = "lists")
-    public class SpeciesList {
+public class SpeciesList {
 
     @Id private String id;
     @Version private Integer version;
@@ -71,7 +69,8 @@ import lombok.extern.jackson.Jacksonized;
         this.description = other.description;
         this.listType = other.listType;
         this.licence = other.licence;
-        this.originalFieldList = other.originalFieldList != null ? List.copyOf(other.originalFieldList) : null;
+        this.originalFieldList =
+                other.originalFieldList != null ? List.copyOf(other.originalFieldList) : null;
         this.fieldList = other.fieldList != null ? List.copyOf(other.fieldList) : null;
         this.facetList = other.facetList != null ? List.copyOf(other.facetList) : null;
         this.doi = other.doi;
@@ -92,13 +91,18 @@ import lombok.extern.jackson.Jacksonized;
         this.ownerName = other.ownerName;
         this.lastUpdatedBy = other.lastUpdatedBy;
         this.editors = other.editors != null ? List.copyOf(other.editors) : null;
-        this.approvedViewers = other.approvedViewers != null ? List.copyOf(other.approvedViewers) : null;
+        this.approvedViewers =
+                other.approvedViewers != null ? List.copyOf(other.approvedViewers) : null;
         this.tags = other.tags != null ? List.copyOf(other.tags) : null;
         this.classification = other.classification;
         this.dateCreated = other.dateCreated != null ? new Date(other.dateCreated.getTime()) : null;
-        this.metadataLastUpdated = other.metadataLastUpdated != null ? new Date(other.metadataLastUpdated.getTime()) : null;
+        this.metadataLastUpdated =
+                other.metadataLastUpdated != null
+                        ? new Date(other.metadataLastUpdated.getTime())
+                        : null;
         this.lastUpdated = other.lastUpdated != null ? new Date(other.lastUpdated.getTime()) : null;
-        this.lastUploaded = other.lastUploaded != null ? new Date(other.lastUploaded.getTime()) : null;
+        this.lastUploaded =
+                other.lastUploaded != null ? new Date(other.lastUploaded.getTime()) : null;
     }
 
     public String getId() {

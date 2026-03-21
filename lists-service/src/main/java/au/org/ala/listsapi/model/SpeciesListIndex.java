@@ -1,40 +1,33 @@
 /**
- * Copyright (c) 2025 Atlas of Living Australia
- * All Rights Reserved.
- * 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Copyright (c) 2025 Atlas of Living Australia All Rights Reserved.
+ *
+ * <p>The contents of this file are subject to the Mozilla Public License Version 1.1 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at http://www.mozilla.org/MPL/
+ *
+ * <p>Software distributed under the License is distributed on an "AS IS" basis, WITHOUT WARRANTY OF
+ * ANY KIND, either express or implied. See the License for the specific language governing rights
+ * and limitations under the License.
  */
-
 package au.org.ala.listsapi.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
-
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Mapping;
 import org.springframework.data.elasticsearch.annotations.Setting;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
-
 /**
- * SpeciesListIndex is a model/bean that represents a single elastic search document and
- * each entry corresponds to a denormalised taxon row entry for a species list. Individual 
- * lists are represented by aggregating the entries for each list's taxa in the index.
- * Note: any changes to this file will require the ElasticSearch index to be deleted, 
- * recreated and reindexed again. Otherwise the mappings.json file is not sent to the server.
+ * SpeciesListIndex is a model/bean that represents a single elastic search document and each entry
+ * corresponds to a denormalised taxon row entry for a species list. Individual lists are
+ * represented by aggregating the entries for each list's taxa in the index. Note: any changes to
+ * this file will require the ElasticSearch index to be deleted, recreated and reindexed again.
+ * Otherwise the mappings.json file is not sent to the server.
  */
 @Document(indexName = "species-lists", createIndex = true)
 @Setting(settingPath = "/elasticsearch/settings.json")

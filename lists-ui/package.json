@@ -11,7 +11,7 @@
     "build:staging": "tsc && vite build --mode staging",
     "build:testing": "tsc && vite build --mode testing",
     "build:development": "tsc && vite build --mode development",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
   "dependencies": {

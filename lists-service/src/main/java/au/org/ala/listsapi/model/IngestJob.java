@@ -1,9 +1,7 @@
 package au.org.ala.listsapi.model;
 
-import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,10 +21,8 @@ public class IngestJob {
     List<String> fieldList;
     List<String> originalFieldNames;
     List<String> facetList;
-    @Builder.Default
-    int rowCount = 0;
-    @Builder.Default
-    long distinctMatchCount = 0;
+    @Builder.Default int rowCount = 0;
+    @Builder.Default long distinctMatchCount = 0;
     String localFile;
     List<String> validationErrors;
 }

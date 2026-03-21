@@ -1,7 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Variables = { [key: string]: any };
 import { getCsrfToken } from '../csrf';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function performGQLQuery<T = any>(
   query: string,
   variables?: Variables,

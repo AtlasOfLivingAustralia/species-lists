@@ -1,4 +1,5 @@
 // Removed a "eslint-disable react-hooks/exhaustive-deps" comment here
+import React from 'react';
 import { Facet, KV, queries, SpeciesListPage, useGQLQuery } from '#/api';
 import {
   ActionIcon,
@@ -39,8 +40,6 @@ import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
 import {
   faCode,
-  faEye,
-  faEyeSlash,
   faMagnifyingGlass,
   faXmark
 } from '@fortawesome/free-solid-svg-icons';
@@ -199,12 +198,14 @@ const Home = ({ routeId }: { routeId: string }) => {
       filters: filters.length > 0 ? filters : [], // Always pass an array
       ...(isUser ? { userId: ala.userid } : {}),
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, size, searchDebounced, sort, dir, filtersKey, refresh, view, isUser, isMyListsPage, isAdminListPage]);
   // Note: using filtersKey instead of filters in dependencies
 
   // Keep the current page in check
   useEffect(() => {
     if (totalPages && page >= totalPages) setPage(totalPages - 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, totalPages]);
 
   // Retry handler
@@ -216,6 +217,7 @@ const Home = ({ routeId }: { routeId: string }) => {
     setSearch('');
     setView('public');
     setRefresh(!refresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh]);
 
   const sortOptions = useMemo(
@@ -257,7 +259,7 @@ const Home = ({ routeId }: { routeId: string }) => {
   }, [setFilters, setPage]);
 
   // Handler for the Enter key press
-  interface KeyDownEvent extends React.KeyboardEvent<HTMLInputElement> {}
+  type KeyDownEvent = React.KeyboardEvent<HTMLInputElement>;
 
   const handleKeyDown = (event: KeyDownEvent): void => {
     if (event.key === 'Enter') {

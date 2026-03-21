@@ -64,10 +64,9 @@ export function TrItem({
       {editing && <Table.Td />}
       {classification.map((key) => (
         <Table.Td key={key} style={tdStyles}>
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {key === "matchType" 
-            ? intl.formatMessage({ id: `classification.${(row.classification as any)?.[key]}` })
-            : (row.classification as any)?.[key]}
+            ? intl.formatMessage({ id: `classification.${(row.classification as Record<string, unknown>)?.[key]}` })
+            : String((row.classification as Record<string, unknown>)?.[key] ?? '')}
         </Table.Td>
       ))}
     </Table.Tr>

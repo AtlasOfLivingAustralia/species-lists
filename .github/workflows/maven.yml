@@ -41,6 +41,9 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
         cache: maven
+    - name: Check formatting (Spotless)
+      working-directory: ${{ env.JAVA_APP_PATH }}
+      run: mvn validate
     - name: Run tests
       working-directory: ${{ env.JAVA_APP_PATH }}
       run: mvn test

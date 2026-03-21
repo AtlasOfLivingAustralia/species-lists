@@ -15,16 +15,13 @@
 package au.org.ala.listsapi.model;
 
 import java.util.List;
-
 import lombok.Builder;
 import lombok.Data;
 
-/**
- * Context object for single list searches
- */
+/** Context object for single list searches */
 @Data
 @Builder
-public  class SingleListSearchContext {
+public class SingleListSearchContext {
     private String speciesListId;
     private SpeciesList speciesList;
     private String searchQuery;

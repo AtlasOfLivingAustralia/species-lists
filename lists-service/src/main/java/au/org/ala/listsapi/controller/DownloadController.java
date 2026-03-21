@@ -1,5 +1,19 @@
 package au.org.ala.listsapi.controller;
 
+import au.org.ala.listsapi.model.Classification;
+import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesListItem;
+import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
+import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import com.opencsv.CSVWriter;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
@@ -10,7 +24,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-
 import org.bson.types.ObjectId;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -26,24 +39,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.opencsv.CSVWriter;
-
-import au.org.ala.listsapi.model.Classification;
-import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.model.SpeciesListItem;
-import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
-import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import jakarta.servlet.http.HttpServletResponse;
-
 /**
- * Controller for downloading species lists in CSV format. Supports both zipped and plain CSV downloads.
+ * Controller for downloading species lists in CSV format. Supports both zipped and plain CSV
+ * downloads.
  */
 @Controller
 @Validated
@@ -55,17 +53,17 @@ public class DownloadController {
     protected final AuthUtils authUtils;
 
     public static final String[] CLASSIFICATION_HEADER_NAMES = {
-            "guid", // taxonID would be better
-            "scientificName",
-            "genus",
-            "family",
-            "order",
-            "class",
-            "phylum",
-            "kingdom",
-            "vernacularName",
-            "matchType",
-            "nameType"
+        "guid", // taxonID would be better
+        "scientificName",
+        "genus",
+        "family",
+        "order",
+        "class",
+        "phylum",
+        "kingdom",
+        "vernacularName",
+        "matchType",
+        "nameType"
     };
 
     public DownloadController(
@@ -80,32 +78,86 @@ public class DownloadController {
     @SecurityRequirement(name = "JWT")
     @Operation(summary = "Download a species list in CSV format", tags = "REST v2")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "CSV data (when zip=false or not specified)", content = @Content(mediaType = "application/octet-stream", schema = @Schema(implementation = String.class))),
-            @ApiResponse(responseCode = "200", description = "Zipped CSV data (when zip=true)", content = @Content(mediaType = "application/octet-stream", schema = @Schema(implementation = byte[].class))),
-            @ApiResponse(responseCode = "400", description = "Bad Request - invalid query parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Cannot query private lists without a user ID"))),
-            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to downwload private species lists", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "You must be authenticated to query private lists"))),
-            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found")))
+        @ApiResponse(
+                responseCode = "200",
+                description = "CSV data (when zip=false or not specified)",
+                content =
+                        @Content(
+                                mediaType = "application/octet-stream",
+                                schema = @Schema(implementation = String.class))),
+        @ApiResponse(
+                responseCode = "200",
+                description = "Zipped CSV data (when zip=true)",
+                content =
+                        @Content(
+                                mediaType = "application/octet-stream",
+                                schema = @Schema(implementation = byte[].class))),
+        @ApiResponse(
+                responseCode = "400",
+                description = "Bad Request - invalid query parameters",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example =
+                                                        "Cannot query private lists without a user ID"))),
+        @ApiResponse(
+                responseCode = "403",
+                description =
+                        "Forbidden - user is not authorized to downwload private species lists",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example =
+                                                        "You must be authenticated to query private lists"))),
+        @ApiResponse(
+                responseCode = "404",
+                description = "Species list not found",
+                content =
+                        @Content(
+                                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                schema =
+                                        @Schema(
+                                                type = "string",
+                                                example = "Species list not found")))
     })
     @GetMapping("/v2/download/{speciesListID}")
     public ResponseEntity<Object> download(
-            @Parameter(description = "The species list ID or data resource ID to download", example = "dr656", required = true)
-            @PathVariable("speciesListID") String speciesListID,
+            @Parameter(
+                            description = "The species list ID or data resource ID to download",
+                            example = "dr656",
+                            required = true)
+                    @PathVariable("speciesListID")
+                    String speciesListID,
             @AuthenticationPrincipal Principal principal,
-            @Parameter(name = "zip", description = "Set to true to receive data in ZIP format, false for plain CSV", schema = @Schema(type = "boolean", defaultValue = "false")) 
-            @RequestParam(value = "zip", defaultValue = "false") Boolean zipped,
+            @Parameter(
+                            name = "zip",
+                            description =
+                                    "Set to true to receive data in ZIP format, false for plain CSV",
+                            schema = @Schema(type = "boolean", defaultValue = "false"))
+                    @RequestParam(value = "zip", defaultValue = "false")
+                    Boolean zipped,
             HttpServletResponse response) {
         try {
             logger.info("Downloading species list " + speciesListID);
-            Optional<SpeciesList> speciesListOptional = speciesListMongoRepository
-                    .findByIdOrDataResourceUid(speciesListID, speciesListID);
+            Optional<SpeciesList> speciesListOptional =
+                    speciesListMongoRepository.findByIdOrDataResourceUid(
+                            speciesListID, speciesListID);
             if (speciesListOptional.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Unrecognized ID while downloading dataset");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Unrecognized ID while downloading dataset");
             }
 
             SpeciesList speciesList = speciesListOptional.get();
             if (speciesList.getIsPrivate()) {
                 // if private, check user is logged in and authorised
-                ResponseEntity<Object> errorResponse = checkAuthorizedToDownload(speciesList, principal);
+                ResponseEntity<Object> errorResponse =
+                        checkAuthorizedToDownload(speciesList, principal);
                 if (errorResponse != null) {
                     return errorResponse; // return 401 if not logged in or not authorized
                 }
@@ -119,7 +171,8 @@ public class DownloadController {
             setupResponseHeaders(response, speciesList.getId(), zipped);
 
             if (zipped) {
-                try (ZipOutputStream zipOutputStream = new ZipOutputStream(response.getOutputStream())) {
+                try (ZipOutputStream zipOutputStream =
+                        new ZipOutputStream(response.getOutputStream())) {
                     ZipEntry zipEntry = new ZipEntry("taxa.csv");
                     zipOutputStream.putNextEntry(zipEntry);
                     writeCSV(speciesList.getId(), zipOutputStream, csvHeaders, speciesList);
@@ -132,7 +185,8 @@ public class DownloadController {
                 writeCSV(speciesList.getId(), response.getOutputStream(), csvHeaders, speciesList);
             }
 
-            logger.info("Finished writing zip download data for species list " + speciesList.getId());
+            logger.info(
+                    "Finished writing zip download data for species list " + speciesList.getId());
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -145,7 +199,8 @@ public class DownloadController {
             OutputStream outputStream,
             List<String> csvHeaders,
             SpeciesList speciesList) {
-        try (CSVWriter csvWriter = new CSVWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8))) {
+        try (CSVWriter csvWriter =
+                new CSVWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8))) {
             writeCsvHeaders(csvWriter, csvHeaders);
 
             int batchSize = 10000;
@@ -153,8 +208,9 @@ public class DownloadController {
 
             boolean finished = false;
             while (!finished) {
-                List<SpeciesListItem> items = speciesListItemMongoRepository.findNextBatch(speciesListID, lastId,
-                        PageRequest.of(0, batchSize));
+                List<SpeciesListItem> items =
+                        speciesListItemMongoRepository.findNextBatch(
+                                speciesListID, lastId, PageRequest.of(0, batchSize));
                 if (items.isEmpty()) {
                     finished = true;
                 } else {
@@ -182,7 +238,9 @@ public class DownloadController {
         response.setHeader("Content-Type", "application/octet-stream");
         response.setHeader(
                 "Content-Disposition",
-                "attachment; filename=species-list-" + speciesListID + (isZipped ? ".zip" : ".csv"));
+                "attachment; filename=species-list-"
+                        + speciesListID
+                        + (isZipped ? ".zip" : ".csv"));
     }
 
     private void writeCsvHeaders(CSVWriter csvWriter, List<String> csvHeaders) {
@@ -198,10 +256,12 @@ public class DownloadController {
                     csvRow.add(speciesListItem.getScientificName());
 
                     fieldList.forEach(
-                            field -> speciesListItem.getProperties().stream()
-                                    .filter(keyValue -> keyValue.getKey().equals(field))
-                                    .findFirst()
-                                    .ifPresent(keyValue -> csvRow.add(keyValue.getValue())));
+                            field ->
+                                    speciesListItem.getProperties().stream()
+                                            .filter(keyValue -> keyValue.getKey().equals(field))
+                                            .findFirst()
+                                            .ifPresent(
+                                                    keyValue -> csvRow.add(keyValue.getValue())));
 
                     Classification classification = speciesListItem.getClassification();
 

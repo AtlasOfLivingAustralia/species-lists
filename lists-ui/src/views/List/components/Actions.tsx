@@ -209,7 +209,7 @@ export function Actions({
           // Fire off the rematch request
           onRematch();
           await ala.rest.lists.rematch(meta.id);
-        } catch (error) {
+        } catch {
           // notifications.show({
           //   message: getErrorMessage(error),
           //   position: 'bottom-left',
@@ -278,6 +278,7 @@ export function Actions({
         />
       ),
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ala, meta]);
 
   return (

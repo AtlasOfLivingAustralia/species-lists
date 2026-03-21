@@ -14,9 +14,7 @@
  */
 package au.org.ala.listsapi.model;
 
-/**
- * Types of constraints
- */
+/** Types of constraints */
 public enum ConstraintType {
     listType,
     licence,

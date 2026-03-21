@@ -17,11 +17,11 @@ import org.springframework.data.annotation.LastModifiedDate;
 @Jacksonized
 @org.springframework.data.mongodb.core.mapping.Document(collection = "releases")
 public class Release {
-  @Id private String id;
-  private Integer releasedVersion;
-  private String speciesListID;
-  private String storedLocation;
-  private SpeciesList metadata;
-  @CreatedDate public LocalDateTime createdDate;
-  @LastModifiedDate public LocalDateTime lastModifiedDate;
+    @Id private String id;
+    private Integer releasedVersion;
+    private String speciesListID;
+    private String storedLocation;
+    private SpeciesList metadata;
+    @CreatedDate public LocalDateTime createdDate;
+    @LastModifiedDate public LocalDateTime lastModifiedDate;
 }

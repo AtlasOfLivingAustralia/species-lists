@@ -1,7 +1,7 @@
 package au.org.ala.listsapi.repo;
 
+import au.org.ala.listsapi.model.SpeciesList;
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
@@ -14,21 +14,20 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
 
-import au.org.ala.listsapi.model.SpeciesList;
-
 @Repository
 public class SpeciesListCustomRepository {
 
-    @Autowired
-    private MongoTemplate mongoTemplate;
+    @Autowired private MongoTemplate mongoTemplate;
 
-    public Page<SpeciesList> findByMultipleExamples(SpeciesList exampleA, SpeciesList exampleB, Pageable pageable) {
+    public Page<SpeciesList> findByMultipleExamples(
+            SpeciesList exampleA, SpeciesList exampleB, Pageable pageable) {
 
         // Create ExampleMatcher for each "probe"
-        ExampleMatcher matcher = ExampleMatcher.matching()
-                .withIgnoreCase()
-                .withIgnoreNullValues()
-                .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
+        ExampleMatcher matcher =
+                ExampleMatcher.matching()
+                        .withIgnoreCase()
+                        .withIgnoreNullValues()
+                        .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
 
         // Build Spring Data Example objects
         Example<SpeciesList> exA = Example.of(exampleA, matcher);

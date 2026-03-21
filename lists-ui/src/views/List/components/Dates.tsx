@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { SpeciesList } from '#/api';
 import { faCalendar } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -25,7 +24,7 @@ const formatDateString = (inputDate: string) => {
   return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
 };
 
-export function Dates({ meta, ...rest }: DatesProps) {
+export function Dates({ meta }: DatesProps) {
   const theme = useMantineTheme();
   const intl = useIntl();
 

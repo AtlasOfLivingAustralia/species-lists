@@ -12,6 +12,6 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @AllArgsConstructor
 public class ConstraintListItem {
-  private String value;
-  private String label;
+    private String value;
+    private String label;
 }

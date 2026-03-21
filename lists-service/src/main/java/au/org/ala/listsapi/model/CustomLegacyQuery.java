@@ -12,5 +12,5 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @AllArgsConstructor
 public class CustomLegacyQuery {
-  private String query;
+    private String query;
 }

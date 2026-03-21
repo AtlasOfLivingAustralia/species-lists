@@ -1,6 +1,5 @@
 import { SpeciesList } from '#/api';
 import { ListTypeBadge } from '#/components/ListTypeBadge';
-import { useALA } from '#/helpers/context/useALA';
 import { parseDate } from '#/helpers/utils/parseListDate';
 import { MapLayersIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { faCalendar, faEye, faEyeSlash } from '@fortawesome/free-regular-svg-icons';
@@ -17,7 +16,6 @@ interface ListRowProps {
 
 export function ListRow({ list, isMobile }: ListRowProps) {
   const loading = Boolean(list);
-  const ala = useALA();
   const locale = import.meta.env.VITE_LOCALE || 'en-AU';
   
   const lastUpdatedObj: Date | undefined = parseDate(list?.lastUpdated || '');

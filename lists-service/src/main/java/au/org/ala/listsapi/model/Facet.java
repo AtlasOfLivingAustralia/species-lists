@@ -11,6 +11,6 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @AllArgsConstructor
 public class Facet {
-  String key;
-  List<FacetCount> counts;
+    String key;
+    List<FacetCount> counts;
 }

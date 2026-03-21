@@ -1,18 +1,15 @@
 package au.org.ala.listsapi.model;
 
-import java.util.List;
-
-import org.springframework.data.elasticsearch.annotations.Field;
-import org.springframework.data.elasticsearch.annotations.FieldType;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.jackson.Jacksonized;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
 
 @NoArgsConstructor
 @Data
@@ -21,44 +18,44 @@ import lombok.extern.jackson.Jacksonized;
 @Jacksonized
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Classification {
-  Boolean success;
+    Boolean success;
 
-  @Field(
-      name = "scientificName",
-      type = FieldType.Text,
-      copyTo = "all",
-      analyzer = "custom_standard_analyzer")
-  String scientificName;
+    @Field(
+            name = "scientificName",
+            type = FieldType.Text,
+            copyTo = "all",
+            analyzer = "custom_standard_analyzer")
+    String scientificName;
 
-  String scientificNameAuthorship;
-  String taxonConceptID;
-  String rank;
-  Integer rankID;
-  String matchType;
-  String nameType;
-  String kingdom;
-  String kingdomID;
-  String phylum;
-  String phylumID;
-  String classs;
-  String classID;
-  String order;
-  String orderID;
-  String family;
-  String familyID;
-  String genus;
-  String genusID;
-  String species;
-  String speciesID;
-  String vernacularName;
-  List<String> speciesGroup;
-  List<String> speciesSubgroup;
-  List<String> issues;
-  Integer lft;
-  Integer rgt;
+    String scientificNameAuthorship;
+    String taxonConceptID;
+    String rank;
+    Integer rankID;
+    String matchType;
+    String nameType;
+    String kingdom;
+    String kingdomID;
+    String phylum;
+    String phylumID;
+    String classs;
+    String classID;
+    String order;
+    String orderID;
+    String family;
+    String familyID;
+    String genus;
+    String genusID;
+    String species;
+    String speciesID;
+    String vernacularName;
+    List<String> speciesGroup;
+    List<String> speciesSubgroup;
+    List<String> issues;
+    Integer lft;
+    Integer rgt;
 
-  @JsonProperty("class")
-  public String getClasss() {
-    return this.classs;
-  }
+    @JsonProperty("class")
+    public String getClasss() {
+        return this.classs;
+    }
 }
