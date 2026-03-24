@@ -12,12 +12,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   Alert,
   Badge,
-  Center,
   Container,
   Flex,
   Grid,
   Group,
-  Image,
   Paper,
   Progress,
   Stack,
@@ -40,8 +38,6 @@ import { Breadcrumbs } from '../Dashboard/components/Breadcrumbs';
 import { ActionCard } from './components/ActionCard';
 import { FetchInfo } from './components/FetchInfo';
 
-// Very important warning image
-import warningImage from '#/static/warning.gif';
 import classes from './index.module.css';
 
 export function Component() {
@@ -135,9 +131,6 @@ export function Component() {
         ),
         children: (
           <Stack>
-            <Center>
-              <Image height={200} src={warningImage} />
-            </Center>
             <Text mt='md'>
               Please only trigger any these functions during low usage.
             </Text>
