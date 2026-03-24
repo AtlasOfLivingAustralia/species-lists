@@ -277,7 +277,7 @@ public class SearchHelperService {
         Sort pageableSort = Sort.by(
             sortDir.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC,
             sortField
-        );
+        ).and(Sort.by("_id")); // secondary sort for consistent ordering across pages
         Pageable pageable = PageRequest.of(page, pageSize, pageableSort);
         // For pagination, we use the repository method directly for better performance
         Page<SpeciesListItem> itemsPage = speciesListItemMongoRepository.findNextBatch(validListIDs, query, pageable);
