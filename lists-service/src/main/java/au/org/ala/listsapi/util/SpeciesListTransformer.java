@@ -123,9 +123,10 @@ public class SpeciesListTransformer {
      *
      * @param speciesListItem The source SpeciesListItem object
      * @param index The index of the item in the list
+     * @param listCache A cache of SpeciesList objects keyed by speciesListID to avoid repeated MongoDB lookups
      * @return A new SpeciesListItemVersion1 object populated with values from the source
      */
-    public SpeciesListItemVersion1 transformToVersion1(SpeciesListItem speciesListItem, int index) {
+    public SpeciesListItemVersion1 transformToVersion1(SpeciesListItem speciesListItem, int index, Map<String, Optional<SpeciesList>> listCache) {
         if (speciesListItem == null) {
             return null;
         }
@@ -140,7 +141,7 @@ public class SpeciesListTransformer {
         listItemVersion1.setDataResourceUid(speciesListID); // fallback - attempt to set actual DataResourceUid further down
 
         // Get list details via MongoDB
-        Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+        Optional<SpeciesList> speciesList = listCache.computeIfAbsent(speciesListID, id -> speciesListMongoRepository.findByIdOrDataResourceUid(id, id));
         AbbrListVersion1 list = new AbbrListVersion1();
 
         if (speciesList.isPresent()) {
