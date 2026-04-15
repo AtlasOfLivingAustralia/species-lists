@@ -80,7 +80,7 @@ export function ListRow({ list, isMobile }: ListRowProps) {
                   // Not currently used as GraphQL is not reuturning this field
                   <><Space w={3} /><ListTypeBadge listTypeValue='hasRegion'/></>
                 )}
-                { !list?.isPrivate && (
+                { list?.dataResourceUid && (
                     <>
                       <Space w={3} />
                       <Box style={{ display: 'flex', alignItems: 'center', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100%' }}>
