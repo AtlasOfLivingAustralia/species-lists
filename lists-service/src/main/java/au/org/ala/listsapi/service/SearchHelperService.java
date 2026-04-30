@@ -358,6 +358,9 @@ public class SearchHelperService {
         if (speciesListQuery.getIsSDS() != null) {
             query.addCriteria(Criteria.where("isSDS").is(speciesListQuery.getIsSDS()));
         }
+        if (speciesListQuery.getListType() != null) {
+            query.addCriteria(Criteria.where("listType").is(speciesListQuery.getListType()));
+        }
         if (speciesListQuery.getDataResourceUid() != null) {
             if (speciesListQuery.getDataResourceUid().contains(",")) {
                 List<String> dataResourceUids = Arrays.asList(speciesListQuery.getDataResourceUid().split(","));
