@@ -8,7 +8,9 @@ import static org.mockito.Mockito.*;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
+import org.bson.types.ObjectId;
 
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,7 +26,13 @@ import au.org.ala.listsapi.model.Facet;
 import au.org.ala.listsapi.model.Filter;
 import au.org.ala.listsapi.model.ListSearchContext;
 import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesListItem;
+import au.org.ala.listsapi.model.InputSpeciesListItem;
 import au.org.ala.listsapi.service.SearchHelperService;
+import au.org.ala.listsapi.service.TaxonService;
+import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
+import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
+import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.ws.security.profile.AlaUserProfile;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,7 +42,19 @@ class GraphQLControllerTest {
     private SearchHelperService searchHelperService;
 
     @Mock
+    private SpeciesListMongoRepository speciesListMongoRepository;
+
+    @Mock
+    private SpeciesListItemMongoRepository speciesListItemMongoRepository;
+
+    @Mock
+    private TaxonService taxonService;
+
+    @Mock
     private AuthUtils authUtils;
+
+    @Mock
+    private SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
 
     @Mock
     private Principal principal;
@@ -130,5 +150,70 @@ class GraphQLControllerTest {
 
         assertNotNull(result);
         verify(searchHelperService).getFacetsForSpeciesLists(any(ListSearchContext.class));
+    }
+
+    @Test
+    void testAddSpeciesListItem_HexId() {
+        InputSpeciesListItem input = new InputSpeciesListItem();
+        input.setSpeciesListID("60b9b3b3e6b3a32b00000000");
+        input.setScientificName("Macropus giganteus");
+        input.setProperties(new ArrayList<>());
+
+        SpeciesList list = new SpeciesList();
+        list.setId("60b9b3b3e6b3a32b00000000");
+        list.setRowCount(0);
+
+        when(speciesListMongoRepository.findByIdOrDataResourceUid("60b9b3b3e6b3a32b00000000", "60b9b3b3e6b3a32b00000000"))
+                .thenReturn(Optional.of(list));
+        when(speciesListMongoRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(speciesListItemMongoRepository.save(any())).thenAnswer(i -> {
+            SpeciesListItem item = i.getArgument(0);
+            item.setId(new ObjectId());
+            return item;
+        });
+        when(principal.getName()).thenReturn("user123");
+
+        SpeciesListItem result = graphQLController.addSpeciesListItem(input, principal);
+
+        assertNotNull(result);
+        assertEquals("60b9b3b3e6b3a32b00000000", result.getSpeciesListID());
+        assertEquals("Macropus giganteus", result.getScientificName());
+        verify(speciesListMongoRepository).findByIdOrDataResourceUid("60b9b3b3e6b3a32b00000000", "60b9b3b3e6b3a32b00000000");
+        verify(speciesListItemMongoRepository).save(any());
+        verify(taxonService).lookupTaxon(any());
+    }
+
+    @Test
+    void testAddSpeciesListItem_DR1234Id() {
+        InputSpeciesListItem input = new InputSpeciesListItem();
+        input.setSpeciesListID("dr1234");
+        input.setScientificName("Macropus rufus");
+        input.setProperties(new ArrayList<>());
+
+        SpeciesList list = new SpeciesList();
+        list.setId("60b9b3b3e6b3a32b00000001");
+        list.setDataResourceUid("dr1234");
+        list.setRowCount(0);
+
+        when(speciesListMongoRepository.findByIdOrDataResourceUid("dr1234", "dr1234"))
+                .thenReturn(Optional.of(list));
+        when(speciesListMongoRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(speciesListItemMongoRepository.save(any())).thenAnswer(i -> {
+            SpeciesListItem item = i.getArgument(0);
+            item.setId(new ObjectId());
+            return item;
+        });
+        when(principal.getName()).thenReturn("user123");
+
+        SpeciesListItem result = graphQLController.addSpeciesListItem(input, principal);
+
+        assertNotNull(result);
+        assertEquals("60b9b3b3e6b3a32b00000001", result.getSpeciesListID(), "Internal hex ID should override the dr1234 ID");
+        assertEquals("Macropus rufus", result.getScientificName());
+        verify(speciesListMongoRepository).findByIdOrDataResourceUid("dr1234", "dr1234");
+        verify(speciesListItemMongoRepository).save(any());
+        verify(taxonService).lookupTaxon(any());
     }
 }
