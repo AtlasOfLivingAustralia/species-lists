@@ -37,12 +37,12 @@ mvn -Dtest=ClassName#methodName test
 ### Linting & Formatting
 The project uses the `spotless-maven-plugin` with Google Java Format.
 
-**Check for formatting issues:**
+**DO NOT Check for formatting issues:**
 ```bash
 # mvn spotless:check
 ```
 
-**Auto-fix formatting issues:**
+**DO NOT Auto-fix formatting issues:**
 ```bash
 # mvn spotless:apply
 ```
