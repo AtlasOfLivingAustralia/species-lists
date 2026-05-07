@@ -180,7 +180,7 @@ class GraphQLControllerTest {
         assertEquals("60b9b3b3e6b3a32b00000000", result.getSpeciesListID());
         assertEquals("Macropus giganteus", result.getScientificName());
         verify(speciesListMongoRepository).findByIdOrDataResourceUid("60b9b3b3e6b3a32b00000000", "60b9b3b3e6b3a32b00000000");
-        verify(speciesListItemMongoRepository).save(any());
+        verify(speciesListItemMongoRepository, times(2)).save(any());
         verify(taxonService).lookupTaxon(any());
     }
 
@@ -213,7 +213,7 @@ class GraphQLControllerTest {
         assertEquals("60b9b3b3e6b3a32b00000001", result.getSpeciesListID(), "Internal hex ID should override the dr1234 ID");
         assertEquals("Macropus rufus", result.getScientificName());
         verify(speciesListMongoRepository).findByIdOrDataResourceUid("dr1234", "dr1234");
-        verify(speciesListItemMongoRepository).save(any());
+        verify(speciesListItemMongoRepository, times(2)).save(any());
         verify(taxonService).lookupTaxon(any());
     }
 }

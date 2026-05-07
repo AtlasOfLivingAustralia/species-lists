@@ -570,6 +570,7 @@ public class GraphQLController {
         try {
             Classification classification = taxonService.lookupTaxon(speciesListItem);
             speciesListItem.setClassification(classification);
+            speciesListItemMongoRepository.save(speciesListItem);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }
@@ -678,6 +679,7 @@ public class GraphQLController {
         try {
             Classification classification = taxonService.lookupTaxon(speciesListItem);
             speciesListItem.setClassification(classification);
+            speciesListItemMongoRepository.save(speciesListItem);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }
