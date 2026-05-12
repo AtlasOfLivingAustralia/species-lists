@@ -297,8 +297,8 @@ public class RESTController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
             @ApiResponse(responseCode = "400", description = "Bad Request - invalid query parameters", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Cannot query private lists without a user ID"))),
-            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view private species lists", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "You must be authenticated to query private lists"))),
-            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found")))
+            @ApiResponse(responseCode = "401", description = "Unauthorized - user must be authenticated to view private species lists", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "You must be authenticated to query private lists"))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view private species lists", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "You are not authorized to query private lists")))
     })
     @GetMapping("/v2/speciesListItems/{speciesListIDs}")
     public ResponseEntity<Object> speciesListItems(
@@ -321,10 +321,6 @@ public class RESTController {
             int pageIndex = (page - 1); // spring data pageable is zero based
             List<SpeciesListItem> speciesListItems = searchHelperService.fetchSpeciesListItems(speciesListIDs,
                     searchQuery, fields, null, pageIndex, pageSize, sort, dir, principal);
-
-            if (speciesListItems.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
 
             return new ResponseEntity<>(speciesListItems, HttpStatus.OK);
         } catch (Exception e) {

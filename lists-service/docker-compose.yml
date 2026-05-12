@@ -1,6 +1,7 @@
 # This docker-compose file is used to run Elasticsearch and MongoDB for local development.
 # It was copied from src/main/docker/docker-compose.yml in the spring boot project root.
 # Any changes should be reflected in both files.
+# TODO: Consider merging these two files into one to avoid duplication and potential inconsistencies.
 version: "3.7"
 services:
   app:

@@ -351,6 +351,12 @@ public class GraphQLController {
     @QueryMapping
     public Page<Release> listReleases(
             @Argument String speciesListID, @Argument Integer page, @Argument Integer size) {
+        
+        Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+        if (optionalSpeciesList.isPresent()) {
+            speciesListID = optionalSpeciesList.get().getId();
+        }
+
         Pageable pageable = PageRequest.of(page, size);
         return releaseMongoRepository.findBySpeciesListID(speciesListID, pageable);
     }
@@ -538,19 +544,22 @@ public class GraphQLController {
         }
 
         Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository
-                .findById(inputSpeciesListItem.getSpeciesListID());
+                .findByIdOrDataResourceUid(inputSpeciesListItem.getSpeciesListID(), inputSpeciesListItem.getSpeciesListID());
 
         if (optionalSpeciesList.isEmpty()) {
             return null;
         }
 
-        if (!authUtils.isAuthorized(optionalSpeciesList.get(), principal)) {
+        SpeciesList speciesList = optionalSpeciesList.get();
+        // ensure we use internal ID
+        inputSpeciesListItem.setSpeciesListID(speciesList.getId());
+
+        if (!authUtils.isAuthorized(speciesList, principal)) {
             logger.info(
-                    "User not authorized to modify access list: " + optionalSpeciesList.get().getId());
+                    "User not authorized to modify access list: " + speciesList.getId());
             throw new AccessDeniedException("You dont have access to this list");
         }
 
-        SpeciesList speciesList = optionalSpeciesList.get();
         SpeciesListItem speciesListItem = optionalSpeciesListItem.get();
         updateItem(inputSpeciesListItem, speciesListItem, principal);
 
@@ -561,6 +570,7 @@ public class GraphQLController {
         try {
             Classification classification = taxonService.lookupTaxon(speciesListItem);
             speciesListItem.setClassification(classification);
+            speciesListItemMongoRepository.save(speciesListItem);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }
@@ -644,13 +654,15 @@ public class GraphQLController {
             @AuthenticationPrincipal Principal principal) {
 
         Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository
-                .findById(inputSpeciesListItem.getSpeciesListID());
+                .findByIdOrDataResourceUid(inputSpeciesListItem.getSpeciesListID(), inputSpeciesListItem.getSpeciesListID());
 
         if (optionalSpeciesList.isEmpty()) {
             return null;
         }
 
         SpeciesList speciesList = optionalSpeciesList.get();
+        // ensure we use internal ID
+        inputSpeciesListItem.setSpeciesListID(speciesList.getId());
 
         if (!authUtils.isAuthorized(speciesList, principal)) {
             throw new AccessDeniedException("You dont have access to this list");
@@ -667,6 +679,7 @@ public class GraphQLController {
         try {
             Classification classification = taxonService.lookupTaxon(speciesListItem);
             speciesListItem.setClassification(classification);
+            speciesListItemMongoRepository.save(speciesListItem);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }

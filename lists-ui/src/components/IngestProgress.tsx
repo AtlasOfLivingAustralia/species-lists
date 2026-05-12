@@ -10,24 +10,11 @@ import {
   faList,
   faSearch,
 } from '@fortawesome/free-solid-svg-icons';
+import { useIntl } from 'react-intl';
 import { useALA } from '#/helpers/context/useALA';
 import { IngestProgress as IngestProgressType } from '#/api';
 
-// Content / icon definitions for ingestion steps
-const steps = [
-  {
-    text: 'Setting up list',
-    icon: faBoxOpen,
-  },
-  {
-    text: 'Matching taxa',
-    icon: faSearch,
-  },
-  {
-    text: 'Finalizing list',
-    icon: faList,
-  },
-];
+// Content / icon definitions for ingestion steps removed from here to be inside component for i18n
 
 interface IngestProgressProps {
   id: string | null;
@@ -42,6 +29,22 @@ export function IngestProgress({
   disableNavigation = false,
   onProgress,
 }: IngestProgressProps) {
+  const intl = useIntl();
+  const steps = [
+    {
+      text: intl.formatMessage({ id: 'ingest.step.setup', defaultMessage: 'Setting up list' }),
+      icon: faBoxOpen,
+    },
+    {
+      text: intl.formatMessage({ id: 'ingest.step.matching', defaultMessage: 'Matching taxa' }),
+      icon: faSearch,
+    },
+    {
+      text: intl.formatMessage({ id: 'ingest.step.finalising', defaultMessage: 'Finalising list' }),
+      icon: faList,
+    },
+  ];
+
   const [update, setUpdate] = useState<boolean>(false);
   const [progress, setProgress] = useState<IngestProgressType>({
     id: '',

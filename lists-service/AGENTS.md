@@ -37,16 +37,16 @@ mvn -Dtest=ClassName#methodName test
 ### Linting & Formatting
 The project uses the `spotless-maven-plugin` with Google Java Format.
 
-**Check for formatting issues:**
+**DO NOT Check for formatting issues:**
 ```bash
-mvn spotless:check
+# mvn spotless:check
 ```
 
-**Auto-fix formatting issues:**
+**DO NOT Auto-fix formatting issues:**
 ```bash
-mvn spotless:apply
+# mvn spotless:apply
 ```
-*Always run this before committing changes.*
+*DO NOT run this before committing changes.*
 
 ## 3. Code Style & Conventions
 
@@ -63,7 +63,7 @@ Imports should be ordered as follows (Google Style):
 Static imports should be placed at the top or bottom depending on the specific Google Style config, but `spotless:apply` will handle this automatically.
 
 ### Formatting
-- **Indentation:** 2 spaces (standard Google Java Style).
+- **Indentation:** 4 spaces (standard Google Java Style).
 - **Line Length:** 100-120 characters usually, but let Spotless decide.
 - **Braces:** K&R style (opening brace on the same line).
 

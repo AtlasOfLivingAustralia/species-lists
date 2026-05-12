@@ -15,9 +15,7 @@
 
 package au.org.ala.listsapi.service;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -73,8 +71,10 @@ public class SpeciesListLegacyService {
      * @return List of legacy SpeciesListItemVersion1 representations
      */
     public List<SpeciesListItemVersion1> convertListItemToVersion1(List<SpeciesListItem> speciesListItems) {
+        Map<String, Optional<SpeciesList>> listCache = new HashMap<>();
+        
         return IntStream.range(0, speciesListItems.size())
-                .mapToObj(i -> speciesListTransformer.transformToVersion1(speciesListItems.get(i), i))
+                .mapToObj(i -> speciesListTransformer.transformToVersion1(speciesListItems.get(i), i, listCache))
                 .collect(Collectors.toList());
     }
 

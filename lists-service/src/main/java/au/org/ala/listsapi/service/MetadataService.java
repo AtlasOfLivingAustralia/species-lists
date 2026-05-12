@@ -50,6 +50,18 @@ public class MetadataService {
         );
     }
 
+    /**
+     * Creates or updates a metadata entry in the Collectory for the given species list. 
+     * If the species list does not have a dataResourceUid, a new metadata entry will be 
+     * created and the dataResourceUid will be set on the species list. If the species 
+     * list already has a dataResourceUid, the existing metadata entry will be updated.
+     * 
+     * TODO: Include an additional message in JSON to indicate if the collections update
+     * failed, with failure details included.
+     * 
+     * @param speciesList
+     * @throws Exception
+     */
     public void setMeta(SpeciesList speciesList) throws Exception {
         logger.info("Setting metadata in Collectory for species list: " + speciesList.getId());
         String dataResourceUid = speciesList.getDataResourceUid();
@@ -69,7 +81,7 @@ public class MetadataService {
         int statusCode = (int)response.get("statusCode");
         if (statusCode < 200 || statusCode > 299) {
             logger.error(response.get("error").toString());
-            throw new Exception("Failed to create metadata entry for species list");
+            throw new Exception("Failed to create metadata entry for species list - status code: " + statusCode + " - response: " + response.get("resp").toString());
         }
 
         if (speciesList.getDataResourceUid() == null) {
@@ -105,7 +117,7 @@ public class MetadataService {
         int statusCode = (int)response.get("statusCode");
         if (statusCode < 200 || statusCode > 299) {
             logger.error(response.get("error").toString());
-            throw new Exception("Failed to delete metadata entry for species list");
+            throw new Exception("Failed to delete metadata entry for species list - status code: " + statusCode + " - response: " + response.get("resp").toString());
         }
 
         logger.info("collections DELETE: " + response.get("resp").toString());

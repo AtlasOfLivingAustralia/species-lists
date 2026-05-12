@@ -40,6 +40,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import au.org.ala.listsapi.model.Classification;
+import au.org.ala.listsapi.model.KeyValue;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListIndex;
 import au.org.ala.listsapi.model.SpeciesListItem;
@@ -452,10 +453,16 @@ public class TaxonService {
         while (!finished) {
             long startTime = System.nanoTime();
 
-            List<SpeciesListItem> items = speciesListItemMongoRepository.findNextBatch(speciesList.getId(), lastId,
-                    PageRequest.of(0, bulkMatchBatchSize));
-            long elapsed = System.nanoTime() - startTime;
+            List<SpeciesListItem> items;
+            if (lastId == null) {
+                items = speciesListItemMongoRepository.findFirstBatch(
+                    speciesList.getId(), PageRequest.of(0, bulkMatchBatchSize));
+            } else {
+                items = speciesListItemMongoRepository.findNextBatchAfter(
+                    speciesList.getId(), lastId, PageRequest.of(0, bulkMatchBatchSize));
+            }
 
+            long elapsed = System.nanoTime() - startTime;
             logger.info("[{}|taxonMatch] Fetched {} items in {} ms",
                     speciesListID, items.size(), elapsed / 1_000_000);
 
@@ -844,6 +851,18 @@ public class TaxonService {
         }
         if (StringUtils.isNotBlank(item.getGenus())) {
             builder.genus(StringUtils.trimToNull(item.getGenus()));
+        }
+
+        if (item.getProperties() != null) {
+            String rank = item.getProperties().stream()
+                    .filter(kv -> "taxonRank".equalsIgnoreCase(kv.getKey()) || "rank".equalsIgnoreCase(kv.getKey()))
+                    .map(KeyValue::getValue)
+                    .filter(StringUtils::isNotBlank)
+                    .findFirst()
+                    .orElse(null);
+            if (rank != null) {
+                builder.rank(StringUtils.trimToNull(rank));
+            }
         }
         
         return builder.build();

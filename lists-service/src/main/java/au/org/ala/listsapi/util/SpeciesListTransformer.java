@@ -91,9 +91,11 @@ public class SpeciesListTransformer {
         version1.setListName(speciesList.getTitle());
         version1.setDescription(speciesList.getDescription());
         version1.setListType(speciesList.getListType());
+        version1.setAuthority(speciesList.getAuthority() != null ? speciesList.getAuthority() : "");
+        version1.setCategory(speciesList.getCategory() != null ? speciesList.getCategory() : "");
         version1.setRegion(speciesList.getRegion());
-        version1.setSdsType(null); // Not implemented in SpeciesList
-        version1.setGeneralisation(null); // Not implemented in SpeciesList
+        version1.setSdsType(Boolean.TRUE.equals(speciesList.getIsSDS()) ? "CONSERVATION" : "");
+        version1.setGeneralisation(Boolean.TRUE.equals(speciesList.getIsSDS()) ? "10km" : ""); // Not implemented in SpeciesList but returning empty string for legacy support
         version1.setWkt(speciesList.getWkt());
 
         // Fetch user details using the userdetailsService if enabled, and the owner is not an email address (e.g., a userID number)
@@ -121,9 +123,10 @@ public class SpeciesListTransformer {
      *
      * @param speciesListItem The source SpeciesListItem object
      * @param index The index of the item in the list
+     * @param listCache A cache of SpeciesList objects keyed by speciesListID to avoid repeated MongoDB lookups
      * @return A new SpeciesListItemVersion1 object populated with values from the source
      */
-    public SpeciesListItemVersion1 transformToVersion1(SpeciesListItem speciesListItem, int index) {
+    public SpeciesListItemVersion1 transformToVersion1(SpeciesListItem speciesListItem, int index, Map<String, Optional<SpeciesList>> listCache) {
         if (speciesListItem == null) {
             return null;
         }
@@ -138,7 +141,7 @@ public class SpeciesListTransformer {
         listItemVersion1.setDataResourceUid(speciesListID); // fallback - attempt to set actual DataResourceUid further down
 
         // Get list details via MongoDB
-        Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
+        Optional<SpeciesList> speciesList = listCache.computeIfAbsent(speciesListID, id -> speciesListMongoRepository.findByIdOrDataResourceUid(id, id));
         AbbrListVersion1 list = new AbbrListVersion1();
 
         if (speciesList.isPresent()) {
