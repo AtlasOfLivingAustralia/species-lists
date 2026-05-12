@@ -38,7 +38,7 @@ RUN mkdir -p /data/$APP_ARTIFACT && \
     chown -R $USER:$USER /data/$APP_ARTIFACT
 WORKDIR /opt/atlas/$APP_ARTIFACT
 
-COPY --from=builder /app/target/lists-service-*-SNAPSHOT.jar /opt/atlas/$APP_ARTIFACT/app.jar
+COPY --from=builder /app/target/lists-service-*.jar /opt/atlas/$APP_ARTIFACT/app.jar
 
 USER $USER
 EXPOSE $SERVER_PORT
