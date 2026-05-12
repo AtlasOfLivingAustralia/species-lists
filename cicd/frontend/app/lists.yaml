@@ -24,6 +24,9 @@ Parameters:
   pUiSubDomain:
     Type: String
     Description: The subdomain the site are accessed on
+  pWsSubDomain:
+    Type: String
+    Description: The subdomain the backend API is accessed on
   pCloudfrontCertificate:
     Type: String
     Description: The arn of the SSL certificate to be used
@@ -64,6 +67,49 @@ Resources:
             Principal:
               AWS: !Sub 'arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${ListsCloudFrontOai}'
 
+  WsRedirectFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub 
+        - "lists-ws-redirect-${ResourceName}"
+        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Redirect /ws/* to the backend domain
+        Runtime: cloudfront-js-1.0
+      FunctionCode: !Sub 
+        - |
+          function handler(event) {
+              var request = event.request;
+              var uri = request.uri;
+              var newUri = "https://${Domain}" + uri;
+              if (request.querystring) {
+                  var qs = [];
+                  for (var key in request.querystring) {
+                      var val = request.querystring[key];
+                      if (val.multiValue) {
+                          for (var i = 0; i < val.multiValue.length; i++) {
+                              qs.push(key + '=' + val.multiValue[i].value);
+                          }
+                      } else {
+                          qs.push(key + '=' + val.value);
+                      }
+                  }
+                  if (qs.length > 0) {
+                      newUri += '?' + qs.join('&');
+                  }
+              }
+              return {
+                  statusCode: 301,
+                  statusDescription: 'Moved Permanently',
+                  headers: {
+                      "location": { "value": newUri },
+                      "cache-control": { "value": "no-store, no-cache, must-revalidate, proxy-revalidate" }
+                  }
+              };
+          }
+        - Domain: !Sub "${pWsSubDomain}.${pHostedZone}"
+
   ListsDnsRecord:
     Type: AWS::Route53::RecordSet
     Properties:
@@ -88,6 +134,21 @@ Resources:
             ErrorCachingMinTTL: 300
             ResponseCode: 200
             ResponsePagePath: /index.html
+        CacheBehaviors:
+          - PathPattern: '/ws/*'
+            TargetOriginId: lists-s3
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+            # AWS Managed CachingDisabled Policy
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt WsRedirectFunction.FunctionMetadata.FunctionARN
         DefaultCacheBehavior:
           AllowedMethods:
             - GET
