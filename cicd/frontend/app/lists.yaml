@@ -103,7 +103,8 @@ Resources:
                   statusCode: 301,
                   statusDescription: 'Moved Permanently',
                   headers: {
-                      "location": { "value": newUri }
+                      "location": { "value": newUri },
+                      "cache-control": { "value": "no-store, no-cache, must-revalidate, proxy-revalidate" }
                   }
               };
           }
@@ -143,7 +144,8 @@ Resources:
             CachedMethods:
               - GET
               - HEAD
-            CachePolicyId: !Ref ListsCachePolicy
+            # AWS Managed CachingDisabled Policy
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
             FunctionAssociations:
               - EventType: viewer-request
                 FunctionARN: !GetAtt WsRedirectFunction.FunctionMetadata.FunctionARN
