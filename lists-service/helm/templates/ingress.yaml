@@ -1,4 +1,8 @@
 {{- if .Values.ingress.enabled }}
+{{- $tagParts := list -}}
+{{- range $key, $value := .Values.tags -}}
+{{- $tagParts = append $tagParts (printf "%s=%s" $key $value) -}}
+{{- end -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -15,10 +19,7 @@ metadata:
     alb.ingress.kubernetes.io/ssl-redirect: '443'
     alb.ingress.kubernetes.io/success-codes: 200,404,301,302
     alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09
-    alb.ingress.kubernetes.io/tags: >
-      {{- range $key, $value := .Values.tags }}
-      {{ $key }}={{ $value }},
-      {{- end }}
+    alb.ingress.kubernetes.io/tags: {{ join "," $tagParts | quote }}
     alb.ingress.kubernetes.io/load-balancer-attributes: >
       idle_timeout.timeout_seconds=90,
       access_logs.s3.enabled=true,
