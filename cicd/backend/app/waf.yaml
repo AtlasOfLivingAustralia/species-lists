@@ -7,6 +7,9 @@ Parameters:
   pCleanBranch:
     Type: String
     Description: The clean branch, can be used in resource names
+  pCommonWafRuleGroupStackName:
+    Type: String
+    Description: Name of the ala-bedrock common WAF rule group stack, used to import shared rule group ARNs
   pEnvironment:
     Type: String
 
@@ -20,32 +23,6 @@ Conditions:
 
 
 Resources:
-
-  ListsDenylistIpSet:
-    Type: AWS::WAFv2::IPSet
-    Properties:
-      Name: !Sub 
-              - lists-eks-denylist-ip-set-${ResourceName}
-              - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
-      Description: List of IPs to deny for lists
-      Scope: REGIONAL
-      IPAddressVersion: IPV4
-      Addresses: 
-        - 172.59.129.122/32
-
-  ListsAllowlistIpSet:
-    Type: AWS::WAFv2::IPSet
-    Properties:
-      Name: !Sub 
-              - lists-allowlist-ip-set-${ResourceName}
-              - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
-      Description: List of IPs to allow
-      Scope: REGIONAL
-      IPAddressVersion: IPV4
-      Addresses:  # allow all traffic from our private IPs and public NAT-GW IPs
-        - 172.30.0.0/16
-        - 52.65.75.50/32
-        - 13.238.5.100/32
 
   ListsWaf:
     Type: AWS::WAFv2::WebACL
@@ -82,146 +59,70 @@ Resources:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
             MetricName: !Sub ${pEnvironment}-biocache-ALAHostHeaderCheck
-        - Name: ALAIpAllowList
-          Action:
-            Allow: { }
+        - Name: IpControl
           Priority: 1
+          OverrideAction:
+            None: {}
+          Statement:
+            RuleGroupReferenceStatement:
+              Arn: !ImportValue
+                Fn::Sub: ${pCommonWafRuleGroupStackName}-IpControlRuleGroupArn
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-ALAIpAllowList
-          Statement:
-            IPSetReferenceStatement:
-              Arn: !GetAtt ListsAllowlistIpSet.Arn
-        - Name: ALAIpDenyList
-          Action:
-            Block: { }
+            MetricName: !Sub ${pEnvironment}-lists-IpControlRuleGroup
+        - Name: BlockJa4Fingerprint
           Priority: 2
+          OverrideAction:
+            None: {}
+          Statement:
+            RuleGroupReferenceStatement:
+              Arn: !ImportValue
+                Fn::Sub: ${pCommonWafRuleGroupStackName}-BlockJa4RuleGroupArn
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-ALAIpDenyList
-          Statement:
-            IPSetReferenceStatement:
-              Arn: !GetAtt ListsDenylistIpSet.Arn
-        - Name: ALABlockJa4Fingerprint
+            MetricName: !Sub ${pEnvironment}-lists-BlockJa4RuleGroup
+        - Name: BlockAsn
           Priority: 3
-          Action: 
-            Block: {}
+          OverrideAction:
+            None: {}
           Statement:
-            OrStatement:
-              Statements:
-                - ByteMatchStatement:
-                    # over 1M in the last 3 days, mostly CN and BR, 200K user agents! 2025/04/07
-                    SearchString: 't13d311000_e8f1e7e78f70_a29327ec888c'
-                    FieldToMatch:
-                      JA4Fingerprint:
-                        FallbackBehavior: NO_MATCH
-                    PositionalConstraint: EXACTLY
-                    TextTransformations:
-                      - Priority: 0
-                        Type: NONE
-                - ByteMatchStatement:
-                    # multiple IPs, UAs from BR and VN, may be the cause of AVH performance problems 2025/05/28
-                    SearchString: 't13d1812h1_85036bcba153_d41ae481755e'
-                    FieldToMatch:
-                      JA4Fingerprint:
-                        FallbackBehavior: NO_MATCH
-                    PositionalConstraint: EXACTLY
-                    TextTransformations:
-                      - Priority: 0
-                        Type: NONE
-                - ByteMatchStatement:
-                    # Another BR bot, 200K hits on BIE in the last 24hrs 2025/05/30
-                    SearchString: 't13d4412h1_fd39b124ee10_58ed7828516f'
-                    FieldToMatch:
-                      JA4Fingerprint:
-                        FallbackBehavior: NO_MATCH
-                    PositionalConstraint: EXACTLY
-                    TextTransformations:
-                      - Priority: 0
-                        Type: NONE
-                - ByteMatchStatement:
-                    # SG,BR,VN bot, 200K hits on Biocache over the last few days 2025/08/15 ASN 136907
-                    SearchString: 't13d311100_e8f1e7e78f70_d41ae481755e'
-                    FieldToMatch:
-                      JA4Fingerprint:
-                        FallbackBehavior: NO_MATCH
-                    PositionalConstraint: EXACTLY
-                    TextTransformations:
-                      - Priority: 0
-                        Type: NONE
-                - ByteMatchStatement:
-                    # Thinkbot, mostly from china, 250k in the last 3 days 2025/08/25
-                    # UA on some requests: Mozilla/5.0 (compatible; Thinkbot/0.5.8; +In_the_test_phase,_if_the_Thinkbot_brings_you_trouble,_please_block_its_IP_address._Thank_you.)
-                    SearchString: 't13d131000_f57a46bbacb6_e7c285222651'
-                    FieldToMatch:
-                      JA4Fingerprint:
-                        FallbackBehavior: NO_MATCH
-                    PositionalConstraint: EXACTLY
-                    TextTransformations:
-                      - Priority: 0
-                        Type: NONE
+            RuleGroupReferenceStatement:
+              Arn: !ImportValue
+                Fn::Sub: ${pCommonWafRuleGroupStackName}-BlockAsnRuleGroupArn
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-ALABlockJa4Fingerprint
-        - Name: ALABlockSpecificBots
-          Action:
-            Block: {}
+            MetricName: !Sub ${pEnvironment}-lists-BlockAsnRuleGroup
+        - Name: BlockSpecificBots
           Priority: 4
-          RuleLabels:
-            - Name: bot:specific_blocked
+          OverrideAction:
+            None: {}
+          Statement:
+            RuleGroupReferenceStatement:
+              Arn: !ImportValue
+                Fn::Sub: ${pCommonWafRuleGroupStackName}-BlockSpecificBotsRuleGroupArn
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-ALABlockSpecificBots
+            MetricName: !Sub ${pEnvironment}-lists-BlockSpecificBotsRuleGroup
+        - Name: BlockDatacenterOldChrome
+          Priority: 5
+          OverrideAction:
+            None: {}
           Statement:
-            AndStatement:
-              Statements:
-                - NotStatement:
-                    Statement:
-                      ByteMatchStatement:
-                        SearchString: '/robots.txt'
-                        FieldToMatch:
-                          UriPath: {}
-                        PositionalConstraint: STARTS_WITH
-                        TextTransformations:
-                          - Priority: 0
-                            Type: NONE
-                - OrStatement:
-                    Statements:
-                      - ByteMatchStatement:
-                          SearchString: 'facebookexternalhit'
-                          FieldToMatch:
-                            SingleHeader:
-                              Name: User-Agent
-                          PositionalConstraint: STARTS_WITH
-                          TextTransformations:
-                            - Priority: 0
-                              Type: NONE
-                      - ByteMatchStatement:
-                          SearchString: 'meta-externalagent'
-                          FieldToMatch:
-                            SingleHeader:
-                              Name: User-Agent
-                          PositionalConstraint: STARTS_WITH
-                          TextTransformations:
-                            - Priority: 0
-                              Type: NONE
-                      - ByteMatchStatement:
-                          SearchString: 'PerplexityBot'
-                          FieldToMatch:
-                            SingleHeader:
-                              Name: User-Agent
-                          PositionalConstraint: CONTAINS_WORD
-                          TextTransformations:
-                            - Priority: 0
-                              Type: NONE
+            RuleGroupReferenceStatement:
+              Arn: !ImportValue
+                Fn::Sub: ${pCommonWafRuleGroupStackName}-BlockDatacenterOldChromeRuleGroupArn
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub ${pEnvironment}-lists-BlockDatacenterOldChromeRuleGroup
         - Name: ALARateLimitJa4
           Action:
             Block: { }
-          Priority: 5
+          Priority: 6
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
@@ -243,7 +144,7 @@ Resources:
         - Name: AWSManagedRulesAmazonIpReputationList
           OverrideAction: 
             None: {}
-          Priority: 6
+          Priority: 7
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesAmazonIpReputationList
@@ -259,7 +160,7 @@ Resources:
         - Name: AWSManagedRulesAnonymousIpList
           OverrideAction: 
             None: {}
-          Priority: 7
+          Priority: 8
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesAnonymousIpList
@@ -278,7 +179,7 @@ Resources:
         - Name: AWSManagedRulesKnownBadInputsRuleSet
           OverrideAction: 
             None: {}
-          Priority: 8
+          Priority: 9
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesKnownBadInputsRuleSet
@@ -290,7 +191,7 @@ Resources:
         - Name: AWSManagedRulesCommonRuleSet
           OverrideAction: 
             None: {}
-          Priority: 9
+          Priority: 10
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesCommonRuleSet
@@ -315,7 +216,7 @@ Resources:
         - Name: AWSManagedRulesBotControlRuleSet-ws
           OverrideAction: 
             None: {}
-          Priority: 10
+          Priority: 11
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesBotControlRuleSet
@@ -347,7 +248,7 @@ Resources:
         - Name: ALARateLimitGoodBots
           Action:
             Block: { }
-          Priority: 11
+          Priority: 12
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
@@ -364,7 +265,7 @@ Resources:
         - Name: ALABlockDatacenterBrowsers
           Action:
             Block: {}
-          Priority: 12
+          Priority: 13
           RuleLabels:
             - Name: bot:datacenterbrowsers
           VisibilityConfig:
