@@ -139,6 +139,8 @@ config:
   app:
     name: "species-lists"
     url: ""
+    cookie:
+      domain: ""
   graphql:
     enabled: true
     path: "/graphql"
