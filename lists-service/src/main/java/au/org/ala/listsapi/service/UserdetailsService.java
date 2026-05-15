@@ -17,6 +17,8 @@ package au.org.ala.listsapi.service;
 import java.util.Map;
 
 import org.apache.http.entity.ContentType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,8 @@ import au.org.ala.listsapi.service.auth.WebService;
 
 @Service
 public class UserdetailsService {
+    private static final Logger logger = LoggerFactory.getLogger(UserdetailsService.class);
+
     @Autowired WebService webService;
 
     @Value("${userDetails.api.url}")
@@ -43,9 +47,13 @@ public class UserdetailsService {
         );
 
         if ((int)request.get("statusCode") == 200) {
-            Map resp = (Map)request.get("resp");
-
-            return resp;
+            Object resp = request.get("resp");
+            if (resp instanceof Map) {
+                return (Map) resp;
+            } else {
+                logger.warn("Unexpected response type from user details API: " + (resp != null ? resp.getClass().getName() : "null"));
+                return null;
+            }
         }
 
         return null;
