@@ -255,14 +255,14 @@ public class MigrateService {
             list.setOwner((String) legacyUser.get("userId"));
             String displayName = (String) legacyUser.get("displayName");
             if (displayName == null || displayName.trim().isEmpty()) {
-                String firstName = (String) legacyUser.get("firstName");
-                String lastName = (String) legacyUser.get("lastName");
-                if (firstName != null && lastName != null) {
-                    displayName = firstName.trim() + " " + lastName.trim();
-                } else if (firstName != null) {
-                    displayName = firstName.trim();
-                } else if (lastName != null) {
-                    displayName = lastName.trim();
+                String fName = legacyUser.get("firstName") != null ? ((String) legacyUser.get("firstName")).trim() : "";
+                String lName = legacyUser.get("lastName") != null ? ((String) legacyUser.get("lastName")).trim() : "";
+                if (!fName.isEmpty() && !lName.isEmpty()) {
+                    displayName = fName + " " + lName;
+                } else if (!fName.isEmpty()) {
+                    displayName = fName;
+                } else if (!lName.isEmpty()) {
+                    displayName = lName;
                 }
             }
             list.setOwnerName(displayName);

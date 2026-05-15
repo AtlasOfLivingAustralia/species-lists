@@ -107,14 +107,14 @@ public class SpeciesListTransformer {
                 version1.setUsername((String) userDetails.get("email"));
                 String fullName = (String) userDetails.get("displayName");
                 if (fullName == null || fullName.trim().isEmpty()) {
-                    String firstName = (String) userDetails.get("firstName");
-                    String lastName = (String) userDetails.get("lastName");
-                    if (firstName != null && lastName != null) {
-                        fullName = firstName.trim() + " " + lastName.trim();
-                    } else if (firstName != null) {
-                        fullName = firstName.trim();
-                    } else if (lastName != null) {
-                        fullName = lastName.trim();
+                    String fName = userDetails.get("firstName") != null ? ((String) userDetails.get("firstName")).trim() : "";
+                    String lName = userDetails.get("lastName") != null ? ((String) userDetails.get("lastName")).trim() : "";
+                    if (!fName.isEmpty() && !lName.isEmpty()) {
+                        fullName = fName + " " + lName;
+                    } else if (!fName.isEmpty()) {
+                        fullName = fName;
+                    } else if (!lName.isEmpty()) {
+                        fullName = lName;
                     }
                 }
                 version1.setFullName(fullName);
