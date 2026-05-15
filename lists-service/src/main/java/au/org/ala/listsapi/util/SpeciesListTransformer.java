@@ -105,7 +105,19 @@ public class SpeciesListTransformer {
 
             if (userDetails != null && userDetails.get("email") != null) {
                 version1.setUsername((String) userDetails.get("email"));
-                version1.setFullName((String) userDetails.get("displayName"));
+                String fullName = (String) userDetails.get("displayName");
+                if (fullName == null || fullName.trim().isEmpty()) {
+                    String firstName = (String) userDetails.get("firstName");
+                    String lastName = (String) userDetails.get("lastName");
+                    if (firstName != null && lastName != null) {
+                        fullName = firstName.trim() + " " + lastName.trim();
+                    } else if (firstName != null) {
+                        fullName = firstName.trim();
+                    } else if (lastName != null) {
+                        fullName = lastName.trim();
+                    }
+                }
+                version1.setFullName(fullName);
             } else {
                 version1.setUsername(speciesList.getOwner());
                 version1.setFullName(speciesList.getOwnerName());
