@@ -598,9 +598,13 @@ public class UploadService {
                                  trimmed.startsWith("https:") || 
                                  UUID_PATTERN.matcher(trimmed).matches();
                 if (isGuid) {
-                    taxonID = suppliedName;
+                    if (StringUtils.isEmpty(taxonID)) {
+                        taxonID = suppliedName;
+                    }
                 } else {
-                    scientificName = suppliedName; // undocumented input field, left in for backward compatibility
+                    if (StringUtils.isEmpty(scientificName)) {
+                        scientificName = suppliedName; // undocumented input field, left in for backward compatibility
+                    }
                 }
             } else {
                 suppliedName = firstNonEmpty(scientificName, taxonID, taxonConceptID, vernacularName);
