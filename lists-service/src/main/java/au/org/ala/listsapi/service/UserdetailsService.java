@@ -33,7 +33,7 @@ public class UserdetailsService {
     public Map fetchUserByEmail(String email) {
         Map<String, Object> params = Map.of("userName", email);
         Map request = webService.post(
-                userdetailsUrl + "/userDetails/getUserDetails",
+                userdetailsUrl + "userDetails/getUserDetails",
                 null,
                 params,
                 ContentType.APPLICATION_JSON,

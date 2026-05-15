@@ -253,7 +253,19 @@ public class MigrateService {
 
         if (legacyUser != null) {
             list.setOwner((String) legacyUser.get("userId"));
-            list.setOwnerName((String) legacyUser.get("displayName"));
+            String displayName = (String) legacyUser.get("displayName");
+            if (displayName == null || displayName.trim().isEmpty()) {
+                String fName = legacyUser.get("firstName") != null ? ((String) legacyUser.get("firstName")).trim() : "";
+                String lName = legacyUser.get("lastName") != null ? ((String) legacyUser.get("lastName")).trim() : "";
+                if (!fName.isEmpty() && !lName.isEmpty()) {
+                    displayName = fName + " " + lName;
+                } else if (!fName.isEmpty()) {
+                    displayName = fName;
+                } else if (!lName.isEmpty()) {
+                    displayName = lName;
+                }
+            }
+            list.setOwnerName(displayName);
         }
     }
 
