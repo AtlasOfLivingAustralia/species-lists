@@ -51,7 +51,7 @@ public class UserdetailsService {
             if (resp instanceof Map) {
                 return (Map) resp;
             } else {
-                logger.warn("Unexpected response type from user details API: " + (resp != null ? resp.getClass().getName() : "null"));
+                logger.warn("Unexpected response type from user details API for username " + email + ": " + (resp != null ? resp.getClass().getName() : "null") + ", response: " + resp);
                 return null;
             }
         }
