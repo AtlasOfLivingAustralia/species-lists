@@ -589,7 +589,16 @@ public class UploadService {
             String suppliedName = values.remove("Supplied Name");
 
             if (suppliedName != null) {
-                scientificName = suppliedName; // undocumented input field, left in for backward compatibility
+                String trimmed = suppliedName.trim();
+                boolean isGuid = trimmed.startsWith("urn:") || 
+                                 trimmed.startsWith("http:") || 
+                                 trimmed.startsWith("https:") || 
+                                 trimmed.matches("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
+                if (isGuid) {
+                    taxonID = suppliedName;
+                } else {
+                    scientificName = suppliedName; // undocumented input field, left in for backward compatibility
+                }
             } else {
                 suppliedName = firstNonEmpty(scientificName, taxonID, taxonConceptID, vernacularName);
             }
