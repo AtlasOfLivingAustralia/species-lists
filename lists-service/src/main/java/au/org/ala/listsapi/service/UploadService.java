@@ -32,6 +32,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -106,6 +107,8 @@ public class UploadService {
     }
 
     private static final Set<String> ACCEPTED_FILE_TYPES = Set.of("text/csv", "application/zip");
+
+    private static final Pattern UUID_PATTERN = Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
 
     public static Set<String> getAcceptedFileTypes() {
         return ACCEPTED_FILE_TYPES;
@@ -589,7 +592,20 @@ public class UploadService {
             String suppliedName = values.remove("Supplied Name");
 
             if (suppliedName != null) {
-                scientificName = suppliedName; // undocumented input field, left in for backward compatibility
+                String trimmed = suppliedName.trim();
+                boolean isGuid = trimmed.startsWith("urn:") || 
+                                 trimmed.startsWith("http:") || 
+                                 trimmed.startsWith("https:") || 
+                                 UUID_PATTERN.matcher(trimmed).matches();
+                if (isGuid) {
+                    if (StringUtils.isEmpty(taxonID)) {
+                        taxonID = suppliedName;
+                    }
+                } else {
+                    if (StringUtils.isEmpty(scientificName)) {
+                        scientificName = suppliedName; // undocumented input field, left in for backward compatibility
+                    }
+                }
             } else {
                 suppliedName = firstNonEmpty(scientificName, taxonID, taxonConceptID, vernacularName);
             }
