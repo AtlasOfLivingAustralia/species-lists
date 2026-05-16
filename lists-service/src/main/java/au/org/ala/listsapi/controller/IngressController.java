@@ -577,7 +577,7 @@ public class IngressController {
     }
 
     @NotNull
-    private ResponseEntity<Object> startAsyncTaskIfNotBusy(String name, Runnable runnable) {
+    private synchronized ResponseEntity<Object> startAsyncTaskIfNotBusy(String name, Runnable runnable) {
         if (asyncTask == null || asyncTask.isDone()) {
             asyncTask = CompletableFuture.runAsync(runnable);
             taskName = name;
