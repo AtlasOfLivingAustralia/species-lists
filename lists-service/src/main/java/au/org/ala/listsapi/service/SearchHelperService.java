@@ -570,7 +570,7 @@ public class SearchHelperService {
         builder.withAggregation(
             "list_count",
             Aggregation.of(a -> a.cardinality(
-                ca -> ca.field(SPECIES_LIST_ID + ".keyword")
+                ca -> ca.field(SPECIES_LIST_ID + ".keyword").precisionThreshold(40000)
             ))
         );
         
@@ -615,7 +615,7 @@ public class SearchHelperService {
                     .terms(ta -> ta.field(esField).size(50))
                     .aggregations("distinct_list_count",
                         Aggregation.of(ca -> ca.cardinality(
-                            c -> c.field(SPECIES_LIST_ID + ".keyword")
+                            c -> c.field(SPECIES_LIST_ID + ".keyword").precisionThreshold(40000)
                         ))
                     )
                 )
