@@ -30,9 +30,6 @@ Parameters:
   pCloudfrontCertificate:
     Type: String
     Description: The arn of the SSL certificate to be used
-  pAppCertificate:
-    Type: String
-    Description: The arn of the SSL certificate for the backend API
 
 Conditions:
   IsDev: !Equals
@@ -71,6 +68,12 @@ Resources:
               AWS: !Sub 'arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${ListsCloudFrontOai}'
 
   # Origin Request Policy for /ws/* to forward all headers/cookies/query strings
+  # This is required for proxying API requests where:
+  # - Authorization headers must reach the backend
+  # - CSRF cookies need to be forwarded
+  # - CORS headers (Origin, Referer) must be preserved
+  # - All query parameters are API-specific
+  # Note: Caching is disabled for this path (CachingDisabled policy below)
   WsOriginRequestPolicy:
     Type: AWS::CloudFront::OriginRequestPolicy
     Properties:
