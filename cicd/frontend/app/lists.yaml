@@ -141,8 +141,13 @@ Resources:
             TargetOriginId: lists-s3
             ViewerProtocolPolicy: redirect-to-https
             AllowedMethods:
+              - DELETE
               - GET
               - HEAD
+              - OPTIONS
+              - PATCH
+              - POST
+              - PUT
             CachedMethods:
               - GET
               - HEAD
