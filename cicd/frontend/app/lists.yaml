@@ -104,7 +104,9 @@ Resources:
                   statusDescription: 'Moved Permanently',
                   headers: {
                       "location": { "value": newUri },
-                      "cache-control": { "value": "no-store, no-cache, must-revalidate, proxy-revalidate" }
+                      "cache-control": { "value": "no-store, no-cache, must-revalidate, proxy-revalidate" },
+                      "access-control-allow-origin": { "value": "*" },
+                      "access-control-allow-methods": { "value": "GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE" }
                   }
               };
           }
