@@ -98,7 +98,7 @@ public class WsToV1RedirectFilter extends OncePerRequestFilter {
     }
 
     private void redirect(HttpServletResponse response, String newUri) throws IOException {
-        response.setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY);
+        response.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
         response.setHeader("Location", newUri);
     }
 }
