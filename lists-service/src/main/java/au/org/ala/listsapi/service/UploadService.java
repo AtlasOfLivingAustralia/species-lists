@@ -573,11 +573,39 @@ public class UploadService {
             Map<String, String> values = iterator.next();
 
             if (isMigration) {
-                // remove legacy data
+                // Preserve user-provided taxonomic values from raw* fields before removing matched values
+                // This ensures user-provided family, kingdom, etc. are available for name matching
+                if (values.containsKey("rawkingdom")) {
+                    values.put("kingdom", values.get("rawkingdom"));
+                }
+                if (values.containsKey("rawphylum")) {
+                    values.put("phylum", values.get("rawphylum"));
+                }
+                if (values.containsKey("rawclass")) {
+                    values.put("class", values.get("rawclass"));
+                }
+                if (values.containsKey("raworder")) {
+                    values.put("order", values.get("raworder"));
+                }
+                if (values.containsKey("rawfamily")) {
+                    values.put("family", values.get("rawfamily"));
+                }
+                if (values.containsKey("rawgenus")) {
+                    values.put("genus", values.get("rawgenus"));
+                }
+                
+                // Remove legacy matched data (GUIDs and matched taxonomy)
+                // Note: raw* values are preserved above and will remain in properties
                 values.remove("guid");
+                values.remove("taxonID");
+                values.remove("taxonConceptID");
                 values.remove("scientificName");
-                values.remove("family");
-                values.remove("kingdom");
+                values.remove("family");   // Removes matched family (raw is already copied above)
+                values.remove("kingdom");  // Removes matched kingdom (raw is already copied above)
+                values.remove("phylum");   // Removes matched phylum (raw is already copied above)
+                values.remove("class");    // Removes matched class (raw is already copied above)
+                values.remove("order");    // Removes matched order (raw is already copied above)
+                values.remove("genus");    // Removes matched genus (raw is already copied above)
             }
 
             if (originalFieldNames.isEmpty()) {

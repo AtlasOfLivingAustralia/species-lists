@@ -833,24 +833,90 @@ public class TaxonService {
         if (StringUtils.isNotBlank(item.getVernacularName())) {
             builder.vernacularName(StringUtils.trimToNull(item.getVernacularName()));
         }
-        // Set taxonomic hierarchy
-        if (StringUtils.isNotBlank(item.getKingdom())) {
-            builder.kingdom(StringUtils.trimToNull(item.getKingdom()));
+        // Set taxonomic hierarchy - check direct fields first, then fall back to raw* fields in properties
+        
+        // Set kingdom - check direct field first, then rawkingdom in properties
+        String kingdomValue = item.getKingdom();
+        if (StringUtils.isBlank(kingdomValue) && item.getProperties() != null) {
+            kingdomValue = item.getProperties().stream()
+                    .filter(kv -> "rawkingdom".equalsIgnoreCase(kv.getKey()))
+                    .map(KeyValue::getValue)
+                    .filter(StringUtils::isNotBlank)
+                    .findFirst()
+                    .orElse(null);
         }
-        if (StringUtils.isNotBlank(item.getPhylum())) {
-            builder.phylum(StringUtils.trimToNull(item.getPhylum()));
+        if (StringUtils.isNotBlank(kingdomValue)) {
+            builder.kingdom(StringUtils.trimToNull(kingdomValue));
         }
-        if (StringUtils.isNotBlank(item.getClasss())) {
-            builder.clazz(StringUtils.trimToNull(item.getClasss()));
+        
+        // Set phylum - check direct field first, then rawphylum in properties
+        String phylumValue = item.getPhylum();
+        if (StringUtils.isBlank(phylumValue) && item.getProperties() != null) {
+            phylumValue = item.getProperties().stream()
+                    .filter(kv -> "rawphylum".equalsIgnoreCase(kv.getKey()))
+                    .map(KeyValue::getValue)
+                    .filter(StringUtils::isNotBlank)
+                    .findFirst()
+                    .orElse(null);
         }
-        if (StringUtils.isNotBlank(item.getOrder())) {
-            builder.order(StringUtils.trimToNull(item.getOrder()));
+        if (StringUtils.isNotBlank(phylumValue)) {
+            builder.phylum(StringUtils.trimToNull(phylumValue));
         }
-        if (StringUtils.isNotBlank(item.getFamily())) {
-            builder.family(StringUtils.trimToNull(item.getFamily()));
+        
+        // Set class - check direct field first, then rawclass in properties
+        String classValue = item.getClasss();
+        if (StringUtils.isBlank(classValue) && item.getProperties() != null) {
+            classValue = item.getProperties().stream()
+                    .filter(kv -> "rawclass".equalsIgnoreCase(kv.getKey()))
+                    .map(KeyValue::getValue)
+                    .filter(StringUtils::isNotBlank)
+                    .findFirst()
+                    .orElse(null);
         }
-        if (StringUtils.isNotBlank(item.getGenus())) {
-            builder.genus(StringUtils.trimToNull(item.getGenus()));
+        if (StringUtils.isNotBlank(classValue)) {
+            builder.clazz(StringUtils.trimToNull(classValue));
+        }
+        
+        // Set order - check direct field first, then raworder in properties
+        String orderValue = item.getOrder();
+        if (StringUtils.isBlank(orderValue) && item.getProperties() != null) {
+            orderValue = item.getProperties().stream()
+                    .filter(kv -> "raworder".equalsIgnoreCase(kv.getKey()))
+                    .map(KeyValue::getValue)
+                    .filter(StringUtils::isNotBlank)
+                    .findFirst()
+                    .orElse(null);
+        }
+        if (StringUtils.isNotBlank(orderValue)) {
+            builder.order(StringUtils.trimToNull(orderValue));
+        }
+        
+        // Set family - check direct field first, then rawfamily in properties
+        String familyValue = item.getFamily();
+        if (StringUtils.isBlank(familyValue) && item.getProperties() != null) {
+            familyValue = item.getProperties().stream()
+                    .filter(kv -> "rawfamily".equalsIgnoreCase(kv.getKey()))
+                    .map(KeyValue::getValue)
+                    .filter(StringUtils::isNotBlank)
+                    .findFirst()
+                    .orElse(null);
+        }
+        if (StringUtils.isNotBlank(familyValue)) {
+            builder.family(StringUtils.trimToNull(familyValue));
+        }
+        
+        // Set genus - check direct field first, then rawgenus in properties
+        String genusValue = item.getGenus();
+        if (StringUtils.isBlank(genusValue) && item.getProperties() != null) {
+            genusValue = item.getProperties().stream()
+                    .filter(kv -> "rawgenus".equalsIgnoreCase(kv.getKey()))
+                    .map(KeyValue::getValue)
+                    .filter(StringUtils::isNotBlank)
+                    .findFirst()
+                    .orElse(null);
+        }
+        if (StringUtils.isNotBlank(genusValue)) {
+            builder.genus(StringUtils.trimToNull(genusValue));
         }
 
         if (item.getProperties() != null) {
