@@ -67,48 +67,32 @@ Resources:
             Principal:
               AWS: !Sub 'arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${ListsCloudFrontOai}'
 
-  WsRedirectFunction:
-    Type: AWS::CloudFront::Function
+  # Origin Request Policy for /ws/* to forward all headers/cookies/query strings
+  # This is required for proxying API requests where:
+  # - Authorization headers must reach the backend
+  # - CSRF cookies need to be forwarded
+  # - CORS headers (Origin, Referer) must be preserved
+  # - All query parameters are API-specific
+  # Note: Caching is disabled for this path (CachingDisabled policy below)
+  WsOriginRequestPolicy:
+    Type: AWS::CloudFront::OriginRequestPolicy
     Properties:
-      Name: !Sub 
-        - "lists-ws-redirect-${ResourceName}"
-        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
-      AutoPublish: true
-      FunctionConfig:
-        Comment: Redirect /ws/* to the backend domain
-        Runtime: cloudfront-js-1.0
-      FunctionCode: !Sub 
-        - |
-          function handler(event) {
-              var request = event.request;
-              var uri = request.uri;
-              var newUri = "https://${Domain}" + uri;
-              if (request.querystring) {
-                  var qs = [];
-                  for (var key in request.querystring) {
-                      var val = request.querystring[key];
-                      if (val.multiValue) {
-                          for (var i = 0; i < val.multiValue.length; i++) {
-                              qs.push(key + '=' + val.multiValue[i].value);
-                          }
-                      } else {
-                          qs.push(key + '=' + val.value);
-                      }
-                  }
-                  if (qs.length > 0) {
-                      newUri += '?' + qs.join('&');
-                  }
-              }
-              return {
-                  statusCode: 301,
-                  statusDescription: 'Moved Permanently',
-                  headers: {
-                      "location": { "value": newUri },
-                      "cache-control": { "value": "no-store, no-cache, must-revalidate, proxy-revalidate" }
-                  }
-              };
-          }
-        - Domain: !Sub "${pWsSubDomain}.${pHostedZone}"
+      OriginRequestPolicyConfig:
+        Name: !Sub
+          - "Lists-WS-Origin-Policy-${ResourceName}"
+          - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+        Comment: !Sub Origin request policy for /ws/* API requests in ${pEnvironment}
+        HeadersConfig:
+          HeaderBehavior: allViewerAndWhitelistCloudFront
+          Headers:
+            - CloudFront-Forwarded-Proto
+            - CloudFront-Is-Desktop-Viewer
+            - CloudFront-Is-Mobile-Viewer
+            - CloudFront-Is-Tablet-Viewer
+        CookiesConfig:
+          CookieBehavior: all
+        QueryStringsConfig:
+          QueryStringBehavior: all
 
   ListsDnsRecord:
     Type: AWS::Route53::RecordSet
@@ -136,19 +120,23 @@ Resources:
             ResponsePagePath: /index.html
         CacheBehaviors:
           - PathPattern: '/ws/*'
-            TargetOriginId: lists-s3
+            TargetOriginId: lists-backend-api
             ViewerProtocolPolicy: redirect-to-https
             AllowedMethods:
+              - DELETE
               - GET
               - HEAD
+              - OPTIONS
+              - PATCH
+              - POST
+              - PUT
             CachedMethods:
               - GET
               - HEAD
             # AWS Managed CachingDisabled Policy
             CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
-            FunctionAssociations:
-              - EventType: viewer-request
-                FunctionARN: !GetAtt WsRedirectFunction.FunctionMetadata.FunctionARN
+            # Use custom origin request policy to forward all headers/cookies/query strings
+            OriginRequestPolicyId: !Ref WsOriginRequestPolicy
         DefaultCacheBehavior:
           AllowedMethods:
             - GET
@@ -170,6 +158,16 @@ Resources:
             S3OriginConfig:
               OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${ListsCloudFrontOai}'
             OriginPath: !Sub '/${pBucketPath}'
+          - DomainName: !Sub '${pWsSubDomain}.${pHostedZone}'
+            Id: lists-backend-api
+            CustomOriginConfig:
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols:
+                - TLSv1.2
+            OriginCustomHeaders:
+              - HeaderName: X-Forwarded-Host
+                HeaderValue: !Sub '${pUiSubDomain}.${pHostedZone}'
         ViewerCertificate:
           AcmCertificateArn: !Ref pCloudfrontCertificate
           MinimumProtocolVersion: TLSv1.2_2021
