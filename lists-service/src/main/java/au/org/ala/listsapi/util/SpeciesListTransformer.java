@@ -203,10 +203,6 @@ public class SpeciesListTransformer {
                 return "vernacular name";
             case "group":
                 return "Group";
-            case "rawkingdom":
-                return "kingdom";
-            case "rawfamily":
-                return "family";
             case "taxonRank":
                 return "rank";
             default:

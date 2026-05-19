@@ -834,90 +834,12 @@ public class TaxonService {
             builder.vernacularName(StringUtils.trimToNull(item.getVernacularName()));
         }
         // Set taxonomic hierarchy - check direct fields first, then fall back to raw* fields in properties
-        
-        // Set kingdom - check direct field first, then rawkingdom in properties
-        String kingdomValue = item.getKingdom();
-        if (StringUtils.isBlank(kingdomValue) && item.getProperties() != null) {
-            kingdomValue = item.getProperties().stream()
-                    .filter(kv -> "rawkingdom".equalsIgnoreCase(kv.getKey()))
-                    .map(KeyValue::getValue)
-                    .filter(StringUtils::isNotBlank)
-                    .findFirst()
-                    .orElse(null);
-        }
-        if (StringUtils.isNotBlank(kingdomValue)) {
-            builder.kingdom(StringUtils.trimToNull(kingdomValue));
-        }
-        
-        // Set phylum - check direct field first, then rawphylum in properties
-        String phylumValue = item.getPhylum();
-        if (StringUtils.isBlank(phylumValue) && item.getProperties() != null) {
-            phylumValue = item.getProperties().stream()
-                    .filter(kv -> "rawphylum".equalsIgnoreCase(kv.getKey()))
-                    .map(KeyValue::getValue)
-                    .filter(StringUtils::isNotBlank)
-                    .findFirst()
-                    .orElse(null);
-        }
-        if (StringUtils.isNotBlank(phylumValue)) {
-            builder.phylum(StringUtils.trimToNull(phylumValue));
-        }
-        
-        // Set class - check direct field first, then rawclass in properties
-        String classValue = item.getClasss();
-        if (StringUtils.isBlank(classValue) && item.getProperties() != null) {
-            classValue = item.getProperties().stream()
-                    .filter(kv -> "rawclass".equalsIgnoreCase(kv.getKey()))
-                    .map(KeyValue::getValue)
-                    .filter(StringUtils::isNotBlank)
-                    .findFirst()
-                    .orElse(null);
-        }
-        if (StringUtils.isNotBlank(classValue)) {
-            builder.clazz(StringUtils.trimToNull(classValue));
-        }
-        
-        // Set order - check direct field first, then raworder in properties
-        String orderValue = item.getOrder();
-        if (StringUtils.isBlank(orderValue) && item.getProperties() != null) {
-            orderValue = item.getProperties().stream()
-                    .filter(kv -> "raworder".equalsIgnoreCase(kv.getKey()))
-                    .map(KeyValue::getValue)
-                    .filter(StringUtils::isNotBlank)
-                    .findFirst()
-                    .orElse(null);
-        }
-        if (StringUtils.isNotBlank(orderValue)) {
-            builder.order(StringUtils.trimToNull(orderValue));
-        }
-        
-        // Set family - check direct field first, then rawfamily in properties
-        String familyValue = item.getFamily();
-        if (StringUtils.isBlank(familyValue) && item.getProperties() != null) {
-            familyValue = item.getProperties().stream()
-                    .filter(kv -> "rawfamily".equalsIgnoreCase(kv.getKey()))
-                    .map(KeyValue::getValue)
-                    .filter(StringUtils::isNotBlank)
-                    .findFirst()
-                    .orElse(null);
-        }
-        if (StringUtils.isNotBlank(familyValue)) {
-            builder.family(StringUtils.trimToNull(familyValue));
-        }
-        
-        // Set genus - check direct field first, then rawgenus in properties
-        String genusValue = item.getGenus();
-        if (StringUtils.isBlank(genusValue) && item.getProperties() != null) {
-            genusValue = item.getProperties().stream()
-                    .filter(kv -> "rawgenus".equalsIgnoreCase(kv.getKey()))
-                    .map(KeyValue::getValue)
-                    .filter(StringUtils::isNotBlank)
-                    .findFirst()
-                    .orElse(null);
-        }
-        if (StringUtils.isNotBlank(genusValue)) {
-            builder.genus(StringUtils.trimToNull(genusValue));
-        }
+        setTaxonomicField(builder::kingdom, item.getKingdom(), "rawkingdom", item.getProperties());
+        setTaxonomicField(builder::phylum, item.getPhylum(), "rawphylum", item.getProperties());
+        setTaxonomicField(builder::clazz, item.getClasss(), "rawclass", item.getProperties());
+        setTaxonomicField(builder::order, item.getOrder(), "raworder", item.getProperties());
+        setTaxonomicField(builder::family, item.getFamily(), "rawfamily", item.getProperties());
+        setTaxonomicField(builder::genus, item.getGenus(), "rawgenus", item.getProperties());
 
         if (item.getProperties() != null) {
             String rank = item.getProperties().stream()
@@ -1004,6 +926,34 @@ public class TaxonService {
         if (memoryUsagePercent > 80) {
             logger.warn("[Memory|{}] High memory usage: {:.1f}% - consider running GC or reducing batch sizes", 
                     context, memoryUsagePercent);
+        }
+    }
+
+    /**
+     * Helper method to set a taxonomic field in the NameSearch builder.
+     * Checks the direct field value first, then falls back to the raw* field in properties.
+     *
+     * @param setter The builder setter method reference
+     * @param directValue The direct field value (may be null/blank)
+     * @param rawFieldName The raw field name to search for in properties (case-insensitive)
+     * @param properties The properties list from SpeciesListItem
+     */
+    private void setTaxonomicField(
+            java.util.function.Consumer<String> setter,
+            String directValue,
+            String rawFieldName,
+            List<KeyValue> properties) {
+        String value = directValue;
+        if (StringUtils.isBlank(value) && properties != null) {
+            value = properties.stream()
+                    .filter(kv -> rawFieldName.equalsIgnoreCase(kv.getKey()))
+                    .map(KeyValue::getValue)
+                    .filter(StringUtils::isNotBlank)
+                    .findFirst()
+                    .orElse(null);
+        }
+        if (StringUtils.isNotBlank(value)) {
+            setter.accept(StringUtils.trimToNull(value));
         }
     }
 }

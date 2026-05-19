@@ -146,18 +146,16 @@ class SpeciesListTransformerTest {
       
       QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
       
-      // Should have: rawfamily->family (via fixLegacyKeys), family (duplicate), otherProperty
+      // Should have: rawfamily (preserved), family (duplicate), otherProperty
       assertEquals(3, result.getKvpValues().size());
       
-      // Check that we have both "family" entries (one from fixLegacyKeys, one duplicate)
-      long familyCount = result.getKvpValues().stream()
-          .filter(kv -> "family".equals(kv.getKey()))
-          .count();
-      assertEquals(2, familyCount, "Should have two 'family' entries");
+      // Check that we have rawfamily and family
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "rawfamily".equals(kv.getKey())));
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "family".equals(kv.getKey())));
       
       // All family values should be "Felidae"
       result.getKvpValues().stream()
-          .filter(kv -> "family".equals(kv.getKey()))
+          .filter(kv -> "rawfamily".equals(kv.getKey()) || "family".equals(kv.getKey()))
           .forEach(kv -> assertEquals("Felidae", kv.getValue()));
     }
     
@@ -174,18 +172,12 @@ class SpeciesListTransformerTest {
       
       QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
       
-      // Should have: rawfamily->family (via fixLegacyKeys), family (direct) - NO duplicate
+      // Should have: rawfamily (preserved), family (direct) - NO duplicate since family already exists
       assertEquals(2, result.getKvpValues().size());
       
-      // Check family values
-      long familyCount = result.getKvpValues().stream()
-          .filter(kv -> "family".equals(kv.getKey()))
-          .count();
-      assertEquals(2, familyCount, "Should have exactly two 'family' entries (one from fixLegacyKeys, one direct)");
-      
-      // Should have both values
+      // Check we have rawfamily and family with their respective values
       assertTrue(result.getKvpValues().stream()
-          .anyMatch(kv -> "family".equals(kv.getKey()) && "RawFelidae".equals(kv.getValue())));
+          .anyMatch(kv -> "rawfamily".equals(kv.getKey()) && "RawFelidae".equals(kv.getValue())));
       assertTrue(result.getKvpValues().stream()
           .anyMatch(kv -> "family".equals(kv.getKey()) && "DirectFelidae".equals(kv.getValue())));
     }
@@ -207,21 +199,24 @@ class SpeciesListTransformerTest {
       
       QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
       
-      // First pass transforms via fixLegacyKeys: rawkingdom->kingdom, rawfamily->family, others stay as-is
-      // Second pass adds non-raw versions: kingdom (skip, already transformed), phylum, class, order, family (skip), genus
-      // Total: kingdom (from rawkingdom), rawphylum, phylum, rawclass, class, raworder, order, family (from rawfamily), rawgenus, genus
-      // But we need to check actual counts since fixLegacyKeys only transforms rawkingdom and rawfamily
+      // All raw fields should be preserved AND have non-raw duplicates added
+      // Total: rawkingdom, kingdom, rawphylum, phylum, rawclass, class, raworder, order, rawfamily, family, rawgenus, genus = 12
+      assertEquals(12, result.getKvpValues().size());
       
-      // Check that raw fields that are NOT transformed by fixLegacyKeys also get non-raw versions
-      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "kingdom".equals(kv.getKey())), "Should have kingdom from rawkingdom via fixLegacyKeys");
+      // Check that all raw fields exist
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "rawkingdom".equals(kv.getKey())), "Should have rawkingdom");
       assertTrue(result.getKvpValues().stream().anyMatch(kv -> "rawphylum".equals(kv.getKey())), "Should have rawphylum");
-      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "phylum".equals(kv.getKey())), "Should have phylum duplicate");
       assertTrue(result.getKvpValues().stream().anyMatch(kv -> "rawclass".equals(kv.getKey())), "Should have rawclass");
-      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "class".equals(kv.getKey())), "Should have class duplicate");
       assertTrue(result.getKvpValues().stream().anyMatch(kv -> "raworder".equals(kv.getKey())), "Should have raworder");
-      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "order".equals(kv.getKey())), "Should have order duplicate");
-      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "family".equals(kv.getKey())), "Should have family from rawfamily via fixLegacyKeys");
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "rawfamily".equals(kv.getKey())), "Should have rawfamily");
       assertTrue(result.getKvpValues().stream().anyMatch(kv -> "rawgenus".equals(kv.getKey())), "Should have rawgenus");
+      
+      // Check that all non-raw duplicates exist
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "kingdom".equals(kv.getKey())), "Should have kingdom duplicate");
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "phylum".equals(kv.getKey())), "Should have phylum duplicate");
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "class".equals(kv.getKey())), "Should have class duplicate");
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "order".equals(kv.getKey())), "Should have order duplicate");
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "family".equals(kv.getKey())), "Should have family duplicate");
       assertTrue(result.getKvpValues().stream().anyMatch(kv -> "genus".equals(kv.getKey())), "Should have genus duplicate");
       
       // Verify values
@@ -248,10 +243,11 @@ class SpeciesListTransformerTest {
       
       QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
       
-      // rawfamily->family (fixLegacyKeys) + family duplicate + kingdom + raworder + order duplicate + customField = 6
+      // rawfamily (preserved) + family (duplicate) + kingdom + raworder (preserved) + order (duplicate) + customField = 6
       assertEquals(6, result.getKvpValues().size());
       
-      assertEquals(2, countKeyOccurrences(result.getKvpValues(), "family"), "family should appear twice");
+      assertEquals(1, countKeyOccurrences(result.getKvpValues(), "rawfamily"), "rawfamily should appear once");
+      assertEquals(1, countKeyOccurrences(result.getKvpValues(), "family"), "family should appear once (duplicate of rawfamily)");
       assertEquals(1, countKeyOccurrences(result.getKvpValues(), "kingdom"), "kingdom should appear once (no raw version)");
       assertEquals(1, countKeyOccurrences(result.getKvpValues(), "raworder"), "raworder should appear once");
       assertEquals(1, countKeyOccurrences(result.getKvpValues(), "order"), "order should appear once (duplicate of raworder)");
@@ -296,10 +292,12 @@ class SpeciesListTransformerTest {
       
       QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
       
-      // rawfamily->family (fixLegacyKeys) + family (duplicate) + taxonRank->rank + CommonNames->common name = 4
+      // rawfamily (preserved) + family (duplicate) + taxonRank->rank + CommonNames->common name = 4
       assertEquals(4, result.getKvpValues().size());
       
       // Check legacy transformations
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "rawfamily".equals(kv.getKey())));
       assertTrue(result.getKvpValues().stream()
           .anyMatch(kv -> "family".equals(kv.getKey())));
       assertTrue(result.getKvpValues().stream()
@@ -347,14 +345,14 @@ class SpeciesListTransformerTest {
       
       QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
       
-      // Should have: rawfamily->family (fixLegacyKeys), Family (direct) - NO additional duplicate
+      // Should have: rawfamily (preserved), Family (as-is) - NO additional duplicate since "family" exists (case-insensitive check)
       assertEquals(2, result.getKvpValues().size());
       
-      // Should have both values but NOT a third entry
-      long familyCount = result.getKvpValues().stream()
-          .filter(kv -> "family".equalsIgnoreCase(kv.getKey()))
-          .count();
-      assertEquals(2, familyCount, "Should have exactly two family-like entries");
+      // Should have rawfamily and Family
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "rawfamily".equals(kv.getKey())));
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "Family".equals(kv.getKey())));
     }
     
     private long countKeyOccurrences(List<KvpValueVersion1> kvps, String key) {
