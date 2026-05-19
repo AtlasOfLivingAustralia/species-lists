@@ -573,7 +573,7 @@ public class UploadService {
             Map<String, String> values = iterator.next();
 
             if (isMigration) {
-                // remove legacy data
+                // Remove legacy data
                 values.remove("guid");
                 values.remove("scientificName");
                 values.remove("family");

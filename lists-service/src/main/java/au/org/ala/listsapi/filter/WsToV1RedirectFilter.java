@@ -17,10 +17,13 @@ import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Redirects legacy requests to the new API version paths.
- * Handles redirects from:
- * - "/ws/" to "/v1/"
+ * Handles URL rewriting from:
+ * - "/ws/" to "/v1/" (internal rewrite for CloudFront proxy compatibility)
  * - "/upload", "/ingest", "/delete" to "/v2/upload", "/v2/ingest", "/v2/delete"
  * - Pre-versioned paths to their versioned equivalents
+ * 
+ * Note: Uses internal forwarding (URL rewrite) for /ws/* paths to support
+ * CloudFront proxy architecture where relative redirects would fail.
  */
 @Component
 public class WsToV1RedirectFilter extends OncePerRequestFilter {
@@ -59,14 +62,17 @@ public class WsToV1RedirectFilter extends OncePerRequestFilter {
 
         String requestUri = request.getRequestURI();
 
-        // Handle old prefix redirect
+        // Handle old prefix with internal rewrite (for CloudFront proxy compatibility)
         if (requestUri.startsWith(wsPrefix)) {
+            String newPath = requestUri.replaceFirst(wsPrefix, v1Prefix);
             String queryString = request.getQueryString();
-            String newUri = requestUri.replaceFirst(wsPrefix, v1Prefix);
-            if (queryString != null) {
-                newUri += "?" + queryString;
-            }
-            redirect(response, newUri);
+            
+            logger.debug("Rewriting /ws/* path internally: {} -> {}", requestUri, newPath);
+            
+            // Use internal forward (URL rewrite) instead of redirect
+            // This preserves the original host and works with CloudFront proxy
+            request.getRequestDispatcher(newPath + (queryString != null ? "?" + queryString : ""))
+                   .forward(request, response);
             return;
         }
 

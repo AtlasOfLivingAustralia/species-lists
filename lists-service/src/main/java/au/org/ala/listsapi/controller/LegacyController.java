@@ -31,6 +31,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -127,7 +128,16 @@ public class LegacyController {
             @AuthenticationPrincipal Principal principal) {
         try {
             int page = offset / max;
-            Pageable paging = PageRequest.of(page, max);
+            
+            // Map legacy field names to database field names and create Sort object
+            String mappedSortField = fixSortField(sort);
+            Sort.Direction sortDirection = "desc".equalsIgnoreCase(order) 
+                ? Sort.Direction.DESC 
+                : Sort.Direction.ASC;
+            Sort pageableSort = Sort.by(sortDirection, mappedSortField)
+                .and(Sort.by("_id")); // secondary sort for consistent ordering across pages
+            
+            Pageable paging = PageRequest.of(page, max, pageableSort);
             RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
             fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, isSDS, isBIE, druid, listType, speciesListQuery);
 
@@ -145,6 +155,21 @@ public class LegacyController {
             logger.error("Error occurred for /v1/speciesList: {}", e.getMessage(), e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @SecurityRequirement(name = "JWT")
+    @Operation(tags = "REST v1", summary = "Get species list metadata for a given species list ID", deprecated = true)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListVersion1.class))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
+    })
+    @GetMapping({"/v1/speciesList/{speciesListID}", "/v1/speciesList/{speciesListID}/"})
+    public ResponseEntity<Object> speciesList(
+            @Parameter(description = "The species list ID or data resource ID", example = "dr656")
+            @PathVariable("speciesListID") String speciesListID,
+            @AuthenticationPrincipal Principal principal) {
+        return getListDetails(speciesListID, principal);
     }
 
     /**
@@ -364,21 +389,6 @@ public class LegacyController {
         // Note: Filter booleans are nullified here as path lookup is specific to one list
         return internalSpeciesListItems(druid, null, null, null, null, null, 
                                     query, null, sort, order, null, max, offset, principal);
-    }
-
-    @SecurityRequirement(name = "JWT")
-    @Operation(tags = "REST v1", summary = "Get species list metadata for a given species list ID", deprecated = true)
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListVersion1.class))),
-            @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
-    })
-    @GetMapping({"/v1/speciesList/{speciesListID}", "/v1/speciesList/{speciesListID}/"})
-    public ResponseEntity<Object> speciesList(
-            @Parameter(description = "The species list ID or data resource ID", example = "dr656")
-            @PathVariable("speciesListID") String speciesListID,
-            @AuthenticationPrincipal Principal principal) {
-        return getListDetails(speciesListID, principal);
     }
 
     @SecurityRequirement(name = "JWT")

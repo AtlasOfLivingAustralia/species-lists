@@ -2,13 +2,27 @@ package au.org.ala.listsapi.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import au.org.ala.listsapi.model.Classification;
+import au.org.ala.listsapi.model.KeyValue;
+import au.org.ala.listsapi.model.KvpValueVersion1;
+import au.org.ala.listsapi.model.QueryListItemVersion1;
 import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.model.SpeciesListVersion1;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.UserdetailsService;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -90,4 +104,265 @@ class SpeciesListTransformerTest {
     assertEquals("", result.getSdsType());
     assertEquals("", result.getGeneralisation());
   }
+  
+  @Nested
+  @DisplayName("KVP Values Duplication Tests for Raw Taxonomic Fields")
+  class KvpValuesDuplicationTests {
+    
+    private SpeciesListItem createTestItem() {
+      SpeciesListItem item = new SpeciesListItem();
+      item.setId(new ObjectId());
+      item.setSpeciesListID("test-list-id");
+      item.setScientificName("Felis catus");
+      
+      Classification classification = new Classification();
+      classification.setTaxonConceptID("urn:lsid:biodiversity.org.au:afd.taxon:12345");
+      classification.setScientificName("Felis catus");
+      item.setClassification(classification);
+      
+      return item;
+    }
+    
+    private void mockSpeciesList() {
+      SpeciesList speciesList = new SpeciesList();
+      speciesList.setId("test-list-id");
+      speciesList.setDataResourceUid("dr123");
+      speciesList.setTitle("Test List");
+      when(speciesListMongoRepository.findByIdOrDataResourceUid(anyString(), anyString()))
+          .thenReturn(Optional.of(speciesList));
+    }
+    
+    @Test
+    @DisplayName("Should duplicate rawFamily to family when family doesn't exist")
+    void shouldDuplicateRawFamilyToFamily() {
+      mockSpeciesList();
+      SpeciesListItem item = createTestItem();
+      
+      List<KeyValue> properties = new ArrayList<>();
+      properties.add(new KeyValue("rawfamily", "Felidae"));
+      properties.add(new KeyValue("otherProperty", "someValue"));
+      item.setProperties(properties);
+      
+      QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
+      
+      // Should have: rawfamily (preserved), family (duplicate), otherProperty
+      assertEquals(3, result.getKvpValues().size());
+      
+      // Check that we have rawfamily and family
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "rawfamily".equals(kv.getKey())));
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "family".equals(kv.getKey())));
+      
+      // All family values should be "Felidae"
+      result.getKvpValues().stream()
+          .filter(kv -> "rawfamily".equals(kv.getKey()) || "family".equals(kv.getKey()))
+          .forEach(kv -> assertEquals("Felidae", kv.getValue()));
+    }
+    
+    @Test
+    @DisplayName("Should NOT duplicate rawFamily when family already exists")
+    void shouldNotDuplicateWhenFamilyExists() {
+      mockSpeciesList();
+      SpeciesListItem item = createTestItem();
+      
+      List<KeyValue> properties = new ArrayList<>();
+      properties.add(new KeyValue("rawfamily", "RawFelidae"));
+      properties.add(new KeyValue("family", "DirectFelidae"));
+      item.setProperties(properties);
+      
+      QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
+      
+      // Should have: rawfamily (preserved), family (direct) - NO duplicate since family already exists
+      assertEquals(2, result.getKvpValues().size());
+      
+      // Check we have rawfamily and family with their respective values
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "rawfamily".equals(kv.getKey()) && "RawFelidae".equals(kv.getValue())));
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "family".equals(kv.getKey()) && "DirectFelidae".equals(kv.getValue())));
+    }
+    
+    @Test
+    @DisplayName("Should duplicate all raw taxonomic fields")
+    void shouldDuplicateAllRawTaxonomicFields() {
+      mockSpeciesList();
+      SpeciesListItem item = createTestItem();
+      
+      List<KeyValue> properties = new ArrayList<>();
+      properties.add(new KeyValue("rawkingdom", "Animalia"));
+      properties.add(new KeyValue("rawphylum", "Chordata"));
+      properties.add(new KeyValue("rawclass", "Mammalia"));
+      properties.add(new KeyValue("raworder", "Carnivora"));
+      properties.add(new KeyValue("rawfamily", "Felidae"));
+      properties.add(new KeyValue("rawgenus", "Felis"));
+      item.setProperties(properties);
+      
+      QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
+      
+      // All raw fields should be preserved AND have non-raw duplicates added
+      // Total: rawkingdom, kingdom, rawphylum, phylum, rawclass, class, raworder, order, rawfamily, family, rawgenus, genus = 12
+      assertEquals(12, result.getKvpValues().size());
+      
+      // Check that all raw fields exist
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "rawkingdom".equals(kv.getKey())), "Should have rawkingdom");
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "rawphylum".equals(kv.getKey())), "Should have rawphylum");
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "rawclass".equals(kv.getKey())), "Should have rawclass");
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "raworder".equals(kv.getKey())), "Should have raworder");
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "rawfamily".equals(kv.getKey())), "Should have rawfamily");
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "rawgenus".equals(kv.getKey())), "Should have rawgenus");
+      
+      // Check that all non-raw duplicates exist
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "kingdom".equals(kv.getKey())), "Should have kingdom duplicate");
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "phylum".equals(kv.getKey())), "Should have phylum duplicate");
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "class".equals(kv.getKey())), "Should have class duplicate");
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "order".equals(kv.getKey())), "Should have order duplicate");
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "family".equals(kv.getKey())), "Should have family duplicate");
+      assertTrue(result.getKvpValues().stream().anyMatch(kv -> "genus".equals(kv.getKey())), "Should have genus duplicate");
+      
+      // Verify values
+      assertKvpValue(result.getKvpValues(), "kingdom", "Animalia");
+      assertKvpValue(result.getKvpValues(), "phylum", "Chordata");
+      assertKvpValue(result.getKvpValues(), "class", "Mammalia");
+      assertKvpValue(result.getKvpValues(), "order", "Carnivora");
+      assertKvpValue(result.getKvpValues(), "family", "Felidae");
+      assertKvpValue(result.getKvpValues(), "genus", "Felis");
+    }
+    
+    @Test
+    @DisplayName("Should handle mix of raw and non-raw fields correctly")
+    void shouldHandleMixOfRawAndNonRawFields() {
+      mockSpeciesList();
+      SpeciesListItem item = createTestItem();
+      
+      List<KeyValue> properties = new ArrayList<>();
+      properties.add(new KeyValue("rawfamily", "Felidae"));    // Will be transformed to family + duplicated as family (total 2x family)
+      properties.add(new KeyValue("kingdom", "Animalia"));      // Already non-raw, no duplicate
+      properties.add(new KeyValue("raworder", "Carnivora"));    // Not transformed by fixLegacyKeys, but duplicated as order
+      properties.add(new KeyValue("customField", "value"));     // Not taxonomic, no duplicate
+      item.setProperties(properties);
+      
+      QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
+      
+      // rawfamily (preserved) + family (duplicate) + kingdom + raworder (preserved) + order (duplicate) + customField = 6
+      assertEquals(6, result.getKvpValues().size());
+      
+      assertEquals(1, countKeyOccurrences(result.getKvpValues(), "rawfamily"), "rawfamily should appear once");
+      assertEquals(1, countKeyOccurrences(result.getKvpValues(), "family"), "family should appear once (duplicate of rawfamily)");
+      assertEquals(1, countKeyOccurrences(result.getKvpValues(), "kingdom"), "kingdom should appear once (no raw version)");
+      assertEquals(1, countKeyOccurrences(result.getKvpValues(), "raworder"), "raworder should appear once");
+      assertEquals(1, countKeyOccurrences(result.getKvpValues(), "order"), "order should appear once (duplicate of raworder)");
+      assertEquals(1, countKeyOccurrences(result.getKvpValues(), "customField"), "customField should appear once");
+    }
+    
+    @Test
+    @DisplayName("Should handle empty properties list")
+    void shouldHandleEmptyProperties() {
+      mockSpeciesList();
+      SpeciesListItem item = createTestItem();
+      item.setProperties(new ArrayList<>());
+      
+      QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
+      
+      assertTrue(result.getKvpValues().isEmpty());
+    }
+    
+    @Test
+    @DisplayName("Should handle null properties")
+    void shouldHandleNullProperties() {
+      mockSpeciesList();
+      SpeciesListItem item = createTestItem();
+      item.setProperties(null);
+      
+      QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
+      
+      assertTrue(result.getKvpValues().isEmpty());
+    }
+    
+    @Test
+    @DisplayName("Should apply legacy key transformations along with duplication")
+    void shouldApplyLegacyKeyTransformations() {
+      mockSpeciesList();
+      SpeciesListItem item = createTestItem();
+      
+      List<KeyValue> properties = new ArrayList<>();
+      properties.add(new KeyValue("rawfamily", "Felidae"));
+      properties.add(new KeyValue("taxonRank", "species"));
+      properties.add(new KeyValue("CommonNames", "Cat"));
+      item.setProperties(properties);
+      
+      QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
+      
+      // rawfamily (preserved) + family (duplicate) + taxonRank->rank + CommonNames->common name = 4
+      assertEquals(4, result.getKvpValues().size());
+      
+      // Check legacy transformations
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "rawfamily".equals(kv.getKey())));
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "family".equals(kv.getKey())));
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "rank".equals(kv.getKey()) && "species".equals(kv.getValue())));
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "common name".equals(kv.getKey()) && "Cat".equals(kv.getValue())));
+    }
+    
+    @Test
+    @DisplayName("Should handle case variations in raw taxonomic field names")
+    void shouldHandleCaseVariations() {
+      mockSpeciesList();
+      SpeciesListItem item = createTestItem();
+      
+      List<KeyValue> properties = new ArrayList<>();
+      properties.add(new KeyValue("RawFamily", "Felidae"));      // Different case
+      properties.add(new KeyValue("rawKingdom", "Animalia"));    // Mixed case
+      properties.add(new KeyValue("RAWORDER", "Carnivora"));     // Uppercase
+      item.setProperties(properties);
+      
+      QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
+      
+      // Should recognize all variations as raw taxonomic fields and duplicate them
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "family".equalsIgnoreCase(kv.getKey()) && "Felidae".equals(kv.getValue())),
+          "Should have family duplicate from RawFamily");
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "kingdom".equalsIgnoreCase(kv.getKey()) && "Animalia".equals(kv.getValue())),
+          "Should have kingdom duplicate from rawKingdom");
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "order".equalsIgnoreCase(kv.getKey()) && "Carnivora".equals(kv.getValue())),
+          "Should have order duplicate from RAWORDER");
+    }
+    
+    @Test
+    @DisplayName("Should NOT duplicate if non-raw version exists in different case")
+    void shouldNotDuplicateIfNonRawExistsInDifferentCase() {
+      mockSpeciesList();
+      SpeciesListItem item = createTestItem();
+      
+      List<KeyValue> properties = new ArrayList<>();
+      properties.add(new KeyValue("rawfamily", "RawFelidae"));
+      properties.add(new KeyValue("Family", "DirectFelidae"));  // Different case but should match "family"
+      item.setProperties(properties);
+      
+      QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
+      
+      // Should have: rawfamily (preserved), Family (as-is) - NO additional duplicate since "family" exists (case-insensitive check)
+      assertEquals(2, result.getKvpValues().size());
+      
+      // Should have rawfamily and Family
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "rawfamily".equals(kv.getKey())));
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "Family".equals(kv.getKey())));
+    }
+    
+    private long countKeyOccurrences(List<KvpValueVersion1> kvps, String key) {
+      return kvps.stream().filter(kv -> key.equals(kv.getKey())).count();
+    }
+    
+    private void assertKvpValue(List<KvpValueVersion1> kvps, String key, String expectedValue) {
+      assertTrue(kvps.stream()
+          .anyMatch(kv -> key.equals(kv.getKey()) && expectedValue.equals(kv.getValue())),
+          String.format("Expected to find kvp with key='%s' and value='%s'", key, expectedValue));
+    }
+  }
 }
+
