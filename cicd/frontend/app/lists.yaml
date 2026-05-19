@@ -67,6 +67,31 @@ Resources:
             Principal:
               AWS: !Sub 'arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${ListsCloudFrontOai}'
 
+  # CloudFront Function to rewrite /ws/* to /v1/* before proxying to backend
+  # This is needed because the backend API uses /v1/* paths internally
+  WsToV1RewriteFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub 
+        - "lists-ws-to-v1-rewrite-${ResourceName}"
+        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Rewrite /ws/* paths to /v1/* before proxying to backend
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+            var request = event.request;
+            var uri = request.uri;
+            
+            // Rewrite /ws/* to /v1/*
+            if (uri.startsWith('/ws/')) {
+                request.uri = uri.replace(/^\/ws\//, '/v1/');
+            }
+            
+            return request;
+        }
+
   # Origin Request Policy for /ws/* to forward all headers/cookies/query strings
   # This is required for proxying API requests where:
   # - Authorization headers must reach the backend
@@ -137,6 +162,10 @@ Resources:
             CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
             # Use custom origin request policy to forward all headers/cookies/query strings
             OriginRequestPolicyId: !Ref WsOriginRequestPolicy
+            # Rewrite /ws/* to /v1/* before sending to backend
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt WsToV1RewriteFunction.FunctionMetadata.FunctionARN
         DefaultCacheBehavior:
           AllowedMethods:
             - GET
