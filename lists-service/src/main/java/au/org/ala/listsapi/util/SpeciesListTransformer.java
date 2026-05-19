@@ -167,11 +167,7 @@ public class SpeciesListTransformer {
             logger.warn("SpeciesListItemVersion1 transformToVersion1() -> Species list not found for ID: " + speciesListID);
         }
 
-        List<KvpValueVersion1> kvps = new ArrayList<>();
-        if (speciesListItem.getProperties() != null) {
-            speciesListItem.getProperties()
-                    .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
-        }
+        List<KvpValueVersion1> kvps = buildKvpValues(speciesListItem.getProperties());
         listItemVersion1.setKvpValues(kvps);
 
         return listItemVersion1;
@@ -207,15 +203,83 @@ public class SpeciesListTransformer {
                 return "vernacular name";
             case "group":
                 return "Group";
-            case "rawkingdom":
-                return "kingdom";
-            case "rawfamily":
-                return "family";
             case "taxonRank":
                 return "rank";
             default:
                 return key;
         }
+    }
+    
+    /**
+     * Check if a key is a raw taxonomic field (rawkingdom, rawphylum, rawclass, raworder, rawfamily, rawgenus)
+     * Case-insensitive comparison to handle variations in field naming
+     */
+    private static boolean isRawTaxonomicField(String key) {
+        return key != null && (
+            key.equalsIgnoreCase("rawkingdom") || 
+            key.equalsIgnoreCase("rawphylum") || 
+            key.equalsIgnoreCase("rawclass") || 
+            key.equalsIgnoreCase("raworder") || 
+            key.equalsIgnoreCase("rawfamily") || 
+            key.equalsIgnoreCase("rawgenus")
+        );
+    }
+    
+    /**
+     * Get the non-raw version of a taxonomic field name (case-insensitive)
+     * e.g., "rawfamily" -> "family", "RawKingdom" -> "kingdom", "RAWORDER" -> "order"
+     * Always returns lowercase version to ensure consistency
+     */
+    private static String getWithoutRawPrefix(String key) {
+        if (key != null && key.toLowerCase().startsWith("raw")) {
+            return key.substring(3).toLowerCase(); // Remove "raw" prefix and normalize to lowercase
+        }
+        return key != null ? key.toLowerCase() : null;
+    }
+    
+    /**
+     * Check if a list of properties already contains a key (case-insensitive)
+     */
+    private static boolean containsKey(List<au.org.ala.listsapi.model.KeyValue> properties, String key) {
+        if (properties == null || key == null) {
+            return false;
+        }
+        return properties.stream().anyMatch(kv -> key.equalsIgnoreCase(kv.getKey()));
+    }
+    
+    /**
+     * Build KVP values from properties, adding duplicate entries for raw taxonomic fields.
+     * For migrated lists compatibility: if a property has key "rawFamily" (or other raw taxonomic fields),
+     * we add both the raw version AND the non-raw version (e.g., both "rawFamily" and "family")
+     * to maintain compatibility with the legacy system - but only if the non-raw version doesn't already exist.
+     * 
+     * @param properties The list of KeyValue properties from the SpeciesListItem
+     * @return List of KvpValueVersion1 objects for the legacy API
+     */
+    private static List<KvpValueVersion1> buildKvpValues(List<au.org.ala.listsapi.model.KeyValue> properties) {
+        List<KvpValueVersion1> kvps = new ArrayList<>();
+        
+        if (properties != null) {
+            // First pass: add all properties with their legacy key names
+            properties.forEach(kvpValue -> {
+                String legacyKey = fixLegacyKeys(kvpValue.getKey());
+                kvps.add(new KvpValueVersion1(legacyKey, kvpValue.getValue(), null));
+            });
+            
+            // Second pass: for raw taxonomic fields, also add the non-raw version if it doesn't exist
+            properties.forEach(kvpValue -> {
+                String originalKey = kvpValue.getKey();
+                if (isRawTaxonomicField(originalKey)) {
+                    String nonRawKey = getWithoutRawPrefix(originalKey);
+                    // Only add the non-raw version if it doesn't already exist in properties
+                    if (!containsKey(properties, nonRawKey)) {
+                        kvps.add(new KvpValueVersion1(nonRawKey, kvpValue.getValue(), null));
+                    }
+                }
+            });
+        }
+        
+        return kvps;
     }
 
     /**
@@ -244,12 +308,7 @@ public class SpeciesListTransformer {
         // Get extra details via MongoDB lookup
         Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
 
-        List<KvpValueVersion1> kvps = new ArrayList<>();
-
-        if (speciesListItem.getProperties() != null) {
-            speciesListItem.getProperties()
-                    .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
-        } 
+        List<KvpValueVersion1> kvps = buildKvpValues(speciesListItem.getProperties());
 
         queryListItemV1.setKvpValues(kvps);
 
@@ -324,11 +383,7 @@ public class SpeciesListTransformer {
         item.setList(list);
 
         // Build KVP values from properties
-        List<KvpValueVersion1> kvps = new ArrayList<>();
-        if (speciesListItem.getProperties() != null) {
-            speciesListItem.getProperties()
-                    .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
-        }
+        List<KvpValueVersion1> kvps = buildKvpValues(speciesListItem.getProperties());
         item.setKvpValues(kvps);
 
         return item;
