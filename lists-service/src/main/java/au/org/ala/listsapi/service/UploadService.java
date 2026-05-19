@@ -575,8 +575,6 @@ public class UploadService {
             if (isMigration) {
                 // Remove legacy data
                 values.remove("guid");
-                values.remove("taxonID");
-                values.remove("taxonConceptID");
                 values.remove("scientificName");
                 values.remove("family");
                 values.remove("kingdom");
