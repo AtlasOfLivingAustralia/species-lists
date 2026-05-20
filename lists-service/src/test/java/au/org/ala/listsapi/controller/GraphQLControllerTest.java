@@ -3,6 +3,7 @@ package au.org.ala.listsapi.controller;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 import java.security.Principal;
@@ -215,5 +216,80 @@ class GraphQLControllerTest {
         verify(speciesListMongoRepository).findByIdOrDataResourceUid("dr1234", "dr1234");
         verify(speciesListItemMongoRepository, times(2)).save(any());
         verify(taxonService).lookupTaxon(any());
+    }
+
+    @Test
+    void testAddField_ReindexesList() {
+        String listId = "list123";
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        list.setFieldList(new ArrayList<>());
+        
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
+                .thenReturn(Optional.of(list));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
+        
+        // Mock the pagination for finding items
+        when(speciesListItemMongoRepository.findNextBatch(eq(listId), isNull(), any(PageRequest.class)))
+                .thenReturn(new ArrayList<>());
+
+        SpeciesList result = graphQLController.addField(listId, "newField", "defaultValue", principal);
+
+        assertNotNull(result);
+        assertTrue(result.getFieldList().contains("newField"));
+        verify(speciesListMongoRepository).save(list);
+        verify(taxonService).reindex(listId);
+    }
+
+    @Test
+    void testRenameField_ReindexesList() {
+        String listId = "list123";
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        List<String> fields = new ArrayList<>();
+        fields.add("oldField");
+        list.setFieldList(fields);
+        
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
+                .thenReturn(Optional.of(list));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
+        
+        when(speciesListItemMongoRepository.findNextBatch(eq(listId), isNull(), any(PageRequest.class)))
+                .thenReturn(new ArrayList<>());
+
+        SpeciesList result = graphQLController.renameField(listId, "oldField", "newField", principal);
+
+        assertNotNull(result);
+        assertFalse(result.getFieldList().contains("oldField"));
+        assertTrue(result.getFieldList().contains("newField"));
+        verify(speciesListMongoRepository).save(list);
+        verify(taxonService).reindex(listId);
+    }
+
+    @Test
+    void testRemoveField_ReindexesList() {
+        String listId = "list123";
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        List<String> fields = new ArrayList<>();
+        fields.add("fieldToRemove");
+        list.setFieldList(fields);
+        
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
+                .thenReturn(Optional.of(list));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
+        
+        when(speciesListItemMongoRepository.findNextBatch(eq(listId), isNull(), any(PageRequest.class)))
+                .thenReturn(new ArrayList<>());
+
+        SpeciesList result = graphQLController.removeField(listId, "fieldToRemove", principal);
+
+        assertNotNull(result);
+        assertFalse(result.getFieldList().contains("fieldToRemove"));
+        verify(speciesListMongoRepository).save(list);
+        verify(taxonService).reindex(listId);
     }
 }
