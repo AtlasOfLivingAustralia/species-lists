@@ -39,8 +39,6 @@ import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
 import {
   faCode,
-  faEye,
-  faEyeSlash,
   faMagnifyingGlass,
   faXmark
 } from '@fortawesome/free-solid-svg-icons';
@@ -78,6 +76,8 @@ const sortField = [
   'rowCount_desc',
   'rowCount_asc',
 ];
+
+const MAX_ENTRIES = 10000; // Maximum number of entries the API allows us to paginate through (for performance reasons)
 
 const Home = ({ routeId }: { routeId: string }) => {
   useDocumentTitle('ALA Species Lists');
@@ -183,7 +183,9 @@ const Home = ({ routeId }: { routeId: string }) => {
   );
 
   // Destructure results & calculate the real page offset
-  const { totalElements, totalPages, content } = data?.lists || {};
+  const { totalElements, totalPages: rawTotalPages, content } = data?.lists || {};
+  const maxAllowedPages = Math.ceil(MAX_ENTRIES / size);
+  const totalPages = rawTotalPages ? Math.min(rawTotalPages, maxAllowedPages) : undefined;
   const realPage = page + 1;
   const filtersKey = JSON.stringify(filters);
 
@@ -645,12 +647,6 @@ const Home = ({ routeId }: { routeId: string }) => {
                   getControlProps={(control) => ({
                     'aria-label': `${control} page`,
                   })}
-                  getItemProps={(page) => {
-                    if (page === totalPages) {
-                      return { style: { display: 'none' } };
-                    }
-                    return {};
-                  }}
                 />
               </Stack>
             </Grid.Col>
