@@ -97,7 +97,6 @@ public class LegacyController {
     @Autowired
     protected AuthUtils authUtils;
 
-    @SecurityRequirement(name = "JWT")
     @Operation(tags = "REST v1", summary = "Get species list metadata for all lists", deprecated = true)
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Species lists found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPageVersion1.class))),
@@ -157,7 +156,6 @@ public class LegacyController {
         }
     }
 
-    @SecurityRequirement(name = "JWT")
     @Operation(tags = "REST v1", summary = "Get species list metadata for a given species list ID", deprecated = true)
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListVersion1.class))),
@@ -329,7 +327,6 @@ public class LegacyController {
     /**
      * Return species list items via query or guid lookup.
      */
-    @SecurityRequirement(name = "JWT")
     @Operation(tags = "REST v1", summary = "Search species list items", deprecated = true,
             description = "Search across items using filters. Use 'druid' as a query parameter here.")
     @ApiResponses({
@@ -364,7 +361,6 @@ public class LegacyController {
     /**
      * Return species list items for a specific list ID, with optional query and nonulls filter.
      */
-    @SecurityRequirement(name = "JWT")
     @Operation(tags = "REST v1", summary = "Get items by specific List ID", deprecated = true,
             description = "Retrieve items for a specific list ID provided in the URL path.")
     @ApiResponses({
