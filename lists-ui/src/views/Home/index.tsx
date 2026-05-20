@@ -270,6 +270,21 @@ const Home = ({ routeId }: { routeId: string }) => {
 
   const hasError = Boolean(error);
 
+  const filteredFacets = useMemo(() => {
+    return (data?.facets || []).filter(facet => {
+      // Keep it if it's currently an active filter
+      const isActive = filters.some(f => f.key === facet.key);
+      if (isActive) return true;
+      
+      // Otherwise, hide if there's only 1 option and its count equals the total elements
+      if (facet.counts.length === 1 && facet.counts[0].count === totalElements) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [data?.facets, totalElements, filters]);
+
   return (
     <>
       <Container fluid className={classes.speciesHeader}>
@@ -493,7 +508,7 @@ const Home = ({ routeId }: { routeId: string }) => {
                     </Stack>
                 ) : (
                   <FiltersSection
-                    facets={data?.facets || []}
+                    facets={filteredFacets}
                     active={filters || []}
                     onSelect={handleFilterClick}
                     onReset={() => {
