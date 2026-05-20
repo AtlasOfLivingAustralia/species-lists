@@ -429,7 +429,9 @@ public class GraphQLController {
             }
         }
 
-        return speciesListMongoRepository.save(toUpdate);
+        SpeciesList savedList = speciesListMongoRepository.save(toUpdate);
+        taxonService.reindex(savedList.getId());
+        return savedList;
     }
 
     @SchemaMapping(typeName = "Mutation", field = "renameField")
@@ -480,7 +482,9 @@ public class GraphQLController {
                 lastId = items.get(items.size() - 1).getId();
             }
         }
-        return speciesListMongoRepository.save(toUpdate);
+        SpeciesList savedList = speciesListMongoRepository.save(toUpdate);
+        taxonService.reindex(savedList.getId());
+        return savedList;
     }
 
     @SchemaMapping(typeName = "Mutation", field = "removeField")
@@ -529,7 +533,9 @@ public class GraphQLController {
             }
         }
 
-        return speciesListMongoRepository.save(toUpdate);
+        SpeciesList savedList = speciesListMongoRepository.save(toUpdate);
+        taxonService.reindex(savedList.getId());
+        return savedList;
     }
 
     @SchemaMapping(typeName = "Mutation", field = "updateSpeciesListItem")
