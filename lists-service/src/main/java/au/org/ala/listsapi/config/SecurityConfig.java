@@ -134,7 +134,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests(auth -> auth
             // ALLOW ALL OPTIONS REQUESTS (The fix for 403 Preflight)
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/", "/graphql", "/ingest", "/graphiql", "/v1/species/**", "/csrf", "/**")
+                .requestMatchers("/", "/graphql", "/ingest", "/graphiql", "/v1/speciesListItemsInternal/**", "/v1/speciesListInternal/**", "/csrf", "/**")
                 .permitAll());
         http.cors(Customizer.withDefaults());
         
