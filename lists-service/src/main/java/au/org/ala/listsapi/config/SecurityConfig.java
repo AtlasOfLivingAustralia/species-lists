@@ -134,8 +134,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests(auth -> auth
             // ALLOW ALL OPTIONS REQUESTS (The fix for 403 Preflight)
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/", "/graphql", "/ingest", "/graphiql", "/v1/species/**", "/csrf", "/**")
-                .permitAll());
+                .anyRequest().permitAll());
         http.cors(Customizer.withDefaults());
         
         // 2. CSRF Configuration (Updated for SPA/React)

@@ -276,8 +276,8 @@ const Home = ({ routeId }: { routeId: string }) => {
       const isActive = filters.some(f => f.key === facet.key);
       if (isActive) return true;
       
-      // Otherwise, hide if there's only 1 option and its count equals the total elements
-      if (facet.counts.length === 1 && facet.counts[0].count === totalElements) {
+      // Otherwise, hide if there's only 1 option and its count equals or exceeds the total elements
+      if (facet.counts.length === 1 && facet.counts[0].count >= totalElements) {
         return false;
       }
       
