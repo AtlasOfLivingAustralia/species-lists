@@ -210,7 +210,9 @@ function List() {
   }, [id]);
 
   // Destructure results & calculate the real page offset
-  const { totalElements, totalPages } = list || { totalElements: 0, totalPages: 0 };
+  const { totalElements, totalPages: rawTotalPages } = list || { totalElements: 0, totalPages: 0 };
+  const maxAllowedPages = Math.floor(10000 / size);
+  const totalPages = Math.min(rawTotalPages, maxAllowedPages);
   let totalEntries = totalElements;
 
   if (totalElements == maxEntries) {
@@ -859,14 +861,8 @@ function List() {
                     radius='md'
                     siblings={2}
                     getControlProps={(control) => ({
-                      'aria-label': `${control} page`,
+                    'aria-label': `${control} page`,
                     })}
-                    getItemProps={(page) => {
-                      if (page === totalPages) {
-                        return { style: { display: 'none' } };
-                      }
-                      return {};
-                    }}
                   /> 
                   </Center>
                 </Box>

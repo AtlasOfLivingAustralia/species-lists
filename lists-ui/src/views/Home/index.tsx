@@ -183,7 +183,9 @@ const Home = ({ routeId }: { routeId: string }) => {
   );
 
   // Destructure results & calculate the real page offset
-  const { totalElements, totalPages, content } = data?.lists || {};
+  const { totalElements, totalPages: rawTotalPages, content } = data?.lists || {};
+  const maxAllowedPages = Math.floor(10000 / size);
+  const totalPages = rawTotalPages ? Math.min(rawTotalPages, maxAllowedPages) : undefined;
   const realPage = page + 1;
   const filtersKey = JSON.stringify(filters);
 
@@ -645,12 +647,6 @@ const Home = ({ routeId }: { routeId: string }) => {
                   getControlProps={(control) => ({
                     'aria-label': `${control} page`,
                   })}
-                  getItemProps={(page) => {
-                    if (page === totalPages) {
-                      return { style: { display: 'none' } };
-                    }
-                    return {};
-                  }}
                 />
               </Stack>
             </Grid.Col>
