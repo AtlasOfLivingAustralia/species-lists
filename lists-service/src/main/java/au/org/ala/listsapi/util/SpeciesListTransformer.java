@@ -18,6 +18,7 @@ package au.org.ala.listsapi.util;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -195,6 +196,9 @@ public class SpeciesListTransformer {
     }
 
     private static String fixLegacyKeys(String key) {
+        if (key == null) {
+            return null;
+        }
         // Fix known legacy key names, for backward compatibility
         switch (key) {
             case "CommonNames":
@@ -216,18 +220,18 @@ public class SpeciesListTransformer {
      */
     private static boolean isRawTaxonomicField(String key) {
         if (key == null) return false;
-        String lowerKey = key.toLowerCase();
+        String lowerKey = key.toLowerCase(Locale.ROOT);
         return lowerKey.equals("rawkingdom") || 
-               lowerKey.equals("rawphylum") || 
-               lowerKey.equals("rawclass") || 
-               lowerKey.equals("raworder") || 
-               lowerKey.equals("rawfamily") || 
-               lowerKey.equals("rawgenus") ||
-               lowerKey.equals("rawrank") ||
-               lowerKey.equals("rawscientific_name") ||
-               lowerKey.equals("rawsupplied_name") ||
-               lowerKey.equals("rawscientificname") ||
-               lowerKey.equals("rawsuppliedname");
+                lowerKey.equals("rawphylum") || 
+                lowerKey.equals("rawclass") || 
+                lowerKey.equals("raworder") || 
+                lowerKey.equals("rawfamily") || 
+                lowerKey.equals("rawgenus") ||
+                lowerKey.equals("rawrank") ||
+                lowerKey.equals("rawscientific_name") ||
+                lowerKey.equals("rawsupplied_name") ||
+                lowerKey.equals("rawscientificname") ||
+                lowerKey.equals("rawsuppliedname");
     }
     
     /**
@@ -236,7 +240,7 @@ public class SpeciesListTransformer {
      * Removes prefix and preserves original case, converting underscores to spaces
      */
     private static String getWithoutRawPrefix(String key) {
-        if (key != null && key.toLowerCase().startsWith("raw")) {
+        if (key != null && key.toLowerCase(Locale.ROOT).startsWith("raw")) {
             return key.substring(3).replace('_', ' '); // Remove "raw" prefix, keep casing, replace underscore with space
         }
         return key != null ? key.replace('_', ' ') : null;
@@ -267,6 +271,7 @@ public class SpeciesListTransformer {
         if (properties != null) {
             // First pass: add all properties with their legacy key names
             properties.forEach(kvpValue -> {
+                if (kvpValue.getKey() == null) return; // Skip null keys
                 String legacyKey = fixLegacyKeys(kvpValue.getKey());
                 kvps.add(new KvpValueVersion1(legacyKey, kvpValue.getValue(), null));
             });
