@@ -257,6 +257,48 @@ public class SpeciesListTransformer {
     }
     
     /**
+     * Transform a collection of keys according to the legacy API rules.
+     * This applies legacy mapping, underscore-to-space replacement, and raw prefix stripping.
+     * 
+     * @param keys The original keys
+     * @return A set of transformed keys matching what would be returned in kvpValues
+     */
+    public static java.util.Set<String> transformLegacyKeys(java.util.Collection<String> keys) {
+        if (keys == null) return java.util.Collections.emptySet();
+        
+        java.util.Set<String> result = new java.util.HashSet<>();
+        
+        // First pass: add all properties with their legacy key names
+        for (String key : keys) {
+            if (key == null) continue;
+            result.add(fixLegacyKeys(key));
+        }
+        
+        // Second pass: for any key containing underscores, add a version with spaces
+        for (String key : keys) {
+            if (key != null && key.contains("_")) {
+                String spaceKey = key.replace('_', ' ');
+                // Only add if not present case-insensitively (to match buildKvpValues logic)
+                if (result.stream().noneMatch(k -> k.equalsIgnoreCase(spaceKey))) {
+                    result.add(spaceKey);
+                }
+            }
+        }
+        
+        // Third pass: for raw taxonomic fields, also add the non-raw version
+        for (String key : keys) {
+            if (isRawTaxonomicField(key)) {
+                String nonRawKey = getWithoutRawPrefix(key);
+                if (result.stream().noneMatch(k -> k.equalsIgnoreCase(nonRawKey))) {
+                    result.add(nonRawKey);
+                }
+            }
+        }
+        
+        return result;
+    }
+
+    /**
      * Build KVP values from properties, adding duplicate entries for raw taxonomic fields.
      * For migrated lists compatibility: if a property has key "rawFamily" (or other raw taxonomic fields),
      * we add both the raw version AND the non-raw version (e.g., both "rawFamily" and "family")
