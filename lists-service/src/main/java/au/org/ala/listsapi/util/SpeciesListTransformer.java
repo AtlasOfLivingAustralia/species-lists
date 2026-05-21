@@ -268,10 +268,19 @@ public class SpeciesListTransformer {
         
         java.util.Set<String> result = new java.util.HashSet<>();
         
-        // First pass: add all properties with their legacy key names
+        // First pass: add all properties with their original keys AND legacy substituted keys
         for (String key : keys) {
             if (key == null) continue;
-            result.add(fixLegacyKeys(key));
+            
+            result.add(key); // Original key
+            
+            String legacyKey = fixLegacyKeys(key);
+            if (!key.equals(legacyKey)) {
+                // Only add if not present case-insensitively
+                if (result.stream().noneMatch(k -> k.equalsIgnoreCase(legacyKey))) {
+                    result.add(legacyKey);
+                }
+            }
         }
         
         // Second pass: for any key containing underscores, add a version with spaces
@@ -311,11 +320,19 @@ public class SpeciesListTransformer {
         List<KvpValueVersion1> kvps = new ArrayList<>();
         
         if (properties != null) {
-            // First pass: add all properties with their legacy key names
+            // First pass: add all properties with their original keys AND legacy substituted keys
             properties.forEach(kvpValue -> {
                 if (kvpValue.getKey() == null) return; // Skip null keys
-                String legacyKey = fixLegacyKeys(kvpValue.getKey());
-                kvps.add(new KvpValueVersion1(legacyKey, kvpValue.getValue(), null));
+                
+                String originalKey = kvpValue.getKey();
+                kvps.add(new KvpValueVersion1(originalKey, kvpValue.getValue(), null));
+                
+                String legacyKey = fixLegacyKeys(originalKey);
+                if (!originalKey.equals(legacyKey)) {
+                    if (!containsKey(kvps, legacyKey)) {
+                        kvps.add(new KvpValueVersion1(legacyKey, kvpValue.getValue(), null));
+                    }
+                }
             });
             
             // Second pass: for any key containing underscores, add a version with spaces
