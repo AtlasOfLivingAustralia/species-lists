@@ -247,15 +247,63 @@ public class SpeciesListTransformer {
     }
     
     /**
-     * Check if a list of kvps already contains a key (case-insensitive)
+     * Shared logic to apply legacy transformations (substitutions, spaces, raw taxonomic fields)
+     * over a set of elements containing keys.
      */
-    private static boolean containsKey(List<KvpValueVersion1> kvps, String key) {
-        if (kvps == null || key == null) {
-            return false;
+    private static <T> void applyLegacyTransformations(
+        Iterable<T> items,
+        java.util.function.Function<T, String> keyExtractor,
+        java.util.function.BiConsumer<String, T> addKeyFn
+    ) {
+        // Track keys to avoid O(N) scans for uniqueness and duplicate additions
+        java.util.Set<String> exactKeys = new java.util.HashSet<>();
+        java.util.Set<String> caseInsensitiveKeys = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+
+        // Helper to add a key and track it
+        java.util.function.BiConsumer<String, T> emit = (newKey, item) -> {
+            exactKeys.add(newKey);
+            caseInsensitiveKeys.add(newKey);
+            addKeyFn.accept(newKey, item);
+        };
+
+        // First pass: original and legacy substituted keys
+        for (T item : items) {
+            String originalKey = keyExtractor.apply(item);
+            if (originalKey == null) continue;
+
+            emit.accept(originalKey, item);
+
+            String legacyKey = fixLegacyKeys(originalKey);
+            if (!originalKey.equals(legacyKey)) {
+                if (!exactKeys.contains(legacyKey)) {
+                    emit.accept(legacyKey, item);
+                }
+            }
         }
-        return kvps.stream().anyMatch(kv -> key.equalsIgnoreCase(kv.getKey()));
+
+        // Second pass: underscore replacement
+        for (T item : items) {
+            String originalKey = keyExtractor.apply(item);
+            if (originalKey != null && originalKey.contains("_")) {
+                String spaceKey = originalKey.replace('_', ' ');
+                if (!caseInsensitiveKeys.contains(spaceKey)) {
+                    emit.accept(spaceKey, item);
+                }
+            }
+        }
+
+        // Third pass: raw taxonomic fields
+        for (T item : items) {
+            String originalKey = keyExtractor.apply(item);
+            if (isRawTaxonomicField(originalKey)) {
+                String nonRawKey = getWithoutRawPrefix(originalKey);
+                if (!caseInsensitiveKeys.contains(nonRawKey)) {
+                    emit.accept(nonRawKey, item);
+                }
+            }
+        }
     }
-    
+
     /**
      * Transform a collection of keys according to the legacy API rules.
      * This applies legacy mapping, underscore-to-space replacement, and raw prefix stripping.
@@ -265,45 +313,8 @@ public class SpeciesListTransformer {
      */
     public static java.util.Set<String> transformLegacyKeys(java.util.Collection<String> keys) {
         if (keys == null) return java.util.Collections.emptySet();
-        
         java.util.Set<String> result = new java.util.HashSet<>();
-        
-        // First pass: add all properties with their original keys AND legacy substituted keys
-        for (String key : keys) {
-            if (key == null) continue;
-            
-            result.add(key); // Original key
-            
-            String legacyKey = fixLegacyKeys(key);
-            if (!key.equals(legacyKey)) {
-                // Exact check to allow case-only changes like "group" -> "Group"
-                if (!result.contains(legacyKey)) {
-                    result.add(legacyKey);
-                }
-            }
-        }
-        
-        // Second pass: for any key containing underscores, add a version with spaces
-        for (String key : keys) {
-            if (key != null && key.contains("_")) {
-                String spaceKey = key.replace('_', ' ');
-                // Only add if not present case-insensitively (to match buildKvpValues logic)
-                if (result.stream().noneMatch(k -> k.equalsIgnoreCase(spaceKey))) {
-                    result.add(spaceKey);
-                }
-            }
-        }
-        
-        // Third pass: for raw taxonomic fields, also add the non-raw version
-        for (String key : keys) {
-            if (isRawTaxonomicField(key)) {
-                String nonRawKey = getWithoutRawPrefix(key);
-                if (result.stream().noneMatch(k -> k.equalsIgnoreCase(nonRawKey))) {
-                    result.add(nonRawKey);
-                }
-            }
-        }
-        
+        applyLegacyTransformations(keys, k -> k, (newKey, originalItem) -> result.add(newKey));
         return result;
     }
 
@@ -318,49 +329,11 @@ public class SpeciesListTransformer {
      */
     private static List<KvpValueVersion1> buildKvpValues(List<au.org.ala.listsapi.model.KeyValue> properties) {
         List<KvpValueVersion1> kvps = new ArrayList<>();
-        
-        if (properties != null) {
-            // First pass: add all properties with their original keys AND legacy substituted keys
-            properties.forEach(kvpValue -> {
-                if (kvpValue.getKey() == null) return; // Skip null keys
-                
-                String originalKey = kvpValue.getKey();
-                kvps.add(new KvpValueVersion1(originalKey, kvpValue.getValue(), null));
-                
-                String legacyKey = fixLegacyKeys(originalKey);
-                if (!originalKey.equals(legacyKey)) {
-                    // Exact match check to allow case-only changes like "group" -> "Group"
-                    boolean hasExactMatch = kvps.stream().anyMatch(kv -> legacyKey.equals(kv.getKey()));
-                    if (!hasExactMatch) {
-                        kvps.add(new KvpValueVersion1(legacyKey, kvpValue.getValue(), null));
-                    }
-                }
-            });
-            
-            // Second pass: for any key containing underscores, add a version with spaces
-            properties.forEach(kvpValue -> {
-                String originalKey = kvpValue.getKey();
-                if (originalKey != null && originalKey.contains("_")) {
-                    String spaceKey = originalKey.replace('_', ' ');
-                    if (!containsKey(kvps, spaceKey)) {
-                        kvps.add(new KvpValueVersion1(spaceKey, kvpValue.getValue(), null));
-                    }
-                }
-            });
-
-            // Third pass: for raw taxonomic fields, also add the non-raw version if it doesn't exist
-            properties.forEach(kvpValue -> {
-                String originalKey = kvpValue.getKey();
-                if (isRawTaxonomicField(originalKey)) {
-                    String nonRawKey = getWithoutRawPrefix(originalKey);
-                    // Only add the non-raw version if it doesn't already exist
-                    if (!containsKey(kvps, nonRawKey)) {
-                        kvps.add(new KvpValueVersion1(nonRawKey, kvpValue.getValue(), null));
-                    }
-                }
-            });
-        }
-        
+        if (properties == null) return kvps;
+        applyLegacyTransformations(
+                properties,
+                au.org.ala.listsapi.model.KeyValue::getKey,
+                (newKey, kvpValue) -> kvps.add(new KvpValueVersion1(newKey, kvpValue.getValue(), null)));
         return kvps;
     }
 
