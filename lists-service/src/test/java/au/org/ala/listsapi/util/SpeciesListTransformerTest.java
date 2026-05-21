@@ -287,12 +287,13 @@ class SpeciesListTransformerTest {
       properties.add(new KeyValue("rawfamily", "Felidae"));
       properties.add(new KeyValue("taxonRank", "species"));
       properties.add(new KeyValue("CommonNames", "Cat"));
+      properties.add(new KeyValue("group", "Mammal"));
       item.setProperties(properties);
       
       QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
       
-      // rawfamily (preserved) + family (duplicate) + taxonRank->rank + CommonNames->common name = 4
-      assertEquals(4, result.getKvpValues().size());
+      // rawfamily (preserved) + family (duplicate) + taxonRank (preserved) + rank (duplicate) + CommonNames (preserved) + common name (duplicate) + group (preserved) + Group (duplicate) = 8
+      assertEquals(8, result.getKvpValues().size());
       
       // Check legacy transformations
       assertTrue(result.getKvpValues().stream()
@@ -300,9 +301,17 @@ class SpeciesListTransformerTest {
       assertTrue(result.getKvpValues().stream()
           .anyMatch(kv -> "family".equals(kv.getKey())));
       assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "taxonRank".equals(kv.getKey()) && "species".equals(kv.getValue())));
+      assertTrue(result.getKvpValues().stream()
           .anyMatch(kv -> "rank".equals(kv.getKey()) && "species".equals(kv.getValue())));
       assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "CommonNames".equals(kv.getKey()) && "Cat".equals(kv.getValue())));
+      assertTrue(result.getKvpValues().stream()
           .anyMatch(kv -> "common name".equals(kv.getKey()) && "Cat".equals(kv.getValue())));
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "group".equals(kv.getKey()) && "Mammal".equals(kv.getValue())));
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "Group".equals(kv.getKey()) && "Mammal".equals(kv.getValue())));
     }
     
     @Test
