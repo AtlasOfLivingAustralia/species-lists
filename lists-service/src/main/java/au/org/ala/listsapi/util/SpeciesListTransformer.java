@@ -276,8 +276,8 @@ public class SpeciesListTransformer {
             
             String legacyKey = fixLegacyKeys(key);
             if (!key.equals(legacyKey)) {
-                // Only add if not present case-insensitively
-                if (result.stream().noneMatch(k -> k.equalsIgnoreCase(legacyKey))) {
+                // Exact check to allow case-only changes like "group" -> "Group"
+                if (!result.contains(legacyKey)) {
                     result.add(legacyKey);
                 }
             }
@@ -329,7 +329,9 @@ public class SpeciesListTransformer {
                 
                 String legacyKey = fixLegacyKeys(originalKey);
                 if (!originalKey.equals(legacyKey)) {
-                    if (!containsKey(kvps, legacyKey)) {
+                    // Exact match check to allow case-only changes like "group" -> "Group"
+                    boolean hasExactMatch = kvps.stream().anyMatch(kv -> legacyKey.equals(kv.getKey()));
+                    if (!hasExactMatch) {
                         kvps.add(new KvpValueVersion1(legacyKey, kvpValue.getValue(), null));
                     }
                 }
