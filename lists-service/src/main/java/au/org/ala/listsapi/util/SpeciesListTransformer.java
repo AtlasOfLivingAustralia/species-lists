@@ -18,6 +18,7 @@ package au.org.ala.listsapi.util;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -195,6 +196,9 @@ public class SpeciesListTransformer {
     }
 
     private static String fixLegacyKeys(String key) {
+        if (key == null) {
+            return null;
+        }
         // Fix known legacy key names, for backward compatibility
         switch (key) {
             case "CommonNames":
@@ -215,36 +219,41 @@ public class SpeciesListTransformer {
      * Case-insensitive comparison to handle variations in field naming
      */
     private static boolean isRawTaxonomicField(String key) {
-        return key != null && (
-            key.equalsIgnoreCase("rawkingdom") || 
-            key.equalsIgnoreCase("rawphylum") || 
-            key.equalsIgnoreCase("rawclass") || 
-            key.equalsIgnoreCase("raworder") || 
-            key.equalsIgnoreCase("rawfamily") || 
-            key.equalsIgnoreCase("rawgenus")
-        );
+        if (key == null) return false;
+        String lowerKey = key.toLowerCase(Locale.ROOT);
+        return lowerKey.equals("rawkingdom") || 
+                lowerKey.equals("rawphylum") || 
+                lowerKey.equals("rawclass") || 
+                lowerKey.equals("raworder") || 
+                lowerKey.equals("rawfamily") || 
+                lowerKey.equals("rawgenus") ||
+                lowerKey.equals("rawrank") ||
+                lowerKey.equals("rawscientific_name") ||
+                lowerKey.equals("rawsupplied_name") ||
+                lowerKey.equals("rawscientificname") ||
+                lowerKey.equals("rawsuppliedname");
     }
     
     /**
      * Get the non-raw version of a taxonomic field name (case-insensitive)
-     * e.g., "rawfamily" -> "family", "RawKingdom" -> "kingdom", "RAWORDER" -> "order"
-     * Always returns lowercase version to ensure consistency
+     * e.g., "rawfamily" -> "family", "RawKingdom" -> "kingdom", "RAWORDER" -> "order", "rawSupplied_Name" -> "Supplied Name"
+     * Removes prefix and preserves original case, converting underscores to spaces
      */
     private static String getWithoutRawPrefix(String key) {
-        if (key != null && key.toLowerCase().startsWith("raw")) {
-            return key.substring(3).toLowerCase(); // Remove "raw" prefix and normalize to lowercase
+        if (key != null && key.toLowerCase(Locale.ROOT).startsWith("raw")) {
+            return key.substring(3).replace('_', ' '); // Remove "raw" prefix, keep casing, replace underscore with space
         }
-        return key != null ? key.toLowerCase() : null;
+        return key != null ? key.replace('_', ' ') : null;
     }
     
     /**
-     * Check if a list of properties already contains a key (case-insensitive)
+     * Check if a list of kvps already contains a key (case-insensitive)
      */
-    private static boolean containsKey(List<au.org.ala.listsapi.model.KeyValue> properties, String key) {
-        if (properties == null || key == null) {
+    private static boolean containsKey(List<KvpValueVersion1> kvps, String key) {
+        if (kvps == null || key == null) {
             return false;
         }
-        return properties.stream().anyMatch(kv -> key.equalsIgnoreCase(kv.getKey()));
+        return kvps.stream().anyMatch(kv -> key.equalsIgnoreCase(kv.getKey()));
     }
     
     /**
@@ -262,17 +271,29 @@ public class SpeciesListTransformer {
         if (properties != null) {
             // First pass: add all properties with their legacy key names
             properties.forEach(kvpValue -> {
+                if (kvpValue.getKey() == null) return; // Skip null keys
                 String legacyKey = fixLegacyKeys(kvpValue.getKey());
                 kvps.add(new KvpValueVersion1(legacyKey, kvpValue.getValue(), null));
             });
             
-            // Second pass: for raw taxonomic fields, also add the non-raw version if it doesn't exist
+            // Second pass: for any key containing underscores, add a version with spaces
+            properties.forEach(kvpValue -> {
+                String originalKey = kvpValue.getKey();
+                if (originalKey != null && originalKey.contains("_")) {
+                    String spaceKey = originalKey.replace('_', ' ');
+                    if (!containsKey(kvps, spaceKey)) {
+                        kvps.add(new KvpValueVersion1(spaceKey, kvpValue.getValue(), null));
+                    }
+                }
+            });
+
+            // Third pass: for raw taxonomic fields, also add the non-raw version if it doesn't exist
             properties.forEach(kvpValue -> {
                 String originalKey = kvpValue.getKey();
                 if (isRawTaxonomicField(originalKey)) {
                     String nonRawKey = getWithoutRawPrefix(originalKey);
-                    // Only add the non-raw version if it doesn't already exist in properties
-                    if (!containsKey(properties, nonRawKey)) {
+                    // Only add the non-raw version if it doesn't already exist
+                    if (!containsKey(kvps, nonRawKey)) {
                         kvps.add(new KvpValueVersion1(nonRawKey, kvpValue.getValue(), null));
                     }
                 }
