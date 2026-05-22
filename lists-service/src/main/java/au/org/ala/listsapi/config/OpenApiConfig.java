@@ -103,7 +103,7 @@ public class OpenApiConfig {
         clone.setExternalDocs(op.getExternalDocs());
         // Append _ws to ensure uniqueness
         if (op.getOperationId() != null) {
-            clone.setOperationId(op.getOperationId() + "_ws");
+            clone.setOperationId(op.getOperationId() + "Ws");
         }
         clone.setParameters(op.getParameters());
         clone.setRequestBody(op.getRequestBody());
