@@ -96,12 +96,23 @@ public class OpenApiConfig {
     }
 
     private io.swagger.v3.oas.models.Operation cloneOperation(io.swagger.v3.oas.models.Operation op) {
-        io.swagger.v3.oas.models.Operation clone =
-                io.swagger.v3.core.util.Json.mapper().convertValue(op, io.swagger.v3.oas.models.Operation.class);
+        io.swagger.v3.oas.models.Operation clone = new io.swagger.v3.oas.models.Operation();
+        clone.setTags(op.getTags());
+        clone.setSummary(op.getSummary());
+        clone.setDescription(op.getDescription());
+        clone.setExternalDocs(op.getExternalDocs());
         // Append _ws to ensure uniqueness
         if (op.getOperationId() != null) {
             clone.setOperationId(op.getOperationId() + "_ws");
         }
+        clone.setParameters(op.getParameters());
+        clone.setRequestBody(op.getRequestBody());
+        clone.setResponses(op.getResponses());
+        clone.setCallbacks(op.getCallbacks());
+        clone.setDeprecated(op.getDeprecated());
+        clone.setSecurity(op.getSecurity());
+        clone.setServers(op.getServers());
+        clone.setExtensions(op.getExtensions());
         return clone;
     }
 
