@@ -18,6 +18,7 @@ package au.org.ala.listsapi.util;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -195,6 +196,9 @@ public class SpeciesListTransformer {
     }
 
     private static String fixLegacyKeys(String key) {
+        if (key == null) {
+            return null;
+        }
         // Fix known legacy key names, for backward compatibility
         switch (key) {
             case "CommonNames":
@@ -215,38 +219,105 @@ public class SpeciesListTransformer {
      * Case-insensitive comparison to handle variations in field naming
      */
     private static boolean isRawTaxonomicField(String key) {
-        return key != null && (
-            key.equalsIgnoreCase("rawkingdom") || 
-            key.equalsIgnoreCase("rawphylum") || 
-            key.equalsIgnoreCase("rawclass") || 
-            key.equalsIgnoreCase("raworder") || 
-            key.equalsIgnoreCase("rawfamily") || 
-            key.equalsIgnoreCase("rawgenus")
-        );
+        if (key == null) return false;
+        String lowerKey = key.toLowerCase(Locale.ROOT);
+        return lowerKey.equals("rawkingdom") || 
+                lowerKey.equals("rawphylum") || 
+                lowerKey.equals("rawclass") || 
+                lowerKey.equals("raworder") || 
+                lowerKey.equals("rawfamily") || 
+                lowerKey.equals("rawgenus") ||
+                lowerKey.equals("rawrank") ||
+                lowerKey.equals("rawscientific_name") ||
+                lowerKey.equals("rawsupplied_name") ||
+                lowerKey.equals("rawscientificname") ||
+                lowerKey.equals("rawsuppliedname");
     }
     
     /**
      * Get the non-raw version of a taxonomic field name (case-insensitive)
-     * e.g., "rawfamily" -> "family", "RawKingdom" -> "kingdom", "RAWORDER" -> "order"
-     * Always returns lowercase version to ensure consistency
+     * e.g., "rawfamily" -> "family", "RawKingdom" -> "kingdom", "RAWORDER" -> "order", "rawSupplied_Name" -> "Supplied Name"
+     * Removes prefix and preserves original case, converting underscores to spaces
      */
     private static String getWithoutRawPrefix(String key) {
-        if (key != null && key.toLowerCase().startsWith("raw")) {
-            return key.substring(3).toLowerCase(); // Remove "raw" prefix and normalize to lowercase
+        if (key != null && key.toLowerCase(Locale.ROOT).startsWith("raw")) {
+            return key.substring(3).replace('_', ' '); // Remove "raw" prefix, keep casing, replace underscore with space
         }
-        return key != null ? key.toLowerCase() : null;
+        return key != null ? key.replace('_', ' ') : null;
     }
     
     /**
-     * Check if a list of properties already contains a key (case-insensitive)
+     * Shared logic to apply legacy transformations (substitutions, spaces, raw taxonomic fields)
+     * over a set of elements containing keys.
      */
-    private static boolean containsKey(List<au.org.ala.listsapi.model.KeyValue> properties, String key) {
-        if (properties == null || key == null) {
-            return false;
+    private static <T> void applyLegacyTransformations(
+        Iterable<T> items,
+        java.util.function.Function<T, String> keyExtractor,
+        java.util.function.BiConsumer<String, T> addKeyFn
+    ) {
+        // Track keys to avoid O(N) scans for uniqueness and duplicate additions
+        java.util.Set<String> exactKeys = new java.util.HashSet<>();
+        java.util.Set<String> caseInsensitiveKeys = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+
+        // Helper to add a key and track it
+        java.util.function.BiConsumer<String, T> emit = (newKey, item) -> {
+            exactKeys.add(newKey);
+            caseInsensitiveKeys.add(newKey);
+            addKeyFn.accept(newKey, item);
+        };
+
+        // First pass: original and legacy substituted keys
+        for (T item : items) {
+            String originalKey = keyExtractor.apply(item);
+            if (originalKey == null) continue;
+
+            emit.accept(originalKey, item);
+
+            String legacyKey = fixLegacyKeys(originalKey);
+            if (!originalKey.equals(legacyKey)) {
+                if (!exactKeys.contains(legacyKey)) {
+                    emit.accept(legacyKey, item);
+                }
+            }
         }
-        return properties.stream().anyMatch(kv -> key.equalsIgnoreCase(kv.getKey()));
+
+        // Second pass: underscore replacement
+        for (T item : items) {
+            String originalKey = keyExtractor.apply(item);
+            if (originalKey != null && originalKey.contains("_")) {
+                String spaceKey = originalKey.replace('_', ' ');
+                if (!caseInsensitiveKeys.contains(spaceKey)) {
+                    emit.accept(spaceKey, item);
+                }
+            }
+        }
+
+        // Third pass: raw taxonomic fields
+        for (T item : items) {
+            String originalKey = keyExtractor.apply(item);
+            if (isRawTaxonomicField(originalKey)) {
+                String nonRawKey = getWithoutRawPrefix(originalKey);
+                if (!caseInsensitiveKeys.contains(nonRawKey)) {
+                    emit.accept(nonRawKey, item);
+                }
+            }
+        }
     }
-    
+
+    /**
+     * Transform a collection of keys according to the legacy API rules.
+     * This applies legacy mapping, underscore-to-space replacement, and raw prefix stripping.
+     * 
+     * @param keys The original keys
+     * @return A set of transformed keys matching what would be returned in kvpValues
+     */
+    public static java.util.Set<String> transformLegacyKeys(java.util.Collection<String> keys) {
+        if (keys == null) return java.util.Collections.emptySet();
+        java.util.Set<String> result = new java.util.HashSet<>();
+        applyLegacyTransformations(keys, k -> k, (newKey, originalItem) -> result.add(newKey));
+        return result;
+    }
+
     /**
      * Build KVP values from properties, adding duplicate entries for raw taxonomic fields.
      * For migrated lists compatibility: if a property has key "rawFamily" (or other raw taxonomic fields),
@@ -258,27 +329,11 @@ public class SpeciesListTransformer {
      */
     private static List<KvpValueVersion1> buildKvpValues(List<au.org.ala.listsapi.model.KeyValue> properties) {
         List<KvpValueVersion1> kvps = new ArrayList<>();
-        
-        if (properties != null) {
-            // First pass: add all properties with their legacy key names
-            properties.forEach(kvpValue -> {
-                String legacyKey = fixLegacyKeys(kvpValue.getKey());
-                kvps.add(new KvpValueVersion1(legacyKey, kvpValue.getValue(), null));
-            });
-            
-            // Second pass: for raw taxonomic fields, also add the non-raw version if it doesn't exist
-            properties.forEach(kvpValue -> {
-                String originalKey = kvpValue.getKey();
-                if (isRawTaxonomicField(originalKey)) {
-                    String nonRawKey = getWithoutRawPrefix(originalKey);
-                    // Only add the non-raw version if it doesn't already exist in properties
-                    if (!containsKey(properties, nonRawKey)) {
-                        kvps.add(new KvpValueVersion1(nonRawKey, kvpValue.getValue(), null));
-                    }
-                }
-            });
-        }
-        
+        if (properties == null) return kvps;
+        applyLegacyTransformations(
+                properties,
+                au.org.ala.listsapi.model.KeyValue::getKey,
+                (newKey, kvpValue) -> kvps.add(new KvpValueVersion1(newKey, kvpValue.getValue(), null)));
         return kvps;
     }
 

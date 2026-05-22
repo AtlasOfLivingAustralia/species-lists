@@ -617,15 +617,7 @@ public class LegacyController {
 
                 Set<String> commonKeys = SearchHelperService.findCommonKeys(speciesLists);
 
-                // Perform string replacement for some values in the Set based on a Map<String, String>
-                Map<String, String> replacements = Map.of(
-                    "taxonRank", "rank",
-                    "rawfamily", "family"
-                );
-
-                Set<String> renamedCommonKeys = commonKeys.stream()
-                        .map(key -> replacements.getOrDefault(key, key))
-                        .collect(java.util.stream.Collectors.toSet());
+                Set<String> renamedCommonKeys = au.org.ala.listsapi.util.SpeciesListTransformer.transformLegacyKeys(commonKeys);
 
                 return new ResponseEntity<>(renamedCommonKeys, HttpStatus.OK);
             }

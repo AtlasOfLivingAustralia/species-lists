@@ -287,12 +287,13 @@ class SpeciesListTransformerTest {
       properties.add(new KeyValue("rawfamily", "Felidae"));
       properties.add(new KeyValue("taxonRank", "species"));
       properties.add(new KeyValue("CommonNames", "Cat"));
+      properties.add(new KeyValue("group", "Mammal"));
       item.setProperties(properties);
       
       QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
       
-      // rawfamily (preserved) + family (duplicate) + taxonRank->rank + CommonNames->common name = 4
-      assertEquals(4, result.getKvpValues().size());
+      // rawfamily (preserved) + family (duplicate) + taxonRank (preserved) + rank (duplicate) + CommonNames (preserved) + common name (duplicate) + group (preserved) + Group (duplicate) = 8
+      assertEquals(8, result.getKvpValues().size());
       
       // Check legacy transformations
       assertTrue(result.getKvpValues().stream()
@@ -300,9 +301,17 @@ class SpeciesListTransformerTest {
       assertTrue(result.getKvpValues().stream()
           .anyMatch(kv -> "family".equals(kv.getKey())));
       assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "taxonRank".equals(kv.getKey()) && "species".equals(kv.getValue())));
+      assertTrue(result.getKvpValues().stream()
           .anyMatch(kv -> "rank".equals(kv.getKey()) && "species".equals(kv.getValue())));
       assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "CommonNames".equals(kv.getKey()) && "Cat".equals(kv.getValue())));
+      assertTrue(result.getKvpValues().stream()
           .anyMatch(kv -> "common name".equals(kv.getKey()) && "Cat".equals(kv.getValue())));
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "group".equals(kv.getKey()) && "Mammal".equals(kv.getValue())));
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> "Group".equals(kv.getKey()) && "Mammal".equals(kv.getValue())));
     }
     
     @Test
@@ -352,6 +361,66 @@ class SpeciesListTransformerTest {
           .anyMatch(kv -> "rawfamily".equals(kv.getKey())));
       assertTrue(result.getKvpValues().stream()
           .anyMatch(kv -> "Family".equals(kv.getKey())));
+    }
+    
+    @Test
+    @DisplayName("Should add space-separated duplicate for keys with underscores")
+    void shouldDuplicateKeysWithUnderscores() {
+      mockSpeciesList();
+      SpeciesListItem item = createTestItem();
+      
+      List<KeyValue> properties = new ArrayList<>();
+      properties.add(new KeyValue("custom_field_name", "value1"));
+      properties.add(new KeyValue("Another_Field", "value2"));
+      item.setProperties(properties);
+      
+      QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
+      
+      // Should have: custom_field_name, custom field name, Another_Field, Another Field = 4
+      assertEquals(4, result.getKvpValues().size());
+      
+      assertKvpValue(result.getKvpValues(), "custom_field_name", "value1");
+      assertKvpValue(result.getKvpValues(), "custom field name", "value1");
+      assertKvpValue(result.getKvpValues(), "Another_Field", "value2");
+      assertKvpValue(result.getKvpValues(), "Another Field", "value2");
+    }
+
+    @Test
+    @DisplayName("Should handle rawSupplied_Name, rawRank, rawScientific_Name and their underscores")
+    void shouldHandleExtendedRawTaxonomicFields() {
+      mockSpeciesList();
+      SpeciesListItem item = createTestItem();
+      
+      List<KeyValue> properties = new ArrayList<>();
+      properties.add(new KeyValue("rawSupplied_Name", "Eucalyptus globulus"));
+      properties.add(new KeyValue("rawRank", "species"));
+      properties.add(new KeyValue("rawScientific_Name", "E. globulus"));
+      item.setProperties(properties);
+      
+      QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
+      
+      // Should have: 
+      // 1. rawSupplied_Name
+      // 2. rawSupplied Name (due to underscore replacement of rawSupplied_Name)
+      // 3. Supplied Name (due to raw stripping and underscore replacement of rawSupplied_Name)
+      // 4. rawRank
+      // 5. Rank (due to raw stripping)
+      // 6. rawScientific_Name
+      // 7. rawScientific Name (due to underscore replacement of rawScientific_Name)
+      // 8. Scientific Name (due to raw stripping and underscore replacement of rawScientific_Name)
+      
+      assertEquals(8, result.getKvpValues().size());
+      
+      assertKvpValue(result.getKvpValues(), "rawSupplied_Name", "Eucalyptus globulus");
+      assertKvpValue(result.getKvpValues(), "rawSupplied Name", "Eucalyptus globulus");
+      assertKvpValue(result.getKvpValues(), "Supplied Name", "Eucalyptus globulus");
+      
+      assertKvpValue(result.getKvpValues(), "rawRank", "species");
+      assertKvpValue(result.getKvpValues(), "Rank", "species");
+      
+      assertKvpValue(result.getKvpValues(), "rawScientific_Name", "E. globulus");
+      assertKvpValue(result.getKvpValues(), "rawScientific Name", "E. globulus");
+      assertKvpValue(result.getKvpValues(), "Scientific Name", "E. globulus");
     }
     
     private long countKeyOccurrences(List<KvpValueVersion1> kvps, String key) {
