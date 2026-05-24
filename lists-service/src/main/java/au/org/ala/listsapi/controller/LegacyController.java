@@ -709,12 +709,16 @@ public class LegacyController {
             @RequestParam(name = "isBIE", required = false) String isBIE,
             @AuthenticationPrincipal Principal principal,
             HttpServletRequest request) {
-        String fullUrl = request.getRequestURL().toString();
+        String uri = request.getRequestURI();
         String guid = "";
-        if (fullUrl.contains("/v1/species/")) {
-            guid = (fullUrl.split("/v1/species/").length > 1) ? fullUrl.split("/v1/species/")[1] : "";
-        } else if (fullUrl.contains("/ws/species/")) {
-            guid = (fullUrl.split("/ws/species/").length > 1) ? fullUrl.split("/ws/species/")[1] : "";
+        
+        int v1Index = uri.indexOf("/v1/species/");
+        int wsIndex = uri.indexOf("/ws/species/");
+        
+        if (v1Index != -1) {
+            guid = uri.substring(v1Index + "/v1/species/".length());
+        } else if (wsIndex != -1) {
+            guid = uri.substring(wsIndex + "/ws/species/".length());
         }
 
         if (guid != null && guid.contains("%3A%2F")) {
