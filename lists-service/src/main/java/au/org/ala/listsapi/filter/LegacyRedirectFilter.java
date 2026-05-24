@@ -16,35 +16,25 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * Redirects legacy requests to the new API version paths.
- * Handles URL rewriting from:
- * - "/ws/" to "/v1/" (internal rewrite for CloudFront proxy compatibility)
- * - "/upload", "/ingest", "/delete" to "/v2/upload", "/v2/ingest", "/v2/delete"
- * - Pre-versioned paths to their versioned equivalents
- * 
- * Note: Uses internal forwarding (URL rewrite) for /ws/* paths to support
- * CloudFront proxy architecture where relative redirects would fail.
+ * Redirects legacy pre-version requests to the new v2 API paths.
+ * Handles URL redirects from:
+ * - "/upload", "/ingest", "/delete", "/constraints" to "/v2/upload", "/v2/ingest", "/v2/delete", "/v2/constraints"
+ * - "/speciesListItem/downloadList/{listId}" to "/v2/download/{listId}"
  */
 @Component
-public class WsToV1RedirectFilter extends OncePerRequestFilter {
+public class LegacyRedirectFilter extends OncePerRequestFilter {
 
-    private final String wsPrefix;
-    private final String v1Prefix;
     private final String v2Prefix;
     private final Map<String, String> preVersionPaths;
-    private static final Logger logger = LoggerFactory.getLogger(WsToV1RedirectFilter.class);
+    private static final Logger logger = LoggerFactory.getLogger(LegacyRedirectFilter.class);
 
-    public WsToV1RedirectFilter(
-            @Value("${api.ws.prefix:/ws}") String wsPrefix,
-            @Value("${api.v1.prefix:/v1}") String v1Prefix,
+    public LegacyRedirectFilter(
             @Value("${api.v2.prefix:/v2}") String v2Prefix,
             @Value("${api.preversion.upload:/upload}") String preversionUpload,
             @Value("${api.preversion.ingest:/ingest}") String preversionIngest,
             @Value("${api.preversion.delete:/delete}") String preversionDelete,
             @Value("${api.preversion.constraints:/constraints}") String preversionConstraints) {
 
-        this.wsPrefix = wsPrefix;
-        this.v1Prefix = v1Prefix;
         this.v2Prefix = v2Prefix;
 
         // Create a map of preversion paths 
@@ -61,20 +51,6 @@ public class WsToV1RedirectFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
 
         String requestUri = request.getRequestURI();
-
-        // Handle old prefix with internal rewrite (for CloudFront proxy compatibility)
-        if (requestUri.startsWith(wsPrefix)) {
-            String newPath = requestUri.replaceFirst(wsPrefix, v1Prefix);
-            String queryString = request.getQueryString();
-            
-            logger.debug("Rewriting /ws/* path internally: {} -> {}", requestUri, newPath);
-            
-            // Use internal forward (URL rewrite) instead of redirect
-            // This preserves the original host and works with CloudFront proxy
-            request.getRequestDispatcher(newPath + (queryString != null ? "?" + queryString : ""))
-                   .forward(request, response);
-            return;
-        }
 
         // Handle pre-version paths (Biocollect, etc.)
         for (Map.Entry<String, String> entry : preVersionPaths.entrySet()) {
