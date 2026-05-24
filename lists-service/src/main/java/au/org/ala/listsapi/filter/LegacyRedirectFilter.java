@@ -16,19 +16,19 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * Redirects legacy requests to the new API version paths.
- * Handles URL rewriting from:
- * - "/upload", "/ingest", "/delete" to "/v2/upload", "/v2/ingest", "/v2/delete"
- * - Pre-versioned paths to their versioned equivalents
+ * Redirects legacy pre-version requests to the new v2 API paths.
+ * Handles URL redirects from:
+ * - "/upload", "/ingest", "/delete", "/constraints" to "/v2/upload", "/v2/ingest", "/v2/delete", "/v2/constraints"
+ * - "/speciesListItem/downloadList/{listId}" to "/v2/download/{listId}"
  */
 @Component
-public class WsToV1RedirectFilter extends OncePerRequestFilter {
+public class LegacyRedirectFilter extends OncePerRequestFilter {
 
     private final String v2Prefix;
     private final Map<String, String> preVersionPaths;
-    private static final Logger logger = LoggerFactory.getLogger(WsToV1RedirectFilter.class);
+    private static final Logger logger = LoggerFactory.getLogger(LegacyRedirectFilter.class);
 
-    public WsToV1RedirectFilter(
+    public LegacyRedirectFilter(
             @Value("${api.v2.prefix:/v2}") String v2Prefix,
             @Value("${api.preversion.upload:/upload}") String preversionUpload,
             @Value("${api.preversion.ingest:/ingest}") String preversionIngest,
