@@ -104,7 +104,7 @@ public class LegacyController {
             @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
     })
-    @GetMapping({"/v1/speciesList", "/v1/speciesList/"})
+    @GetMapping({"/v1/speciesList", "/v1/speciesList/", "/ws/speciesList", "/ws/speciesList/"})
     public ResponseEntity<Object> speciesListSearch(
             @Nullable @RequestParam(name = "isAuthoritative") String isAuthoritative,
             @Nullable @RequestParam(name = "isThreatened") String isThreatened,
@@ -162,7 +162,7 @@ public class LegacyController {
             @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
     })
-    @GetMapping({"/v1/speciesList/{speciesListID}", "/v1/speciesList/{speciesListID}/"})
+    @GetMapping({"/v1/speciesList/{speciesListID}", "/v1/speciesList/{speciesListID}/", "/ws/speciesList/{speciesListID}", "/ws/speciesList/{speciesListID}/"})
     public ResponseEntity<Object> speciesListLegacy(
             @Parameter(description = "The species list ID or data resource ID", example = "dr656")
             @PathVariable("speciesListID") String speciesListID,
@@ -335,7 +335,7 @@ public class LegacyController {
             @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
     })
-    @GetMapping("/v1/speciesListItems")
+    @GetMapping({"/v1/speciesListItems", "/ws/speciesListItems"})
     public ResponseEntity<Object> searchSpeciesListItems(
             @Parameter(description = "Filter by list ID (druid) as query parameter", example = "dr656")
             @RequestParam(name = "druid", required = false) String druid,
@@ -370,7 +370,7 @@ public class LegacyController {
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
     })
     @JsonView(Views.Narrow.class)
-    @GetMapping({"/v1/speciesListItems/{druid}", "/v1/speciesListItems/{druid}/"})
+    @GetMapping({"/v1/speciesListItems/{druid}", "/v1/speciesListItems/{druid}/", "/ws/speciesListItems/{druid}", "/ws/speciesListItems/{druid}/"})
     public ResponseEntity<Object> getSpeciesListItemsByPath(
             @Parameter(description = "The species list ID path parameter", example = "dr656") 
             @PathVariable(name = "druid") String druid,
@@ -394,7 +394,7 @@ public class LegacyController {
             @ApiResponse(responseCode = "403", description = "Forbidden - user is not authorized to view this species list", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))),
     })
-    @GetMapping({"/v1/speciesListInternal/{speciesListID}", "/v1/speciesListInternal/{speciesListID}/"})
+    @GetMapping({"/v1/speciesListInternal/{speciesListID}", "/v1/speciesListInternal/{speciesListID}/", "/ws/speciesListInternal/{speciesListID}", "/ws/speciesListInternal/{speciesListID}/"})
     public ResponseEntity<Object> speciesListInternal(
             @Parameter(description = "The species list ID or data resource ID", example = "dr656")
             @PathVariable("speciesListID") String speciesListID, 
@@ -464,7 +464,7 @@ public class LegacyController {
     })
     @JsonView(Views.Narrow.class)
     @SecurityRequirement(name = "JWT")
-    @GetMapping({"/v1/speciesListItemsInternal/{druid}", "/v1/speciesListItemsInternal/{druid}/"})
+    @GetMapping({"/v1/speciesListItemsInternal/{druid}", "/v1/speciesListItemsInternal/{druid}/", "/ws/speciesListItemsInternal/{druid}", "/ws/speciesListItemsInternal/{druid}/"})
     public ResponseEntity<Object> speciesListItemsInternal(
             @Parameter(
                     name = "druid",
@@ -578,7 +578,7 @@ public class LegacyController {
                     )
             )
     })
-    @GetMapping({"/v1/listCommonKeys/{speciesListIDs}", "/v1/listCommonKeys/{speciesListIDs}/"})
+    @GetMapping({"/v1/listCommonKeys/{speciesListIDs}", "/v1/listCommonKeys/{speciesListIDs}/", "/ws/listCommonKeys/{speciesListIDs}", "/ws/listCommonKeys/{speciesListIDs}/"})
     public ResponseEntity<Object> speciesListCommonKeysWithId(
             @Parameter(
                     name = "speciesListIDs",
@@ -597,7 +597,7 @@ public class LegacyController {
         return speciesListCommonKeys(speciesListIDs, druid, principal);
     }
 
-    @GetMapping({"/v1/listCommonKeys", "/v1/listCommonKeys/"})
+    @GetMapping({"/v1/listCommonKeys", "/v1/listCommonKeys/", "/ws/listCommonKeys", "/ws/listCommonKeys/"})
     public ResponseEntity<Object> speciesListCommonKeys(
             @Parameter(
                     name = "speciesListIDs",
@@ -684,7 +684,7 @@ public class LegacyController {
             )
     })
     @JsonView(Views.Wide.class)
-    @GetMapping("/v1/species/**")
+    @GetMapping({"/v1/species/**", "/ws/species/**"})
     public ResponseEntity<Object> speciesListItemsForGuid(
             @Parameter(
                     name = "guids",
@@ -710,7 +710,12 @@ public class LegacyController {
             @AuthenticationPrincipal Principal principal,
             HttpServletRequest request) {
         String fullUrl = request.getRequestURL().toString();
-        String guid = (fullUrl.split("/v1/species/").length > 1) ? fullUrl.split("/v1/species/")[1] : "";
+        String guid = "";
+        if (fullUrl.contains("/v1/species/")) {
+            guid = (fullUrl.split("/v1/species/").length > 1) ? fullUrl.split("/v1/species/")[1] : "";
+        } else if (fullUrl.contains("/ws/species/")) {
+            guid = (fullUrl.split("/ws/species/").length > 1) ? fullUrl.split("/ws/species/")[1] : "";
+        }
 
         if (guid != null && guid.contains("%3A%2F")) {
             // Decode the URL-encoded GUID if it's encoded
@@ -823,7 +828,7 @@ public class LegacyController {
             )
     })
     @JsonView(Views.Narrow.class)
-    @GetMapping({"/v1/queryListItemOrKVP", "/v1/queryListItemOrKVP/"})
+    @GetMapping({"/v1/queryListItemOrKVP", "/v1/queryListItemOrKVP/", "/ws/queryListItemOrKVP", "/ws/queryListItemOrKVP/"})
     public ResponseEntity<Object> queryListItemOrKVP(
             @Parameter(
                 name = "druid",
