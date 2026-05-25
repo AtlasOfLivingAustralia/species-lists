@@ -423,6 +423,38 @@ class SpeciesListTransformerTest {
       assertKvpValue(result.getKvpValues(), "Scientific Name", "E. globulus");
     }
     
+    private void assertTransformation(String inputKey, String expectedOutputKey) {
+      SpeciesListItem item = createTestItem();
+      List<KeyValue> properties = new ArrayList<>();
+      properties.add(new KeyValue(inputKey, "test_val"));
+      item.setProperties(properties);
+      
+      QueryListItemVersion1 result = transformer.transformToQueryListVersion1(item);
+      
+      assertTrue(result.getKvpValues().stream()
+          .anyMatch(kv -> expectedOutputKey.equals(kv.getKey()) && "test_val".equals(kv.getValue())),
+          String.format("Expected to find transformed kvp with key='%s' from input='%s'", expectedOutputKey, inputKey));
+    }
+
+    @Test
+    @DisplayName("Should apply specific key transformations based on provided mapping")
+    void shouldApplySpecificKeyTransformations() {
+      mockSpeciesList();
+      
+      assertTransformation("VernacularName", "vernacular name");
+      assertTransformation("Supplied_common_name", "Supplied common name");
+      assertTransformation("Other_Name", "Other Name");
+      assertTransformation("CommonNames", "common names");
+      assertTransformation("Supplied_common_name", "suppliedCommonName");
+      assertTransformation("CommonName", "common name");
+      assertTransformation("vernacularName", "vernacular name");
+      assertTransformation("Full_name", "Full name");
+      assertTransformation("supplied_species_name", "supplied species name");
+      assertTransformation("Display_Name", "Display Name");
+      assertTransformation("matchedName", "matched name");
+      assertTransformation("rawSupplied_Name", "Supplied Name");
+    }
+    
     private long countKeyOccurrences(List<KvpValueVersion1> kvps, String key) {
       return kvps.stream().filter(kv -> key.equals(kv.getKey())).count();
     }
