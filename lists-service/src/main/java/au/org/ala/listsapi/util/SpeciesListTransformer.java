@@ -202,9 +202,16 @@ public class SpeciesListTransformer {
         // Fix known legacy key names, for backward compatibility
         switch (key) {
             case "CommonNames":
+                return "common names";
+            case "CommonName":
                 return "common name";
             case "VernacularName":
+            case "vernacularName":
                 return "vernacular name";
+            case "Supplied_common_name":
+                return "Supplied common name";
+            case "matchedName":
+                return "matched name";
             case "group":
                 return "Group";
             case "taxonRank":

@@ -307,7 +307,7 @@ class SpeciesListTransformerTest {
       assertTrue(result.getKvpValues().stream()
           .anyMatch(kv -> "CommonNames".equals(kv.getKey()) && "Cat".equals(kv.getValue())));
       assertTrue(result.getKvpValues().stream()
-          .anyMatch(kv -> "common name".equals(kv.getKey()) && "Cat".equals(kv.getValue())));
+          .anyMatch(kv -> "common names".equals(kv.getKey()) && "Cat".equals(kv.getValue())));
       assertTrue(result.getKvpValues().stream()
           .anyMatch(kv -> "group".equals(kv.getKey()) && "Mammal".equals(kv.getValue())));
       assertTrue(result.getKvpValues().stream()
@@ -445,7 +445,6 @@ class SpeciesListTransformerTest {
       assertTransformation("Supplied_common_name", "Supplied common name");
       assertTransformation("Other_Name", "Other Name");
       assertTransformation("CommonNames", "common names");
-      assertTransformation("Supplied_common_name", "suppliedCommonName");
       assertTransformation("CommonName", "common name");
       assertTransformation("vernacularName", "vernacular name");
       assertTransformation("Full_name", "Full name");
