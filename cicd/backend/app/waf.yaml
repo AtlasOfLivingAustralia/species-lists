@@ -102,7 +102,7 @@ Resources:
           Statement:
             RuleGroupReferenceStatement:
               Arn: !ImportValue
-                Fn::Sub: ${pCommonWafRuleGroupStackName}-BlockSpecificBotsRuleGroup2Arn
+                Fn::Sub: ${pCommonWafRuleGroupStackName}-BlockSpecificBotsRuleGroupArn
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
