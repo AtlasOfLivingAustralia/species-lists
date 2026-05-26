@@ -126,8 +126,18 @@ const Home = ({ routeId }: { routeId: string }) => {
     parseAsFilters
   );
 
-  // Normalize filters to always be an array
-  const filters = useMemo(() => filtersRaw || [], [filtersRaw]);
+  // Normalize filters to always be an array and ensure mutual exclusivity for isPrivate
+  const filters = useMemo(() => {
+    const arr = filtersRaw || [];
+    let foundPrivate = false;
+    return arr.filter(f => {
+      if (f.key === 'isPrivate') {
+        if (foundPrivate) return false;
+        foundPrivate = true;
+      }
+      return true;
+    });
+  }, [filtersRaw]);
   const setFilters = useCallback((value: KV[] | ((prev: KV[] | null) => KV[] | null)) => {
     if (typeof value === 'function') {
       setFiltersRaw((prev) => {
