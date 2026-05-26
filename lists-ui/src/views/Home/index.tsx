@@ -126,8 +126,18 @@ const Home = ({ routeId }: { routeId: string }) => {
     parseAsFilters
   );
 
-  // Normalize filters to always be an array
-  const filters = useMemo(() => filtersRaw || [], [filtersRaw]);
+  // Normalize filters to always be an array and ensure mutual exclusivity for isPrivate
+  const filters = useMemo(() => {
+    const arr = filtersRaw || [];
+    let foundPrivate = false;
+    return arr.filter(f => {
+      if (f.key === 'isPrivate') {
+        if (foundPrivate) return false;
+        foundPrivate = true;
+      }
+      return true;
+    });
+  }, [filtersRaw]);
   const setFilters = useCallback((value: KV[] | ((prev: KV[] | null) => KV[] | null)) => {
     if (typeof value === 'function') {
       setFiltersRaw((prev) => {
@@ -247,7 +257,13 @@ const Home = ({ routeId }: { routeId: string }) => {
         );
       } else {
         setPage(0); // Reset 'page' when a filter is added
-        setFilters([...(filters || []), filter]);
+        
+        // Prevent selecting both public and private simultaneously
+        const nextFilters = filter.key === 'isPrivate' 
+            ? (filters || []).filter(({ key }) => key !== 'isPrivate')
+            : (filters || []);
+            
+        setFilters([...nextFilters, filter]);
       }
     },
     [filters, setFilters, setPage]
