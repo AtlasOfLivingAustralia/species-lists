@@ -270,6 +270,48 @@ class TaxonServiceTest {
     }
 
     @Nested
+    @DisplayName("Vernacular Name Mapping Tests")
+    class VernacularNameMappingTests {
+        
+        @Test
+        @DisplayName("Should use vernacular name if provided")
+        void shouldUseVernacularNameIfProvided() throws Exception {
+            SpeciesListItem item = new SpeciesListItem();
+            item.setScientificName("Felis catus");
+            item.setVernacularName("Cat");
+            
+            NameSearch result = buildNameSearch(item);
+            
+            assertEquals("Felis catus", result.getScientificName());
+            assertEquals("Cat", result.getVernacularName());
+        }
+
+        @Test
+        @DisplayName("Should fallback to scientific name for vernacular name if vernacular is blank")
+        void shouldFallbackToScientificNameForVernacularName() throws Exception {
+            SpeciesListItem item = new SpeciesListItem();
+            item.setScientificName("Common Name Test");
+            
+            NameSearch result = buildNameSearch(item);
+            
+            assertEquals("Common Name Test", result.getScientificName());
+            assertEquals("Common Name Test", result.getVernacularName());
+        }
+        
+        @Test
+        @DisplayName("Should fallback to scientific name for vernacular name even if scientific name is trimmed")
+        void shouldFallbackToScientificNameForVernacularNameTrimmed() throws Exception {
+            SpeciesListItem item = new SpeciesListItem();
+            item.setScientificName("  Common Name Test  ");
+            
+            NameSearch result = buildNameSearch(item);
+            
+            assertEquals("Common Name Test", result.getScientificName());
+            assertEquals("Common Name Test", result.getVernacularName());
+        }
+    }
+
+    @Nested
     @DisplayName("Null and Empty Handling Tests")
     class NullAndEmptyHandlingTests {
         

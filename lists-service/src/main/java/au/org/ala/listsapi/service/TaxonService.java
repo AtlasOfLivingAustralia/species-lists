@@ -832,6 +832,9 @@ public class TaxonService {
         // Set vernacular/common name
         if (StringUtils.isNotBlank(item.getVernacularName())) {
             builder.vernacularName(StringUtils.trimToNull(item.getVernacularName()));
+        } else if (StringUtils.isNotBlank(item.getScientificName())) {
+            // Fallback for legacy matching: if vernacular name is empty, try matching on supplied name as a common name
+            builder.vernacularName(StringUtils.trimToNull(item.getScientificName()));
         }
         // Set taxonomic hierarchy - check direct fields first, then fall back to raw* fields in properties
         setTaxonomicField(builder::kingdom, item.getKingdom(), "rawkingdom", item.getProperties());
