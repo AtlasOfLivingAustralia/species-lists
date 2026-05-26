@@ -15,6 +15,7 @@ import {
   Collapse,
   Group,
   Paper,
+  Radio,
   Stack,
   Text,
   ThemeIcon,
@@ -75,18 +76,21 @@ function RenderCheckbox(
 
   if (!countItem) return null; // Handle case where countItem might be undefined
   
+  const InputComponent = facetName === 'isPrivate' ? Radio : Checkbox;
+
   return (
-    <Checkbox
+    <InputComponent
       key={key} // Use the provided key
       size='xs'
       classNames={{
         root: !isBooleanFacet ? classes.checkboxRoot : undefined,
         body: classes.checkboxBody,
-        inner: classes.checkboxInner,
+        inner: classes.checkboxInner,  
         labelWrapper: classes.checkboxLabelWrapper,
         label: classes.checkboxLabel,
       }}
-      onChange={onChange} // Use the provided onChange handler
+      onClick={facetName === 'isPrivate' ? onChange : undefined} // Radios don't fire onChange when clicking already selected ones
+      onChange={facetName !== 'isPrivate' ? onChange : () => {}} // Use the provided onChange handler
       checked={isChecked}
       label={
         // The label structure remains the same
@@ -209,7 +213,7 @@ const FacetComponent = memo(
             <Text size='md' className={classes.facetHeader} span>
               <FormattedMessage id={facet.key || 'filter.key.missing'} defaultMessage={removeFilterPrefix(facet.key)}
               />{' '}
-              <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.or.tooltip', defaultMessage: '' })} />
+              {facet.key !== 'isPrivate' && <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.or.tooltip', defaultMessage: '' })} />}
             </Text>
             {showExpand && (
               <ActionIcon

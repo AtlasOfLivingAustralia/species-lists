@@ -83,6 +83,9 @@
 .checkboxInner input {
   cursor: pointer;
 }
+.checkboxInner {
+  margin-top: 3px;
+}
 .checkboxLabelWrapper {
   width: 100%;
 }

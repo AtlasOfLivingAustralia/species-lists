@@ -247,7 +247,13 @@ const Home = ({ routeId }: { routeId: string }) => {
         );
       } else {
         setPage(0); // Reset 'page' when a filter is added
-        setFilters([...(filters || []), filter]);
+        
+        // Prevent selecting both public and private simultaneously
+        const nextFilters = filter.key === 'isPrivate' 
+            ? (filters || []).filter(({ key }) => key !== 'isPrivate')
+            : (filters || []);
+            
+        setFilters([...nextFilters, filter]);
       }
     },
     [filters, setFilters, setPage]
