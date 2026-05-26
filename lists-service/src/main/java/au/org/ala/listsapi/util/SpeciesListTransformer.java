@@ -18,6 +18,7 @@ package au.org.ala.listsapi.util;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -167,11 +168,7 @@ public class SpeciesListTransformer {
             logger.warn("SpeciesListItemVersion1 transformToVersion1() -> Species list not found for ID: " + speciesListID);
         }
 
-        List<KvpValueVersion1> kvps = new ArrayList<>();
-        if (speciesListItem.getProperties() != null) {
-            speciesListItem.getProperties()
-                    .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
-        }
+        List<KvpValueVersion1> kvps = buildKvpValues(speciesListItem.getProperties());
         listItemVersion1.setKvpValues(kvps);
 
         return listItemVersion1;
@@ -199,23 +196,152 @@ public class SpeciesListTransformer {
     }
 
     private static String fixLegacyKeys(String key) {
+        if (key == null) {
+            return null;
+        }
         // Fix known legacy key names, for backward compatibility
         switch (key) {
             case "CommonNames":
+                return "common names";
+            case "CommonName":
                 return "common name";
             case "VernacularName":
+            case "vernacularName":
                 return "vernacular name";
+            case "Supplied_common_name":
+                return "Supplied common name";
+            case "matchedName":
+                return "matched name";
             case "group":
                 return "Group";
-            case "rawkingdom":
-                return "kingdom";
-            case "rawfamily":
-                return "family";
             case "taxonRank":
                 return "rank";
             default:
                 return key;
         }
+    }
+    
+    /**
+     * Check if a key is a raw taxonomic field (rawkingdom, rawphylum, rawclass, raworder, rawfamily, rawgenus)
+     * Case-insensitive comparison to handle variations in field naming
+     */
+    private static boolean isRawTaxonomicField(String key) {
+        if (key == null) return false;
+        String lowerKey = key.toLowerCase(Locale.ROOT);
+        return lowerKey.equals("rawkingdom") || 
+                lowerKey.equals("rawphylum") || 
+                lowerKey.equals("rawclass") || 
+                lowerKey.equals("raworder") || 
+                lowerKey.equals("rawfamily") || 
+                lowerKey.equals("rawgenus") ||
+                lowerKey.equals("rawrank") ||
+                lowerKey.equals("rawscientific_name") ||
+                lowerKey.equals("rawsupplied_name") ||
+                lowerKey.equals("rawscientificname") ||
+                lowerKey.equals("rawsuppliedname");
+    }
+    
+    /**
+     * Get the non-raw version of a taxonomic field name (case-insensitive)
+     * e.g., "rawfamily" -> "family", "RawKingdom" -> "kingdom", "RAWORDER" -> "order", "rawSupplied_Name" -> "Supplied Name"
+     * Removes prefix and preserves original case, converting underscores to spaces
+     */
+    private static String getWithoutRawPrefix(String key) {
+        if (key != null && key.toLowerCase(Locale.ROOT).startsWith("raw")) {
+            return key.substring(3).replace('_', ' '); // Remove "raw" prefix, keep casing, replace underscore with space
+        }
+        return key != null ? key.replace('_', ' ') : null;
+    }
+    
+    /**
+     * Shared logic to apply legacy transformations (substitutions, spaces, raw taxonomic fields)
+     * over a set of elements containing keys.
+     */
+    private static <T> void applyLegacyTransformations(
+        Iterable<T> items,
+        java.util.function.Function<T, String> keyExtractor,
+        java.util.function.BiConsumer<String, T> addKeyFn
+    ) {
+        // Track keys to avoid O(N) scans for uniqueness and duplicate additions
+        java.util.Set<String> exactKeys = new java.util.HashSet<>();
+        java.util.Set<String> caseInsensitiveKeys = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+
+        // Helper to add a key and track it
+        java.util.function.BiConsumer<String, T> emit = (newKey, item) -> {
+            exactKeys.add(newKey);
+            caseInsensitiveKeys.add(newKey);
+            addKeyFn.accept(newKey, item);
+        };
+
+        // First pass: original and legacy substituted keys
+        for (T item : items) {
+            String originalKey = keyExtractor.apply(item);
+            if (originalKey == null) continue;
+
+            emit.accept(originalKey, item);
+
+            String legacyKey = fixLegacyKeys(originalKey);
+            if (!originalKey.equals(legacyKey)) {
+                if (!exactKeys.contains(legacyKey)) {
+                    emit.accept(legacyKey, item);
+                }
+            }
+        }
+
+        // Second pass: underscore replacement
+        for (T item : items) {
+            String originalKey = keyExtractor.apply(item);
+            if (originalKey != null && originalKey.contains("_")) {
+                String spaceKey = originalKey.replace('_', ' ');
+                if (!caseInsensitiveKeys.contains(spaceKey)) {
+                    emit.accept(spaceKey, item);
+                }
+            }
+        }
+
+        // Third pass: raw taxonomic fields
+        for (T item : items) {
+            String originalKey = keyExtractor.apply(item);
+            if (isRawTaxonomicField(originalKey)) {
+                String nonRawKey = getWithoutRawPrefix(originalKey);
+                if (!caseInsensitiveKeys.contains(nonRawKey)) {
+                    emit.accept(nonRawKey, item);
+                }
+            }
+        }
+    }
+
+    /**
+     * Transform a collection of keys according to the legacy API rules.
+     * This applies legacy mapping, underscore-to-space replacement, and raw prefix stripping.
+     * 
+     * @param keys The original keys
+     * @return A set of transformed keys matching what would be returned in kvpValues
+     */
+    public static java.util.Set<String> transformLegacyKeys(java.util.Collection<String> keys) {
+        if (keys == null) return java.util.Collections.emptySet();
+        java.util.Set<String> result = new java.util.HashSet<>();
+        applyLegacyTransformations(keys, k -> k, (newKey, originalItem) -> result.add(newKey));
+        return result;
+    }
+
+    /**
+     * Build KVP values from properties, adding duplicate entries for raw taxonomic fields.
+     * For migrated lists compatibility: if a property has key "rawFamily" (or other raw taxonomic fields),
+     * we add both the raw version AND the non-raw version (e.g., both "rawFamily" and "family")
+     * to maintain compatibility with the legacy system - but only if the non-raw version doesn't already exist.
+     * 
+     * @param properties The list of KeyValue properties from the SpeciesListItem
+     * @return List of KvpValueVersion1 objects for the legacy API
+     */
+    private static List<KvpValueVersion1> buildKvpValues(List<au.org.ala.listsapi.model.KeyValue> properties) {
+        List<KvpValueVersion1> kvps = new ArrayList<>();
+        if (properties == null) return kvps;
+        applyLegacyTransformations(
+                properties,
+                au.org.ala.listsapi.model.KeyValue::getKey,
+                (newKey, kvpValue) -> kvps.add(new KvpValueVersion1(newKey, kvpValue.getValue(), null)));
+        return kvps;
     }
 
     /**
@@ -244,12 +370,7 @@ public class SpeciesListTransformer {
         // Get extra details via MongoDB lookup
         Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID, speciesListID);
 
-        List<KvpValueVersion1> kvps = new ArrayList<>();
-
-        if (speciesListItem.getProperties() != null) {
-            speciesListItem.getProperties()
-                    .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
-        } 
+        List<KvpValueVersion1> kvps = buildKvpValues(speciesListItem.getProperties());
 
         queryListItemV1.setKvpValues(kvps);
 
@@ -324,11 +445,7 @@ public class SpeciesListTransformer {
         item.setList(list);
 
         // Build KVP values from properties
-        List<KvpValueVersion1> kvps = new ArrayList<>();
-        if (speciesListItem.getProperties() != null) {
-            speciesListItem.getProperties()
-                    .forEach(kvpValue -> kvps.add(new KvpValueVersion1(fixLegacyKeys(kvpValue.getKey()), kvpValue.getValue(), null)));
-        }
+        List<KvpValueVersion1> kvps = buildKvpValues(speciesListItem.getProperties());
         item.setKvpValues(kvps);
 
         return item;

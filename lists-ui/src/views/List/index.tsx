@@ -90,7 +90,7 @@ enum SortDirection {
   DESC = 'desc',
 }
 
-const maxEntries = 10000; // ES maximumDocuments limit (see elastic.maximumDocuments config in lists-service)
+const MAX_ENTRIES = 10000; // ES maximumDocuments limit (see elastic.maximumDocuments config in lists-service)
 const classificationFields = ['family', 'kingdom', 'vernacularName', 'matchType'];
 
 function List() {
@@ -210,10 +210,12 @@ function List() {
   }, [id]);
 
   // Destructure results & calculate the real page offset
-  const { totalElements, totalPages } = list || { totalElements: 0, totalPages: 0 };
+  const { totalElements, totalPages: rawTotalPages } = list || { totalElements: 0, totalPages: 0 };
+  const maxAllowedPages = Math.ceil(MAX_ENTRIES / size);
+  const totalPages = Math.min(rawTotalPages, maxAllowedPages);
   let totalEntries = totalElements;
 
-  if (totalElements == maxEntries) {
+  if (totalElements == MAX_ENTRIES) {
     totalEntries = meta?.rowCount ?? totalElements;
   }
 
@@ -719,7 +721,7 @@ function List() {
                       { filters && filters.length > 0 && (
                         <><Space w={5} />–<Space w={2} /></>
                       )}
-                      { endPage == maxEntries &&
+                      { endPage == MAX_ENTRIES &&
                         <Text style={{ color: 'red', marginLeft: 5 }}>
                           <FormattedMessage id='results.warning.max' defaultMessage='Maximum number of pages reached. Try filtering or sorting table by a different column.' />
                         </Text>
@@ -859,14 +861,8 @@ function List() {
                     radius='md'
                     siblings={2}
                     getControlProps={(control) => ({
-                      'aria-label': `${control} page`,
+                    'aria-label': `${control} page`,
                     })}
-                    getItemProps={(page) => {
-                      if (page === totalPages) {
-                        return { style: { display: 'none' } };
-                      }
-                      return {};
-                    }}
                   /> 
                   </Center>
                 </Box>
