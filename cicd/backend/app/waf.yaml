@@ -78,7 +78,7 @@ Resources:
           Statement:
             RuleGroupReferenceStatement:
               Arn: !ImportValue
-                Fn::Sub: ${pCommonWafRuleGroupStackName}-BlockJa4RuleGroupArn
+                Fn::Sub: ${pCommonWafRuleGroupStackName}-BlockJa4RuleGroup2Arn
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
@@ -107,22 +107,10 @@ Resources:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
             MetricName: !Sub ${pEnvironment}-lists-BlockSpecificBotsRuleGroup
-        - Name: BlockDatacenterOldChrome
-          Priority: 5
-          OverrideAction:
-            None: {}
-          Statement:
-            RuleGroupReferenceStatement:
-              Arn: !ImportValue
-                Fn::Sub: ${pCommonWafRuleGroupStackName}-BlockDatacenterOldChromeRuleGroupArn
-          VisibilityConfig:
-            SampledRequestsEnabled: true
-            CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-BlockDatacenterOldChromeRuleGroup
         - Name: ALARateLimitJa4
           Action:
             Block: { }
-          Priority: 6
+          Priority: 5
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
@@ -144,7 +132,7 @@ Resources:
         - Name: AWSManagedRulesAmazonIpReputationList
           OverrideAction: 
             None: {}
-          Priority: 7
+          Priority: 6
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesAmazonIpReputationList
@@ -160,7 +148,7 @@ Resources:
         - Name: AWSManagedRulesAnonymousIpList
           OverrideAction: 
             None: {}
-          Priority: 8
+          Priority: 7
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesAnonymousIpList
@@ -179,7 +167,7 @@ Resources:
         - Name: AWSManagedRulesKnownBadInputsRuleSet
           OverrideAction: 
             None: {}
-          Priority: 9
+          Priority: 8
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesKnownBadInputsRuleSet
@@ -191,7 +179,7 @@ Resources:
         - Name: AWSManagedRulesCommonRuleSet
           OverrideAction: 
             None: {}
-          Priority: 10
+          Priority: 9
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesCommonRuleSet
@@ -216,7 +204,7 @@ Resources:
         - Name: AWSManagedRulesBotControlRuleSet-ws
           OverrideAction: 
             None: {}
-          Priority: 11
+          Priority: 10
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesBotControlRuleSet
@@ -248,7 +236,7 @@ Resources:
         - Name: ALARateLimitGoodBots
           Action:
             Block: { }
-          Priority: 12
+          Priority: 11
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
@@ -265,7 +253,7 @@ Resources:
         - Name: ALABlockDatacenterBrowsers
           Action:
             Block: {}
-          Priority: 13
+          Priority: 12
           RuleLabels:
             - Name: bot:datacenterbrowsers
           VisibilityConfig:
