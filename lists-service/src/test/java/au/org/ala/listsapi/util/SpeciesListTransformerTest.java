@@ -124,7 +124,7 @@ class SpeciesListTransformerTest {
       assertTrue(result.contains("taxonRank"));
       assertTrue(result.contains("rank"));
       assertTrue(result.contains("CommonNames"));
-      assertTrue(result.contains("common name"));
+      assertTrue(result.contains("common names"));
       assertTrue(result.contains("group"));
       assertTrue(result.contains("Group"));
     }
