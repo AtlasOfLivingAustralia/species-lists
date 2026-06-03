@@ -59,23 +59,6 @@ public class OpenApiConfig {
     }
 
     @Bean
-    public OpenApiCustomizer wsAliasCustomiser() {
-        return openApi -> {
-            Paths paths = openApi.getPaths();
-            if (paths != null) {
-                Paths wsPaths = new Paths();
-                paths.forEach((path, pathItem) -> {
-                    if (path.startsWith("/v1/")) {
-                        String wsPath = "/ws/" + path.substring(4);
-                        wsPaths.addPathItem(wsPath, pathItem);
-                    }
-                });
-                paths.putAll(wsPaths);
-            }
-        };
-    }
-
-    @Bean
     public OpenAPI customOpenAPI() {
         String version = getClass().getPackage().getImplementationVersion();
         if (version == null) version = apiVersion;

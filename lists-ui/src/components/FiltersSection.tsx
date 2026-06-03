@@ -209,7 +209,7 @@ const FacetComponent = memo(
             <Text size='md' className={classes.facetHeader} span>
               <FormattedMessage id={facet.key || 'filter.key.missing'} defaultMessage={removeFilterPrefix(facet.key)}
               />{' '}
-              <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.or.tooltip', defaultMessage: '' })} />
+              {facet.key !== 'isPrivate' && <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.or.tooltip', defaultMessage: '' })} />}
             </Text>
             {showExpand && (
               <ActionIcon
