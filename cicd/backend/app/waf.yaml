@@ -78,7 +78,7 @@ Resources:
           Statement:
             RuleGroupReferenceStatement:
               Arn: !ImportValue
-                Fn::Sub: ${pCommonWafRuleGroupStackName}-BlockJa4RuleGroupArn
+                Fn::Sub: ${pCommonWafRuleGroupStackName}-BlockJa4RuleGroup2Arn
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
@@ -107,18 +107,6 @@ Resources:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
             MetricName: !Sub ${pEnvironment}-lists-BlockSpecificBotsRuleGroup
-        - Name: BlockDatacenterOldChrome
-          Priority: 5
-          OverrideAction:
-            None: {}
-          Statement:
-            RuleGroupReferenceStatement:
-              Arn: !ImportValue
-                Fn::Sub: ${pCommonWafRuleGroupStackName}-BlockDatacenterOldChromeRuleGroupArn
-          VisibilityConfig:
-            SampledRequestsEnabled: true
-            CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-BlockDatacenterOldChromeRuleGroup
         - Name: ALARateLimitJa4
           Action:
             Block: { }
