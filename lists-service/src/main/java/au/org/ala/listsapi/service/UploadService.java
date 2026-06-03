@@ -300,7 +300,13 @@ public class UploadService {
                                 }
                             });
                 } else {
-                    File fileToLoad = new File(tempDir + "/" + fileIdentifier);
+                    if (fileIdentifier == null
+                            || fileIdentifier.contains("..")
+                            || fileIdentifier.contains("/")
+                            || fileIdentifier.contains("\\")) {
+                        throw new IllegalArgumentException("Invalid file identifier");
+                    }
+                    File fileToLoad = new File(tempDir, fileIdentifier);
                     CompletableFuture.runAsync(
                             () -> {
                                 try {
@@ -516,7 +522,8 @@ public class UploadService {
         // Validate file path to prevent path traversal attacks
         String canonicalPath = file.getCanonicalPath();
         String expectedParentPath = new File(tempDir).getCanonicalPath();
-        if (!canonicalPath.startsWith(expectedParentPath)) {
+        if (!(canonicalPath.equals(expectedParentPath)
+                || canonicalPath.startsWith(expectedParentPath + File.separator))) {
             throw new SecurityException("Invalid file path: potential path traversal detected");
         }
         return loadCSVWithFallback(speciesListID, () -> new FileInputStream(file), dryRun, skipIndexing, false);
@@ -552,10 +559,14 @@ public class UploadService {
                 return loadCSV(speciesListID, is, dryRun, skipIndexing, isMigration, java.nio.charset.StandardCharsets.UTF_8);
             }
         } catch (Exception e) {
-            boolean isCharsetError = e instanceof java.io.CharConversionException 
-                || e instanceof java.nio.charset.MalformedInputException
-                || (e instanceof RuntimeException && (e.getCause() instanceof java.io.CharConversionException || e.getCause() instanceof java.nio.charset.MalformedInputException));
-            
+            boolean isCharsetError = false;
+            for (Throwable t = e; t != null; t = t.getCause()) {
+                if (t instanceof java.nio.charset.CharacterCodingException
+                        || t instanceof java.io.CharConversionException) {
+                    isCharsetError = true;
+                    break;
+                }
+            }
             if (isCharsetError) {
                 logger.warn("UTF-8 parsing failed for list {}, falling back to Windows-1252", speciesListID);
                 if (!dryRun && speciesListID != null) {

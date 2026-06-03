@@ -78,7 +78,7 @@ class UploadServiceTest {
 
         IngestJob job = uploadService.loadCSVWithFallback(
                 "testList",
-                () -> new ByteArrayInputStream(csv.getBytes()),
+                () -> new ByteArrayInputStream(csv.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
                 false,
                 true,
                 false
