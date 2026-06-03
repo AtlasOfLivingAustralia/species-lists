@@ -473,11 +473,13 @@ public class UploadService {
 
     public IngestJob ingestCSVS3(String speciesListID, String s3Key, boolean dryRun, boolean skipIndexing)
             throws Exception {
-        var inputStreamOptional = s3Service.getFileStream(s3Key);
-        if (inputStreamOptional.isEmpty()) {
-            throw new Exception("File not found in S3: " + s3Key);
-        }
-        return loadCSV(speciesListID, inputStreamOptional.get(), dryRun, skipIndexing, false);
+        return loadCSVWithFallback(speciesListID, () -> {
+            var inputStreamOptional = s3Service.getFileStream(s3Key);
+            if (inputStreamOptional.isEmpty()) {
+                throw new Exception("File not found in S3: " + s3Key);
+            }
+            return inputStreamOptional.get();
+        }, dryRun, skipIndexing, false);
     }
 
     public IngestJob ingestZipS3(
@@ -500,7 +502,7 @@ public class UploadService {
             while (entries.hasMoreElements()) {
                 ZipEntry entry = entries.nextElement();
                 if (!entry.isDirectory() && entry.getName().endsWith(".csv")) {
-                    return loadCSV(speciesListID, zipFile.getInputStream(entry), dryRun, skipIndexing, false);
+                    return loadCSVWithFallback(speciesListID, () -> zipFile.getInputStream(entry), dryRun, skipIndexing, false);
                 }
             }
         } finally {
@@ -517,7 +519,7 @@ public class UploadService {
         if (!canonicalPath.startsWith(expectedParentPath)) {
             throw new SecurityException("Invalid file path: potential path traversal detected");
         }
-        return loadCSV(speciesListID, new FileInputStream(file), dryRun, skipIndexing, false);
+        return loadCSVWithFallback(speciesListID, () -> new FileInputStream(file), dryRun, skipIndexing, false);
     }
 
     public IngestJob ingestZip(
@@ -528,10 +530,45 @@ public class UploadService {
         while (entries.hasMoreElements()) {
             ZipEntry entry = entries.nextElement();
             if (!entry.isDirectory() && entry.getName().endsWith(".csv")) {
-                return loadCSV(speciesListID, zipFile.getInputStream(entry), dryRun, skipIndexing, false);
+                return loadCSVWithFallback(speciesListID, () -> zipFile.getInputStream(entry), dryRun, skipIndexing, false);
             }
         }
         return null;
+    }
+
+    @FunctionalInterface
+    public interface InputStreamProvider {
+        InputStream get() throws Exception;
+    }
+
+    public IngestJob loadCSVWithFallback(
+            String speciesListID,
+            InputStreamProvider streamProvider,
+            boolean dryRun,
+            boolean skipIndexing,
+            boolean isMigration) throws Exception {
+        try {
+            try (InputStream is = streamProvider.get()) {
+                return loadCSV(speciesListID, is, dryRun, skipIndexing, isMigration, java.nio.charset.StandardCharsets.UTF_8);
+            }
+        } catch (Exception e) {
+            boolean isCharsetError = e instanceof java.io.CharConversionException 
+                || e instanceof java.nio.charset.MalformedInputException
+                || (e instanceof RuntimeException && (e.getCause() instanceof java.io.CharConversionException || e.getCause() instanceof java.nio.charset.MalformedInputException));
+            
+            if (isCharsetError) {
+                logger.warn("UTF-8 parsing failed for list {}, falling back to Windows-1252", speciesListID);
+                if (!dryRun && speciesListID != null) {
+                    // Cleanup any partially inserted records before retrying
+                    speciesListItemMongoRepository.deleteBySpeciesListID(speciesListID);
+                    speciesListIndexElasticRepository.deleteSpeciesListItemBySpeciesListID(speciesListID);
+                }
+                try (InputStream is2 = streamProvider.get()) {
+                    return loadCSV(speciesListID, is2, dryRun, skipIndexing, isMigration, java.nio.charset.Charset.forName("windows-1252"));
+                }
+            }
+            throw e;
+        }
     }
 
     public IngestJob loadCSV(
@@ -540,6 +577,17 @@ public class UploadService {
             boolean dryRun,
             boolean skipIndexing,
             boolean isMigration)
+            throws Exception {
+        return loadCSV(speciesListID, inputStream, dryRun, skipIndexing, isMigration, java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    public IngestJob loadCSV(
+            String speciesListID,
+            InputStream inputStream,
+            boolean dryRun,
+            boolean skipIndexing,
+            boolean isMigration,
+            java.nio.charset.Charset charset)
             throws Exception {
 
         if (!dryRun && speciesListID != null) {
@@ -555,7 +603,12 @@ public class UploadService {
         int rowCount = 0;
         CsvMapper mapper = new CsvMapper();
         CsvSchema schema = CsvSchema.emptySchema().withHeader();
-        MappingIterator<Map<String, String>> iterator = mapper.reader(Map.class).with(schema).readValues(inputStream);
+        java.io.InputStreamReader reader = new java.io.InputStreamReader(
+                inputStream, 
+                charset.newDecoder()
+                       .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                       .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT));
+        MappingIterator<Map<String, String>> iterator = mapper.readerFor(Map.class).with(schema).readValues(reader);
 
         // store
         Map<String, Set<String>> facets = new HashMap<>();
@@ -707,9 +760,12 @@ public class UploadService {
         logger.info("Field names = " + StringUtils.join(fieldNames, ", "));
         List<String> facetNames = new ArrayList<>(fieldNames);
         facetNames.removeAll(notFacetable);
+        
+        // Filter out empty strings
+        facetNames.removeIf(s -> s == null || s.trim().isEmpty());
 
         logger.info("Facet-able names = " + StringUtils.join(facetNames, ", "));
-        ingestJob.setFieldList(fieldNames.stream().toList());
+        ingestJob.setFieldList(fieldNames.stream().filter(s -> s != null && !s.trim().isEmpty()).toList());
         ingestJob.setFacetList(facetNames);
         ingestJob.setRowCount(rowCount);
         ingestJob.setOriginalFieldNames(originalFieldNames);

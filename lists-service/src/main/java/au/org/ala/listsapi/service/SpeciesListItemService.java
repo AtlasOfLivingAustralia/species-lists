@@ -263,6 +263,9 @@ public class SpeciesListItemService {
         }
 
         for (String field : facetFields) {
+            if (field == null || field.trim().isEmpty()) {
+                continue;
+            }
             String esField = getPropertiesFacetField(field);
             builder.withAggregation(
                 field,
