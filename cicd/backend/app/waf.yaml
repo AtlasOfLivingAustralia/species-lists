@@ -78,7 +78,7 @@ Resources:
           Statement:
             RuleGroupReferenceStatement:
               Arn: !ImportValue
-                Fn::Sub: ${pCommonWafRuleGroupStackName}-BlockJa4RuleGroup2Arn
+                Fn::Sub: ${pCommonWafRuleGroupStackName}-BlockJa4RuleGroupArn
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
