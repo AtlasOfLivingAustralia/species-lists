@@ -1,6 +1,6 @@
 .mobile {
   /* Desktop Sizes */
-  @media (min-width: 48em) {
+  @media (min-width: 769px) {
     display: none !important;
   }
 }

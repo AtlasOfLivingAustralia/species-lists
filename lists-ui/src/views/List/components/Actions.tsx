@@ -324,6 +324,15 @@ export function Actions({
             </Menu.Item>
           {authorisedForList && (
             <>
+                {!isReingest && (
+                  <Menu.Item
+                    onClick={handleAddClick}
+                    disabled={updating || rematching || deleting}
+                    leftSection={<FontAwesomeIcon icon={faPlus} />}
+                  >
+                    <FormattedMessage id='add.taxa.label' defaultMessage='Add species' />
+                  </Menu.Item>
+                )}
                 <Menu.Label>
                   {intl.formatMessage({ id: 'actions.menu.administration', defaultMessage: 'Administration' })}
                 </Menu.Label>
