@@ -42,11 +42,14 @@ public class SpeciesListCustomRepository {
     private Page<SpeciesList> findByCriteria(Criteria baseCriteria, String searchQuery, Pageable pageable) {
         Criteria criteria = baseCriteria;
         if (searchQuery != null && !searchQuery.isBlank()) {
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
+                    java.util.regex.Pattern.quote(searchQuery),
+                    java.util.regex.Pattern.CASE_INSENSITIVE);
             criteria = new Criteria().andOperator(
                     baseCriteria,
                     new Criteria().orOperator(
-                            Criteria.where("title").regex(searchQuery, "i"),
-                            Criteria.where("description").regex(searchQuery, "i")));
+                            Criteria.where("title").regex(pattern),
+                            Criteria.where("description").regex(pattern)));
         }
 
         Query query = new Query(criteria).with(pageable).with(Sort.by("_id"));

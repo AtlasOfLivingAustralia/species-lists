@@ -155,7 +155,7 @@ public class RESTController {
         try {
             String decodedQuery = searchQuery != null && !searchQuery.isBlank()
                     ? URLDecoder.decode(searchQuery, StandardCharsets.UTF_8)
-                    : ".*";
+                    : null;
             String mappedSortField = fixSortField(sort);
             Sort.Direction sortDirection = "desc".equalsIgnoreCase(order)
                     ? Sort.Direction.DESC
