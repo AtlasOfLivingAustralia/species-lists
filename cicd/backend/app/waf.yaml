@@ -38,6 +38,11 @@ Resources:
         SampledRequestsEnabled: true
         CloudWatchMetricsEnabled: true
         MetricName: !Sub ${pEnvironment}-lists-DefaultAction
+      Tags:
+        - Key: Name
+          Value: !Sub lists-eks-${pEnvironment}-backend
+      TokenDomains:
+        - ala.org.au
       Rules:
         - Name: ALAHostHeaderCheck
           Priority: 0

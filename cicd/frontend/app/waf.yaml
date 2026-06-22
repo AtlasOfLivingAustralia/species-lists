@@ -46,6 +46,11 @@ Resources:
         SampledRequestsEnabled: true
         CloudWatchMetricsEnabled: true
         MetricName: !Sub lists-waf-wacl-${pCleanBranch}
+      Tags:
+        - Key: Name
+          Value: !Sub lists-eks-${pEnvironment}-frontend
+      TokenDomains:
+        - ala.org.au
       Rules:
         - Name: ip-allowlist
           Action:
