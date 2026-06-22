@@ -101,9 +101,6 @@ Resources:
             ManagedRuleGroupStatement:
               VendorName: AWS
               Name: AWSManagedRulesKnownBadInputsRuleSet
-      Tags:
-        - Key: Environment
-          Value: !Ref pEnvironment
 
 Outputs:
  ListsWafWebAclArn:
