@@ -1,6 +1,7 @@
 package au.org.ala.listsapi.config;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -46,16 +47,36 @@ public class OpenApiConfig {
     @Bean
     public OpenApiCustomizer trailingSlashRemovalCustomiser() {
         return openApi -> {
-            Paths paths = openApi.getPaths();
-            if (paths != null) {
-                List<String> pathsToRemove = paths.keySet().stream()
-                    .filter(path -> path.endsWith("/") && 
-                            paths.containsKey(path.substring(0, path.length() - 1)))
-                    .collect(Collectors.toList());
-                
-                pathsToRemove.forEach(paths::remove);
+            try {
+                Paths paths = openApi.getPaths();
+                if (paths != null) {
+                    List<String> pathsToRemove = paths.keySet().stream()
+                        .filter(path -> path.endsWith("/") && 
+                                paths.containsKey(path.substring(0, path.length() - 1)))
+                        .collect(Collectors.toList());
+                    
+                    pathsToRemove.forEach(paths::remove);
+
+                    replaceLegacySpeciesWildcardPaths(paths);
+                }
+            } catch (Exception e) {
+                // Leave the generated docs untouched if rewriting fails.
             }
         };
+    }
+
+    private void replaceLegacySpeciesWildcardPaths(Paths paths) {
+        Map<String, String> legacyPathReplacements = Map.of(
+                "/v1/species/**", "/v1/species",
+                "/ws/species/**", "/ws/species");
+
+        legacyPathReplacements.forEach((legacyPath, openApiPath) -> {
+            if (!paths.containsKey(legacyPath)) {
+                return;
+            }
+
+            paths.addPathItem(openApiPath, paths.remove(legacyPath));
+        });
     }
 
     @Bean
