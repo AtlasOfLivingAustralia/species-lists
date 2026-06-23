@@ -1,9 +1,9 @@
 package au.org.ala.listsapi.config;
 
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springdoc.core.customizers.OpenApiCustomizer;
@@ -60,7 +60,8 @@ public class OpenApiConfig {
                     replaceLegacySpeciesWildcardPaths(paths);
                 }
             } catch (Exception e) {
-                // Leave the generated docs untouched if rewriting fails.
+                org.slf4j.LoggerFactory.getLogger(OpenApiConfig.class)
+                        .warn("OpenAPI path rewriting failed; leaving generated docs unchanged.", e);
             }
         };
     }
