@@ -106,6 +106,9 @@
   "admin.wipe-docs": "Wiping documents (MongoDB)",
   "admin.migrate-reset": "Reset migration",
   "admin.reboot": "Rebooting",
+  "admin.banner.title": "Banner Message",
+  "admin.banner.description": "Use the <a>ALA global admin tool</a> to manage banner messages displayed to users. Use the \"Lists\" entry to show message for this app and \"Global\" to show on all ALA apps.",
+  "admin.migration.title": "Migration",
 
   "upload.title": "Upload",
   "upload.title.label": "Upload a list",

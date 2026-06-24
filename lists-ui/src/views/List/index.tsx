@@ -766,8 +766,8 @@ function List() {
                   <Message />
                   ) : paginationLoading ? (
                     <Stack gap="xs" mt={4}>
-                      {[...Array(size)].map((_, i) => (
-                      <Skeleton key={`skeleton-${i}-${size}`} height={i === 0 ? 42 : 30} radius={4} />
+                      {[...Array(size + 1)].map((_, i) => (
+                      <Skeleton key={`skeleton-${i}-${size}`} height={i === 0 ? 50 : 28} radius={4} />
                       ))}
                     </Stack>
                   ) : (
@@ -848,7 +848,8 @@ function List() {
                     </Table.Tbody>
                   </Table>
                   )}
-                  <Center mt='xl'>
+                </Box>
+                <Center mt='xl'>
                   <Pagination
                     disabled={(totalPages || 0) < 1 || hasError}
                     value={realPage}
@@ -864,8 +865,7 @@ function List() {
                     'aria-label': `${control} page`,
                     })}
                   /> 
-                  </Center>
-                </Box>
+                </Center>
               </Grid.Col>
               <Grid.Col span={12} py='xl'>
               </Grid.Col>
