@@ -43,6 +43,7 @@ import classes from './index.module.css';
 export function Component() {
   useDocumentTitle('ALA Lists | Admin');
   const intl = useIntl();
+  const AppVersion = () => <span>v{__APP_VERSION__}</span>
 
   // State hooks
   const migrationLoader = useLoaderData();
@@ -242,16 +243,21 @@ export function Component() {
           <Grid.Col span={12}>
             <Breadcrumbs listTitle={intl.formatMessage({ id: 'admin.title', defaultMessage: 'Admin' })}/>
           </Grid.Col>
-          <Grid.Col span={12}>
+          <Grid.Col span={6}>
             <Title order={3} classNames={{ root: classes.title }} >
               <FormattedMessage id='admin.title.label' defaultMessage='Admin Functions' />
+            </Title>
+          </Grid.Col>
+          <Grid.Col span={6} ta='right'>
+            <Title order={4} classNames={{ root: classes.title }} >
+               AppVersion: <AppVersion />
             </Title>
           </Grid.Col>
         </Grid>
       </Container>
       <Container fluid>
         <Stack gap='xl' mt='lg'>
-          <Grid>
+         <Grid>
             <Grid.Col span={12}>
               <Stack>
                 <Title order={4}>
