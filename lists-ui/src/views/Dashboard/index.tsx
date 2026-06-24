@@ -46,7 +46,7 @@ function Dashboard() {
       />
       <ExternalBanner
         url={import.meta.env.VITE_ALA_MESSAGES}
-        services={['species-lists']} // add `'test-warning'` to services array to test the warning banner
+        services={['lists','global']}
       />
       <Header
         isAuthenticated={auth.isAuthenticated}
