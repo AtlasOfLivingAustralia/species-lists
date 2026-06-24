@@ -253,7 +253,39 @@ export function Component() {
         <Stack gap='xl' mt='lg'>
           <Grid>
             <Grid.Col span={12}>
-              <Title order={4}>Migration</Title>
+              <Stack>
+                <Title order={4}>
+                  <FormattedMessage
+                    id='admin.banner.title'
+                    defaultMessage='Banner Message'
+                  />
+                </Title>
+                <Text>
+                  <FormattedMessage
+                    id='admin.banner.description'
+                    defaultMessage='Use the <a>ALA global admin tool</a> to manage banner messages displayed to users. Use the "Lists" entry to show message for this app and "Global" to show on all ALA apps.'
+                    values={{
+                      a: (chunks) => (
+                        <a
+                          href={
+                            import.meta.env.VITE_ALA_GLOBAL_ADMIN ||
+                            'https://admin.ala.org.au/banners'
+                          }
+                          target='_blank'
+                          rel='noopener noreferrer'
+                        >
+                          {chunks}
+                        </a>
+                      ),
+                    }}
+                  />
+                </Text>
+              </Stack>
+            </Grid.Col>
+          </Grid>
+          <Grid>
+            <Grid.Col span={12}>
+              <Title order={4}><FormattedMessage id='admin.migration.title' defaultMessage='Migration' /></Title>
             </Grid.Col>
             <Grid.Col span={12}>
               <Stack>
