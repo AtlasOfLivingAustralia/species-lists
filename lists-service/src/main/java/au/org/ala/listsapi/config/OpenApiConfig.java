@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springdoc.core.customizers.OpenApiCustomizer;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
@@ -21,14 +20,18 @@ import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * OpenAPI configuration for the Lists API.
  */
+@RequiredArgsConstructor
 @Configuration
 public class OpenApiConfig {
-    @Autowired
-    private MessageSource messageSource;
+    private final MessageSource messageSource;
+    private final Logger log = LoggerFactory.getLogger(OpenApiConfig.class);
 
     Locale locale = LocaleContextHolder.getLocale();
 
@@ -42,6 +45,7 @@ public class OpenApiConfig {
      * Customiser to remove trailing slashes from OpenAPI paths.
      * Mostly used for legacy v1 endpoints which should be accessible
      * with or without a trailing slash.
+     * 
      * @return
      */
     @Bean
@@ -51,17 +55,16 @@ public class OpenApiConfig {
                 Paths paths = openApi.getPaths();
                 if (paths != null) {
                     List<String> pathsToRemove = paths.keySet().stream()
-                        .filter(path -> path.endsWith("/") && 
-                                paths.containsKey(path.substring(0, path.length() - 1)))
-                        .collect(Collectors.toList());
-                    
+                            .filter(path -> path.endsWith("/") &&
+                                    paths.containsKey(path.substring(0, path.length() - 1)))
+                            .collect(Collectors.toList());
+
                     pathsToRemove.forEach(paths::remove);
 
                     replaceLegacySpeciesWildcardPaths(paths);
                 }
             } catch (Exception e) {
-                org.slf4j.LoggerFactory.getLogger(OpenApiConfig.class)
-                        .warn("OpenAPI path rewriting failed; leaving generated docs unchanged.", e);
+                log.warn("OpenAPI path rewriting failed; leaving generated docs unchanged.", e);
             }
         };
     }
@@ -83,7 +86,8 @@ public class OpenApiConfig {
     @Bean
     public OpenAPI customOpenAPI() {
         String version = getClass().getPackage().getImplementationVersion();
-        if (version == null) version = apiVersion;
+        if (version == null)
+            version = apiVersion;
 
         // Sections of the API documentation
         // are ordered by the order in which they are added to this list.
@@ -99,7 +103,7 @@ public class OpenApiConfig {
 
         return new OpenAPI()
                 .info(new Info()
-                        .title(messageSource.getMessage("openapi.info.title", new Object[]{appUrl}, locale))
+                        .title(messageSource.getMessage("openapi.info.title", new Object[] { appUrl }, locale))
                         .description(messageSource.getMessage("openapi.info.description", null, locale))
                         .version(version)
                         .contact(new Contact()
