@@ -46,7 +46,7 @@ function Dashboard() {
       />
       <ExternalBanner
         url={import.meta.env.VITE_ALA_MESSAGES}
-        services={['lists','global']}
+        services={['lists']}
       />
       <Header
         isAuthenticated={auth.isAuthenticated}
