@@ -54,7 +54,7 @@
     "@types/turndown": "^5.0.6",
     "@typescript-eslint/eslint-plugin": "^8.30.1",
     "@typescript-eslint/parser": "^8.30.1",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^6.0.3",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9.24.0",
     "eslint-plugin-react-hooks": "^5.2.0",
@@ -63,7 +63,7 @@
     "postcss-preset-mantine": "^1.15.0",
     "postcss-simple-vars": "^7.0.1",
     "typescript": "^5.2.2",
-    "vite": "^6.4.1",
+    "vite": "^8.1.0",
     "vite-plugin-svgr": "^4.3.0"
   }
 }
