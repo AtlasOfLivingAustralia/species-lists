@@ -2375,7 +2375,7 @@ postcss-nested@^7.0.2:
   dependencies:
     postcss-selector-parser "^7.0.0"
 
-postcss-preset-mantine@^1.15.0:
+postcss-preset-mantine@^1.18.0:
   version "1.18.0"
   resolved "https://registry.yarnpkg.com/postcss-preset-mantine/-/postcss-preset-mantine-1.18.0.tgz#e665fab8205b69f27d634e19d9a6524a2fb1fc04"
   integrity sha512-sP6/s1oC7cOtBdl4mw/IRKmKvYTuzpRrH/vT6v9enMU/EQEQ31eQnHcWtFghOXLH87AAthjL/Q75rLmin1oZoA==
