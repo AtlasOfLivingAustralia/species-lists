@@ -98,7 +98,9 @@ public class SecurityConfig {
         
         // Note: If appUrl has a trailing slash (e.g. ...:5173/), remove it!
         // Multiple origins can be comma-separated; cors.domain adds a wildcard subdomain pattern
-        List<String> allowedOrigins = new ArrayList<>(Arrays.asList(appUrl.split(",\\s*")));
+        List<String> allowedOrigins = Arrays.stream(appUrl.split(",\\s*"))
+                .map(url -> url.endsWith("/") ? url.substring(0, url.length() - 1) : url)
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         if (isValidDomain(corsDomain)) {
             allowedOrigins.add("https://*." + corsDomain.trim());
         } else if (corsDomain != null && !corsDomain.isBlank()) {
@@ -132,8 +134,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests(auth -> auth
             // ALLOW ALL OPTIONS REQUESTS (The fix for 403 Preflight)
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/", "/graphql", "/ingest", "/graphiql", "/v1/species/**", "/csrf", "/**")
-                .permitAll());
+                .anyRequest().permitAll());
         http.cors(Customizer.withDefaults());
         
         // 2. CSRF Configuration (Updated for SPA/React)

@@ -449,7 +449,7 @@ public class IngressController {
             @ApiResponse(responseCode = "400", description = "Bad Request", content = {
                     @Content(mediaType = "text/plain") })
     })
-    public ResponseEntity<Object> ingest(
+    public ResponseEntity<Object> ingestExisting(
             @Parameter(description = "Value should be the `localFile` property returned from the `/v2/upload` endpoint")
             @RequestParam("file") String fileIdentifier,
             @Parameter(description = "Value should be the `speciesListID` for the existing species list to be reloaded")
@@ -577,7 +577,7 @@ public class IngressController {
     }
 
     @NotNull
-    private ResponseEntity<Object> startAsyncTaskIfNotBusy(String name, Runnable runnable) {
+    private synchronized ResponseEntity<Object> startAsyncTaskIfNotBusy(String name, Runnable runnable) {
         if (asyncTask == null || asyncTask.isDone()) {
             asyncTask = CompletableFuture.runAsync(runnable);
             taskName = name;

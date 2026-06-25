@@ -358,6 +358,9 @@ public class SearchHelperService {
         if (speciesListQuery.getIsSDS() != null) {
             query.addCriteria(Criteria.where("isSDS").is(speciesListQuery.getIsSDS()));
         }
+        if (speciesListQuery.getListType() != null) {
+            query.addCriteria(Criteria.where("listType").is(speciesListQuery.getListType()));
+        }
         if (speciesListQuery.getDataResourceUid() != null) {
             if (speciesListQuery.getDataResourceUid().contains(",")) {
                 List<String> dataResourceUids = Arrays.asList(speciesListQuery.getDataResourceUid().split(","));
@@ -567,7 +570,7 @@ public class SearchHelperService {
         builder.withAggregation(
             "list_count",
             Aggregation.of(a -> a.cardinality(
-                ca -> ca.field(SPECIES_LIST_ID + ".keyword")
+                ca -> ca.field(SPECIES_LIST_ID + ".keyword").precisionThreshold(40000)
             ))
         );
         
@@ -612,7 +615,7 @@ public class SearchHelperService {
                     .terms(ta -> ta.field(esField).size(50))
                     .aggregations("distinct_list_count",
                         Aggregation.of(ca -> ca.cardinality(
-                            c -> c.field(SPECIES_LIST_ID + ".keyword")
+                            c -> c.field(SPECIES_LIST_ID + ".keyword").precisionThreshold(40000)
                         ))
                     )
                 )
@@ -1028,6 +1031,9 @@ public class SearchHelperService {
         }
         
         for (String field : facetFields) {
+            if (field == null || field.trim().isEmpty()) {
+                continue;
+            }
             String esField = getPropertiesFacetField(field);
             builder.withAggregation(
                 field,

@@ -296,9 +296,6 @@ export function Actions({
           </ActionIcon>
         </Menu.Target>
         <Menu.Dropdown>
-          <Menu.Label>
-              {intl.formatMessage({ id: 'actions.menu.label', defaultMessage: 'Actions' })}
-          </Menu.Label>
           <Menu.Item
             onClick={handleDownload}
             disabled={updating || rematching || deleting}
@@ -315,49 +312,45 @@ export function Actions({
           >
             Occurrence records
           </Menu.Item>
-            <Menu.Item
-              onClick={() => handleQidRedirect(import.meta.env.VITE_ALA_SPATIAL)}
-              disabled={Boolean(fetchingQid)}
-              leftSection={<FontAwesomeIcon icon={faGlobe} />}
-            >
-              {intl.formatMessage({ id: 'actions.spatialPortal', defaultMessage: 'Spatial portal' })}
-            </Menu.Item>
+          <Menu.Item
+            onClick={() => handleQidRedirect(import.meta.env.VITE_ALA_SPATIAL)}
+            disabled={Boolean(fetchingQid)}
+            leftSection={<FontAwesomeIcon icon={faGlobe} />}
+          >
+            {intl.formatMessage({ id: 'actions.spatialPortal', defaultMessage: 'Spatial portal' })}
+          </Menu.Item>
           {authorisedForList && (
             <>
-                <Menu.Label>
-                  {intl.formatMessage({ id: 'actions.menu.administration', defaultMessage: 'Administration' })}
-                </Menu.Label>
-                <Menu.Item
-                  onClick={handleMetaEdit}
-                  disabled={updating || rematching || deleting}
-                  leftSection={<FontAwesomeIcon icon={faEdit} />}
-                >
-                  {intl.formatMessage({ id: 'actions.editMetadata', defaultMessage: 'Edit metadata' })}
-                </Menu.Item>
-                <Menu.Item
-                  onClick={handleRematch}
-                  disabled={updating || rematching || deleting}
-                  color='red'
-                  leftSection={<FontAwesomeIcon icon={faRefresh} />}
-                >
-                  {intl.formatMessage({ id: 'actions.rematchList', defaultMessage: 'Rematch list' })}
-                </Menu.Item>
-                <Menu.Item
-                  onClick={handleReingest}
-                  disabled={updating || rematching || deleting}
-                  color='red'
-                  leftSection={<FontAwesomeIcon icon={faUpload} />}
-                >
-                  {intl.formatMessage({ id: 'actions.reingestList', defaultMessage: 'Reingest list' })}
-                </Menu.Item>
-                <Menu.Item
-                  onClick={handleDelete}
-                  disabled={updating || rematching || deleting}
-                  color='red'
-                  leftSection={<FontAwesomeIcon icon={faTrashAlt} />}
-                >
-                  {intl.formatMessage({ id: 'actions.deleteList', defaultMessage: 'Delete list' })}
-                </Menu.Item>
+              <Menu.Divider />
+              <Menu.Item
+                onClick={handleMetaEdit}
+                disabled={updating || rematching || deleting}
+                leftSection={<FontAwesomeIcon icon={faEdit} />}
+              >
+                {intl.formatMessage({ id: 'actions.editMetadata', defaultMessage: 'Edit metadata' })}
+              </Menu.Item>
+              <Menu.Item
+                onClick={handleRematch}
+                disabled={updating || rematching || deleting}
+                leftSection={<FontAwesomeIcon icon={faRefresh} />}
+              >
+                {intl.formatMessage({ id: 'actions.rematchList', defaultMessage: 'Rematch list' })}
+              </Menu.Item>
+              <Menu.Item
+                onClick={handleReingest}
+                disabled={updating || rematching || deleting}
+                leftSection={<FontAwesomeIcon icon={faUpload} />}
+              >
+                {intl.formatMessage({ id: 'actions.reingestList', defaultMessage: 'Reingest list' })}
+              </Menu.Item>
+              <Menu.Item
+                onClick={handleDelete}
+                disabled={updating || rematching || deleting}
+                color='red'
+                leftSection={<FontAwesomeIcon icon={faTrashAlt} />}
+              >
+                {intl.formatMessage({ id: 'actions.deleteList', defaultMessage: 'Delete list' })}
+              </Menu.Item>
               <Menu.Divider />
               <Flex
                 direction='row'
@@ -383,6 +376,15 @@ export function Actions({
                   disabled={updating || rematching || deleting}
                 />
               </Flex>
+              {!isReingest && (
+                <Menu.Item
+                  onClick={handleAddClick}
+                  disabled={updating || rematching || deleting}
+                  leftSection={<FontAwesomeIcon icon={faPlus} />}
+                >
+                  <FormattedMessage id='add.taxa.label' defaultMessage='Add species' />
+                </Menu.Item>
+              )}
             </>
           )}
         </Menu.Dropdown>

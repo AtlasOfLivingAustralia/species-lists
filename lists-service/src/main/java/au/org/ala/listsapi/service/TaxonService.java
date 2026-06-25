@@ -833,25 +833,13 @@ public class TaxonService {
         if (StringUtils.isNotBlank(item.getVernacularName())) {
             builder.vernacularName(StringUtils.trimToNull(item.getVernacularName()));
         }
-        // Set taxonomic hierarchy
-        if (StringUtils.isNotBlank(item.getKingdom())) {
-            builder.kingdom(StringUtils.trimToNull(item.getKingdom()));
-        }
-        if (StringUtils.isNotBlank(item.getPhylum())) {
-            builder.phylum(StringUtils.trimToNull(item.getPhylum()));
-        }
-        if (StringUtils.isNotBlank(item.getClasss())) {
-            builder.clazz(StringUtils.trimToNull(item.getClasss()));
-        }
-        if (StringUtils.isNotBlank(item.getOrder())) {
-            builder.order(StringUtils.trimToNull(item.getOrder()));
-        }
-        if (StringUtils.isNotBlank(item.getFamily())) {
-            builder.family(StringUtils.trimToNull(item.getFamily()));
-        }
-        if (StringUtils.isNotBlank(item.getGenus())) {
-            builder.genus(StringUtils.trimToNull(item.getGenus()));
-        }
+        // Set taxonomic hierarchy - check direct fields first, then fall back to raw* fields in properties
+        setTaxonomicField(builder::kingdom, item.getKingdom(), "rawkingdom", item.getProperties());
+        setTaxonomicField(builder::phylum, item.getPhylum(), "rawphylum", item.getProperties());
+        setTaxonomicField(builder::clazz, item.getClasss(), "rawclass", item.getProperties());
+        setTaxonomicField(builder::order, item.getOrder(), "raworder", item.getProperties());
+        setTaxonomicField(builder::family, item.getFamily(), "rawfamily", item.getProperties());
+        setTaxonomicField(builder::genus, item.getGenus(), "rawgenus", item.getProperties());
 
         if (item.getProperties() != null) {
             String rank = item.getProperties().stream()
@@ -938,6 +926,34 @@ public class TaxonService {
         if (memoryUsagePercent > 80) {
             logger.warn("[Memory|{}] High memory usage: {:.1f}% - consider running GC or reducing batch sizes", 
                     context, memoryUsagePercent);
+        }
+    }
+
+    /**
+     * Helper method to set a taxonomic field in the NameSearch builder.
+     * Checks the direct field value first, then falls back to the raw* field in properties.
+     *
+     * @param setter The builder setter method reference
+     * @param directValue The direct field value (may be null/blank)
+     * @param rawFieldName The raw field name to search for in properties (case-insensitive)
+     * @param properties The properties list from SpeciesListItem
+     */
+    private void setTaxonomicField(
+            java.util.function.Consumer<String> setter,
+            String directValue,
+            String rawFieldName,
+            List<KeyValue> properties) {
+        String value = directValue;
+        if (StringUtils.isBlank(value) && properties != null) {
+            value = properties.stream()
+                    .filter(kv -> rawFieldName.equalsIgnoreCase(kv.getKey()))
+                    .map(KeyValue::getValue)
+                    .filter(StringUtils::isNotBlank)
+                    .findFirst()
+                    .orElse(null);
+        }
+        if (StringUtils.isNotBlank(value)) {
+            setter.accept(StringUtils.trimToNull(value));
         }
     }
 }

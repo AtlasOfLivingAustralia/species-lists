@@ -32,6 +32,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -106,6 +107,8 @@ public class UploadService {
     }
 
     private static final Set<String> ACCEPTED_FILE_TYPES = Set.of("text/csv", "application/zip");
+
+    private static final Pattern UUID_PATTERN = Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
 
     public static Set<String> getAcceptedFileTypes() {
         return ACCEPTED_FILE_TYPES;
@@ -297,7 +300,13 @@ public class UploadService {
                                 }
                             });
                 } else {
-                    File fileToLoad = new File(tempDir + "/" + fileIdentifier);
+                    if (fileIdentifier == null
+                            || fileIdentifier.contains("..")
+                            || fileIdentifier.contains("/")
+                            || fileIdentifier.contains("\\")) {
+                        throw new IllegalArgumentException("Invalid file identifier");
+                    }
+                    File fileToLoad = new File(tempDir, fileIdentifier);
                     CompletableFuture.runAsync(
                             () -> {
                                 try {
@@ -470,11 +479,13 @@ public class UploadService {
 
     public IngestJob ingestCSVS3(String speciesListID, String s3Key, boolean dryRun, boolean skipIndexing)
             throws Exception {
-        var inputStreamOptional = s3Service.getFileStream(s3Key);
-        if (inputStreamOptional.isEmpty()) {
-            throw new Exception("File not found in S3: " + s3Key);
-        }
-        return loadCSV(speciesListID, inputStreamOptional.get(), dryRun, skipIndexing, false);
+        return loadCSVWithFallback(speciesListID, () -> {
+            var inputStreamOptional = s3Service.getFileStream(s3Key);
+            if (inputStreamOptional.isEmpty()) {
+                throw new Exception("File not found in S3: " + s3Key);
+            }
+            return inputStreamOptional.get();
+        }, dryRun, skipIndexing, false);
     }
 
     public IngestJob ingestZipS3(
@@ -497,7 +508,7 @@ public class UploadService {
             while (entries.hasMoreElements()) {
                 ZipEntry entry = entries.nextElement();
                 if (!entry.isDirectory() && entry.getName().endsWith(".csv")) {
-                    return loadCSV(speciesListID, zipFile.getInputStream(entry), dryRun, skipIndexing, false);
+                    return loadCSVWithFallback(speciesListID, () -> zipFile.getInputStream(entry), dryRun, skipIndexing, false);
                 }
             }
         } finally {
@@ -511,10 +522,11 @@ public class UploadService {
         // Validate file path to prevent path traversal attacks
         String canonicalPath = file.getCanonicalPath();
         String expectedParentPath = new File(tempDir).getCanonicalPath();
-        if (!canonicalPath.startsWith(expectedParentPath)) {
+        if (!(canonicalPath.equals(expectedParentPath)
+                || canonicalPath.startsWith(expectedParentPath + File.separator))) {
             throw new SecurityException("Invalid file path: potential path traversal detected");
         }
-        return loadCSV(speciesListID, new FileInputStream(file), dryRun, skipIndexing, false);
+        return loadCSVWithFallback(speciesListID, () -> new FileInputStream(file), dryRun, skipIndexing, false);
     }
 
     public IngestJob ingestZip(
@@ -525,10 +537,49 @@ public class UploadService {
         while (entries.hasMoreElements()) {
             ZipEntry entry = entries.nextElement();
             if (!entry.isDirectory() && entry.getName().endsWith(".csv")) {
-                return loadCSV(speciesListID, zipFile.getInputStream(entry), dryRun, skipIndexing, false);
+                return loadCSVWithFallback(speciesListID, () -> zipFile.getInputStream(entry), dryRun, skipIndexing, false);
             }
         }
         return null;
+    }
+
+    @FunctionalInterface
+    public interface InputStreamProvider {
+        InputStream get() throws Exception;
+    }
+
+    public IngestJob loadCSVWithFallback(
+            String speciesListID,
+            InputStreamProvider streamProvider,
+            boolean dryRun,
+            boolean skipIndexing,
+            boolean isMigration) throws Exception {
+        try {
+            try (InputStream is = streamProvider.get()) {
+                return loadCSV(speciesListID, is, dryRun, skipIndexing, isMigration, java.nio.charset.StandardCharsets.UTF_8);
+            }
+        } catch (Exception e) {
+            boolean isCharsetError = false;
+            for (Throwable t = e; t != null; t = t.getCause()) {
+                if (t instanceof java.nio.charset.CharacterCodingException
+                        || t instanceof java.io.CharConversionException) {
+                    isCharsetError = true;
+                    break;
+                }
+            }
+            if (isCharsetError) {
+                logger.warn("UTF-8 parsing failed for list {}, falling back to Windows-1252", speciesListID);
+                if (!dryRun && speciesListID != null) {
+                    // Cleanup any partially inserted records before retrying
+                    speciesListItemMongoRepository.deleteBySpeciesListID(speciesListID);
+                    speciesListIndexElasticRepository.deleteSpeciesListItemBySpeciesListID(speciesListID);
+                }
+                try (InputStream is2 = streamProvider.get()) {
+                    return loadCSV(speciesListID, is2, dryRun, skipIndexing, isMigration, java.nio.charset.Charset.forName("windows-1252"));
+                }
+            }
+            throw e;
+        }
     }
 
     public IngestJob loadCSV(
@@ -537,6 +588,17 @@ public class UploadService {
             boolean dryRun,
             boolean skipIndexing,
             boolean isMigration)
+            throws Exception {
+        return loadCSV(speciesListID, inputStream, dryRun, skipIndexing, isMigration, java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    public IngestJob loadCSV(
+            String speciesListID,
+            InputStream inputStream,
+            boolean dryRun,
+            boolean skipIndexing,
+            boolean isMigration,
+            java.nio.charset.Charset charset)
             throws Exception {
 
         if (!dryRun && speciesListID != null) {
@@ -552,7 +614,12 @@ public class UploadService {
         int rowCount = 0;
         CsvMapper mapper = new CsvMapper();
         CsvSchema schema = CsvSchema.emptySchema().withHeader();
-        MappingIterator<Map<String, String>> iterator = mapper.reader(Map.class).with(schema).readValues(inputStream);
+        java.io.InputStreamReader reader = new java.io.InputStreamReader(
+                inputStream, 
+                charset.newDecoder()
+                       .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                       .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT));
+        MappingIterator<Map<String, String>> iterator = mapper.readerFor(Map.class).with(schema).readValues(reader);
 
         // store
         Map<String, Set<String>> facets = new HashMap<>();
@@ -570,7 +637,7 @@ public class UploadService {
             Map<String, String> values = iterator.next();
 
             if (isMigration) {
-                // remove legacy data
+                // Remove legacy data
                 values.remove("guid");
                 values.remove("scientificName");
                 values.remove("family");
@@ -589,7 +656,20 @@ public class UploadService {
             String suppliedName = values.remove("Supplied Name");
 
             if (suppliedName != null) {
-                scientificName = suppliedName; // undocumented input field, left in for backward compatibility
+                String trimmed = suppliedName.trim();
+                boolean isGuid = trimmed.startsWith("urn:") || 
+                                 trimmed.startsWith("http:") || 
+                                 trimmed.startsWith("https:") || 
+                                 UUID_PATTERN.matcher(trimmed).matches();
+                if (isGuid) {
+                    if (StringUtils.isEmpty(taxonID)) {
+                        taxonID = suppliedName;
+                    }
+                } else {
+                    if (StringUtils.isEmpty(scientificName)) {
+                        scientificName = suppliedName; // undocumented input field, left in for backward compatibility
+                    }
+                }
             } else {
                 suppliedName = firstNonEmpty(scientificName, taxonID, taxonConceptID, vernacularName);
             }
@@ -691,9 +771,12 @@ public class UploadService {
         logger.info("Field names = " + StringUtils.join(fieldNames, ", "));
         List<String> facetNames = new ArrayList<>(fieldNames);
         facetNames.removeAll(notFacetable);
+        
+        // Filter out empty strings
+        facetNames.removeIf(s -> s == null || s.trim().isEmpty());
 
         logger.info("Facet-able names = " + StringUtils.join(facetNames, ", "));
-        ingestJob.setFieldList(fieldNames.stream().toList());
+        ingestJob.setFieldList(fieldNames.stream().filter(s -> s != null && !s.trim().isEmpty()).toList());
         ingestJob.setFacetList(facetNames);
         ingestJob.setRowCount(rowCount);
         ingestJob.setOriginalFieldNames(originalFieldNames);

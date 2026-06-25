@@ -39,8 +39,6 @@ import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
 import {
   faCode,
-  faEye,
-  faEyeSlash,
   faMagnifyingGlass,
   faXmark
 } from '@fortawesome/free-solid-svg-icons';
@@ -78,6 +76,8 @@ const sortField = [
   'rowCount_desc',
   'rowCount_asc',
 ];
+
+const MAX_ENTRIES = 10000; // Maximum number of entries the API allows us to paginate through (for performance reasons)
 
 const Home = ({ routeId }: { routeId: string }) => {
   useDocumentTitle('ALA Species Lists');
@@ -126,8 +126,18 @@ const Home = ({ routeId }: { routeId: string }) => {
     parseAsFilters
   );
 
-  // Normalize filters to always be an array
-  const filters = useMemo(() => filtersRaw || [], [filtersRaw]);
+  // Normalize filters to always be an array and ensure mutual exclusivity for isPrivate
+  const filters = useMemo(() => {
+    const arr = filtersRaw || [];
+    let foundPrivate = false;
+    return arr.filter(f => {
+      if (f.key === 'isPrivate') {
+        if (foundPrivate) return false;
+        foundPrivate = true;
+      }
+      return true;
+    });
+  }, [filtersRaw]);
   const setFilters = useCallback((value: KV[] | ((prev: KV[] | null) => KV[] | null)) => {
     if (typeof value === 'function') {
       setFiltersRaw((prev) => {
@@ -183,7 +193,9 @@ const Home = ({ routeId }: { routeId: string }) => {
   );
 
   // Destructure results & calculate the real page offset
-  const { totalElements, totalPages, content } = data?.lists || {};
+  const { totalElements, totalPages: rawTotalPages, content } = data?.lists || {};
+  const maxAllowedPages = Math.ceil(MAX_ENTRIES / size);
+  const totalPages = rawTotalPages ? Math.min(rawTotalPages, maxAllowedPages) : undefined;
   const realPage = page + 1;
   const filtersKey = JSON.stringify(filters);
 
@@ -245,7 +257,13 @@ const Home = ({ routeId }: { routeId: string }) => {
         );
       } else {
         setPage(0); // Reset 'page' when a filter is added
-        setFilters([...(filters || []), filter]);
+        
+        // Prevent selecting both public and private simultaneously
+        const nextFilters = filter.key === 'isPrivate' 
+            ? (filters || []).filter(({ key }) => key !== 'isPrivate')
+            : (filters || []);
+            
+        setFilters([...nextFilters, filter]);
       }
     },
     [filters, setFilters, setPage]
@@ -267,6 +285,21 @@ const Home = ({ routeId }: { routeId: string }) => {
   };
 
   const hasError = Boolean(error);
+
+  const filteredFacets = useMemo(() => {
+    return (data?.facets || []).filter(facet => {
+      // Keep it if it's currently an active filter
+      const isActive = filters.some(f => f.key === facet.key);
+      if (isActive) return true;
+      
+      // Otherwise, hide if there's only 1 option and its count equals or exceeds the total elements
+      if (facet.counts.length === 1 && facet.counts[0].count >= totalElements) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [data?.facets, totalElements, filters]);
 
   return (
     <>
@@ -491,7 +524,7 @@ const Home = ({ routeId }: { routeId: string }) => {
                     </Stack>
                 ) : (
                   <FiltersSection
-                    facets={data?.facets || []}
+                    facets={filteredFacets}
                     active={filters || []}
                     onSelect={handleFilterClick}
                     onReset={() => {
@@ -645,12 +678,6 @@ const Home = ({ routeId }: { routeId: string }) => {
                   getControlProps={(control) => ({
                     'aria-label': `${control} page`,
                   })}
-                  getItemProps={(page) => {
-                    if (page === totalPages) {
-                      return { style: { display: 'none' } };
-                    }
-                    return {};
-                  }}
                 />
               </Stack>
             </Grid.Col>

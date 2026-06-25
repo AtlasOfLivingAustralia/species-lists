@@ -5,7 +5,7 @@ This monorepo contains two sub-projects:
 - **`lists-ui/`** – React 19 / TypeScript / Vite frontend
 
 All commands below should be run from the relevant sub-project directory unless stated otherwise.
-
+Never commit any changes directly to the main branch
 ---
 
 ## 1. Repository Structure
@@ -22,7 +22,7 @@ species-lists/
 
 **Language:** Java 21 | **Framework:** Spring Boot 3.5.x | **Build:** Maven
 **Databases:** MongoDB (primary), Elasticsearch (search index)
-**Formatting:** Google Java Format via Spotless Maven Plugin
+**Formatting:** Google Java Format 
 
 ### Build
 ```bash
@@ -47,7 +47,7 @@ mvn -Dtest=AuthUtilsTest#adminUser_isAuthorized test
 mvn -Dtest=SpeciesListTransformerTest test
 ```
 
-### Linting & Formatting (Spotless)
+### Linting & Formatting
 ```bash
 # Check for formatting violations
 mvn spotless:check
@@ -56,7 +56,6 @@ mvn spotless:check
 mvn spotless:apply
 ```
 > Always ask user before running  `mvn spotless:apply` 
-> Alwats ask user before committing any code to Git
 
 ---
 
@@ -117,7 +116,7 @@ yarn lint
 Static imports appear in their own block. `spotless:apply` will enforce this automatically.
 
 ### Formatting
-- **Indentation:** 2 spaces (Google Java Format default – let Spotless manage it)
+- **Indentation:** 4 spaces (Google Java Format default)
 - **Line length:** managed by Spotless
 - **Braces:** K&R style (opening brace on the same line)
 
