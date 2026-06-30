@@ -780,7 +780,14 @@ public class GraphQLController {
             if (dataResourceUid != null && !dataResourceUid.equals(toUpdate.getDataResourceUid())) {
                 AlaUserProfile profile = authUtils.getUserProfile(principal);
                 if (!authUtils.hasAdminRole(profile)) {
-                    throw new AccessDeniedException("You dont have permission to edit the data resource UID");
+                    throw new AccessDeniedException("You don't have permission to edit the data resource UID");
+                }
+                if (StringUtils.isBlank(dataResourceUid)) {
+                    throw new Exception("dataResourceUid must not be blank");
+                }
+                Optional<SpeciesList> existing = speciesListMongoRepository.findByDataResourceUid(dataResourceUid);
+                if (existing.isPresent() && !existing.get().getId().equals(toUpdate.getId())) {
+                    throw new Exception("dataResourceUid is already in use by another list");
                 }
                 toUpdate.setDataResourceUid(dataResourceUid);
                 reindexRequired = true;

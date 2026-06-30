@@ -390,15 +390,22 @@ export function ListMeta({
                     label={
                         <Group gap="xs">
                             <FontAwesomeIcon icon={faExclamationTriangle} color="red" />
-                            <FormattedMessage id="listmeta.dr.label" defaultMessage="Data Resource ID" />
+                            <FormattedMessage id="listmeta.dr.label" defaultMessage="Data Resource UID" />
                         </Group>
                     }
-                    placeholder={intl.formatMessage({ id: 'listmeta.dr.placeholder', defaultMessage: 'Data Resource ID' })}
+                    placeholder={intl.formatMessage({ id: 'listmeta.dr.placeholder', defaultMessage: 'Data Resource UID' })}
                     disabled={loading}
                     readOnly={!uidChangeConfirmed}
                     onClick={() => {
                         if (!uidChangeConfirmed) {
-                            if (window.confirm("Are you sure you want to change the ID, this is a dangerous change?")) {
+                            if (
+                                window.confirm(
+                                    intl.formatMessage({
+                                        id: 'listmeta.dr.confirm',
+                                        defaultMessage: 'Are you sure you want to change the UID? This is a dangerous change.',
+                                    })
+                                )
+                            ) {
                                 setUidChangeConfirmed(true);
                             }
                         }
