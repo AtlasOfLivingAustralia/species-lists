@@ -30,7 +30,6 @@ export default ({ mode }: { mode: string }) => {
           // Your existing project
           '.',
           // Add your linked library path
-          //'/Users/dos009/Documents/Github/ala-mantine'
           resolve(__dirname, '../../ala-mantine')
         ]
       }
