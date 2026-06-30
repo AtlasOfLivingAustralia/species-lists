@@ -10,6 +10,7 @@ export interface ALAContextProps {
   roles: string[];
   rest: ReturnType<typeof rest>;
   isAdmin: boolean;
+  isAdminOrEditor: boolean;
   isAuthenticated: boolean;
   isAuthorisedForList: (list: SpeciesList) => boolean;
   showAuthRequiredNotification: () => void;
@@ -21,6 +22,7 @@ export default createContext<ALAContextProps | null>({
   roles: [],
   rest: rest('', false),
   isAdmin: false,
+  isAdminOrEditor: false,
   isAuthenticated: false,
   isAuthorisedForList: () => false,
   showAuthRequiredNotification: () => {},

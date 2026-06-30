@@ -20,7 +20,7 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { ExternalLinkIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { faExclamationTriangle, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { FormattedMessage, useIntl } from 'react-intl';
 
@@ -76,6 +76,7 @@ export function ListMeta({
 }: ListMetaProps) {
   const { constraints, loaded } = useConstraints(ala);
   const [tagSearch, setTagSearch] = useState('');
+  const [uidChangeConfirmed, setUidChangeConfirmed] = useState(false);
   const [customTags, setCustomTags] = useState<string[]>([]);
 
   const intl = useIntl();
@@ -382,6 +383,37 @@ export function ListMeta({
             onChange={(value) => form.setFieldValue('isPrivate', value === 'private')}
           />
         </Grid.Col>
+        {ala.isAdmin && (
+            <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+                <TextInput
+                    name='dataResourceUid'
+                    label={
+                        <Group gap="xs">
+                            <FontAwesomeIcon icon={faExclamationTriangle} color="red" />
+                            <FormattedMessage id="listmeta.dr.label" defaultMessage="Data Resource UID" />
+                        </Group>
+                    }
+                    placeholder={intl.formatMessage({ id: 'listmeta.dr.placeholder', defaultMessage: 'Data Resource UID' })}
+                    disabled={loading}
+                    readOnly={!uidChangeConfirmed}
+                    onClick={() => {
+                        if (!uidChangeConfirmed) {
+                            if (
+                                window.confirm(
+                                    intl.formatMessage({
+                                        id: 'listmeta.dr.confirm',
+                                        defaultMessage: 'Are you sure you want to change the UID? This is a dangerous change.',
+                                    })
+                                )
+                            ) {
+                                setUidChangeConfirmed(true);
+                            }
+                        }
+                    }}
+                    {...form.getInputProps('dataResourceUid')}
+                />
+            </Grid.Col>
+        )}
         <Grid.Col span={{ base: 12 }}>
           <Textarea
             name='wkt'
