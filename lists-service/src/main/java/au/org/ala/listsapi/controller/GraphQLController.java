@@ -757,6 +757,7 @@ public class GraphQLController {
             @Argument Boolean isSDS,
             @Argument Boolean isBIE,
             @Argument List<String> tags,
+            @Argument String dataResourceUid,
             @AuthenticationPrincipal Principal principal) throws Exception {
         Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(id, id);
 
@@ -774,6 +775,15 @@ public class GraphQLController {
                     !validationService.isValueValid(ConstraintType.licence, licence)) {
                 throw new Exception(
                         "Updated list contains invalid properties for a controlled value (list type, license)");
+            }
+
+            if (dataResourceUid != null && !dataResourceUid.equals(toUpdate.getDataResourceUid())) {
+                AlaUserProfile profile = authUtils.getUserProfile(principal);
+                if (!authUtils.hasAdminRole(profile)) {
+                    throw new AccessDeniedException("You dont have permission to edit the data resource UID");
+                }
+                toUpdate.setDataResourceUid(dataResourceUid);
+                reindexRequired = true;
             }
 
             if (title != null && !title.equalsIgnoreCase(toUpdate.getTitle())
