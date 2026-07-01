@@ -43,6 +43,7 @@ import classes from './index.module.css';
 export function Component() {
   useDocumentTitle('ALA Lists | Admin');
   const intl = useIntl();
+  const AppVersion = () => <span>v{__APP_VERSION__}</span>
 
   // State hooks
   const migrationLoader = useLoaderData();
@@ -242,18 +243,55 @@ export function Component() {
           <Grid.Col span={12}>
             <Breadcrumbs listTitle={intl.formatMessage({ id: 'admin.title', defaultMessage: 'Admin' })}/>
           </Grid.Col>
-          <Grid.Col span={12}>
+          <Grid.Col span={6}>
             <Title order={3} classNames={{ root: classes.title }} >
               <FormattedMessage id='admin.title.label' defaultMessage='Admin Functions' />
+            </Title>
+          </Grid.Col>
+          <Grid.Col span={6} ta='right'>
+            <Title order={4} classNames={{ root: classes.title }} >
+               AppVersion: <AppVersion />
             </Title>
           </Grid.Col>
         </Grid>
       </Container>
       <Container fluid>
         <Stack gap='xl' mt='lg'>
+         <Grid>
+            <Grid.Col span={12}>
+              <Stack>
+                <Title order={4}>
+                  <FormattedMessage
+                    id='admin.banner.title'
+                    defaultMessage='Banner Message'
+                  />
+                </Title>
+                <Text>
+                  <FormattedMessage
+                    id='admin.banner.description'
+                    defaultMessage='Use the <a>ALA global admin tool</a> to manage banner messages displayed to users. Use the "Lists" entry to show message for this app and "Global" to show on all ALA apps.'
+                    values={{
+                      a: (chunks) => (
+                        <a
+                          href={
+                            import.meta.env.VITE_ALA_GLOBAL_ADMIN ||
+                            'https://admin.ala.org.au/banners'
+                          }
+                          target='_blank'
+                          rel='noopener noreferrer'
+                        >
+                          {chunks}
+                        </a>
+                      ),
+                    }}
+                  />
+                </Text>
+              </Stack>
+            </Grid.Col>
+          </Grid>
           <Grid>
             <Grid.Col span={12}>
-              <Title order={4}>Migration</Title>
+              <Title order={4}><FormattedMessage id='admin.migration.title' defaultMessage='Migration' /></Title>
             </Grid.Col>
             <Grid.Col span={12}>
               <Stack>

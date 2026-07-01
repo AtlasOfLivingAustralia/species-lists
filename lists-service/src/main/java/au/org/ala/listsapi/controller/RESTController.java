@@ -16,21 +16,23 @@
 package au.org.ala.listsapi.controller;
 
 import java.security.Principal;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.net.URLDecoder;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Example;
-import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -137,11 +139,31 @@ public class RESTController {
     @GetMapping("/v2/speciesList")
     public ResponseEntity<Object> speciesLists(
             @ParameterObject RESTSpeciesListQuery speciesList,
+            @Parameter(description = "Search query for filtering species lists", example = "Eucalyptus", required = false)
+            @Nullable @RequestParam(name = "q", required = false) String searchQuery,
+            @Schema(allowableValues = {"count", "listName", "listType", "dateCreated", "lastUpdated", "ownerFullName", "region", "category", "authority"})
+            @Parameter(description = "Field to sort by", example = "listName", required = false)
+            @Nullable @RequestParam(name = "sort", defaultValue = "listName") String sort,
+            @Schema(allowableValues = {"asc", "desc"})
+            @Parameter(description = "Sort direction (asc or desc)", example = "asc", required = false)
+            @Nullable @RequestParam(name = "order", defaultValue = "asc") String order,
+            @Parameter(description = "Page number for pagination", example = "1", required = false)
             @RequestParam(name = "page", defaultValue = "1", required = false) @Max(10000) int page,
+            @Parameter(description = "Number of items per page", example = "10", required = false)
             @RequestParam(name = "pageSize", defaultValue = "10", required = false) @Max(1000) int pageSize,
             @AuthenticationPrincipal Principal principal) {
         try {
-            Pageable paging = PageRequest.of(page - 1, pageSize);
+            String decodedQuery = searchQuery != null && !searchQuery.isBlank()
+                    ? URLDecoder.decode(searchQuery, StandardCharsets.UTF_8)
+                    : null;
+            String mappedSortField = fixSortField(sort);
+            Sort.Direction sortDirection = "desc".equalsIgnoreCase(order)
+                    ? Sort.Direction.DESC
+                    : Sort.Direction.ASC;
+            Pageable paging = PageRequest.of(page - 1, pageSize,
+                    Sort.by(sortDirection, mappedSortField).and(Sort.by("_id")));
+
+            AlaUserProfile profile = null;
 
             if (!authUtils.isAuthenticated(principal)) {
                 if (eq(speciesList.getIsPrivate(), "true")) {
@@ -151,7 +173,7 @@ public class RESTController {
 
                 speciesList.setIsPrivate("false");
             } else {
-                AlaUserProfile profile = authUtils.getUserProfile(principal);
+                profile = authUtils.getUserProfile(principal);
 
                 // If the user isn't an admin or doesn't have internal scope
                 if (!authUtils.hasAdminRole(profile) && !authUtils.hasInternalScope(profile)) {
@@ -168,8 +190,12 @@ public class RESTController {
                             publicLists.setIsPrivate("false");
 
                             Page<SpeciesList> results = speciesListCustomRepository
-                                    .findByMultipleExamples(privateLists.convertTo(), publicLists.convertTo(), paging);
-                            return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
+                                    .findByMultipleExamples(privateLists.convertTo(), publicLists.convertTo(), decodedQuery, paging);
+                            SpeciesListPage response = getLegacyFormatModel(results);
+                            response.setQ(decodedQuery);
+                            response.setSort(sort);
+                            response.setOrder(order);
+                            return new ResponseEntity<>(response, HttpStatus.OK);
                         } else { // Otherwise, only query public lists with that userid
                             speciesList.setIsPrivate("false");
                         }
@@ -186,24 +212,30 @@ public class RESTController {
                 // If the user is an admin or has internal scope, they can query any lists without restrictions
             }
 
-            if (speciesList == null || speciesList.isEmpty()) {
-                Page<SpeciesList> results = speciesListMongoRepository.findAll(paging);
-                return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
-            }
+            Page<SpeciesList> results = speciesListCustomRepository
+                    .findByExample(speciesList.convertTo(), decodedQuery, paging);
 
-            ExampleMatcher matcher = ExampleMatcher.matching()
-                    .withIgnoreCase()
-                    .withIgnoreNullValues()
-                    .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
-
-            // Create an Example from the exampleProduct with the matcher
-            Example<SpeciesList> example = Example.of(speciesList.convertTo(), matcher);
-            Page<SpeciesList> results = speciesListMongoRepository.findAll(example, paging);
-            return new ResponseEntity<>(getLegacyFormatModel(results), HttpStatus.OK);
+            SpeciesListPage response = getLegacyFormatModel(results);
+            response.setQ(decodedQuery);
+            response.setSort(sort);
+            response.setOrder(order);
+            return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    private String fixSortField(String sort) {
+        Map<String, String> sortFieldMapping = Map.of(
+                "count", "rowCount",
+                "listName", "title",
+                "ownerFullName", "ownerName",
+                "guid", "classification.taxonConceptID",
+                "region", "hasRegion",
+                "rawScientificName", "suppliedName");
+
+        return sortFieldMapping.getOrDefault(sort, sort);
     }
 
     @Operation(tags = "REST v2", summary = "Get a list of species lists that contain the specified taxon GUID")

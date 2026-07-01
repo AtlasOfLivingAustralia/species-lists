@@ -157,6 +157,7 @@ export const MUTATION_LIST_UPDATE = `mutation update(
   $isBIE: Boolean
   $wkt: String
   $tags: [String]
+  $dataResourceUid: String
 ) {
   updateMetadata(
     id: $id
@@ -174,6 +175,7 @@ export const MUTATION_LIST_UPDATE = `mutation update(
     isBIE: $isBIE
     wkt: $wkt
     tags: $tags
+    dataResourceUid: $dataResourceUid
   ) {
     id
   }

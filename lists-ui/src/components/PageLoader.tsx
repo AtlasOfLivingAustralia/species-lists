@@ -1,23 +1,13 @@
-import Lottie, { LottieComponentProps } from 'lottie-react';
-import { Center } from '@mantine/core';
+import { Center, Loader } from '@mantine/core';
 
-// Loader animation
-import loader from '../static/ala-loader-quick.json';
-
-interface PageLoaderProps
-  extends Omit<LottieComponentProps, 'animationData' | 'style'> {
+interface PageLoaderProps {
   size?: number;
 }
 
-export default function PageLoader({ size, ...rest }: PageLoaderProps) {
+export default function PageLoader({ size }: PageLoaderProps) {
   return (
     <Center w='100%' h='100%'>
-      <Lottie
-        style={{ width: size || 200, height: size || 200 }}
-        animationData={loader}
-        autoplay
-        {...rest}
-      />
+      <Loader size={size || 64} />
     </Center>
   );
 }
