@@ -416,21 +416,29 @@ export function ListMeta({
                   </Text>
                   <Text mt="sm" mb="lg">
                     <FormattedMessage 
-                      id="listmeta.dr.dialog.message.2" 
-                      defaultMessage="This is a <strong>dangerous change</strong> and will update data on the collections metadata page, that cannot be undone" 
-                      values={{
+                      defaultMessage="This is a <strong>dangerous change</strong> and will update data on the collections metadata page, that cannot be undone. Please check the new Data Resource ID is correct in the Collections app, before updating."
                         strong: (chunks) => <strong>{chunks}</strong>,
                       }}
                       />
                   </Text>
-                  <form method="dialog">
-                    <Button variant='light' type="submit" value="cancel" radius="md" mr="md">
+                  <Group justify="flex-end" gap="md">
+                    <Button
+                      variant="light"
+                      type="button"
+                      radius="md"
+                      onClick={() => dialogRef.current?.close('cancel')}
+                    >
                       <FormattedMessage id="listmeta.button.cancel.label" defaultMessage="Cancel" />
                     </Button>
-                    <Button variant='filled' type="submit" value="confirm" radius="md">
+                    <Button
+                      variant="filled"
+                      type="button"
+                      radius="md"
+                      onClick={() => dialogRef.current?.close('confirm')}
+                    >
                       <FormattedMessage id="listmeta.button.confirm.label" defaultMessage="Confirm" />
                     </Button>
-                  </form>
+                  </Group>
                 </dialog>
                 <TextInput
                     name='dataResourceUid'
