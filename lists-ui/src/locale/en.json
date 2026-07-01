@@ -183,7 +183,7 @@
 
   "visiblility.private": "This list is private. It is only accessible to the owner, editors and administrators.",
   "visiblility.public": "This list is public. It is accessible to everyone.",
-  
+
   "listmeta.cc.chooserUrl": "https://creativecommons.org/share-your-work/cclicenses/",
   "listmeta.validation.notEmpty": "Please select a value",
   "listmeta.validation.wkt": "Please enter valid WKT format, e.g. POLYGON(...)",
@@ -217,7 +217,7 @@
   "listmeta.dr.dialog.title": "Dangerous Change",
   "listmeta.dr.placeholder": "Data Resource ID",
   "listmeta.dr.dialog.message.1": "Are you sure you want to change the Data Resource ID?",
-  "listmeta.dr.dialog.message.2": "This is a <strong>dangerous change</strong> and will update data on the collections metadata page, that cannot be undone. Please check the new Data Resource ID is correct in the Collections app, before updating.",
+  "listmeta.dr.dialog.message.2": "This is a <strong>dangerous change</strong> and will update data on the collections metadata page, that cannot be undone. Please check the new Data Resource ID is correct in the Collections system, before updating.",
   "isPrivate": "Visibility",
   "summary.list.label": "list",
   "summary.dataResourceUid.tooltip": "View data resource details",

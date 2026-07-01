@@ -416,7 +416,11 @@ export function ListMeta({
                   </Text>
                   <Text mt="sm" mb="lg">
                     <FormattedMessage 
-                      defaultMessage="This is a <strong>dangerous change</strong> and will update data on the collections metadata page, that cannot be undone. Please check the new Data Resource ID is correct in the Collections app, before updating."
+                      id="listmeta.dr.dialog.message.2"
+                      defaultMessage="This is a <strong>dangerous change</strong> and will update data on 
+                      the collections metadata page, that cannot be undone. Please check the new Data Resource ID 
+                      is correct in the Collections system, before updating."
+                      values={{
                         strong: (chunks) => <strong>{chunks}</strong>,
                       }}
                       />
