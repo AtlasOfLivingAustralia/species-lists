@@ -3,10 +3,10 @@ package au.org.ala.listsapi.config;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springdoc.core.customizers.OpenApiCustomizer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
@@ -20,18 +20,14 @@ import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.tags.Tag;
-import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * OpenAPI configuration for the Lists API.
  */
-@RequiredArgsConstructor
 @Configuration
 public class OpenApiConfig {
-    private final MessageSource messageSource;
-    private final Logger log = LoggerFactory.getLogger(OpenApiConfig.class);
+    @Autowired
+    private MessageSource messageSource;
 
     Locale locale = LocaleContextHolder.getLocale();
 
@@ -45,49 +41,27 @@ public class OpenApiConfig {
      * Customiser to remove trailing slashes from OpenAPI paths.
      * Mostly used for legacy v1 endpoints which should be accessible
      * with or without a trailing slash.
-     * 
      * @return
      */
     @Bean
     public OpenApiCustomizer trailingSlashRemovalCustomiser() {
         return openApi -> {
-            try {
-                Paths paths = openApi.getPaths();
-                if (paths != null) {
-                    List<String> pathsToRemove = paths.keySet().stream()
-                            .filter(path -> path.endsWith("/") &&
-                                    paths.containsKey(path.substring(0, path.length() - 1)))
-                            .collect(Collectors.toList());
-
-                    pathsToRemove.forEach(paths::remove);
-
-                    replaceLegacySpeciesWildcardPaths(paths);
-                }
-            } catch (Exception e) {
-                log.warn("OpenAPI path rewriting failed; leaving generated docs unchanged.", e);
+            Paths paths = openApi.getPaths();
+            if (paths != null) {
+                List<String> pathsToRemove = paths.keySet().stream()
+                    .filter(path -> path.endsWith("/") && 
+                            paths.containsKey(path.substring(0, path.length() - 1)))
+                    .collect(Collectors.toList());
+                
+                pathsToRemove.forEach(paths::remove);
             }
         };
-    }
-
-    private void replaceLegacySpeciesWildcardPaths(Paths paths) {
-        Map<String, String> legacyPathReplacements = Map.of(
-                "/v1/species/**", "/v1/species",
-                "/ws/species/**", "/ws/species");
-
-        legacyPathReplacements.forEach((legacyPath, openApiPath) -> {
-            if (!paths.containsKey(legacyPath)) {
-                return;
-            }
-
-            paths.addPathItem(openApiPath, paths.remove(legacyPath));
-        });
     }
 
     @Bean
     public OpenAPI customOpenAPI() {
         String version = getClass().getPackage().getImplementationVersion();
-        if (version == null)
-            version = apiVersion;
+        if (version == null) version = apiVersion;
 
         // Sections of the API documentation
         // are ordered by the order in which they are added to this list.
@@ -103,7 +77,7 @@ public class OpenApiConfig {
 
         return new OpenAPI()
                 .info(new Info()
-                        .title(messageSource.getMessage("openapi.info.title", new Object[] { appUrl }, locale))
+                        .title(messageSource.getMessage("openapi.info.title", new Object[]{appUrl}, locale))
                         .description(messageSource.getMessage("openapi.info.description", null, locale))
                         .version(version)
                         .contact(new Contact()

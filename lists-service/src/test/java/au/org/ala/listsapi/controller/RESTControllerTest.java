@@ -2,30 +2,26 @@ package au.org.ala.listsapi.controller;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import java.security.Principal;
-import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import au.org.ala.listsapi.model.SpeciesList;
-import au.org.ala.listsapi.model.SpeciesListPage;
 import au.org.ala.listsapi.repo.SpeciesListCustomRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.BiocacheService;
+import au.org.ala.listsapi.service.SearchHelperService;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,6 +38,9 @@ class RESTControllerTest {
 
     @Mock
     private AuthUtils authUtils;
+
+    @Mock
+    private SearchHelperService searchHelperService;
 
     @Mock
     private ElasticsearchOperations elasticsearchOperations;
@@ -112,33 +111,6 @@ class RESTControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("private123", response.getBody().getId());
-    }
-
-    @Test
-    void testSpeciesLists_IncludesQuerySortAndOrder() {
-        SpeciesList matchingList = new SpeciesList();
-        matchingList.setId("list-1");
-        matchingList.setTitle("Eucalyptus");
-
-        when(authUtils.isAuthenticated(principal)).thenReturn(false);
-        when(speciesListCustomRepository.findByExample(any(), eq("Eucalyptus"), any(Pageable.class)))
-                .thenAnswer(invocation -> new PageImpl<>(List.of(matchingList), invocation.getArgument(2), 1));
-
-        ResponseEntity<Object> response = restController.speciesLists(new au.org.ala.listsapi.model.RESTSpeciesListQuery(),
-                "Eucalyptus", "listName", "desc", 1, 10, principal);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertInstanceOf(SpeciesListPage.class, response.getBody());
-
-        SpeciesListPage body = (SpeciesListPage) response.getBody();
-        assertEquals("Eucalyptus", body.getQ());
-        assertEquals("listName", body.getSort());
-        assertEquals("desc", body.getOrder());
-        assertEquals(1, body.getLists().size());
-
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(speciesListCustomRepository).findByExample(any(), eq("Eucalyptus"), pageableCaptor.capture());
-        assertTrue(pageableCaptor.getValue().getSort().getOrderFor("title").isDescending());
     }
 
     @Test

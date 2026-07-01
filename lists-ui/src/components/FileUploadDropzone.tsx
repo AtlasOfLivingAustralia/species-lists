@@ -33,12 +33,8 @@ import { useALA } from '#/helpers/context/useALA';
 import classes from './FileUploadDropzone.module.css';
 import { useDisclosure } from '@mantine/hooks';
 
-// Firefox on Windows can omit or misreport MIME types during drag-and-drop,
-// so accept both MIME types and file extensions.
-const ACCEPTED_TYPES = {
-  'text/csv': ['.csv'],
-  'application/zip': ['.zip'],
-};
+// Accepted file types
+const ACCEPTED_TYPES: string[] = ['text/csv', 'application/zip'];
 
 type uploadTypes = 'upload' | 'reingest';
 
