@@ -25,12 +25,13 @@ phases:
       - cd lists-ui
   pre_build:
     commands:
-      - echo running yarn install...
-      - yarn install --frozen-lockfile
+      - echo running npm install...
+      - npm install @rollup/rollup-linux-x64-gnu
+      - npm ci --platform=linux --arch=x64
   build:
     commands:
       - echo building...
-      - yarn run build:$ENVIRONMENT
+      - npm run build:$ENVIRONMENT
 
 artifacts:
   base-directory: lists-ui/dist

@@ -22,46 +22,33 @@ public class SpeciesListCustomRepository {
     @Autowired
     private MongoTemplate mongoTemplate;
 
-    public Page<SpeciesList> findByExample(SpeciesList example, String searchQuery, Pageable pageable) {
-        return findByCriteria(new Criteria().alike(Example.of(example, matcher())), searchQuery, pageable);
-    }
-
     public Page<SpeciesList> findByMultipleExamples(SpeciesList exampleA, SpeciesList exampleB, Pageable pageable) {
-        return findByMultipleExamples(exampleA, exampleB, null, pageable);
-    }
 
-    public Page<SpeciesList> findByMultipleExamples(
-            SpeciesList exampleA, SpeciesList exampleB, String searchQuery, Pageable pageable) {
-
-        Criteria criteriaA = new Criteria().alike(Example.of(exampleA, matcher()));
-        Criteria criteriaB = new Criteria().alike(Example.of(exampleB, matcher()));
-        Criteria combined = new Criteria().orOperator(criteriaA, criteriaB);
-        return findByCriteria(combined, searchQuery, pageable);
-    }
-
-    private Page<SpeciesList> findByCriteria(Criteria baseCriteria, String searchQuery, Pageable pageable) {
-        Criteria criteria = baseCriteria;
-        if (searchQuery != null && !searchQuery.isBlank()) {
-            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
-                    java.util.regex.Pattern.quote(searchQuery),
-                    java.util.regex.Pattern.CASE_INSENSITIVE);
-            criteria = new Criteria().andOperator(
-                    baseCriteria,
-                    new Criteria().orOperator(
-                            Criteria.where("title").regex(pattern),
-                            Criteria.where("description").regex(pattern)));
-        }
-
-        Query query = new Query(criteria).with(pageable).with(Sort.by("_id"));
-        List<SpeciesList> content = mongoTemplate.find(query, SpeciesList.class);
-        long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), SpeciesList.class);
-        return new PageImpl<>(content, pageable, total);
-    }
-
-    private ExampleMatcher matcher() {
-        return ExampleMatcher.matching()
+        // Create ExampleMatcher for each "probe"
+        ExampleMatcher matcher = ExampleMatcher.matching()
                 .withIgnoreCase()
                 .withIgnoreNullValues()
                 .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING);
+
+        // Build Spring Data Example objects
+        Example<SpeciesList> exA = Example.of(exampleA, matcher);
+        Example<SpeciesList> exB = Example.of(exampleB, matcher);
+
+        // Turn each Example into a Criteria object
+        Criteria criteriaA = new Criteria().alike(exA);
+        Criteria criteriaB = new Criteria().alike(exB);
+
+        // Combine them using OR
+        Criteria combined = new Criteria().orOperator(criteriaA, criteriaB);
+
+        Query query = new Query(combined).with(pageable).with(Sort.by("_id"));
+
+        // Execute the query
+        List<SpeciesList> content = mongoTemplate.find(query, SpeciesList.class);
+
+        // For total count (if needed for Page):
+        long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), SpeciesList.class);
+
+        return new PageImpl<>(content, pageable, total);
     }
 }

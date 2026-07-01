@@ -19,10 +19,6 @@ import au.org.ala.listsapi.service.UserdetailsService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Set;
-
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -109,81 +105,6 @@ class SpeciesListTransformerTest {
     assertEquals("", result.getGeneralisation());
   }
   
-  @Nested
-  @DisplayName("Legacy Keys Transformation Tests")
-  class TransformLegacyKeysTests {
-    @Test
-    @DisplayName("Should apply legacy key transformations along with duplication")
-    void shouldApplyLegacyKeyTransformations() {
-      List<String> keys = Arrays.asList("rawfamily", "taxonRank", "CommonNames", "group");
-      Set<String> result = SpeciesListTransformer.transformLegacyKeys(keys);
-      
-      assertEquals(8, result.size());
-      assertTrue(result.contains("rawfamily"));
-      assertTrue(result.contains("family"));
-      assertTrue(result.contains("taxonRank"));
-      assertTrue(result.contains("rank"));
-      assertTrue(result.contains("CommonNames"));
-      assertTrue(result.contains("common names"));
-      assertTrue(result.contains("group"));
-      assertTrue(result.contains("Group"));
-    }
-
-    @Test
-    @DisplayName("Should add space-separated duplicate for keys with underscores")
-    void shouldDuplicateKeysWithUnderscores() {
-      List<String> keys = Arrays.asList("custom_field_name", "Another_Field");
-      Set<String> result = SpeciesListTransformer.transformLegacyKeys(keys);
-      
-      assertEquals(4, result.size());
-      assertTrue(result.contains("custom_field_name"));
-      assertTrue(result.contains("custom field name"));
-      assertTrue(result.contains("Another_Field"));
-      assertTrue(result.contains("Another Field"));
-    }
-
-    @Test
-    @DisplayName("Should handle rawSupplied_Name, rawRank, rawScientific_Name and their underscores")
-    void shouldHandleExtendedRawTaxonomicFields() {
-      List<String> keys = Arrays.asList("rawSupplied_Name", "rawRank", "rawScientific_Name");
-      Set<String> result = SpeciesListTransformer.transformLegacyKeys(keys);
-      
-      assertEquals(8, result.size());
-      assertTrue(result.contains("rawSupplied_Name"));
-      assertTrue(result.contains("rawSupplied Name"));
-      assertTrue(result.contains("Supplied Name"));
-      
-      assertTrue(result.contains("rawRank"));
-      assertTrue(result.contains("Rank"));
-      
-      assertTrue(result.contains("rawScientific_Name"));
-      assertTrue(result.contains("rawScientific Name"));
-      assertTrue(result.contains("Scientific Name"));
-    }
-
-    @Test
-    @DisplayName("Should handle null or empty collections")
-    void shouldHandleNullOrEmpty() {
-      assertTrue(SpeciesListTransformer.transformLegacyKeys(null).isEmpty());
-      assertTrue(SpeciesListTransformer.transformLegacyKeys(Collections.emptyList()).isEmpty());
-    }
-
-    @Test
-    @DisplayName("Should handle case variations in raw taxonomic field names")
-    void shouldHandleCaseVariations() {
-      List<String> keys = Arrays.asList("RawFamily", "rawKingdom", "RAWORDER");
-      Set<String> result = SpeciesListTransformer.transformLegacyKeys(keys);
-      
-      assertEquals(6, result.size());
-      assertTrue(result.contains("RawFamily"));
-      assertTrue(result.contains("Family"));
-      assertTrue(result.contains("rawKingdom"));
-      assertTrue(result.contains("Kingdom"));
-      assertTrue(result.contains("RAWORDER"));
-      assertTrue(result.contains("ORDER"));
-    }
-  }
-
   @Nested
   @DisplayName("KVP Values Duplication Tests for Raw Taxonomic Fields")
   class KvpValuesDuplicationTests {

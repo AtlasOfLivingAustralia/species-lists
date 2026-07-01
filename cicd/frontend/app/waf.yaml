@@ -36,7 +36,7 @@ Resources:
     Type: AWS::WAFv2::WebACL
     Properties:
       Name: !Sub
-        - "lists-frontend-${ResourceName}"
+        - "lists-${ResourceName}"
         - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
       Description: LISTS Web ACL
       Scope: CLOUDFRONT
@@ -46,11 +46,6 @@ Resources:
         SampledRequestsEnabled: true
         CloudWatchMetricsEnabled: true
         MetricName: !Sub lists-waf-wacl-${pCleanBranch}
-      Tags:
-        - Key: Name
-          Value: !Sub lists-eks-${pEnvironment}-frontend
-      TokenDomains:
-        - ala.org.au
       Rules:
         - Name: ip-allowlist
           Action:
@@ -101,26 +96,9 @@ Resources:
             ManagedRuleGroupStatement:
               VendorName: AWS
               Name: AWSManagedRulesKnownBadInputsRuleSet
-
-  ListsLoggingConfiguration:
-    Type: AWS::WAFv2::LoggingConfiguration
-    Properties:
-      ResourceArn: !GetAtt ListsWafWebACL.Arn
-      LogDestinationConfigs:
-        - !GetAtt ListsWafLogGroup.Arn 
-
-  ListsWafLogGroup:
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: Delete
-    Properties:
-      LogGroupName: !Sub 
-                       - aws-waf-logs-${pEnvironment}/${ListsWafName}-ia
-                       - ListsWafName: !Select [ 0, !Split [ '|', !Ref ListsWafWebACL]]
-      LogGroupClass: INFREQUENT_ACCESS
-      RetentionInDays: 14
       Tags:
-        - Key: Name
-          Value: !Ref AWS::StackName
+        - Key: Environment
+          Value: !Ref pEnvironment
 
 Outputs:
  ListsWafWebAclArn:

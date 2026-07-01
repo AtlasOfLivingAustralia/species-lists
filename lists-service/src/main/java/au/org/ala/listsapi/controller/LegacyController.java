@@ -688,9 +688,8 @@ public class LegacyController {
     public ResponseEntity<Object> speciesListItemsForGuid(
             @Parameter(
                     name = "guids",
-                    allowReserved = true,
                     description = "Species GUIDs (can be comma-separated) search on. Note this can be provided as a URL path for backwards compatibility.",
-                    example = "https://id.biodiversity.org.au/taxon/apni/51395430",
+                    example = "https://biodiversity.org.au/afd/taxa/083b413f-8746-4788-8dc1-3da495d78a79",
                     schema = @Schema(type = "string")
             )
             @Nullable @RequestParam(name = "guids") String guids,
