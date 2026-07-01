@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Anchor,
   Autocomplete,
@@ -19,7 +19,7 @@ import {
   Tooltip,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { ExternalLinkIcon } from '@atlasoflivingaustralia/ala-mantine';
+import { CautionIcon, ExternalLinkIcon } from '@atlasoflivingaustralia/ala-mantine';
 import { faExclamationTriangle, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { FormattedMessage, useIntl } from 'react-intl';
@@ -78,9 +78,10 @@ export function ListMeta({
   const [tagSearch, setTagSearch] = useState('');
   const [uidChangeConfirmed, setUidChangeConfirmed] = useState(false);
   const [customTags, setCustomTags] = useState<string[]>([]);
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
 
   const intl = useIntl();
-  const chooserUrl = "https://creativecommons.org/share-your-work/cclicenses/";
+  const chooserUrl = intl.formatMessage({ id: 'listmeta.cc.chooserUrl', defaultMessage: 'https://creativecommons.org/share-your-work/cclicenses/' });
 
   // Custom validator for the `listType` and `licence` fields.
   const notEmpty = (value: string) =>
@@ -201,6 +202,15 @@ export function ListMeta({
     ],
     []
   );
+
+  const handleDialogClose = (event: React.SyntheticEvent<HTMLDialogElement>) => {
+    if (event.currentTarget.returnValue === 'confirm') {
+      setUidChangeConfirmed(true);
+    } else {
+      setUidChangeConfirmed(false);
+      form.setFieldValue('dataResourceUid', initialValues?.dataResourceUid || '');
+    }
+  };
 
   return (
     <form onSubmit={form.onSubmit(handleSumbit)}>
@@ -385,6 +395,55 @@ export function ListMeta({
         </Grid.Col>
         {ala.isAdmin && (
             <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+                <dialog 
+                  ref={dialogRef} 
+                  onClose={handleDialogClose}
+                  style={{
+                    padding: '2rem',
+                    borderRadius: '10px',
+                    border: '1px solid #ccc',
+                    width: '500px',
+                    maxWidth: '90%',
+                  }}
+                >
+                  <Text size="lg" fw={700} mb={10}>
+                      <CautionIcon color="red" size={16}/>&nbsp;&nbsp;
+                      <strong><FormattedMessage id="listmeta.dr.dialog.title" defaultMessage="Dangerous Change" /></strong>
+                  </Text>
+                  <hr/>
+                  <Text mt="sm"><strong>
+                    <FormattedMessage id="listmeta.dr.dialog.message.1" defaultMessage="Are you sure you want to change the Data Resource ID?" /></strong>
+                  </Text>
+                  <Text mt="sm" mb="lg">
+                    <FormattedMessage 
+                      id="listmeta.dr.dialog.message.2"
+                      defaultMessage="This is a <strong>dangerous change</strong> and will update data on 
+                      the collections metadata page, that cannot be undone. Please check the new Data Resource ID 
+                      is correct in the Collections system, before updating."
+                      values={{
+                        strong: (chunks) => <strong>{chunks}</strong>,
+                      }}
+                      />
+                  </Text>
+                  <Group justify="flex-end" gap="md">
+                    <Button
+                      variant="light"
+                      type="button"
+                      radius="md"
+                      onClick={() => dialogRef.current?.close('cancel')}
+                    >
+                      <FormattedMessage id="listmeta.button.cancel.label" defaultMessage="Cancel" />
+                    </Button>
+                    <Button
+                      variant="filled"
+                      type="button"
+                      radius="md"
+                      onClick={() => dialogRef.current?.close('confirm')}
+                    >
+                      <FormattedMessage id="listmeta.button.confirm.label" defaultMessage="Confirm" />
+                    </Button>
+                  </Group>
+                </dialog>
                 <TextInput
                     name='dataResourceUid'
                     label={
@@ -397,19 +456,11 @@ export function ListMeta({
                     disabled={loading}
                     readOnly={!uidChangeConfirmed}
                     onClick={() => {
-                        if (!uidChangeConfirmed) {
-                            if (
-                                window.confirm(
-                                    intl.formatMessage({
-                                        id: 'listmeta.dr.confirm',
-                                        defaultMessage: 'Are you sure you want to change the UID? This is a dangerous change.',
-                                    })
-                                )
-                            ) {
-                                setUidChangeConfirmed(true);
-                            }
-                        }
+                      if (!uidChangeConfirmed) {
+                        dialogRef.current?.showModal();
+                      }
                     }}
+                    error={form.errors.dataResourceUid}
                     {...form.getInputProps('dataResourceUid')}
                 />
             </Grid.Col>
@@ -460,6 +511,14 @@ export function ListMeta({
           <Group justify='center'>
             <Button
               radius='md'
+              variant='light'
+              onClick={() => (onReset ? onReset() : form.reset())}
+              disabled={loading}
+            >
+              <FormattedMessage id='listmeta.button.cancel.label' defaultMessage='Cancel' />
+            </Button>
+            <Button
+              radius='md'
               variant='filled'
               type='submit'
               loading={loading}
@@ -467,14 +526,6 @@ export function ListMeta({
               {initialValues
                 ? intl.formatMessage({ id: 'listmeta.button.update.label', defaultMessage: 'Update' })
                 : intl.formatMessage({ id: 'listmeta.button.create.label', defaultMessage: 'Create' })}
-            </Button>
-            <Button
-              radius='md'
-              variant='light'
-              onClick={() => (onReset ? onReset() : form.reset())}
-              disabled={loading}
-            >
-              <FormattedMessage id='listmeta.button.cancel.label' defaultMessage='Cancel' />
             </Button>
           </Group>
         </Grid.Col>
