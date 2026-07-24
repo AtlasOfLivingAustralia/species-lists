@@ -36,3 +36,8 @@ artifacts:
   base-directory: lists-ui/dist
   files:
     - '**/*'
+
+cache:
+  paths:
+    - '/root/.cache/yarn/**/*'
+    - 'lists-ui/node_modules/**/*'
