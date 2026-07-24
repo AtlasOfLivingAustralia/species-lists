@@ -29,6 +29,8 @@ Conditions:
     - !Condition IsDev
 
 Resources:
+
+  # not currently used, all environments are public
   AllowlistIpSet:
     Type: AWS::WAFv2::IPSet
     Properties:
