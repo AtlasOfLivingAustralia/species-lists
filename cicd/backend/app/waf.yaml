@@ -1,15 +1,19 @@
 AWSTemplateFormatVersion: "2010-09-09"
+
 Description: Lists regional WAF resources
 
 Parameters:
   pBuildNumber:
     Type: Number
+
   pCleanBranch:
-    Type: String
     Description: The clean branch, can be used in resource names
-  pCommonWafRuleGroupStackName:
     Type: String
+
+  pCommonWafRuleGroupStackName:
     Description: Name of the ala-bedrock common WAF rule group stack, used to import shared rule group ARNs
+    Type: String
+
   pEnvironment:
     Type: String
 
@@ -17,27 +21,29 @@ Conditions:
   IsProd: !Equals
     - !Ref pEnvironment
     - production
+
   IsDev: !Equals
     - !Ref pEnvironment
     - development
 
-
 Resources:
-
   ListsWaf:
     Type: AWS::WAFv2::WebACL
     Properties:
-      Name: !Sub 
-              - lists-eks-${ResourceName}
-              - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      Name: !Sub
+        - lists-eks-${ResourceName}
+        - ResourceName: !If
+            - IsDev
+            - !Ref pCleanBranch
+            - !Ref pEnvironment
       Description: ACL for the EKS lists WAF
       Scope: REGIONAL
       DefaultAction:
-        Allow: { }
+        Allow: {}
       VisibilityConfig:
         SampledRequestsEnabled: true
         CloudWatchMetricsEnabled: true
-        MetricName: !Sub ${pEnvironment}-lists-DefaultAction
+        MetricName: !Sub ${pEnvironment}-lists-backend-DefaultAction
       Tags:
         - Key: Name
           Value: !Sub lists-eks-${pEnvironment}-backend
@@ -46,24 +52,24 @@ Resources:
       Rules:
         - Name: ALAHostHeaderCheck
           Priority: 0
-          Action: 
+          Action:
             Block: {}
           Statement:
             NotStatement:
-                Statement:
-                  ByteMatchStatement:
-                    SearchString: '.ala.org.au'
-                    FieldToMatch:
-                      SingleHeader:
-                        Name: 'Host'
-                    PositionalConstraint: ENDS_WITH
-                    TextTransformations:
-                      - Priority: 0
-                        Type: NONE
+              Statement:
+                ByteMatchStatement:
+                  SearchString: .ala.org.au
+                  FieldToMatch:
+                    SingleHeader:
+                      Name: Host
+                  PositionalConstraint: ENDS_WITH
+                  TextTransformations:
+                    - Priority: 0
+                      Type: NONE
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-biocache-ALAHostHeaderCheck
+            MetricName: !Sub ${pEnvironment}-lists-backend-ALAHostHeaderCheck
         - Name: IpControl
           Priority: 1
           OverrideAction:
@@ -75,7 +81,7 @@ Resources:
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-IpControlRuleGroup
+            MetricName: !Sub ${pEnvironment}-lists-backend-IpControlRuleGroup
         - Name: BlockJa4Fingerprint
           Priority: 2
           OverrideAction:
@@ -87,7 +93,7 @@ Resources:
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-BlockJa4RuleGroup
+            MetricName: !Sub ${pEnvironment}-lists-backend-BlockJa4RuleGroup
         - Name: BlockAsn
           Priority: 3
           OverrideAction:
@@ -99,7 +105,7 @@ Resources:
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-BlockAsnRuleGroup
+            MetricName: !Sub ${pEnvironment}-lists-backend-BlockAsnRuleGroup
         - Name: BlockSpecificBots
           Priority: 4
           OverrideAction:
@@ -111,15 +117,15 @@ Resources:
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-BlockSpecificBotsRuleGroup
+            MetricName: !Sub ${pEnvironment}-lists-backend-BlockSpecificBotsRuleGroup
         - Name: ALARateLimitJa4
           Action:
-            Block: { }
+            Block: {}
           Priority: 5
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-ALARateLimitJa4
+            MetricName: !Sub ${pEnvironment}-lists-backend-ALARateLimitJa4
           Statement:
             RateBasedStatement:
               Limit: 300
@@ -135,42 +141,42 @@ Resources:
                       CountryCodes:
                         - AU
         - Name: AWSManagedRulesAmazonIpReputationList
-          OverrideAction: 
+          OverrideAction:
             None: {}
           Priority: 6
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesAmazonIpReputationList
               VendorName: AWS
-              RuleActionOverrides: 
-               - ActionToUse:
-                   Block: {}
-                 Name: AWSManagedIPDDoSList
+              RuleActionOverrides:
+                - ActionToUse:
+                    Block: {}
+                  Name: AWSManagedIPDDoSList
           VisibilityConfig:
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-AWSManagedRulesAmazonIpReputationList
+            MetricName: !Sub ${pEnvironment}-lists-backend-AWSManagedRulesAmazonIpReputationList
             SampledRequestsEnabled: true
         - Name: AWSManagedRulesAnonymousIpList
-          OverrideAction: 
+          OverrideAction:
             None: {}
           Priority: 7
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesAnonymousIpList
               VendorName: AWS
-              RuleActionOverrides: 
-               - ActionToUse:
-                   Count: {}
-                 Name: AnonymousIPList
-               - ActionToUse:
-                   Count: {}
-                 Name: HostingProviderIPList
+              RuleActionOverrides:
+                - ActionToUse:
+                    Count: {}
+                  Name: AnonymousIPList
+                - ActionToUse:
+                    Count: {}
+                  Name: HostingProviderIPList
           VisibilityConfig:
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-AWSManagedRulesAnonymousIpList
+            MetricName: !Sub ${pEnvironment}-lists-backend-AWSManagedRulesAnonymousIpList
             SampledRequestsEnabled: true
         - Name: AWSManagedRulesKnownBadInputsRuleSet
-          OverrideAction: 
+          OverrideAction:
             None: {}
           Priority: 8
           Statement:
@@ -179,35 +185,35 @@ Resources:
               VendorName: AWS
           VisibilityConfig:
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-AWSManagedRulesKnownBadInputsRuleSet
+            MetricName: !Sub ${pEnvironment}-lists-backend-AWSManagedRulesKnownBadInputsRuleSet
             SampledRequestsEnabled: true
         - Name: AWSManagedRulesCommonRuleSet
-          OverrideAction: 
+          OverrideAction:
             None: {}
           Priority: 9
           Statement:
             ManagedRuleGroupStatement:
               Name: AWSManagedRulesCommonRuleSet
               VendorName: AWS
-              RuleActionOverrides: 
-               - ActionToUse:
-                   Count: {}
-                 Name: NoUserAgent_HEADER
-               - ActionToUse:
-                   Count: {}
-                 Name: SizeRestrictions_QUERYSTRING
-               - ActionToUse:
-                   Count: {}
-                 Name: SizeRestrictions_BODY
-               - ActionToUse:
-                   Count: {}
-                 Name: SizeRestrictions_URIPATH
+              RuleActionOverrides:
+                - ActionToUse:
+                    Count: {}
+                  Name: NoUserAgent_HEADER
+                - ActionToUse:
+                    Count: {}
+                  Name: SizeRestrictions_QUERYSTRING
+                - ActionToUse:
+                    Count: {}
+                  Name: SizeRestrictions_BODY
+                - ActionToUse:
+                    Count: {}
+                  Name: SizeRestrictions_URIPATH
           VisibilityConfig:
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-AWSManagedRulesCommonRuleSet
+            MetricName: !Sub ${pEnvironment}-lists-backend-AWSManagedRulesCommonRuleSet
             SampledRequestsEnabled: true
         - Name: AWSManagedRulesBotControlRuleSet-ws
-          OverrideAction: 
+          OverrideAction:
             None: {}
           Priority: 10
           Statement:
@@ -218,34 +224,34 @@ Resources:
                     EnableMachineLearning: FALSE
                     InspectionLevel: COMMON
               VendorName: AWS
-              RuleActionOverrides: 
-               - ActionToUse:
-                   Count: {}
-                 Name: CategoryHttpLibrary
-               - ActionToUse:
-                   Allow: {}
-                 Name: CategoryLinkChecker
-               - ActionToUse:
-                   Allow: {}
-                 Name: CategoryMonitoring
-               - ActionToUse:
-                   Count: {}
-                 Name: SignalAutomatedBrowser
-               - ActionToUse:
-                   Count: {}
-                 Name: SignalNonBrowserUserAgent
+              RuleActionOverrides:
+                - ActionToUse:
+                    Count: {}
+                  Name: CategoryHttpLibrary
+                - ActionToUse:
+                    Allow: {}
+                  Name: CategoryLinkChecker
+                - ActionToUse:
+                    Allow: {}
+                  Name: CategoryMonitoring
+                - ActionToUse:
+                    Count: {}
+                  Name: SignalAutomatedBrowser
+                - ActionToUse:
+                    Count: {}
+                  Name: SignalNonBrowserUserAgent
           VisibilityConfig:
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-AWSManagedRulesBotControlRuleSet-ws
+            MetricName: !Sub ${pEnvironment}-lists-backend-AWSManagedRulesBotControlRuleSet-ws
             SampledRequestsEnabled: true
         - Name: ALARateLimitGoodBots
           Action:
-            Block: { }
+            Block: {}
           Priority: 11
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-ALARateLimitGoodBots
+            MetricName: !Sub ${pEnvironment}-lists-backend-ALARateLimitGoodBots
           Statement:
             RateBasedStatement:
               Limit: 120
@@ -254,7 +260,7 @@ Resources:
               ScopeDownStatement:
                 LabelMatchStatement:
                   Key: bot:verified
-                  Scope: LABEL 
+                  Scope: LABEL
         - Name: ALABlockDatacenterBrowsers
           Action:
             Block: {}
@@ -264,7 +270,7 @@ Resources:
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-lists-ALABlockDatacenterBrowsers
+            MetricName: !Sub ${pEnvironment}-lists-backend-ALABlockDatacenterBrowsers
           Statement:
             AndStatement:
               Statements:
@@ -277,7 +283,7 @@ Resources:
                 - NotStatement:
                     Statement:
                       ByteMatchStatement:
-                        SearchString: '/ws'
+                        SearchString: /ws
                         FieldToMatch:
                           UriPath: {}
                         PositionalConstraint: STARTS_WITH
@@ -285,12 +291,12 @@ Resources:
                           - Priority: 0
                             Type: NONE
                 - LabelMatchStatement:
-                    Key: 'awswaf:managed:aws:anonymous-ip-list:HostingProviderIPList'
+                    Key: awswaf:managed:aws:anonymous-ip-list:HostingProviderIPList
                     Scope: LABEL
                 - NotStatement:
                     Statement:
                       LabelMatchStatement:
-                        Key: 'awswaf:managed:aws:bot-control:signal:non_browser_user_agent'
+                        Key: awswaf:managed:aws:bot-control:signal:non_browser_user_agent
                         Scope: LABEL
                 - NotStatement:
                     Statement:
@@ -303,15 +309,19 @@ Resources:
     Properties:
       ResourceArn: !GetAtt ListsWaf.Arn
       LogDestinationConfigs:
-        - !GetAtt ListsWafLogGroup.Arn 
+        - !GetAtt ListsWafLogGroup.Arn
 
   ListsWafLogGroup:
-    Type: AWS::Logs::LogGroup
     DeletionPolicy: Delete
+    Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub 
-                       - aws-waf-logs-${pEnvironment}/${ListsWafName}-ia
-                       - ListsWafName: !Select [ 0, !Split [ '|', !Ref ListsWaf]]
+      LogGroupName: !Sub
+        - aws-waf-logs-${pEnvironment}/${ListsWafName}-ia
+        - ListsWafName: !Select
+            - 0
+            - !Split
+              - '|'
+              - !Ref ListsWaf
       LogGroupClass: INFREQUENT_ACCESS
       RetentionInDays: 14
       Tags:
@@ -322,4 +332,3 @@ Outputs:
   ListsWafArn:
     Description: The ARN of the WAF
     Value: !GetAtt ListsWaf.Arn
-  
