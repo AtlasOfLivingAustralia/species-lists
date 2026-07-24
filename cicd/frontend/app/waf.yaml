@@ -87,7 +87,7 @@ Resources:
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
-            MetricName: !Sub ${pEnvironment}-biocache-ALAHostHeaderCheck
+            MetricName: !Sub ${pEnvironment}-lists-frontend-ALAHostHeaderCheck
         - Name: IpControl
           Priority: 1
           OverrideAction:
