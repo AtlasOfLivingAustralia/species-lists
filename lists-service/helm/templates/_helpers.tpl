@@ -59,3 +59,14 @@ Selector labels
 app.kubernetes.io/name: {{ include "ala-species-lists.fullname" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{/*
+Comma-separated key=value tag string built from .Values.tags, e.g. "product=lists,branch=main"
+*/}}
+{{- define "ala-alerts.resourceTags" -}}
+{{- $tags := list -}}
+{{- range $key := keys .Values.tags | sortAlpha -}}
+{{- $tags = append $tags (printf "%s=%s" $key (index $.Values.tags $key)) -}}
+{{- end -}}
+{{- join "," $tags -}}
+{{- end }}
