@@ -488,7 +488,10 @@ const Home = ({ routeId }: { routeId: string }) => {
               <Select
                 w={110}
                 value={size?.toString()}
-                onChange={(newSize) => setSize(parseInt(newSize || '10', 10))}
+                onChange={(newSize) => {
+                  setPage(0); // Reset 'page' when page size is changed
+                  setSize(parseInt(newSize || '10', 10));
+                }}
                 data={['10', '20', '50', '100'].map((value) => ({
                   label: `${value} items`,
                   value,
