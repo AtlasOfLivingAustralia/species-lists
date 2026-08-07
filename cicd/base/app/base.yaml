@@ -210,6 +210,17 @@ Resources:
               Service: "logdelivery.elasticloadbalancing.amazonaws.com"
             Action: "s3:PutObject"
             Resource: !Sub "arn:aws:s3:::${LoadBalancerAccessLogsBucket}/logs/AWSLogs/${AWS::AccountId}/*"
+          - Sid: TLSAccessOnly
+            Action:
+              - s3:*
+            Effect: Deny
+            Resource:
+              - !Sub arn:aws:s3:::${LoadBalancerAccessLogsBucket}
+              - !Sub arn:aws:s3:::${LoadBalancerAccessLogsBucket}/*
+            Principal: '*'
+            Condition:
+              Bool:
+                'aws:SecureTransport': "false"
 
   ListsRole:
     Type: AWS::IAM::Role
