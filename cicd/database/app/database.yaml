@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: 'A DocumentDB Cluster with AutoScaling'
+Description: 'A DocumentDB Cluster, provisioned or serverless (Serverless V2)'
 
 Parameters:
   pAdminUser:
@@ -21,6 +21,15 @@ Parameters:
     Description: The DocumentDB engine version
     Type: String
     Default: 4.0.0
+  pDbMode:
+    Description: >-
+      The capacity mode of the DocumentDB cluster. Serverless (Serverless V2)
+      requires an engine version of 5.0.0 or later.
+    Type: String
+    AllowedValues:
+      - provisioned
+      - serverless
+    Default: provisioned
   pDbParameterGroupFamily:
     Description: The DocumentDB parameter group family
     Type: String
@@ -40,7 +49,7 @@ Parameters:
       - production
     Type: String
   pInstanceClass:
-    Description: The DocumentDB instance class
+    Description: The DocumentDB instance class, only used when pDbMode is provisioned
     Type: String
     Default: db.t4g.medium
   pInstanceCount:
@@ -50,6 +59,18 @@ Parameters:
   pProductName:
     Description: The product name
     Type: String
+  pServerlessMaxCapacity:
+    Description: The maximum capacity in DCUs, only used when pDbMode is serverless
+    Type: Number
+    MinValue: 1
+    MaxValue: 256
+    Default: 2
+  pServerlessMinCapacity:
+    Description: The minimum capacity in DCUs, only used when pDbMode is serverless
+    Type: Number
+    MinValue: 0.5
+    MaxValue: 256
+    Default: 0.5
   pVpcStackName:
     Description: The name of the Bedrock VPC stack
     Type: String
@@ -61,6 +82,12 @@ Conditions:
   IsProd: !Equals
     - !Ref pEnvironment
     - production
+  IsProvisioned: !Equals
+    - !Ref pDbMode
+    - provisioned
+  IsServerless: !Equals
+    - !Ref pDbMode
+    - serverless
 
 Resources:
 
@@ -134,6 +161,11 @@ Resources:
         - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
       PreferredBackupWindow: 16:00-17:00
       PreferredMaintenanceWindow: tue:17:00-tue:19:00
+      ServerlessV2ScalingConfiguration: !If
+        - IsServerless
+        - MinCapacity: !Ref pServerlessMinCapacity
+          MaxCapacity: !Ref pServerlessMaxCapacity
+        - !Ref AWS::NoValue
       StorageEncrypted: true
       Tags:
         - Key: Name
@@ -145,6 +177,7 @@ Resources:
 
   DocDbInstance:
     Type: AWS::DocDB::DBInstance
+    Condition: IsProvisioned
     Properties:
       DBClusterIdentifier: !Ref DocDbCluster
       DBInstanceClass: !Ref pInstanceClass
@@ -156,7 +189,27 @@ Resources:
             - ${pProductName}-${ResourceName}-instance
             - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
 
+  DocDbServerlessInstance:
+    Type: AWS::DocDB::DBInstance
+    Condition: IsServerless
+    Properties:
+      DBClusterIdentifier: !Ref DocDbCluster
+      DBInstanceClass: db.serverless
+      AutoMinorVersionUpgrade: true
+      EnablePerformanceInsights: !Ref pEnablePerformanceInsights
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - ${pProductName}-${ResourceName}-instance
+            - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+
 Outputs:
+
+  DocDbMode:
+    Description: The capacity mode of the DocumentDB cluster
+    Value: !Ref pDbMode
+    Export:
+      Name: !Sub ${AWS::StackName}-DocDbMode
 
   DocDbUsername:
     Description: The DocumentDB username
