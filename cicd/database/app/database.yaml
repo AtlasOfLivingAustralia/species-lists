@@ -175,7 +175,7 @@ Resources:
       VpcSecurityGroupIds:
         - !Ref DocDbSecurityGrp
 
-  DocDbInstance:
+  DocDbProvisionedInstance:
     Type: AWS::DocDB::DBInstance
     Condition: IsProvisioned
     Properties:
@@ -204,12 +204,6 @@ Resources:
             - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
 
 Outputs:
-
-  DocDbMode:
-    Description: The capacity mode of the DocumentDB cluster
-    Value: !Ref pDbMode
-    Export:
-      Name: !Sub ${AWS::StackName}-DocDbMode
 
   DocDbUsername:
     Description: The DocumentDB username
