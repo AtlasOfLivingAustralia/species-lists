@@ -63,7 +63,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{/*
 Comma-separated key=value tag string built from .Values.tags, e.g. "product=lists,branch=main"
 */}}
-{{- define "ala-alerts.resourceTags" -}}
+{{- define "ala-species-lists.resourceTags" -}}
 {{- $tags := list -}}
 {{- range $key := keys .Values.tags | sortAlpha -}}
 {{- $tags = append $tags (printf "%s=%s" $key (index $.Values.tags $key)) -}}
