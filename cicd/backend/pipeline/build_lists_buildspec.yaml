@@ -14,25 +14,28 @@ env:
 phases:
   install:
     commands:
-      #- echo Installing dependencies...
+      - echo Registering QEMU emulators for cross-platform builds...
+      - docker run --rm --privileged public.ecr.aws/eks-distro-build-tooling/binfmt-misc:qemu-v9.2.2 --install all
+      - docker buildx version
+      - docker buildx create --use --name multiarch-builder
 
   build:
     commands:
       - echo Build started on $(date)
       - echo Logging in to Amazon ECR...
-      - echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin 
-      - echo Building the Docker image...
-      - docker build -t $IMAGE_NAME -f lists-service/src/main/docker/Dockerfile lists-service
+      - echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
       - aws ecr get-login-password | docker login -u AWS --password-stdin "https://$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
-      - echo Tagging the Docker image...
-      - echo tagging
       - BUILD_TAG=$CLEAN_BRANCH-$CODEBUILD_BUILD_NUMBER
       - echo build tag is $BUILD_TAG
-      - docker tag $IMAGE_NAME:$IMAGE_TAG $ECR_REPO:$BUILD_TAG
-      - docker tag $IMAGE_NAME:$IMAGE_TAG $ECR_REPO:$IMAGE_TAG
-      - echo Pushing the Docker image to Amazon ECR...
-      - docker push $ECR_REPO:$CLEAN_BRANCH-$CODEBUILD_BUILD_NUMBER
-      - docker push $ECR_REPO:$IMAGE_TAG
+      - echo "$BUILD_TAG" > build_tag.txt
+      - echo Building and pushing the multi-arch Docker image to ECR...
+      - |
+          docker buildx build --platform linux/amd64,linux/arm64 \
+                              -f lists-service/src/main/docker/Dockerfile \
+                              -t $ECR_REPO:$BUILD_TAG \
+                              -t $ECR_REPO:$IMAGE_TAG \
+                              --push \
+                              lists-service
 
   post_build:
     commands:

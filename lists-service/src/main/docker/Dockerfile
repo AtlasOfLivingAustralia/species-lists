@@ -26,7 +26,7 @@ ARG APP_ARTIFACT=lists-service
 # Add the apt.gbif.es repo and gpg key (modern apt-key replacement)
 RUN curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF697D8D2ADB9E24A" \
     | gpg --dearmor -o /etc/apt/keyrings/ala.gpg && \
-    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/ala.gpg] https://apt.gbif.es/ bionic main" \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/ala.gpg] https://apt.gbif.es/ bionic main" \
     > /etc/apt/sources.list.d/ala.list
 
 # Install main dependencies
