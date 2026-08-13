@@ -1,58 +1,72 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 
 Description: Base resources for the Lists service
 
 Parameters:
   pBuild:
-    Type: String
     Description: The build number
+    Type: String
+
   pCleanBranch:
-    Type: String
     Description: The clean branch, can be used in resource names
+    Type: String
+
   pEnvironment:
-    Type: String
     Description: The AWS environment this belongs to
+    Type: String
+
   pProductName:
-    Type: String
     Description: The product name, used in resource names
+    Type: String
+
   pCognitoStackName:
-    Type: String
     Description: The name of the Cognito stack
+    Type: String
+
   pAppClientHost:
-    Type: String
     Description: The host for the app client for the frontend
+    Type: String
+
   pAppClientServiceHost:
-    Type: String
     Description: The host for the app client for the service
+    Type: String
+
   pOidcConnectProvider:
-    Type: String
     Description: The OIDC connect provider
+    Type: String
+
   pClusterOidcIssuerUrl:
-    Type: String
     Description: The OIDC issuer URL for the cluster
-  pEksNamespace:
     Type: String
+
+  pEksNamespace:
     Description: The EKS namespace for the service account
+    Type: String
 
 Conditions:
-
   IsDev: !Equals
     - !Ref pEnvironment
     - development
+
   NotProd: !Not
     - !Equals
       - !Ref pEnvironment
       - production
-  IsFirstBuild: !Equals [!Ref pBuild, "1"]
+
+  IsFirstBuild: !Equals
+    - !Ref pBuild
+    - "1"
 
 Resources:
-
   DocDbPasswordSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: !Sub 
-              - lists-${ResourceName}
-              - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      Name: !Sub
+        - lists-${ResourceName}
+        - ResourceName: !If
+            - IsDev
+            - !Ref pCleanBranch
+            - !Ref pEnvironment
       Description: !Sub Lists app ${pEnvironment} secrets
       GenerateSecretString:
         SecretStringTemplate: |
@@ -63,21 +77,24 @@ Resources:
           }
         GenerateStringKey: db-password
         PasswordLength: 12
-        ExcludeCharacters: "/@\"\\#<>: "
+        ExcludeCharacters: '/@"\#<>: '
       Tags:
         - Key: Name
           Value: !Sub
             - ${pProductName}-${ResourceName}
-            - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+            - ResourceName: !If
+                - IsDev
+                - !Ref pCleanBranch
+                - !Ref pEnvironment
 
   ListsAppClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       AccessTokenValidity: 8
-      AllowedOAuthFlows: 
+      AllowedOAuthFlows:
         - code
       AllowedOAuthFlowsUserPoolClient: True
-      AllowedOAuthScopes: 
+      AllowedOAuthScopes:
         - ala/attrs
         - ala/internal
         - ala/roles
@@ -86,14 +103,17 @@ Resources:
         - profile
         - users/read
       AuthSessionValidity: 3
-      CallbackURLs: 
+      CallbackURLs:
         - !Sub ${pAppClientHost}
         - !Sub ${pAppClientHost}/
         - !Sub ${pAppClientHost}/callback?client_name=OidcClient
         - !Sub ${pAppClientHost}/oauth2-redirect.html
       ClientName: !Sub
-          - species-lists-ui-${ResourceName}
-          - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+        - species-lists-ui-${ResourceName}
+        - ResourceName: !If
+            - IsDev
+            - !Ref pCleanBranch
+            - !Ref pEnvironment
       DefaultRedirectURI: !Sub ${pAppClientHost}
       EnablePropagateAdditionalUserContextData: False
       EnableTokenRevocation: True
@@ -104,7 +124,7 @@ Resources:
         - ALLOW_USER_SRP_AUTH
       GenerateSecret: False
       IdTokenValidity: 8
-      LogoutURLs: 
+      LogoutURLs:
         - !Sub ${pAppClientHost}
         - !Sub ${pAppClientHost}/
       PreventUserExistenceErrors: ENABLED
@@ -119,31 +139,33 @@ Resources:
         AccessToken: hours
         IdToken: hours
         RefreshToken: days
-      UserPoolId: 
-        Fn::ImportValue:
-            !Sub ${pCognitoStackName}-UserPoolId
+      UserPoolId: !ImportValue
+        Fn::Sub: ${pCognitoStackName}-UserPoolId
 
   ListsServiceAppClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       AccessTokenValidity: 8
-      AllowedOAuthFlows: 
+      AllowedOAuthFlows:
         - client_credentials
       AllowedOAuthFlowsUserPoolClient: True
-      AllowedOAuthScopes: 
+      AllowedOAuthScopes:
         - ala/attrs
         - ala/roles
         - ala/internal
         - users/read
       AuthSessionValidity: 3
-      CallbackURLs: 
+      CallbackURLs:
         - !Sub ${pAppClientServiceHost}
         - !Sub ${pAppClientServiceHost}/
         - !Sub ${pAppClientServiceHost}/callback?client_name=OidcClient
         - !Sub ${pAppClientServiceHost}/oauth2-redirect.html
       ClientName: !Sub
-          - species-lists-s2s-${ResourceName}
-          - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+        - species-lists-s2s-${ResourceName}
+        - ResourceName: !If
+            - IsDev
+            - !Ref pCleanBranch
+            - !Ref pEnvironment
       DefaultRedirectURI: !Sub ${pAppClientServiceHost}/callback?client_name=OidcClient
       EnablePropagateAdditionalUserContextData: True
       EnableTokenRevocation: True
@@ -154,7 +176,7 @@ Resources:
         - ALLOW_USER_SRP_AUTH
       GenerateSecret: True
       IdTokenValidity: 8
-      LogoutURLs: 
+      LogoutURLs:
         - !Sub ${pAppClientServiceHost}
         - !Sub ${pAppClientServiceHost}/
       PreventUserExistenceErrors: ENABLED
@@ -169,16 +191,18 @@ Resources:
         AccessToken: hours
         IdToken: hours
         RefreshToken: days
-      UserPoolId: 
-        Fn::ImportValue:
-            !Sub ${pCognitoStackName}-UserPoolId
+      UserPoolId: !ImportValue
+        Fn::Sub: ${pCognitoStackName}-UserPoolId
 
   LoadBalancerAccessLogsBucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub
         - ala-${pProductName}-${ResourceName}-alb-access-logs
-        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+        - ResourceName: !If
+            - IsDev
+            - !Ref pCleanBranch
+            - !Ref pEnvironment
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -186,10 +210,10 @@ Resources:
         RestrictPublicBuckets: true
       LifecycleConfiguration:
         Rules:
-          - Id: "ExpireOldLogs"
+          - Id: ExpireOldLogs
             Status: Enabled
             ExpirationInDays: 90
-            Prefix: "logs/"
+            Prefix: logs/
       OwnershipControls:
         Rules:
           - ObjectOwnership: ObjectWriter
@@ -207,9 +231,9 @@ Resources:
           - Sid: AllowELBAccess
             Effect: Allow
             Principal:
-              Service: "logdelivery.elasticloadbalancing.amazonaws.com"
-            Action: "s3:PutObject"
-            Resource: !Sub "arn:aws:s3:::${LoadBalancerAccessLogsBucket}/logs/AWSLogs/${AWS::AccountId}/*"
+              Service: logdelivery.elasticloadbalancing.amazonaws.com
+            Action: s3:PutObject
+            Resource: !Sub arn:aws:s3:::${LoadBalancerAccessLogsBucket}/logs/AWSLogs/${AWS::AccountId}/*
           - Sid: TLSAccessOnly
             Action:
               - s3:*
@@ -220,7 +244,7 @@ Resources:
             Principal: '*'
             Condition:
               Bool:
-                'aws:SecureTransport': "false"
+                aws:SecureTransport: "false"
 
   ListsRole:
     Type: AWS::IAM::Role
@@ -246,13 +270,13 @@ Resources:
                 "Effect": "Allow",
                 "Principal": {
                   "Service":  "ec2.amazonaws.com"
-        
+
                 },
                 "Action": "sts:AssumeRole"
               }
           ]
         }
-      Description: !Sub 'IAM role for lists uploads bucket access ${AWS::StackName} ${pEnvironment} build ${pBuild}'
+      Description: !Sub IAM role for lists uploads bucket access ${AWS::StackName} ${pEnvironment} build ${pBuild}
       ManagedPolicyArns:
         - !Sub arn:aws:iam::${AWS::AccountId}:policy/cpt/cptSSMInstanceCoreCloudWatchPatch
       Policies:
@@ -273,25 +297,34 @@ Resources:
           PolicyName: lists-uploads-bucket
       RoleName: !Sub
         - ${pProductName}-${ResourceName}
-        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+        - ResourceName: !If
+            - IsDev
+            - !Ref pCleanBranch
+            - !Ref pEnvironment
       Tags:
         - Key: Name
           Value: !Sub
             - ${pProductName}-${ResourceName}
-            - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+            - ResourceName: !If
+                - IsDev
+                - !Ref pCleanBranch
+                - !Ref pEnvironment
 
   ListsInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       InstanceProfileName: !Sub
         - ${pProductName}-${ResourceName}
-        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+        - ResourceName: !If
+            - IsDev
+            - !Ref pCleanBranch
+            - !Ref pEnvironment
       Roles:
         - !Ref ListsRole
 
   ListsUploadsBucket:
-    Type: AWS::S3::Bucket
     DeletionPolicy: Delete
+    Type: AWS::S3::Bucket
     Properties:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -299,7 +332,10 @@ Resources:
               SSEAlgorithm: AES256
       BucketName: !Sub
         - ala-${pProductName}-${ResourceName}
-        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+        - ResourceName: !If
+            - IsDev
+            - !Ref pCleanBranch
+            - !Ref pEnvironment
       LifecycleConfiguration:
         Rules:
           - Id: delete
@@ -318,10 +354,31 @@ Resources:
         - Key: Name
           Value: !Sub
             - ala-${pProductName}-${ResourceName}
-            - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+            - ResourceName: !If
+                - IsDev
+                - !Ref pCleanBranch
+                - !Ref pEnvironment
+
+  ListsUploadsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ListsUploadsBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: TLSAccessOnly
+            Action:
+              - s3:*
+            Effect: Deny
+            Resource:
+              - !Sub arn:aws:s3:::${ListsUploadsBucket}
+              - !Sub arn:aws:s3:::${ListsUploadsBucket}/*
+            Principal: '*'
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
 
 Outputs:
-
   AppClientId:
     Description: The app client for the lists frontend
     Value: !Ref ListsAppClient
@@ -329,10 +386,13 @@ Outputs:
       Name: !Sub ${AWS::StackName}-AppClientId
 
   DocDbPasswordSecretName:
-    Description: The Secrets name for lists 
+    Description: The Secrets name for lists
     Value: !Sub
       - lists-${ResourceName}
-      - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      - ResourceName: !If
+          - IsDev
+          - !Ref pCleanBranch
+          - !Ref pEnvironment
     Export:
       Name: !Sub ${AWS::StackName}-DocDbPasswordSecretName
 
