@@ -130,7 +130,7 @@ export default function Reingest() {
         id={started ? id ?? null : null}
         ingesting={ingesting}
         onProgress={(progress) => {
-          if (progress.completed) {
+          if (progress.errorMessage || progress.completed) {
             setStarted(false);
             setIngesting(false);
           }

@@ -274,6 +274,12 @@ public class UploadService {
             if (fileIdentifier == null || !s3Service.fileExists(fileIdentifier)) {
                 throw new IllegalArgumentException("File not found in S3. Please upload the file first.");
             }
+            String originalFilename = s3Service.getOriginalFilename(fileIdentifier);
+            String contentType = determineContentType(originalFilename);
+            if (contentType == null || !ACCEPTED_FILE_TYPES.contains(contentType)) {
+                throw new IllegalArgumentException(
+                        "Unsupported file type. Supported types are CSV and ZIP.");
+            }
         } else {
             if (fileIdentifier == null
                     || fileIdentifier.contains("..")
@@ -335,8 +341,12 @@ public class UploadService {
         }
         future.exceptionally(
                 ex -> {
-                    Throwable cause = (ex instanceof RuntimeException && ex.getCause() != null) ? ex.getCause() : ex;
-                    String message = cause != null ? cause.getMessage() : "Unknown ingestion error";
+                    Throwable cause =
+                            (ex instanceof RuntimeException && ex.getCause() != null) ? ex.getCause() : ex;
+                    String message =
+                            (cause != null && cause.getMessage() != null && !cause.getMessage().isBlank())
+                                    ? (cause.getClass().getSimpleName() + ": " + cause.getMessage())
+                                    : (cause != null ? cause.getClass().getSimpleName() : "Unknown ingestion error");
                     logger.error(
                             "Async ingestion failed for speciesListID {}: {}",
                             speciesList.getId(),
