@@ -60,9 +60,11 @@ export function IngestProgress({
   const isMobile = useMediaQuery(`(max-width: ${em(750)})`);
   const navigate = useNavigate();
 
+  const hasError = Boolean(progress.errorMessage);
+
   // Calculate ingest step
   let step = 0;
-  if (ingesting) {
+  if (ingesting && !hasError) {
     if (progress.mongoTotal > 0 && progress.mongoTotal < progress.rowCount) {
       step = 1;
     } else if (progress.mongoTotal === progress.rowCount) {
@@ -78,6 +80,11 @@ export function IngestProgress({
 
         setProgress(progress);
         if (onProgress) onProgress(progress);
+
+        // Stop polling when an error is reported; it will be displayed to the user.
+        if (progress.errorMessage) {
+          return;
+        }
 
         // If the list has been ingested successfully, navigate to it, otherwise, wait a bit and check again
         if (progress.completed && !disableNavigation) {
@@ -109,54 +116,62 @@ export function IngestProgress({
       }}
     >
       <Paper p='sm' radius='lg' withBorder>
-        {isMobile ? (
-          <Group justify='center'>
-            <FontAwesomeIcon icon={steps[step].icon} />
-            <Text fw='bold' size='lg'>
-              {steps[step].text}
-            </Text>
-          </Group>
+        {progress.errorMessage ? (
+          <Text c='red.6' fw='bold' size='sm'>
+            {progress.errorMessage}
+          </Text>
         ) : (
-          <Stepper
-            active={step}
-            allowNextStepsSelect={false}
-            completedIcon={<FontAwesomeIcon icon={faCheck} />}
-          >
-            {steps.map((stepInfo) => (
-              <Stepper.Step
-                key={stepInfo.text}
-                icon={<FontAwesomeIcon icon={stepInfo.icon} />}
-                label={stepInfo.text}
-              />
-            ))}
-          </Stepper>
-        )}
-        <Progress.Root h={20} mt='md' radius='md'>
-          <Progress.Section
-            animated={step !== 1}
-            value={
-              step === 0
-                ? 100
-                : (progress.mongoTotal / progress.rowCount) * 80 +
-                  (progress.elasticTotal / progress.rowCount) * 20
-            }
-          >
-            {step === 1 && (
-              <Text
-                c='white'
-                size='xs'
-                style={{ overflow: 'hidden', textWrap: 'nowrap' }}
+          <>
+            {isMobile ? (
+              <Group justify='center'>
+                <FontAwesomeIcon icon={steps[step].icon} />
+                <Text fw='bold' size='lg'>
+                  {steps[step].text}
+                </Text>
+              </Group>
+            ) : (
+              <Stepper
+                active={step}
+                allowNextStepsSelect={false}
+                completedIcon={<FontAwesomeIcon icon={faCheck} />}
               >
-                <b>
-                  {Math.floor((progress.mongoTotal / progress.rowCount) * 100)}%
-                </b>
-                <span style={{ marginLeft: 8, opacity: 0.7 }}>
-                  {progress.mongoTotal}/{progress.rowCount}
-                </span>
-              </Text>
+                {steps.map((stepInfo) => (
+                  <Stepper.Step
+                    key={stepInfo.text}
+                    icon={<FontAwesomeIcon icon={stepInfo.icon} />}
+                    label={stepInfo.text}
+                  />
+                ))}
+              </Stepper>
             )}
-          </Progress.Section>
-        </Progress.Root>
+            <Progress.Root h={20} mt='md' radius='md'>
+              <Progress.Section
+                animated={step !== 1}
+                value={
+                  step === 0
+                    ? 100
+                    : (progress.mongoTotal / progress.rowCount) * 80 +
+                      (progress.elasticTotal / progress.rowCount) * 20
+                }
+              >
+                {step === 1 && (
+                  <Text
+                    c='white'
+                    size='xs'
+                    style={{ overflow: 'hidden', textWrap: 'nowrap' }}
+                  >
+                    <b>
+                      {Math.floor((progress.mongoTotal / progress.rowCount) * 100)}%
+                    </b>
+                    <span style={{ marginLeft: 8, opacity: 0.7 }}>
+                      {progress.mongoTotal}/{progress.rowCount}
+                    </span>
+                  </Text>
+                )}
+              </Progress.Section>
+            </Progress.Root>
+          </>
+        )}
       </Paper>
     </Box>
   );

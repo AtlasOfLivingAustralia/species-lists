@@ -82,6 +82,7 @@ interface IngestProgress {
   mongoTotal: number;
   started: number;
   completed: boolean;
+  errorMessage?: string;
 }
 
 interface MigrateProgress {
