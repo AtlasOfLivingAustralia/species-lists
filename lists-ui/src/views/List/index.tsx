@@ -477,16 +477,18 @@ function List() {
 
   return (
     <>
-      <SpeciesItemDrawer
-        key={selected?.id}
-        opened={opened}
-        item={selected}
-        meta={meta!} 
-        setRefresh={setRefresh}
-        onClose={close}
-        onEdited={handleItemEdited}
-        onDeleted={handleItemDeleted}
-      />
+      {meta && (
+        <SpeciesItemDrawer
+          key={selected?.id}
+          opened={opened}
+          item={selected}
+          meta={meta}
+          setRefresh={setRefresh}
+          onClose={close}
+          onEdited={handleItemEdited}
+          onDeleted={handleItemDeleted}
+        />
+      )}
       <Container fluid className={classes.speciesHeader}>
         <Grid align="center">
           <Grid.Col span={12}>
