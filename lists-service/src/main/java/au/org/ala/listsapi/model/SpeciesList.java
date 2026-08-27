@@ -105,6 +105,10 @@ import lombok.extern.jackson.Jacksonized;
         return id;
     }
 
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public Boolean isPrivate() {
         return isPrivate;
     }

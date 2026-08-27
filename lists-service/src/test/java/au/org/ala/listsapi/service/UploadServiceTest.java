@@ -1,21 +1,31 @@
 package au.org.ala.listsapi.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 
 import au.org.ala.listsapi.model.IngestJob;
+import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.nio.file.Files;
 import java.util.Optional;
+import java.util.concurrent.Executor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -32,12 +42,14 @@ class UploadServiceTest {
     @Mock private MetadataService metadataService;
     @Mock private ProgressService progressService;
     @Mock private SearchHelperService searchHelperService;
+    @Mock private Executor processExecutor;
 
     @InjectMocks private UploadService uploadService;
 
     @BeforeEach
     void setUp() {
-        // Some mocks might be needed
+        ReflectionTestUtils.setField(uploadService, "tempDir", System.getProperty("java.io.tmpdir"));
+        ReflectionTestUtils.setField(uploadService, "s3Enabled", false);
     }
 
     @Test
@@ -94,5 +106,117 @@ class UploadServiceTest {
         for (String facet : job.getFacetList()) {
             assertTrue(facet != null && !facet.trim().isEmpty(), "Facet list should not contain empty strings");
         }
+    }
+
+    @Test
+    void testReload_missingLocalFile_doesNotDeleteExistingItems() {
+        SpeciesList speciesList = new SpeciesList();
+        speciesList.setId("dr123");
+        when(speciesListMongoRepository.findByIdOrDataResourceUid("dr123", "dr123"))
+                .thenReturn(Optional.of(speciesList));
+
+        IllegalArgumentException ex =
+                assertThrows(IllegalArgumentException.class, () ->
+                        uploadService.reload("dr123", "missing-file.csv", false));
+
+        assertTrue(ex.getMessage().contains("File not uploaded yet"));
+        verify(speciesListIndexElasticRepository, never()).deleteSpeciesListItemBySpeciesListID(any());
+        verify(speciesListItemMongoRepository, never()).deleteBySpeciesListID(any());
+        verify(progressService, never()).clearIngestProgress(any());
+    }
+
+    @Test
+    void testReload_unsupportedFileType_doesNotDeleteExistingItems() throws Exception {
+        File tempFile = File.createTempFile("WildNet_2026", ".txt");
+        tempFile.deleteOnExit();
+
+        SpeciesList speciesList = new SpeciesList();
+        speciesList.setId("dr123");
+        when(speciesListMongoRepository.findByIdOrDataResourceUid("dr123", "dr123"))
+                .thenReturn(Optional.of(speciesList));
+
+        IllegalArgumentException ex =
+                assertThrows(IllegalArgumentException.class, () ->
+                        uploadService.reload("dr123", tempFile.getName(), false));
+
+        assertTrue(ex.getMessage().contains("Unsupported file type"));
+        verify(speciesListIndexElasticRepository, never()).deleteSpeciesListItemBySpeciesListID(any());
+        verify(speciesListItemMongoRepository, never()).deleteBySpeciesListID(any());
+    }
+
+    @Test
+    void testReload_invalidFileIdentifier_doesNotDeleteExistingItems() {
+        SpeciesList speciesList = new SpeciesList();
+        speciesList.setId("dr123");
+        when(speciesListMongoRepository.findByIdOrDataResourceUid("dr123", "dr123"))
+                .thenReturn(Optional.of(speciesList));
+
+        IllegalArgumentException ex =
+                assertThrows(IllegalArgumentException.class, () ->
+                        uploadService.reload("dr123", "../etc/passwd", false));
+
+        assertTrue(ex.getMessage().contains("Invalid file identifier"));
+        verify(speciesListIndexElasticRepository, never()).deleteSpeciesListItemBySpeciesListID(any());
+        verify(speciesListItemMongoRepository, never()).deleteBySpeciesListID(any());
+    }
+
+    @Test
+    void testAsyncIngest_localNullContentType_throwsInsteadOfSilentlyFailing() throws Exception {
+        // Simulate a file whose extension is supported but whose probeContentType would
+        // have returned null. The new implementation determines type from the filename
+        // so it should still succeed; this test guards against the historical NPE path.
+        File tempFile = File.createTempFile("WildNet_2026", ".csv");
+        tempFile.deleteOnExit();
+        Files.writeString(
+                tempFile.toPath(),
+                "scientificName\nAcacia dealbata\n");
+
+        SpeciesList speciesList = new SpeciesList();
+        speciesList.setId("dr123");
+        when(speciesListMongoRepository.findById("dr123"))
+                .thenReturn(Optional.of(speciesList));
+
+        uploadService.asyncIngest(speciesList, tempFile, false, true);
+
+        assertEquals(Integer.valueOf(1), speciesList.getRowCount());
+    }
+
+    @Test
+    void testAsyncIngest_localUnsupportedFileType_throwsClearError() throws Exception {
+        File tempFile = File.createTempFile("WildNet_2026", ".txt");
+        tempFile.deleteOnExit();
+
+        SpeciesList speciesList = new SpeciesList();
+        speciesList.setId("dr123");
+
+        IllegalArgumentException ex =
+                assertThrows(IllegalArgumentException.class, () ->
+                        uploadService.asyncIngest(speciesList, tempFile, false, true));
+
+        assertTrue(ex.getMessage().contains("Unsupported file type"));
+        assertEquals(null, speciesList.getRowCount());
+    }
+
+    @Test
+    void testStartAsyncIngest_failure_reportsErrorToProgress() {
+        SpeciesList speciesList = new SpeciesList();
+        speciesList.setId("dr456");
+
+        // Use a direct executor so the future completes synchronously in the test
+        doAnswer(invocation -> {
+            ((Runnable) invocation.getArgument(0)).run();
+            return null;
+        }).when(processExecutor).execute(any());
+
+        uploadService.startAsyncIngest(speciesList, "missing-file.csv", false);
+
+        ArgumentCaptor<String> errorCaptor = ArgumentCaptor.forClass(String.class);
+        verify(progressService, atLeastOnce()).addIngestError(any(), errorCaptor.capture());
+        String captured = errorCaptor.getValue();
+        assertNotNull(captured);
+        assertTrue(
+                captured.contains("FileNotFoundException")
+                        || captured.contains("File not uploaded yet")
+                        || captured.contains("File not found"));
     }
 }

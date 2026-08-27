@@ -25,6 +25,7 @@ public class IngestProgressItem {
     private long mongoTotal = 0;
     private long elasticTotal = 0;
     private boolean completed = false;
+    private String errorMessage;
 
     @CreatedDate public Date started;
 

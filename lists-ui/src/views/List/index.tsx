@@ -9,7 +9,6 @@ import {
   SpeciesListSubmit,
 } from '#/api';
 import {
-  ActionIcon,
   Box,
   Button,
   Center,
@@ -27,7 +26,6 @@ import {
   Stack,
   Table,
   Text,
-  TextInput,
   Title
 } from '@mantine/core';
 import {
@@ -50,8 +48,6 @@ import ReactMarkdown from 'react-markdown';
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import tableClasses from './classes/Table.module.css';
 
@@ -63,6 +59,7 @@ import { TrItem } from './components/Table/TrItem';
 // Local component imports
 import { ActiveFilters, FiltersSection, ToggleFiltersButton } from '#/components/FiltersSection';
 import { IngestProgress } from '#/components/IngestProgress';
+import { SearchInput } from './components/SearchInput';
 import { Message } from '#/components/Message';
 import PageLoader from '#/components/PageLoader';
 import { getErrorMessage, ListError, parseAsFilters } from '#/helpers';
@@ -109,10 +106,6 @@ function List() {
     'search',
     parseAsString.withDefault('')
   );
-
-  // Initialise from URL so the input reflects the current search on load/back-nav
-  const [inputSearchValue, setSearchInputValue] = useState(search);
-
 
   // Search params state
   const [page, setPage] = useQueryState<number>(
@@ -460,21 +453,7 @@ function List() {
     []
   );
 
-  // Handler for the Enter key press
-  interface KeyDownEvent extends React.KeyboardEvent<HTMLInputElement> {}
-
-  const handleKeyDown = (event: KeyDownEvent): void => {
-    if (event.key === 'Enter') {
-      event.preventDefault(); 
-      handleSearchChange(inputSearchValue);
-    }
-  };
-
   if (fatalError) throw fatalError;
-
-  if (loading) {
-    return <PageLoader />;
-  }
 
   if (error) {
     return (
@@ -498,16 +477,18 @@ function List() {
 
   return (
     <>
-      <SpeciesItemDrawer
-        key={selected?.id}
-        opened={opened}
-        item={selected}
-        meta={meta!} 
-        setRefresh={setRefresh}
-        onClose={close}
-        onEdited={handleItemEdited}
-        onDeleted={handleItemDeleted}
-      />
+      {meta && (
+        <SpeciesItemDrawer
+          key={selected?.id}
+          opened={opened}
+          item={selected}
+          meta={meta}
+          setRefresh={setRefresh}
+          onClose={close}
+          onEdited={handleItemEdited}
+          onDeleted={handleItemDeleted}
+        />
+      )}
       <Container fluid className={classes.speciesHeader}>
         <Grid align="center">
           <Grid.Col span={12}>
@@ -523,42 +504,67 @@ function List() {
                 <FormattedMessage id='list.title.prefix' defaultMessage='List details' />
                 <Text component='span' pl={8} pr={10} size='lg' className={classes.listTitlePrefix} inherit>{' '}➤{' '}</Text>
               </Text>
-              {meta?.title}
+              {loading ? (
+                <Skeleton
+                  height={24}
+                  width='40%'
+                  radius='sm'
+                  mt='xs'
+                  style={{ display: 'block' }}
+                />
+              ) : (
+                meta?.title
+              )}
             </Title>
           </Grid.Col>
           <Grid.Col span={12} pt={6} >
             <Flex direction='row' justify='space-between' gap={16}>
               <Stack gap='xs' mb={14}>
-                {meta?.description && (
-                  <Text component="div" c='dark-grey-1' size='sm' mt={4} opacity={0.75}>
-                    <ReactMarkdown
-                      components={{
-                        p: ({ children }) => <>{children}</>,
-                        blockquote: ({ node, ...props }) => (
-                          <blockquote
-                            style={{
-                              borderLeft: '4px solid #d0d7de',
-                              margin: '0',
-                              paddingLeft: '0.75rem',
-                            }}
-                            {...props}
-                          />
-                        ),
-                        ul: ({ node, ...props }) => (
-                          <ul style={{ marginTop: '4px', marginBottom: '4px' }} {...props} />
-                        ),
-                      }}>
-                      {meta.description}
-                    </ReactMarkdown>
-                  </Text>
+                {loading ? (
+                  <>
+                    {meta?.description ? (
+                      <Skeleton height={18} width='70%' radius='sm' />
+                    ) : null}
+                    <Skeleton height={14} width='30%' radius='sm' />
+                    <Group gap={6} mt={0}>
+                      <Skeleton height={20} width={80} radius='sm' />
+                      <Skeleton height={20} width={80} radius='sm' />
+                    </Group>
+                  </>
+                ) : (
+                  <>
+                    {meta?.description && (
+                      <Text component="div" c='dark-grey-1' size='sm' mt={4} opacity={0.75}>
+                        <ReactMarkdown
+                          components={{
+                            p: ({ children }) => <>{children}</>,
+                            blockquote: ({ node, ...props }) => (
+                              <blockquote
+                                style={{
+                                  borderLeft: '4px solid #d0d7de',
+                                  margin: '0',
+                                  paddingLeft: '0.75rem',
+                                }}
+                                {...props}
+                              />
+                            ),
+                            ul: ({ node, ...props }) => (
+                              <ul style={{ marginTop: '4px', marginBottom: '4px' }} {...props} />
+                            ),
+                          }}>
+                          {meta.description}
+                        </ReactMarkdown>
+                      </Text>
+                    )}
+                    <Summary meta={meta!} />
+                    <Group gap={6} mt={0}>
+                      <Flags meta={meta!} />
+                      <Dates meta={meta!} />
+                    </Group>
+                  </>
                 )}
-                <Summary meta={meta!} />
-                <Group gap={6} mt={0}>
-                  <Flags meta={meta!} />
-                  <Dates meta={meta!} />
-                </Group>
               </Stack>
-              {!isReingest && (
+              {!isReingest && !loading && (
                 <Actions
                   meta={meta!}
                   editing={editing}
@@ -598,7 +604,13 @@ function List() {
               />
             </Grid.Col>
           )}
-          {isReingest ? (
+          {loading ? (
+            <Grid.Col span={12}>
+              <Box pt={60} pb={30}>
+                <PageLoader />
+              </Box>
+            </Grid.Col>
+          ) : isReingest ? (
             <Grid.Col span={12}>
               <Outlet />
             </Grid.Col>
@@ -609,63 +621,11 @@ function List() {
                   { !isMobile && (
                     <ToggleFiltersButton toggleFilters={toggleFilters} hidefilters={hidefilters} />
                   )}
-                  <Group gap={0} wrap="nowrap" style={{ flexGrow: 1 }}>
-                    <TextInput
-                      style={{ flex: 1 }}
-                      styles={{ 
-                        input: { 
-                          borderTopRightRadius: 0, 
-                          borderBottomRightRadius: 0,
-                          borderRight: 'none', 
-                        } 
-                      }}
-                      disabled={hasError}
-                      value={inputSearchValue}
-                      onChange={(event) => setSearchInputValue(event.currentTarget.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder={intl.formatMessage({ id: 'search.input.placeholder', defaultMessage: 'Search within list' })}
-                      aria-label={intl.formatMessage({ id: 'search.input.label', defaultMessage: 'Search within list' })}
-                      leftSection={<FontAwesomeIcon icon={faMagnifyingGlass} fontSize={16} stroke='2' />}
-                      rightSection={
-                        <ActionIcon
-                          radius='sm'
-                          variant='transparent'
-                          size='xs'
-                          title={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
-                          aria-label={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
-                          disabled={inputSearchValue.length === 0}
-                          onClick={() => {
-                            handleSearchChange('')
-                            setSearchInputValue('');
-                          }}
-                          style={{ marginLeft: 5, marginRight: 10 }}
-                        >
-                        <FontAwesomeIcon icon={faXmark} fontSize={20} />
-                        </ActionIcon>
-                      }
-                    />
-                    <Button
-                      variant="light"
-                      styles={{
-                        root: {
-                          borderTopLeftRadius: 0, 
-                          borderBottomLeftRadius: 0,
-                          borderColor: 'var(--mantine-color-default-border)',
-                        },
-                      }}
-                      style={{
-                        '--button-hover': 'var(--mantine-color-rust-filled-hover)',
-                        '--button-hover-color': 'white',
-                      }}
-                      radius="md"
-                      onClick={(event) => {
-                        event.preventDefault(); 
-                        handleSearchChange(inputSearchValue);
-                      }}
-                    >
-                      <FormattedMessage id='search.button.label' defaultMessage='Search' />
-                    </Button>
-                  </Group>
+                  <SearchInput
+                    hasError={hasError}
+                    initialValue={search}
+                    onSearch={handleSearchChange}
+                  />
                 </Group>
               </Grid.Col>
               <Grid.Col span={isMobile ? 12 : 3}>

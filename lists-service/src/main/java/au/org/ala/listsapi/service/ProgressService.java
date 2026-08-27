@@ -66,6 +66,28 @@ public class ProgressService {
         ingestProgressMongoRepository.deleteIngestProgressItemBySpeciesListID(speciesListID);
     }
 
+    public void addIngestError(String speciesListId, String errorMessage) {
+        Optional<IngestProgressItem> item = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListID(speciesListId);
+        if (item.isPresent()) {
+            IngestProgressItem currentItem = item.get();
+            currentItem.setErrorMessage(errorMessage);
+            ingestProgressMongoRepository.save(currentItem);
+        } else {
+            IngestProgressItem newItem = new IngestProgressItem(speciesListId, 0);
+            newItem.setErrorMessage(errorMessage);
+            ingestProgressMongoRepository.save(newItem);
+        }
+    }
+
+    public void clearIngestError(String speciesListId) {
+        Optional<IngestProgressItem> item = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListID(speciesListId);
+        if (item.isPresent()) {
+            IngestProgressItem currentItem = item.get();
+            currentItem.setErrorMessage(null);
+            ingestProgressMongoRepository.save(currentItem);
+        }
+    }
+
     public void setupIngestProgress(String speciesListID, long rowCount) {
         Optional<IngestProgressItem> existingItem = ingestProgressMongoRepository.findIngestProgressItemBySpeciesListID(speciesListID);
         if (existingItem.isPresent()) {
