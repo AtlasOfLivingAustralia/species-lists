@@ -5,6 +5,7 @@ import { createBrowserRouter, redirect } from 'react-router';
 // Views
 import Dashboard from './views/Dashboard';
 import Home from './views/Home';
+import List from './views/List';
 
 // Page loader & error components
 import PageError from './components/PageError';
@@ -19,9 +20,10 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 const JWT_ROLES = import.meta.env.VITE_AUTH_JWT_ROLES;
 const JWT_ADMIN_ROLE = import.meta.env.VITE_AUTH_JWT_ADMIN_ROLE;
 
-const List = lazy(() => import('./views/List'));
 const UploadPage = lazy(() => import('./views/Upload'));
 const ReingestPage = lazy(() => import('./views/Reingest'));
+
+// List is loaded eagerly so its header skeleton renders immediately while data fetches.
 
 // Wrap the Upload component with ProtectedRoute and Suspense
 const ProtectedUpload = () => (
@@ -96,11 +98,7 @@ const router = createBrowserRouter([
       {
         path: 'list/:id',
         id: 'list',
-        element: (
-          <Suspense fallback={<PageLoader />}>
-            <List />
-          </Suspense>
-        ),
+        element: <List />,
         errorElement: <PageError />,
         children: [
           {

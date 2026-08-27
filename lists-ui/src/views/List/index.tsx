@@ -455,10 +455,6 @@ function List() {
 
   if (fatalError) throw fatalError;
 
-  if (loading) {
-    return <PageLoader />;
-  }
-
   if (error) {
     return (
       <>
@@ -506,42 +502,67 @@ function List() {
                 <FormattedMessage id='list.title.prefix' defaultMessage='List details' />
                 <Text component='span' pl={8} pr={10} size='lg' className={classes.listTitlePrefix} inherit>{' '}➤{' '}</Text>
               </Text>
-              {meta?.title}
+              {loading ? (
+                <Skeleton
+                  height={24}
+                  width='40%'
+                  radius='sm'
+                  mt='xs'
+                  style={{ display: 'block' }}
+                />
+              ) : (
+                meta?.title
+              )}
             </Title>
           </Grid.Col>
           <Grid.Col span={12} pt={6} >
             <Flex direction='row' justify='space-between' gap={16}>
               <Stack gap='xs' mb={14}>
-                {meta?.description && (
-                  <Text component="div" c='dark-grey-1' size='sm' mt={4} opacity={0.75}>
-                    <ReactMarkdown
-                      components={{
-                        p: ({ children }) => <>{children}</>,
-                        blockquote: ({ node, ...props }) => (
-                          <blockquote
-                            style={{
-                              borderLeft: '4px solid #d0d7de',
-                              margin: '0',
-                              paddingLeft: '0.75rem',
-                            }}
-                            {...props}
-                          />
-                        ),
-                        ul: ({ node, ...props }) => (
-                          <ul style={{ marginTop: '4px', marginBottom: '4px' }} {...props} />
-                        ),
-                      }}>
-                      {meta.description}
-                    </ReactMarkdown>
-                  </Text>
+                {loading ? (
+                  <>
+                    {meta?.description ? (
+                      <Skeleton height={18} width='70%' radius='sm' />
+                    ) : null}
+                    <Skeleton height={14} width='30%' radius='sm' />
+                    <Group gap={6} mt={0}>
+                      <Skeleton height={20} width={80} radius='sm' />
+                      <Skeleton height={20} width={80} radius='sm' />
+                    </Group>
+                  </>
+                ) : (
+                  <>
+                    {meta?.description && (
+                      <Text component="div" c='dark-grey-1' size='sm' mt={4} opacity={0.75}>
+                        <ReactMarkdown
+                          components={{
+                            p: ({ children }) => <>{children}</>,
+                            blockquote: ({ node, ...props }) => (
+                              <blockquote
+                                style={{
+                                  borderLeft: '4px solid #d0d7de',
+                                  margin: '0',
+                                  paddingLeft: '0.75rem',
+                                }}
+                                {...props}
+                              />
+                            ),
+                            ul: ({ node, ...props }) => (
+                              <ul style={{ marginTop: '4px', marginBottom: '4px' }} {...props} />
+                            ),
+                          }}>
+                          {meta.description}
+                        </ReactMarkdown>
+                      </Text>
+                    )}
+                    <Summary meta={meta!} />
+                    <Group gap={6} mt={0}>
+                      <Flags meta={meta!} />
+                      <Dates meta={meta!} />
+                    </Group>
+                  </>
                 )}
-                <Summary meta={meta!} />
-                <Group gap={6} mt={0}>
-                  <Flags meta={meta!} />
-                  <Dates meta={meta!} />
-                </Group>
               </Stack>
-              {!isReingest && (
+              {!isReingest && !loading && (
                 <Actions
                   meta={meta!}
                   editing={editing}
@@ -581,7 +602,13 @@ function List() {
               />
             </Grid.Col>
           )}
-          {isReingest ? (
+          {loading ? (
+            <Grid.Col span={12}>
+              <Box pt={60} pb={30}>
+                <PageLoader />
+              </Box>
+            </Grid.Col>
+          ) : isReingest ? (
             <Grid.Col span={12}>
               <Outlet />
             </Grid.Col>
