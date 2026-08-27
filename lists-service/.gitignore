@@ -31,8 +31,6 @@ META-INF/
 
 !**/lists-service/cicd/build/
 
-### VS Code ###
-.vscode/
 /lists-ui/src/.env.json
 /.mvn/wrapper/maven-wrapper.jar
 /.mvn/wrapper/maven-wrapper.properties

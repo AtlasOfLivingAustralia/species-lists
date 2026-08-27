@@ -32,6 +32,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -86,6 +87,9 @@ public class UploadService {
     protected SearchHelperService searchHelperService;
     @Autowired(required = false)
     protected S3Service s3Service;
+
+    @Autowired
+    private Executor processExecutor;
 
     @Value("${aws.s3.enabled:false}")
     private boolean s3Enabled;
@@ -168,28 +172,7 @@ public class UploadService {
 
         speciesList = speciesListMongoRepository.save(speciesList);
 
-        final SpeciesList ingestList = speciesList;
-
-        if (s3Enabled) {
-            CompletableFuture.runAsync(
-                    () -> {
-                        try {
-                            asyncIngestS3(ingestList, fileIdentifier, dryRun, false);
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-        } else {
-            File fileToLoad = new File(tempDir + "/" + fileIdentifier);
-            CompletableFuture.runAsync(
-                    () -> {
-                        try {
-                            asyncIngest(ingestList, fileToLoad, dryRun, false);
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-        }
+        startAsyncIngest(speciesList, fileIdentifier, dryRun);
 
         // releaseService.release(speciesList.getId());
         return speciesList;
@@ -273,58 +256,105 @@ public class UploadService {
     }
 
     public SpeciesList reload(String speciesListID, String fileIdentifier, boolean dryRun) {
-        if (speciesListID != null) {
-            // remove any existing progress
-            progressService.clearIngestProgress(speciesListID);
-
-            Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository
-                    .findByIdOrDataResourceUid(speciesListID, speciesListID);
-            if (optionalSpeciesList.isPresent()) {
-                SpeciesList speciesList = optionalSpeciesList.get();
-
-                // delete from index
-                speciesListIndexElasticRepository.deleteSpeciesListItemBySpeciesListID(speciesList.getId());
-
-                // delete from mongo
-                speciesListItemMongoRepository.deleteBySpeciesListID(speciesList.getId());
-
-                final SpeciesList ingestList = speciesList;
-
-                if (s3Enabled) {
-                    CompletableFuture.runAsync(
-                            () -> {
-                                try {
-                                    asyncIngestS3(ingestList, fileIdentifier, dryRun, false);
-                                } catch (Exception e) {
-                                    throw new RuntimeException(e);
-                                }
-                            });
-                } else {
-                    if (fileIdentifier == null
-                            || fileIdentifier.contains("..")
-                            || fileIdentifier.contains("/")
-                            || fileIdentifier.contains("\\")) {
-                        throw new IllegalArgumentException("Invalid file identifier");
-                    }
-                    File fileToLoad = new File(tempDir, fileIdentifier);
-                    CompletableFuture.runAsync(
-                            () -> {
-                                try {
-                                    asyncIngest(ingestList, fileToLoad, dryRun, false);
-                                } catch (Exception e) {
-                                    throw new RuntimeException(e);
-                                }
-                            });
-                }
-
-                // releaseService.release(speciesList.getId());
-                return speciesList;
-            } else {
-                return null;
-            }
-        } else {
+        if (speciesListID == null) {
             return null;
         }
+
+        Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository
+                .findByIdOrDataResourceUid(speciesListID, speciesListID);
+        if (optionalSpeciesList.isEmpty()) {
+            return null;
+        }
+
+        SpeciesList speciesList = optionalSpeciesList.get();
+
+        // Validate the file / content type before we delete anything, so a missing or
+        // unsupported file cannot leave the list permanently empty.
+        if (s3Enabled) {
+            if (fileIdentifier == null || !s3Service.fileExists(fileIdentifier)) {
+                throw new IllegalArgumentException("File not found in S3. Please upload the file first.");
+            }
+            String originalFilename = s3Service.getOriginalFilename(fileIdentifier);
+            String contentType = determineContentType(originalFilename);
+            if (contentType == null || !ACCEPTED_FILE_TYPES.contains(contentType)) {
+                throw new IllegalArgumentException(
+                        "Unsupported file type. Supported types are CSV and ZIP.");
+            }
+        } else {
+            if (fileIdentifier == null
+                    || fileIdentifier.contains("..")
+                    || fileIdentifier.contains("/")
+                    || fileIdentifier.contains("\\")) {
+                throw new IllegalArgumentException("Invalid file identifier");
+            }
+            File fileToLoad = new File(tempDir, fileIdentifier);
+            if (!fileToLoad.exists()) {
+                throw new IllegalArgumentException("File not uploaded yet");
+            }
+            String contentType = determineContentType(fileIdentifier);
+            if (contentType == null || !ACCEPTED_FILE_TYPES.contains(contentType)) {
+                throw new IllegalArgumentException(
+                        "Unsupported file type. Supported types are CSV and ZIP.");
+            }
+        }
+
+        // remove any existing progress
+        progressService.clearIngestProgress(speciesListID);
+
+        // delete from index
+        speciesListIndexElasticRepository.deleteSpeciesListItemBySpeciesListID(speciesList.getId());
+
+        // delete from mongo
+        speciesListItemMongoRepository.deleteBySpeciesListID(speciesList.getId());
+
+        startAsyncIngest(speciesList, fileIdentifier, dryRun);
+
+        // releaseService.release(speciesList.getId());
+        return speciesList;
+    }
+
+    void startAsyncIngest(SpeciesList speciesList, String fileIdentifier, boolean dryRun) {
+        CompletableFuture<Void> future;
+        if (s3Enabled) {
+            future =
+                    CompletableFuture.runAsync(
+                            () -> {
+                                try {
+                                    asyncIngestS3(speciesList, fileIdentifier, dryRun, false);
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
+                            },
+                            processExecutor);
+        } else {
+            File fileToLoad = new File(tempDir + "/" + fileIdentifier);
+            future =
+                    CompletableFuture.runAsync(
+                            () -> {
+                                try {
+                                    asyncIngest(speciesList, fileToLoad, dryRun, false);
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
+                            },
+                            processExecutor);
+        }
+        future.exceptionally(
+                ex -> {
+                    Throwable cause =
+                            (ex instanceof RuntimeException && ex.getCause() != null) ? ex.getCause() : ex;
+                    String message =
+                            (cause != null && cause.getMessage() != null && !cause.getMessage().isBlank())
+                                    ? (cause.getClass().getSimpleName() + ": " + cause.getMessage())
+                                    : (cause != null ? cause.getClass().getSimpleName() : "Unknown ingestion error");
+                    logger.error(
+                            "Async ingestion failed for speciesListID {}: {}",
+                            speciesList.getId(),
+                            message,
+                            cause);
+                    progressService.addIngestError(speciesList.getId(), message);
+                    return null;
+                });
     }
 
     /**
@@ -397,9 +427,13 @@ public class UploadService {
             SpeciesList speciesList, String s3Key, boolean dryRun, boolean skipIndexing)
             throws Exception {
 
+        String contentType = determineContentType(s3Key);
+        if (contentType == null || !ACCEPTED_FILE_TYPES.contains(contentType)) {
+            throw new IllegalArgumentException("Unsupported file type: " + s3Key);
+        }
+
         IngestJob ingestJob = null;
 
-        String contentType = determineContentType(s3Key);
         String originalFilename = s3Service.getOriginalFilename(s3Key);
 
         try {
@@ -442,19 +476,22 @@ public class UploadService {
             SpeciesList speciesList, File fileToLoad, boolean dryRun, boolean skipIndexing)
             throws Exception {
 
+        String contentType = determineContentType(fileToLoad.getName());
+        if (contentType == null || !ACCEPTED_FILE_TYPES.contains(contentType)) {
+            throw new IllegalArgumentException(
+                    "Unsupported file type: " + fileToLoad.getName());
+        }
+
         IngestJob ingestJob = null;
 
-        Path path = fileToLoad.toPath();
-        String mimeType = Files.probeContentType(path);
-
         // handle CSV
-        if (mimeType.equals("text/csv")) {
+        if (contentType.equals("text/csv")) {
             // load a CSV
             ingestJob = ingestCSV(speciesList.getId(), fileToLoad, dryRun, skipIndexing);
         }
 
         // handle zip file
-        if (mimeType.equals("application/zip")) {
+        if (contentType.equals("application/zip")) {
             try (ZipFile zipFile = new ZipFile(fileToLoad)) {
                 // load a zip file
                 ingestJob = ingestZip(speciesList.getId(), zipFile, dryRun, skipIndexing);
@@ -474,6 +511,8 @@ public class UploadService {
             speciesListMongoRepository.save(speciesList);
 
             logger.info("Async ingestion complete... " + speciesList);
+        } else {
+            throw new RuntimeException("File did not have a valid content type: " + fileToLoad.getName());
         }
     }
 
