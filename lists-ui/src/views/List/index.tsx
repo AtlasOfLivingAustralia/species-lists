@@ -9,7 +9,6 @@ import {
   SpeciesListSubmit,
 } from '#/api';
 import {
-  ActionIcon,
   Box,
   Button,
   Center,
@@ -27,7 +26,6 @@ import {
   Stack,
   Table,
   Text,
-  TextInput,
   Title
 } from '@mantine/core';
 import {
@@ -50,8 +48,6 @@ import ReactMarkdown from 'react-markdown';
 
 // Icons
 import { StopIcon } from '@atlasoflivingaustralia/ala-mantine';
-import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import tableClasses from './classes/Table.module.css';
 
@@ -63,6 +59,7 @@ import { TrItem } from './components/Table/TrItem';
 // Local component imports
 import { ActiveFilters, FiltersSection, ToggleFiltersButton } from '#/components/FiltersSection';
 import { IngestProgress } from '#/components/IngestProgress';
+import { SearchInput } from './components/SearchInput';
 import { Message } from '#/components/Message';
 import PageLoader from '#/components/PageLoader';
 import { getErrorMessage, ListError, parseAsFilters } from '#/helpers';
@@ -109,10 +106,6 @@ function List() {
     'search',
     parseAsString.withDefault('')
   );
-
-  // Initialise from URL so the input reflects the current search on load/back-nav
-  const [inputSearchValue, setSearchInputValue] = useState(search);
-
 
   // Search params state
   const [page, setPage] = useQueryState<number>(
@@ -460,16 +453,6 @@ function List() {
     []
   );
 
-  // Handler for the Enter key press
-  interface KeyDownEvent extends React.KeyboardEvent<HTMLInputElement> {}
-
-  const handleKeyDown = (event: KeyDownEvent): void => {
-    if (event.key === 'Enter') {
-      event.preventDefault(); 
-      handleSearchChange(inputSearchValue);
-    }
-  };
-
   if (fatalError) throw fatalError;
 
   if (loading) {
@@ -609,63 +592,11 @@ function List() {
                   { !isMobile && (
                     <ToggleFiltersButton toggleFilters={toggleFilters} hidefilters={hidefilters} />
                   )}
-                  <Group gap={0} wrap="nowrap" style={{ flexGrow: 1 }}>
-                    <TextInput
-                      style={{ flex: 1 }}
-                      styles={{ 
-                        input: { 
-                          borderTopRightRadius: 0, 
-                          borderBottomRightRadius: 0,
-                          borderRight: 'none', 
-                        } 
-                      }}
-                      disabled={hasError}
-                      value={inputSearchValue}
-                      onChange={(event) => setSearchInputValue(event.currentTarget.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder={intl.formatMessage({ id: 'search.input.placeholder', defaultMessage: 'Search within list' })}
-                      aria-label={intl.formatMessage({ id: 'search.input.label', defaultMessage: 'Search within list' })}
-                      leftSection={<FontAwesomeIcon icon={faMagnifyingGlass} fontSize={16} stroke='2' />}
-                      rightSection={
-                        <ActionIcon
-                          radius='sm'
-                          variant='transparent'
-                          size='xs'
-                          title={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
-                          aria-label={intl.formatMessage({ id: 'search.clear.label', defaultMessage: 'Clear search' })}
-                          disabled={inputSearchValue.length === 0}
-                          onClick={() => {
-                            handleSearchChange('')
-                            setSearchInputValue('');
-                          }}
-                          style={{ marginLeft: 5, marginRight: 10 }}
-                        >
-                        <FontAwesomeIcon icon={faXmark} fontSize={20} />
-                        </ActionIcon>
-                      }
-                    />
-                    <Button
-                      variant="light"
-                      styles={{
-                        root: {
-                          borderTopLeftRadius: 0, 
-                          borderBottomLeftRadius: 0,
-                          borderColor: 'var(--mantine-color-default-border)',
-                        },
-                      }}
-                      style={{
-                        '--button-hover': 'var(--mantine-color-rust-filled-hover)',
-                        '--button-hover-color': 'white',
-                      }}
-                      radius="md"
-                      onClick={(event) => {
-                        event.preventDefault(); 
-                        handleSearchChange(inputSearchValue);
-                      }}
-                    >
-                      <FormattedMessage id='search.button.label' defaultMessage='Search' />
-                    </Button>
-                  </Group>
+                  <SearchInput
+                    hasError={hasError}
+                    initialValue={search}
+                    onSearch={handleSearchChange}
+                  />
                 </Group>
               </Grid.Col>
               <Grid.Col span={isMobile ? 12 : 3}>

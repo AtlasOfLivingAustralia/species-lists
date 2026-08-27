@@ -29,6 +29,7 @@ import { FileUploadDropzone } from '#/components/FileUploadDropzone';
 export default function Reingest() {
   const { id } = useParams();
   const [ingesting, setIngesting] = useState<boolean>(false);
+  const [started, setStarted] = useState<boolean>(false);
   const [error, setError] = useState<string | Error | null>(null);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [meta, setMeta] = useState<SpeciesList | null>(null);
@@ -75,6 +76,9 @@ export default function Reingest() {
     setIngesting(true);
     try {
       await ala.rest.lists.reingest(meta?.id || '', result?.localFile || '');
+      // Only start polling once the backend has acknowledged the request,
+      // so we don't read a stale completed progress row from a previous ingestion.
+      setStarted(true);
     } catch (error) {
       setIngesting(false);
       notifications.show({
@@ -88,6 +92,8 @@ export default function Reingest() {
   const handleReset = useCallback(() => {
     setError(null);
     setResult(null);
+    setIngesting(false);
+    setStarted(false);
   }, []);
 
   return (
@@ -120,7 +126,16 @@ export default function Reingest() {
           </Group>
         </Paper>
       )}
-      <IngestProgress id={id ?? null} ingesting={ingesting} />
+      <IngestProgress
+        id={started ? id ?? null : null}
+        ingesting={ingesting}
+        onProgress={(progress) => {
+          if (progress.completed) {
+            setStarted(false);
+            setIngesting(false);
+          }
+        }}
+      />
     </Container>
   );
 }
