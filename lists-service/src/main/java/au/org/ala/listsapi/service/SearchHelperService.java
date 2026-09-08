@@ -583,7 +583,7 @@ public class SearchHelperService {
                     .size(MAX_LIST_ENTRIES)
                 )
                 .aggregations("max_score",
-                    Aggregation.of(ma -> ma.max(m -> m.script(s -> s.source("_score"))))
+                    Aggregation.of(ma -> ma.max(m -> m.script(s -> s.source(src -> src.scriptString("_score")))))
                 )
             )
         );
