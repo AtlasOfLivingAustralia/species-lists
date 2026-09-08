@@ -21,13 +21,12 @@ import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hc.core5.http.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -396,7 +395,7 @@ public class WebService {
             }
         } catch (Exception e) {
             logger.error("Failed sending " + method.name() + "request to " + url, e);
-            result.put("statusCode", HttpStatus.SC_INTERNAL_SERVER_ERROR);
+            result.put("statusCode", HttpURLConnection.HTTP_INTERNAL_ERROR);
             result.put("error", "Failed calling web service. " + e.getClass().getName() + " " + e.getMessage() + " URL= " + url + ", method " + method.name() + ".");
         }
 

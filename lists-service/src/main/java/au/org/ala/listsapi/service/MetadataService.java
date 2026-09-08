@@ -17,7 +17,7 @@ package au.org.ala.listsapi.service;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.http.MediaType;
+import org.apache.hc.core5.http.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,7 +72,7 @@ public class MetadataService {
                 collectoryUrl + "/ws/dataResource" + entityUid,
                 metaDataJsonMap,
                 null,
-                MediaType.APPLICATION_JSON_VALUE,
+                ContentType.APPLICATION_JSON,
                 true,
                 false,
                 null
@@ -108,7 +108,7 @@ public class MetadataService {
         Map response = webService.delete(
                 collectoryUrl + "/ws/dataResource/" + dataResourceUid,
                 null,
-                MediaType.APPLICATION_JSON_VALUE,
+                ContentType.APPLICATION_JSON,
                 true,
                 false,
                 null
