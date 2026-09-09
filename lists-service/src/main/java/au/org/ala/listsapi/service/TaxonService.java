@@ -131,7 +131,7 @@ public class TaxonService {
                     .build();
 
             ClientConfiguration clientConfig = ClientConfiguration.builder()
-                    .baseUrl(new java.net.URL(nameMatchingServiceUrl))
+                     .baseUrl(java.net.URI.create(nameMatchingServiceUrl).toURL())
                     .dataCache(dataCacheConfig)
                     .build();
             

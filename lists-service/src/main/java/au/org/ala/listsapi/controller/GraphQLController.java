@@ -14,6 +14,7 @@
  */
 package au.org.ala.listsapi.controller;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.security.Principal;
 import java.text.SimpleDateFormat;
@@ -40,7 +41,6 @@ import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.GraphQlExceptionHandler;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
-import org.springframework.lang.NonNull;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -338,7 +338,7 @@ public class GraphQLController {
     }
 
     @GraphQlExceptionHandler
-    public GraphQLError handle(@NonNull Throwable ex, @NonNull DataFetchingEnvironment environment) {
+    public GraphQLError handle(@NotNull Throwable ex, @NotNull DataFetchingEnvironment environment) {
         return GraphQLError
                 .newError()
                 .errorType(ErrorType.ValidationError)
@@ -1028,19 +1028,23 @@ public class GraphQLController {
         // get taxon image from BIE
         ObjectMapper objectMapper = new ObjectMapper();
         String url = String.format(bieImagesTemplateUrl, taxonID, size, page * size);
-        JsonNode jsonNode = objectMapper.readTree(new URI(url).toURL());
-        JsonNode results = jsonNode.at("/searchResults/results");
-        List<Image> images = new ArrayList<>();
-        Iterator<JsonNode> iter = results.elements();
-        while (iter.hasNext()) {
-            JsonNode node = iter.next();
-            images.add(new Image(node.get("largeImageUrl").asText()));
+        try (InputStream inputStream = URI.create(url).toURL().openStream()) {
+            JsonNode jsonNode = objectMapper.readTree(inputStream);
+            JsonNode results = jsonNode.at("/searchResults/results");
+            List<Image> images = new ArrayList<>();
+            Iterator<JsonNode> iter = results.elements();
+            while (iter.hasNext()) {
+                JsonNode node = iter.next();
+                images.add(new Image(node.get("largeImageUrl").asText()));
+            }
+            return images;
         }
-        return images;
     }
 
     public Map<String, Object> loadJson(String url) throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.readValue(new URI(url).toURL(), objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class));
+        try (InputStream inputStream = URI.create(url).toURL().openStream()) {
+            return objectMapper.readValue(inputStream, objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class));
+        }
     }
 }

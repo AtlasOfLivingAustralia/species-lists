@@ -6,6 +6,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -22,9 +23,9 @@ public class IngestProgressItem {
     @org.springframework.data.mongodb.core.index.Indexed(unique = true)
     private String speciesListID;
     private long rowCount;
-    private long mongoTotal = 0;
-    private long elasticTotal = 0;
-    private boolean completed = false;
+    @Builder.Default private long mongoTotal = 0;
+    @Builder.Default private long elasticTotal = 0;
+    @Builder.Default private boolean completed = false;
     private String errorMessage;
 
     @CreatedDate public Date started;

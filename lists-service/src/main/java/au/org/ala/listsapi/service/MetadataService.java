@@ -39,7 +39,7 @@ public class MetadataService {
     @Value("${collectory.api.url}")
     private String collectoryUrl;
 
-    private Map listToDataResourceJSON(SpeciesList speciesList) {
+    private Map<String, Object> listToDataResourceJSON(SpeciesList speciesList) {
         return Map.of(
             "name", speciesList.getTitle(),
             "pubDescription", speciesList.getDescription(),
@@ -66,9 +66,9 @@ public class MetadataService {
         logger.info("Setting metadata in Collectory for species list: " + speciesList.getId());
         String dataResourceUid = speciesList.getDataResourceUid();
         String entityUid = dataResourceUid != null ? "/" + dataResourceUid : "";
-        Map metaDataJsonMap = listToDataResourceJSON(speciesList);
+        Map<String, Object> metaDataJsonMap = listToDataResourceJSON(speciesList);
 
-        Map response = webService.post(
+        Map<String, Object> response = webService.post(
                 collectoryUrl + "/ws/dataResource" + entityUid,
                 metaDataJsonMap,
                 null,
@@ -87,10 +87,12 @@ public class MetadataService {
         if (speciesList.getDataResourceUid() == null) {
             // The dataResourceUid is returned via the location header as a URL, i.e.
             // location = https://collections.test.ala.org.au/ws/dataResource/dr22893
-            Map<String, List<String>> headers = (Map<String, List<String>>) response.get("headers");
-            String location = headers.get("location").get(0);
+            Object headersValue = response.get("headers");
+            if (headersValue instanceof Map<?, ?> headers
+                    && headers.get("location") instanceof List<?> locations
+                    && !locations.isEmpty()) {
+                String location = String.valueOf(locations.get(0));
 
-            if (location != null) {
                 String[] locationParts = location.split("/");
                 speciesList.setDataResourceUid(locationParts[locationParts.length - 1]);
             }
@@ -105,7 +107,7 @@ public class MetadataService {
             return;
         }
 
-        Map response = webService.delete(
+        Map<String, Object> response = webService.delete(
                 collectoryUrl + "/ws/dataResource/" + dataResourceUid,
                 null,
                 ContentType.APPLICATION_JSON,

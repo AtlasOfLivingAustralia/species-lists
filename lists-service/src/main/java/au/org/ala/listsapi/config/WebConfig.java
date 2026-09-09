@@ -66,6 +66,7 @@ public class WebConfig implements WebMvcConfigurer {
     // configurer.setUrlPathHelper(urlPathHelper);
     // }
 
+    @SuppressWarnings("removal")
     @Override
     public void configurePathMatch(PathMatchConfigurer configurer) {
         // Allow encoded slashes in URLs
