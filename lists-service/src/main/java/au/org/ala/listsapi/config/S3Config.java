@@ -38,7 +38,7 @@ public class S3Config {
         if (webIdentityTokenFile != null && roleArn != null) {
             return WebIdentityTokenFileCredentialsProvider.builder().build();
         } else {
-            return DefaultCredentialsProvider.create();
+            return DefaultCredentialsProvider.builder().build();
         }
     }
 

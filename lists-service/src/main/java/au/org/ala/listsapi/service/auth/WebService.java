@@ -1,6 +1,6 @@
 package au.org.ala.listsapi.service.auth;
 
-import static org.apache.http.HttpHeaders.CONNECTION;
+import static org.springframework.http.HttpHeaders.CONNECTION;
 import static org.springframework.http.HttpHeaders.CONTENT_DISPOSITION;
 import static org.springframework.http.HttpMethod.DELETE;
 import static org.springframework.http.HttpMethod.GET;
@@ -21,8 +21,7 @@ import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpStatus;
-import org.apache.http.entity.ContentType;
+import org.apache.hc.core5.http.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -396,7 +395,7 @@ public class WebService {
             }
         } catch (Exception e) {
             logger.error("Failed sending " + method.name() + "request to " + url, e);
-            result.put("statusCode", HttpStatus.SC_INTERNAL_SERVER_ERROR);
+            result.put("statusCode", HttpURLConnection.HTTP_INTERNAL_ERROR);
             result.put("error", "Failed calling web service. " + e.getClass().getName() + " " + e.getMessage() + " URL= " + url + ", method " + method.name() + ".");
         }
 
