@@ -778,7 +778,7 @@ public class GraphQLController {
                         "Updated list contains invalid properties for a controlled value (list type, license)");
             }
 
-if (dataResourceUid != null && !dataResourceUid.equals(toUpdate.getDataResourceUid())) {
+            if (dataResourceUid != null && !dataResourceUid.equals(toUpdate.getDataResourceUid())) {
                 AlaUserProfile profile = authUtils.getUserProfile(principal);
                 if (!authUtils.hasAdminRole(profile)) {
                     throw new AccessDeniedException("You don't have permission to edit the data resource UID");
