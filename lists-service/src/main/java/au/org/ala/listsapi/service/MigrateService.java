@@ -46,7 +46,7 @@ import au.org.ala.listsapi.model.IngestJob;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.auth.WebService;
-import au.org.ala.ws.security.TokenService;
+import au.org.ala.ws.tokens.TokenService;
 import jakarta.annotation.PostConstruct;
 
 @Service

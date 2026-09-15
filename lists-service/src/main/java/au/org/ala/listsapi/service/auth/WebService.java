@@ -34,7 +34,7 @@ import com.google.common.net.HttpHeaders;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 
 import au.org.ala.web.UserDetails;
-import au.org.ala.ws.security.TokenService;
+import au.org.ala.ws.tokens.TokenService;
 import jakarta.servlet.http.HttpServletResponse;
 
 // TODO: move this and related classes into ala-security-project

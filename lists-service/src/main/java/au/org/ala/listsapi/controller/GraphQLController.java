@@ -769,6 +769,7 @@ public class GraphQLController {
 
         if (authUtils.isAuthorized(toUpdate, principal)) {
             boolean reindexRequired = false;
+            String oldDataResourceUid = toUpdate.getDataResourceUid();
 
             // check that the supplied list type, region and license is valid
             if (!validationService.isValueValid(ConstraintType.listType, listType) ||
@@ -777,12 +778,12 @@ public class GraphQLController {
                         "Updated list contains invalid properties for a controlled value (list type, license)");
             }
 
-            if (dataResourceUid != null && !dataResourceUid.equals(toUpdate.getDataResourceUid())) {
+            if (StringUtils.isNotBlank(dataResourceUid) && !dataResourceUid.equals(toUpdate.getDataResourceUid())) {
                 AlaUserProfile profile = authUtils.getUserProfile(principal);
                 if (!authUtils.hasAdminRole(profile)) {
                     throw new AccessDeniedException("You don't have permission to edit the data resource UID");
                 }
-                if (StringUtils.isBlank(dataResourceUid)) {
+                if (StringUtils.isNotBlank(oldDataResourceUid) && StringUtils.isBlank(dataResourceUid)) {
                     throw new Exception("dataResourceUid must not be blank");
                 }
                 Optional<SpeciesList> existing = speciesListMongoRepository.findByDataResourceUid(dataResourceUid);
