@@ -236,7 +236,7 @@ public class AuthMachineJwt extends OncePerRequestFilter {
     }
 
     private Set<String> extractScopes(OidcCredentials credentials) {
-return new HashSet<>(credentials.getAccessToken().getScope().toStringList());
+        Object scope = credentials.getAccessToken().get("scope");
         if (scope instanceof Collection<?> values) {
             return values.stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet());
         }
