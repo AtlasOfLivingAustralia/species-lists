@@ -1,46 +1,57 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
+
 Description: LISTS Infrastructure
 
 Parameters:
   pListsWafWebAclArn:
-    Type: String
     Description: The WAF Web ACL to attach the CloudFront distribution to
+    Type: String
+
   pSourceBucket:
-    Type: String
     Description: The bucket name for the site
+    Type: String
+
   pBucketPath:
-    Type: String
     Description: Optional path that the files are stored under
+    Type: String
+
   pCleanBranch:
-    Type: String
     Description: A cleaned version of the code branch name
+    Type: String
     Default: development
+
   pEnvironment:
-    Type: String
     Description: The AWS environment this belongs to
+    Type: String
+
   pHostedZone:
-    Type: String
     Description: The hosted zone the site are accessed under
+    Type: String
+
   pUiSubDomain:
-    Type: String
     Description: The subdomain the site are accessed on
+    Type: String
+
   pWsSubDomain:
-    Type: String
     Description: The subdomain the backend API is accessed on
-  pCloudfrontCertificate:
     Type: String
+
+  pCloudfrontCertificate:
     Description: The arn of the SSL certificate to be used
+    Type: String
 
 Conditions:
   IsDev: !Equals
     - !Ref pEnvironment
     - development
-  NotDev: !Not [ Condition: IsDev ]
+
+  NotDev: !Not
+    - !Condition IsDev
 
 Resources:
   ListsBucket:
-    Type: 'AWS::S3::Bucket'
     DeletionPolicy: Delete
+    Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub ${pSourceBucket}
       PublicAccessBlockConfiguration:
@@ -58,26 +69,41 @@ Resources:
     Properties:
       Bucket: !Ref ListsBucket
       PolicyDocument:
-        Version: 2012-10-17
+        Version: "2012-10-17"
         Statement:
-          - Action:
-              - 's3:GetObject'
+          - Sid: CloudFrontAccess
+            Action:
+              - s3:GetObject
             Effect: Allow
-            Resource: !Sub 'arn:aws:s3:::${ListsBucket}/*'
+            Resource: !Sub arn:aws:s3:::${ListsBucket}/*
             Principal:
-              AWS: !Sub 'arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${ListsCloudFrontOai}'
+              AWS: !Sub arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${ListsCloudFrontOai}
+          - Sid: TLSAccessOnly
+            Action:
+              - s3:*
+            Effect: Deny
+            Resource:
+              - !Sub arn:aws:s3:::${ListsBucket}
+              - !Sub arn:aws:s3:::${ListsBucket}/*
+            Principal: '*'
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
 
   WsRedirectFunction:
     Type: AWS::CloudFront::Function
     Properties:
-      Name: !Sub 
-        - "lists-ws-redirect-${ResourceName}"
-        - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+      Name: !Sub
+        - lists-ws-redirect-${ResourceName}
+        - ResourceName: !If
+            - IsDev
+            - !Ref pCleanBranch
+            - !Ref pEnvironment
       AutoPublish: true
       FunctionConfig:
         Comment: Redirect /ws/* to the backend domain
         Runtime: cloudfront-js-1.0
-      FunctionCode: !Sub 
+      FunctionCode: !Sub
         - |
           function handler(event) {
               var request = event.request;
@@ -108,18 +134,18 @@ Resources:
                   }
               };
           }
-        - Domain: !Sub "${pWsSubDomain}.${pHostedZone}"
+        - Domain: !Sub ${pWsSubDomain}.${pHostedZone}
 
   ListsDnsRecord:
     Type: AWS::Route53::RecordSet
     Properties:
-      Name: !Sub '${pUiSubDomain}.${pHostedZone}'
+      Name: !Sub ${pUiSubDomain}.${pHostedZone}
       Comment: !Sub LISTS domain for the ${pEnvironment} environment
       Type: A
       AliasTarget:
         DNSName: !GetAtt ListsCloudFrontDistro.DomainName
         HostedZoneId: Z2FDTNDATAQYW2
-      HostedZoneName: !Sub '${pHostedZone}.'
+      HostedZoneName: !Sub ${pHostedZone}.
 
   ListsCloudFrontDistro:
     Type: AWS::CloudFront::Distribution
@@ -127,7 +153,7 @@ Resources:
     Properties:
       DistributionConfig:
         Aliases:
-          - !Sub '${pUiSubDomain}.${pHostedZone}'
+          - !Sub ${pUiSubDomain}.${pHostedZone}
         Comment: !Sub CF Distribution for the LISTS site ${pEnvironment}
         CustomErrorResponses:
           - ErrorCode: 403
@@ -135,7 +161,7 @@ Resources:
             ResponseCode: 200
             ResponsePagePath: /index.html
         CacheBehaviors:
-          - PathPattern: '/ws/*'
+          - PathPattern: /ws/*
             TargetOriginId: lists-s3
             ViewerProtocolPolicy: redirect-to-https
             AllowedMethods:
@@ -144,6 +170,7 @@ Resources:
             CachedMethods:
               - GET
               - HEAD
+
             # AWS Managed CachingDisabled Policy
             CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
             FunctionAssociations:
@@ -165,11 +192,11 @@ Resources:
         HttpVersion: http2
         IPV6Enabled: false
         Origins:
-          - DomainName: !Sub '${pSourceBucket}.s3.${AWS::Region}.amazonaws.com'
+          - DomainName: !Sub ${pSourceBucket}.s3.${AWS::Region}.amazonaws.com
             Id: lists-s3
             S3OriginConfig:
-              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${ListsCloudFrontOai}'
-            OriginPath: !Sub '/${pBucketPath}'
+              OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${ListsCloudFrontOai}
+            OriginPath: !Sub /${pBucketPath}
         ViewerCertificate:
           AcmCertificateArn: !Ref pCloudfrontCertificate
           MinimumProtocolVersion: TLSv1.2_2021
@@ -188,8 +215,11 @@ Resources:
         MaxTTL: 86400
         MinTTL: 1
         Name: !Sub
-          - "Lists-cache-Policy-${ResourceName}"
-          - ResourceName: !If [ IsDev, !Ref pCleanBranch, !Ref pEnvironment ]
+          - Lists-cache-Policy-${ResourceName}
+          - ResourceName: !If
+              - IsDev
+              - !Ref pCleanBranch
+              - !Ref pEnvironment
         ParametersInCacheKeyAndForwardedToOrigin:
           CookiesConfig:
             CookieBehavior: none
@@ -211,9 +241,11 @@ Resources:
 Outputs:
   ListsBucketName:
     Value: !Ref ListsBucket
+
   ListsBucketArn:
     Value: !GetAtt ListsBucket.Arn
+
   ListsCloudFrontDistributionArn:
     Value: !Sub
-      - "arn:aws:cloudfront::${AWS::AccountId}:distribution/${DistributionId}"
+      - arn:aws:cloudfront::${AWS::AccountId}:distribution/${DistributionId}
       - DistributionId: !GetAtt ListsCloudFrontDistro.Id
