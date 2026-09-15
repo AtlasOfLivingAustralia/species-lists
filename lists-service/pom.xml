@@ -34,18 +34,6 @@
       <id>ALA-snapshots</id>
       <url>https://nexus.ala.org.au/content/repositories/snapshots</url>
     </repository>
-    <!-- Enable local ~/.m2/repository resolution -->
-    <repository>
-      <id>local-maven-repo</id>
-      <url>file://${user.home}/.m2/repository</url>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>true</enabled>
-        <updatePolicy>always</updatePolicy> <!-- Force Maven to pick up local SNAPSHOT changes immediately -->
-      </snapshots>
-    </repository>
   </repositories>
 
   <dependencies>
