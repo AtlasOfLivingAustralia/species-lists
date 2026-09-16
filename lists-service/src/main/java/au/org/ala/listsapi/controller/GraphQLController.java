@@ -14,6 +14,7 @@
  */
 package au.org.ala.listsapi.controller;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.security.Principal;
 import java.text.SimpleDateFormat;
@@ -22,6 +23,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -40,7 +42,6 @@ import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.GraphQlExceptionHandler;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
-import org.springframework.lang.NonNull;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -338,7 +339,7 @@ public class GraphQLController {
     }
 
     @GraphQlExceptionHandler
-    public GraphQLError handle(@NonNull Throwable ex, @NonNull DataFetchingEnvironment environment) {
+    public GraphQLError handle(@NotNull Throwable ex, @NotNull DataFetchingEnvironment environment) {
         return GraphQLError
                 .newError()
                 .errorType(ErrorType.ValidationError)
@@ -769,6 +770,7 @@ public class GraphQLController {
 
         if (authUtils.isAuthorized(toUpdate, principal)) {
             boolean reindexRequired = false;
+            String oldDataResourceUid = toUpdate.getDataResourceUid();
 
             // check that the supplied list type, region and license is valid
             if (!validationService.isValueValid(ConstraintType.listType, listType) ||
@@ -777,19 +779,24 @@ public class GraphQLController {
                         "Updated list contains invalid properties for a controlled value (list type, license)");
             }
 
-            if (dataResourceUid != null && !dataResourceUid.equals(toUpdate.getDataResourceUid())) {
+            String newUid = StringUtils.trimToNull(dataResourceUid);
+            String oldUid = StringUtils.trimToNull(toUpdate.getDataResourceUid());
+
+            if (!Objects.equals(newUid, oldUid)) {
                 AlaUserProfile profile = authUtils.getUserProfile(principal);
                 if (!authUtils.hasAdminRole(profile)) {
                     throw new AccessDeniedException("You don't have permission to edit the data resource UID");
                 }
-                if (StringUtils.isBlank(dataResourceUid)) {
+                if (StringUtils.isNotBlank(oldDataResourceUid) && StringUtils.isBlank(newUid)) {
                     throw new Exception("dataResourceUid must not be blank");
                 }
-                Optional<SpeciesList> existing = speciesListMongoRepository.findByDataResourceUid(dataResourceUid);
-                if (existing.isPresent() && !existing.get().getId().equals(toUpdate.getId())) {
-                    throw new Exception("dataResourceUid is already in use by another list");
+                if (StringUtils.isNotBlank(newUid)) {
+                    Optional<SpeciesList> existing = speciesListMongoRepository.findByDataResourceUid(newUid);
+                    if (existing.isPresent() && !existing.get().getId().equals(toUpdate.getId())) {
+                        throw new Exception("dataResourceUid is already in use by another list");
+                    }
                 }
-                toUpdate.setDataResourceUid(dataResourceUid);
+                toUpdate.setDataResourceUid(newUid);
                 reindexRequired = true;
             }
 
@@ -1028,19 +1035,23 @@ public class GraphQLController {
         // get taxon image from BIE
         ObjectMapper objectMapper = new ObjectMapper();
         String url = String.format(bieImagesTemplateUrl, taxonID, size, page * size);
-        JsonNode jsonNode = objectMapper.readTree(new URI(url).toURL());
-        JsonNode results = jsonNode.at("/searchResults/results");
-        List<Image> images = new ArrayList<>();
-        Iterator<JsonNode> iter = results.elements();
-        while (iter.hasNext()) {
-            JsonNode node = iter.next();
-            images.add(new Image(node.get("largeImageUrl").asText()));
+        try (InputStream inputStream = URI.create(url).toURL().openStream()) {
+            JsonNode jsonNode = objectMapper.readTree(inputStream);
+            JsonNode results = jsonNode.at("/searchResults/results");
+            List<Image> images = new ArrayList<>();
+            Iterator<JsonNode> iter = results.elements();
+            while (iter.hasNext()) {
+                JsonNode node = iter.next();
+                images.add(new Image(node.get("largeImageUrl").asText()));
+            }
+            return images;
         }
-        return images;
     }
 
     public Map<String, Object> loadJson(String url) throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.readValue(new URI(url).toURL(), objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class));
+        try (InputStream inputStream = URI.create(url).toURL().openStream()) {
+            return objectMapper.readValue(inputStream, objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class));
+        }
     }
 }

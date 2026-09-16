@@ -1,6 +1,7 @@
 package au.org.ala.listsapi.model;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -17,9 +18,9 @@ import java.util.Date;
 @Jacksonized
 @org.springframework.data.mongodb.core.mapping.Document(collection = "migrationProgress")
 public class MigrateProgressItem {
-    @Id private String id = "_";
+    @Id @Builder.Default private String id = "_";
     private SpeciesList currentSpeciesList;
-    private long completed = 0;
+    @Builder.Default private long completed = 0;
     private long total;
 
     @CreatedDate public Date started;

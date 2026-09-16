@@ -47,7 +47,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 import com.mongodb.bulk.BulkWriteResult;
@@ -219,7 +219,11 @@ public class SearchHelperService {
                 elasticsearchOperations.search(
                         query, SpeciesListIndex.class, IndexCoordinates.of("species-lists"));
 
-        return ElasticUtils.convertList((List<SpeciesListIndex>) SearchHitSupport.unwrapSearchHits(results));
+        Object unwrapped = SearchHitSupport.unwrapSearchHits(results);
+        if (!(unwrapped instanceof List<?> indexes)) {
+            throw new IllegalStateException("unwrapSearchHits did not return a List");
+        }
+        return ElasticUtils.convertList(indexes.stream().map(SpeciesListIndex.class::cast).toList());
     }
 
     /**
@@ -583,7 +587,7 @@ public class SearchHelperService {
                     .size(MAX_LIST_ENTRIES)
                 )
                 .aggregations("max_score",
-                    Aggregation.of(ma -> ma.max(m -> m.script(s -> s.source("_score"))))
+                    Aggregation.of(ma -> ma.max(m -> m.script(s -> s.source(src -> src.scriptString("_score")))))
                 )
             )
         );
