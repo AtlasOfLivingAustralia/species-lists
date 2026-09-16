@@ -16,7 +16,7 @@ services:
     ports:
       - "8080:8080"
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.26-arm64
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0-arm64
     container_name: species-lists-elastic
     environment:
       - node.name=elasticsearch
