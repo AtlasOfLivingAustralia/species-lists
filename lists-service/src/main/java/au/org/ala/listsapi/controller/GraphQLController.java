@@ -23,6 +23,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -778,19 +779,24 @@ public class GraphQLController {
                         "Updated list contains invalid properties for a controlled value (list type, license)");
             }
 
-            if (dataResourceUid != null && !dataResourceUid.equals(toUpdate.getDataResourceUid())) {
+            String newUid = StringUtils.trimToNull(dataResourceUid);
+            String oldUid = StringUtils.trimToNull(toUpdate.getDataResourceUid());
+
+            if (!Objects.equals(newUid, oldUid)) {
                 AlaUserProfile profile = authUtils.getUserProfile(principal);
                 if (!authUtils.hasAdminRole(profile)) {
                     throw new AccessDeniedException("You don't have permission to edit the data resource UID");
                 }
-                if (StringUtils.isNotBlank(oldDataResourceUid) && StringUtils.isBlank(dataResourceUid)) {
+                if (StringUtils.isNotBlank(oldDataResourceUid) && StringUtils.isBlank(newUid)) {
                     throw new Exception("dataResourceUid must not be blank");
                 }
-                Optional<SpeciesList> existing = speciesListMongoRepository.findByDataResourceUid(dataResourceUid);
-                if (existing.isPresent() && !existing.get().getId().equals(toUpdate.getId())) {
-                    throw new Exception("dataResourceUid is already in use by another list");
+                if (StringUtils.isNotBlank(newUid)) {
+                    Optional<SpeciesList> existing = speciesListMongoRepository.findByDataResourceUid(newUid);
+                    if (existing.isPresent() && !existing.get().getId().equals(toUpdate.getId())) {
+                        throw new Exception("dataResourceUid is already in use by another list");
+                    }
                 }
-                toUpdate.setDataResourceUid(dataResourceUid);
+                toUpdate.setDataResourceUid(newUid);
                 reindexRequired = true;
             }
 

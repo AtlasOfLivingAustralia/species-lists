@@ -23,14 +23,17 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 
+import au.org.ala.listsapi.model.ConstraintType;
 import au.org.ala.listsapi.model.Facet;
 import au.org.ala.listsapi.model.Filter;
 import au.org.ala.listsapi.model.ListSearchContext;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.model.InputSpeciesListItem;
+import au.org.ala.listsapi.service.MetadataService;
 import au.org.ala.listsapi.service.SearchHelperService;
 import au.org.ala.listsapi.service.TaxonService;
+import au.org.ala.listsapi.service.ValidationService;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
@@ -56,6 +59,12 @@ class GraphQLControllerTest {
 
     @Mock
     private SpeciesListIndexElasticRepository speciesListIndexElasticRepository;
+
+    @Mock
+    private ValidationService validationService;
+
+    @Mock
+    private MetadataService metadataService;
 
     @Mock
     private Principal principal;
@@ -291,5 +300,95 @@ class GraphQLControllerTest {
         assertFalse(result.getFieldList().contains("fieldToRemove"));
         verify(speciesListMongoRepository).save(list);
         verify(taxonService).reindex(listId);
+    }
+
+    @Test
+    void testUpdateMetadata_BlankDataResourceUid_TreatedAsNoChangeWhenListHasNullUid() throws Exception {
+        String listId = "list123";
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        list.setDataResourceUid(null);
+        list.setTitle("Old Title");
+        list.setIsPrivate(true);
+
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
+                .thenReturn(Optional.of(list));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.listType), any())).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.licence), any())).thenReturn(true);
+        when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
+
+        SpeciesList result = graphQLController.updateMetadata(
+                listId, "New Title", "description", "CC-BY", "TEST",
+                "authority", "region", null, true, false, false,
+                false, false, false, new ArrayList<>(), "", principal);
+
+        assertNotNull(result);
+        assertEquals("New Title", result.getTitle());
+        assertNull(result.getDataResourceUid());
+        verify(speciesListMongoRepository, never()).findByDataResourceUid(any());
+        verify(speciesListMongoRepository).save(list);
+    }
+
+    @Test
+    void testUpdateMetadata_AdminChangesDataResourceUid_Success() throws Exception {
+        String listId = "list123";
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        list.setDataResourceUid(null);
+        list.setTitle("Title");
+        list.setIsPrivate(true);
+
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
+                .thenReturn(Optional.of(list));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(authUtils.getUserProfile(principal)).thenReturn(adminProfile);
+        when(authUtils.hasAdminRole(adminProfile)).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.listType), any())).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.licence), any())).thenReturn(true);
+        when(speciesListMongoRepository.findByDataResourceUid("dr123")).thenReturn(Optional.empty());
+        when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
+
+        SpeciesList result = graphQLController.updateMetadata(
+                listId, "Title", "description", "CC-BY", "TEST",
+                "authority", "region", null, true, false, false,
+                false, false, false, new ArrayList<>(), "dr123", principal);
+
+        assertNotNull(result);
+        assertEquals("dr123", result.getDataResourceUid());
+        verify(speciesListMongoRepository).findByDataResourceUid("dr123");
+        verify(speciesListMongoRepository).save(list);
+    }
+
+    @Test
+    void testUpdateMetadata_DuplicateDataResourceUid_ThrowsException() {
+        String listId = "list123";
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        list.setDataResourceUid(null);
+        list.setTitle("Title");
+
+        SpeciesList otherList = new SpeciesList();
+        otherList.setId("other456");
+        otherList.setDataResourceUid("dr123");
+
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
+                .thenReturn(Optional.of(list));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(authUtils.getUserProfile(principal)).thenReturn(adminProfile);
+        when(authUtils.hasAdminRole(adminProfile)).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.listType), any())).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.licence), any())).thenReturn(true);
+        when(speciesListMongoRepository.findByDataResourceUid("dr123")).thenReturn(Optional.of(otherList));
+
+        Exception exception = assertThrows(Exception.class, () -> {
+            graphQLController.updateMetadata(
+                    listId, "Title", "description", "CC-BY", "TEST",
+                    "authority", "region", null, true, false, false,
+                    false, false, false, new ArrayList<>(), "dr123", principal);
+        });
+
+        assertEquals("dataResourceUid is already in use by another list", exception.getMessage());
+        verify(speciesListMongoRepository, never()).save(any());
     }
 }
