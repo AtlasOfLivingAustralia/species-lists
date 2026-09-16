@@ -25,14 +25,15 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.pac4j.core.config.Config;
+import org.pac4j.core.context.CallContext;
 import org.pac4j.core.context.WebContext;
-import org.pac4j.core.context.WebContextFactory;
+import org.pac4j.core.context.session.SessionStore;
 import org.pac4j.core.credentials.Credentials;
 import org.pac4j.core.exception.CredentialsException;
 import org.pac4j.core.profile.ProfileManager;
 import org.pac4j.core.profile.UserProfile;
-import org.pac4j.core.util.FindBest;
 import org.pac4j.jee.context.JEEContextFactory;
+import org.pac4j.jee.context.JEEFrameworkParameters;
 import org.pac4j.oidc.credentials.OidcCredentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,20 +65,23 @@ public class AuthMachineJwt extends OncePerRequestFilter {
 
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
         try {
-            WebContext context = FindBest.webContextFactory((WebContextFactory)null, this.config, JEEContextFactory.INSTANCE).newContext(new Object[]{request, response});
-            Optional<Credentials> optCredentials = this.alaAuthClient.getCredentials(context, this.config.getSessionStore());
+            JEEFrameworkParameters frameworkParameters = new JEEFrameworkParameters(request, response);
+            WebContext context = this.config.getWebContextFactory().newContext(frameworkParameters);
+            SessionStore sessionStore = this.config.getSessionStoreFactory().newSessionStore(frameworkParameters);
+            CallContext callContext = new CallContext(context, sessionStore, this.config.getProfileManagerFactory());
+            Optional<Credentials> optCredentials = this.alaAuthClient.getCredentials(callContext);
             if (optCredentials.isPresent()) {
                 Credentials credentials = (Credentials)optCredentials.get();
-                Optional<UserProfile> optProfile = this.alaAuthClient.getUserProfile(credentials, context, this.config.getSessionStore());
+                Optional<UserProfile> optProfile = this.alaAuthClient.getUserProfile(callContext, credentials);
                 if (optProfile.isPresent()) {
                     UserProfile userProfile = (UserProfile)optProfile.get();
                     this.setAuthenticatedUserAsPrincipal(userProfile);
-                    ProfileManager profileManager = new ProfileManager(context, this.config.getSessionStore());
+                    ProfileManager profileManager = this.config.getProfileManagerFactory().apply(context, sessionStore);
                     profileManager.setConfig(this.config);
                     profileManager.save(this.alaAuthClient.getSaveProfileInSession(context, userProfile), userProfile, this.alaAuthClient.isMultiProfile(context, userProfile));
                 } else {
                     if (credentials instanceof OidcCredentials) {
-                        final Set<String> scope = new HashSet<>(((OidcCredentials) credentials).getAccessToken().getScope().toStringList());
+                        final Set<String> scope = extractScopes((OidcCredentials) credentials);
                         UserProfile userProfile = new AlaUserProfile() {
                             @Override
                             public String getName() {
@@ -175,21 +179,6 @@ public class AuthMachineJwt extends OncePerRequestFilter {
                             }
 
                             @Override
-                            public void addPermission(String s) {
-
-                            }
-
-                            @Override
-                            public void addPermissions(Collection<String> collection) {
-
-                            }
-
-                            @Override
-                            public Set<String> getPermissions() {
-                                return null;
-                            }
-
-                            @Override
                             public boolean isRemembered() {
                                 return false;
                             }
@@ -231,7 +220,7 @@ public class AuthMachineJwt extends OncePerRequestFilter {
                         };
 
                         this.setAuthenticatedUserAsPrincipal(userProfile);
-                        ProfileManager profileManager = new ProfileManager(context, this.config.getSessionStore());
+                        ProfileManager profileManager = this.config.getProfileManagerFactory().apply(context, sessionStore);
                         profileManager.setConfig(this.config);
                         profileManager.save(this.alaAuthClient.getSaveProfileInSession(context, userProfile), userProfile, this.alaAuthClient.isMultiProfile(context, userProfile));
                     }
@@ -244,6 +233,17 @@ public class AuthMachineJwt extends OncePerRequestFilter {
         }
 
         chain.doFilter(request, response);
+    }
+
+    private Set<String> extractScopes(OidcCredentials credentials) {
+        Object scope = credentials.getAccessToken().get("scope");
+        if (scope instanceof Collection<?> values) {
+            return values.stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet());
+        }
+        if (scope != null) {
+            return new HashSet<>(List.of(String.valueOf(scope).split("\\s+")));
+        }
+        return new HashSet<>();
     }
 
     private void setAuthenticatedUserAsPrincipal(UserProfile userProfile) {

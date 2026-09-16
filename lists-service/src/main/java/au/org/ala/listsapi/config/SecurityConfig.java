@@ -53,10 +53,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.multipart.support.MultipartFilter;
 
 import au.org.ala.ws.security.AlaWebServiceAuthFilter;
+import au.org.ala.ws.security.client.AlaAuthClient;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.pac4j.core.client.DirectClient;
 
 @Configuration
 @EnableWebSecurity
@@ -72,6 +75,21 @@ public class SecurityConfig {
 
     @Autowired
     protected AlaWebServiceAuthFilter alaWebServiceAuthFilter;
+
+    @Autowired(required = false)
+    protected AlaAuthClient alaAuthClient;
+
+    @PostConstruct
+    public void initPac4jClients() {
+        if (alaAuthClient != null) {
+            alaAuthClient.init();
+            if (alaAuthClient.getAuthClients() != null) {
+                for (DirectClient client : alaAuthClient.getAuthClients()) {
+                    client.init();
+                }
+            }
+        }
+    }
 
     @Value("${app.url}")
     private String appUrl;
