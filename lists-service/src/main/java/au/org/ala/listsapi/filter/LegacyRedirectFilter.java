@@ -70,7 +70,8 @@ public class LegacyRedirectFilter extends OncePerRequestFilter {
             String queryString = request.getQueryString();
             // Get the path variable 'listId' from the request path
             String pathVariable = requestUri.substring(requestUri.lastIndexOf('/') + 1);
-            String newUri = v2Prefix + "/download/" + pathVariable + (queryString != null ? "?" + queryString : "");
+            // String newUri = v2Prefix + "/download/" + pathVariable + (queryString != null ? "?" + queryString : "");
+            String newUri = v2Prefix + "/download/" + pathVariable; // temp fix for databox TODO: revert once fixed there
             redirect(response, newUri);
             return;
         }
