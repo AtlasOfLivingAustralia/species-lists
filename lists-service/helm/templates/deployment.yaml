@@ -5,7 +5,14 @@ metadata:
   labels:
     {{ include "ala-species-lists.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       {{ include "ala-species-lists.selectorLabels" . | nindent 6 }}
