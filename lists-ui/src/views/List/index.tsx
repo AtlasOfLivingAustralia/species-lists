@@ -80,6 +80,7 @@ interface ListLoaderData {
   meta: SpeciesList;
   list: FilteredSpeciesList;
   facets: Facet[];
+  baseFacets?: Facet[];
 }
 
 enum SortDirection {
@@ -140,8 +141,6 @@ function List() {
   // Internal state (not driven by search params)
   const [facets, setFacets] = useState<Facet[]>([]);
   const [baseFacets, setBaseFacets] = useState<Facet[]>([]);
-  const prevBaseQueryRef = useRef<string>('');
-  const currentBaseQuery = `${id}_${search}`;
   const [error, setError] = useState<Error | null>(null);
   const [refresh, setRefresh] = useState<boolean>(false);
   const [editing, setEditing] = useState<boolean>(false);
@@ -193,9 +192,8 @@ function List() {
         setList(result.list);
         setMeta(result.meta);
         setPageTitle(result.meta.title);
-        prevBaseQueryRef.current = `${id}_${search}`;
         setFacets(result.facets);
-        setBaseFacets(result.facets || []);
+        setBaseFacets(result.baseFacets || result.facets || []);
       } catch (err) {
         if (err instanceof ListError) setFatalError(err);
         else setError(err as Error);
@@ -252,6 +250,7 @@ function List() {
           meta: updatedMeta,
           list: updatedList,
           facets: updatedFacets,
+          baseFacets: updatedBaseFacets,
         } = result;
 
         controller.current = null;
@@ -261,15 +260,8 @@ function List() {
         setError(null);
         setMeta(updatedMeta);
         setList(updatedList);
-        if (prevBaseQueryRef.current !== currentBaseQuery) {
-          prevBaseQueryRef.current = currentBaseQuery;
-          if (updatedFacets && updatedFacets.length > 0) {
-            setBaseFacets(updatedFacets);
-          }
-        } else if ((!filters || filters.length === 0) && updatedFacets && updatedFacets.length > 0) {
-          setBaseFacets(updatedFacets);
-        } else if (baseFacets.length === 0 && updatedFacets && updatedFacets.length > 0) {
-          setBaseFacets(updatedFacets);
+        if (updatedBaseFacets && updatedBaseFacets.length > 0) {
+          setBaseFacets(updatedBaseFacets);
         }
         setFacets(updatedFacets);
       } catch (error) {

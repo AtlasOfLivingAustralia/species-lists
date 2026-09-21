@@ -32,7 +32,7 @@ import {
   parseAsString,
   useQueryState,
 } from 'nuqs';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 
 // Icons
@@ -65,6 +65,7 @@ import classes from './classes/index.module.css';
 interface HomeQuery {
   lists: SpeciesListPage;
   facets: Facet[];
+  baseFacets?: Facet[];
 }
 
 const sortField = [
@@ -286,27 +287,9 @@ const Home = ({ routeId }: { routeId: string }) => {
 
   const hasError = Boolean(error);
 
-  // Track base facets for the current search/view query to retain 0-count items during filtering
-  const [baseFacets, setBaseFacets] = useState<Facet[]>([]);
-  const prevBaseQueryRef = useRef<string>('');
-  const currentBaseQuery = `${searchDebounced}_${view}_${routeId}_${ala.userid}`;
-
-  useEffect(() => {
-    if (prevBaseQueryRef.current !== currentBaseQuery) {
-      prevBaseQueryRef.current = currentBaseQuery;
-      if (data?.facets && data.facets.length > 0) {
-        setBaseFacets(data.facets);
-      }
-    } else if (filters.length === 0 && data?.facets && data.facets.length > 0) {
-      setBaseFacets(data.facets);
-    } else if (baseFacets.length === 0 && data?.facets && data.facets.length > 0) {
-      setBaseFacets(data.facets);
-    }
-  }, [currentBaseQuery, data?.facets, filters.length, baseFacets.length]);
-
   const mergedFacets = useMemo(() => {
-    return mergeFacetsWithBase(baseFacets, data?.facets || []);
-  }, [baseFacets, data?.facets]);
+    return mergeFacetsWithBase(data?.baseFacets || [], data?.facets || []);
+  }, [data?.baseFacets, data?.facets]);
 
   const filteredFacets = useMemo(() => {
     return mergedFacets.filter(facet => {
