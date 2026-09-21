@@ -44,6 +44,31 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <!--
+        Upper-bound alignment pins (enforced by maven-enforcer-plugin
+        requireUpperBoundDeps). Transitive trees request conflicting versions;
+        pin the highest requested version so resolution is deterministic.
+      -->
+      <dependency>
+        <groupId>com.squareup.moshi</groupId>
+        <artifactId>moshi</artifactId>
+        <version>1.15.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-text</artifactId>
+        <version>1.15.0</version>
+      </dependency>
+      <dependency>
+        <groupId>com.squareup.okio</groupId>
+        <artifactId>okio-jvm</artifactId>
+        <version>3.7.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.parsson</groupId>
+        <artifactId>parsson</artifactId>
+        <version>1.1.9</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>
@@ -271,6 +296,43 @@
             <goals>
               <goal>repackage</goal>
             </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.6.2</version>
+        <executions>
+          <execution>
+            <id>enforce-upper-bound-deps</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireUpperBoundDeps>
+                  <!--
+                    Known-benign conflicts: Spring Boot's BOM already forces a
+                    consistent Jackson version across the tree; transitive
+                    requests for other Jackson patch versions (springdoc, pac4j,
+                    elasticsearch-java) are intentionally overridden.
+                    OpenTelemetry differs by one patch version via elastic.
+                  -->
+                  <excludes>
+                    <exclude>com.fasterxml.jackson.core:jackson-annotations</exclude>
+                    <exclude>com.fasterxml.jackson.core:jackson-core</exclude>
+                    <exclude>com.fasterxml.jackson.core:jackson-databind</exclude>
+                    <exclude>com.fasterxml.jackson.dataformat:jackson-dataformat-csv</exclude>
+                    <exclude>com.fasterxml.jackson.dataformat:jackson-dataformat-yaml</exclude>
+                    <exclude>com.fasterxml.jackson.datatype:jackson-datatype-jsr310</exclude>
+                    <exclude>com.fasterxml.jackson.module:jackson-module-kotlin</exclude>
+                    <exclude>tools.jackson.core:jackson-databind</exclude>
+                    <exclude>io.opentelemetry:opentelemetry-api</exclude>
+                  </excludes>
+                </requireUpperBoundDeps>
+              </rules>
+            </configuration>
           </execution>
         </executions>
       </plugin>
