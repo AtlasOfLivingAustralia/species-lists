@@ -75,12 +75,17 @@ function RenderCheckbox(
 
   if (!countItem) return null; // Handle case where countItem might be undefined
   
+  const isDisabled = !isChecked && countItem.count === 0;
+
   return (
     <Checkbox
       key={key} // Use the provided key
       size='xs'
+      disabled={isDisabled}
       classNames={{
-        root: !isBooleanFacet ? classes.checkboxRoot : undefined,
+        root: !isBooleanFacet 
+          ? `${classes.checkboxRoot} ${isDisabled ? classes.checkboxRootDisabled : ''}` 
+          : (isDisabled ? classes.checkboxRootDisabled : undefined),
         body: classes.checkboxBody,
         inner: classes.checkboxInner,
         labelWrapper: classes.checkboxLabelWrapper,
@@ -90,7 +95,7 @@ function RenderCheckbox(
       checked={isChecked}
       label={
         // The label structure remains the same
-        <Paper className={classes.checkboxPaper}>
+        <Paper className={`${classes.checkboxPaper} ${isDisabled ? classes.checkboxPaperDisabled : ''}`}>
           <ListTypeBadge 
             listTypeValue={key} 
             iconSide='right' 
@@ -100,8 +105,9 @@ function RenderCheckbox(
           <Chip
             size="xs"
             checked={isChecked}
+            disabled={isDisabled}
             classNames={{
-              root: classes.countsChipRoot,
+              root: `${classes.countsChipRoot} ${isDisabled ? classes.countsChipDisabled : ''}`,
               label: classes.countsChipLabel,
               iconWrapper: classes.countsChipIconWrapper,
             }}

@@ -41,7 +41,7 @@ import {
   parseAsStringEnum,
   useQueryState,
 } from 'nuqs';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 import { Outlet, useLocation, useParams } from 'react-router';
 import ReactMarkdown from 'react-markdown';
@@ -62,7 +62,7 @@ import { IngestProgress } from '#/components/IngestProgress';
 import { SearchInput } from './components/SearchInput';
 import { Message } from '#/components/Message';
 import PageLoader from '#/components/PageLoader';
-import { getErrorMessage, ListError, parseAsFilters } from '#/helpers';
+import { getErrorMessage, ListError, mergeFacetsWithBase, parseAsFilters } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
 import { getAccessToken } from '#/helpers/utils/getAccessToken';
 import { Actions } from './components/Actions';
@@ -80,6 +80,7 @@ interface ListLoaderData {
   meta: SpeciesList;
   list: FilteredSpeciesList;
   facets: Facet[];
+  baseFacets?: Facet[];
 }
 
 enum SortDirection {
@@ -92,7 +93,7 @@ const classificationFields = ['family', 'kingdom', 'vernacularName', 'matchType'
 
 function List() {
   const { id } = useParams();
-  const [_data, setData] = useState<ListLoaderData | null>(null);
+  const [data, setData] = useState<ListLoaderData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [list, setList] = useState<FilteredSpeciesList | null>(null);
@@ -138,7 +139,6 @@ function List() {
   const toggleFilters = () => setHideFilters(!hidefilters);
 
   // Internal state (not driven by search params)
-  const [facets, setFacets] = useState<Facet[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const [refresh, setRefresh] = useState<boolean>(false);
   const [editing, setEditing] = useState<boolean>(false);
@@ -190,7 +190,6 @@ function List() {
         setList(result.list);
         setMeta(result.meta);
         setPageTitle(result.meta.title);
-        setFacets(result.facets);
       } catch (err) {
         if (err instanceof ListError) setFatalError(err);
         else setError(err as Error);
@@ -243,20 +242,14 @@ function List() {
           controller.current.signal
         );
 
-        const {
-          meta: updatedMeta,
-          list: updatedList,
-          facets: updatedFacets,
-        } = result;
-
         controller.current = null;
-        if (updatedMeta === null || updatedList === null) {
+        if (result.meta === null || result.list === null) {
           throwListNotFound();
         }
+        setData(result);
         setError(null);
-        setMeta(updatedMeta);
-        setList(updatedList);
-        setFacets(updatedFacets);
+        setMeta(result.meta);
+        setList(result.list);
       } catch (error) {
         if (error instanceof ListError) setFatalError(error);
         else if (error !== 'New GraphQL request invoked') {
@@ -423,6 +416,10 @@ function List() {
     setSelected(null);
     open();
   }, []);
+
+  const mergedFacets = useMemo(() => {
+    return mergeFacetsWithBase(data?.baseFacets || [], data?.facets || []);
+  }, [data?.baseFacets, data?.facets]);
 
   const handleFilterClick = useCallback(
     (filter: KV) => {
@@ -651,7 +648,7 @@ function List() {
                 <Grid.Col span={{ base: 12, sm: 4, md: 3, lg: 2 }} mt={5}>
                   <Collapse in={!hidefilters}>
                       <FiltersSection
-                        facets={facets || []}
+                        facets={mergedFacets}
                         active={filters || []}
                         onSelect={handleFilterClick}
                         onReset={() => {setFilters([]); setPage(0);}}

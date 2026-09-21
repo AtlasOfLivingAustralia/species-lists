@@ -54,7 +54,7 @@ import {
   FiltersSection,
   ToggleFiltersButton,
 } from '#/components/FiltersSection';
-import { getErrorMessage, parseAsFilters } from '#/helpers';
+import { getErrorMessage, mergeFacetsWithBase, parseAsFilters } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
 
 // Styles
@@ -65,6 +65,7 @@ import classes from './classes/index.module.css';
 interface HomeQuery {
   lists: SpeciesListPage;
   facets: Facet[];
+  baseFacets?: Facet[];
 }
 
 const sortField = [
@@ -286,8 +287,12 @@ const Home = ({ routeId }: { routeId: string }) => {
 
   const hasError = Boolean(error);
 
+  const mergedFacets = useMemo(() => {
+    return mergeFacetsWithBase(data?.baseFacets || [], data?.facets || []);
+  }, [data?.baseFacets, data?.facets]);
+
   const filteredFacets = useMemo(() => {
-    return (data?.facets || []).filter(facet => {
+    return mergedFacets.filter(facet => {
       // Keep it if it's currently an active filter
       const isActive = filters.some(f => f.key === facet.key);
       if (isActive) return true;
@@ -299,7 +304,7 @@ const Home = ({ routeId }: { routeId: string }) => {
       
       return true;
     });
-  }, [data?.facets, totalElements, filters]);
+  }, [mergedFacets, totalElements, filters]);
 
   return (
     <>
@@ -514,7 +519,7 @@ const Home = ({ routeId }: { routeId: string }) => {
           {!hidefilters && (
             <Grid.Col span={{ base: 12, sm: 4, md: 3, lg: 2 }} mt={isMobile ? 0 : 16}>
                 <Collapse in={!hidefilters}>
-                {loading ? (
+                {loading && !data ? (
                     <Stack gap={6}>
                       <Skeleton height={24} width="60%" radius="md" />
                       {Array.from({ length: 3 }).map((_, index) => (
@@ -641,7 +646,7 @@ const Home = ({ routeId }: { routeId: string }) => {
                   <Table
                     striped={false}
                     withRowBorders
-                    className={classes.resultsTable}
+                    className={`${classes.resultsTable} ${loading ? classes.resultsTableLoading : ''}`}
                   >
                     <Table.Tbody>
                       {content

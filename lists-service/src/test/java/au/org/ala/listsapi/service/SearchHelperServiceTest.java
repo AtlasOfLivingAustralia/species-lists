@@ -1,15 +1,20 @@
 package au.org.ala.listsapi.service;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import au.org.ala.listsapi.model.SpeciesList;
-import java.util.Collections;
-import java.util.Arrays;
+import au.org.ala.listsapi.model.Filter;
+import au.org.ala.listsapi.model.ListSearchContext;
 import au.org.ala.listsapi.model.SingleListSearchContext;
+import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesListIndex;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,11 +25,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHits;
-import org.springframework.data.elasticsearch.core.SearchHitsImpl;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Query;
 
 @ExtendWith(MockitoExtension.class)
 class SearchHelperServiceTest {
@@ -80,5 +85,71 @@ class SearchHelperServiceTest {
     // Act with a list containing an empty string
     searchHelperService.getFacetsForSingleSpeciesList(context, Arrays.asList("validField", "", null, "   "));
     // As long as it doesn't throw an Invalid aggregation name exception, we're good.
+  }
+
+  @Test
+  void getFacetsForSpeciesLists_withFilter_appliesDisjunctiveFiltering() {
+    Filter listTypeFilter = new Filter("listType", "CONSERVATION_LIST");
+    ListSearchContext context = ListSearchContext.builder()
+        .searchQuery("birds")
+        .filters(List.of(listTypeFilter))
+        .isAdmin(true)
+        .build();
+
+    SearchHits<SpeciesListIndex> mockHits = org.mockito.Mockito.mock(SearchHits.class);
+    ArgumentCaptor<NativeQuery> nativeQueryCaptor = ArgumentCaptor.forClass(NativeQuery.class);
+
+    when(elasticsearchOperations.search(nativeQueryCaptor.capture(), eq(SpeciesListIndex.class)))
+        .thenReturn(mockHits);
+
+    searchHelperService.getFacetsForSpeciesLists(context);
+
+    NativeQuery captured = nativeQueryCaptor.getValue();
+    assertNotNull(captured);
+
+    // The listType aggregation should NOT be wrapped in a filter (otherFilters is empty for listType)
+    co.elastic.clients.elasticsearch._types.aggregations.Aggregation listTypeAgg = 
+        captured.getAggregations().get("listType");
+    assertNotNull(listTypeAgg);
+    assertTrue(listTypeAgg.isTerms(), "listType aggregation should be a direct terms aggregation");
+
+    // The licence aggregation SHOULD be wrapped in a filter (otherFilters contains listType)
+    co.elastic.clients.elasticsearch._types.aggregations.Aggregation licenceAgg = 
+        captured.getAggregations().get("licence");
+    assertNotNull(licenceAgg);
+    assertTrue(licenceAgg.isFilter(), "licence aggregation should be wrapped in a filter aggregation");
+  }
+
+  @Test
+  void getFacetsForSingleSpeciesList_withFilter_appliesDisjunctiveFiltering() {
+    Filter familyFilter = new Filter("classification.family", "Fabaceae");
+    SingleListSearchContext context = SingleListSearchContext.builder()
+        .speciesListId("list-123")
+        .searchQuery("Acacia")
+        .filters(List.of(familyFilter))
+        .build();
+
+    SearchHits<SpeciesListIndex> mockHits = org.mockito.Mockito.mock(SearchHits.class);
+    ArgumentCaptor<NativeQuery> nativeQueryCaptor = ArgumentCaptor.forClass(NativeQuery.class);
+
+    when(elasticsearchOperations.search(nativeQueryCaptor.capture(), eq(SpeciesListIndex.class)))
+        .thenReturn(mockHits);
+
+    searchHelperService.getFacetsForSingleSpeciesList(context, List.of("status"));
+
+    NativeQuery captured = nativeQueryCaptor.getValue();
+    assertNotNull(captured);
+
+    // The classification.family aggregation should NOT be wrapped in a filter (otherFilters is empty for family)
+    co.elastic.clients.elasticsearch._types.aggregations.Aggregation familyAgg = 
+        captured.getAggregations().get("classification.family");
+    assertNotNull(familyAgg);
+    assertTrue(familyAgg.isTerms(), "classification.family should be a direct terms aggregation");
+
+    // The status aggregation SHOULD be wrapped in a filter (otherFilters contains family)
+    co.elastic.clients.elasticsearch._types.aggregations.Aggregation statusAgg = 
+        captured.getAggregations().get("status");
+    assertNotNull(statusAgg);
+    assertTrue(statusAgg.isFilter(), "status aggregation should be wrapped in a filter aggregation");
   }
 }

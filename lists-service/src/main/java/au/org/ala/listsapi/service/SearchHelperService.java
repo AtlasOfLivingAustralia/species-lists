@@ -459,19 +459,19 @@ public class SearchHelperService {
     }
 
     /**
-     * Get facets for species lists with permission-aware filtering
+     * Get facets for species lists with permission-aware disjunctive filtering
      */
     public List<Facet> getFacetsForSpeciesLists(ListSearchContext context) {
         NativeQueryBuilder builder = NativeQuery.builder();
         
-        // Apply query with permission filters
+        // Apply base query with permission filters (excluding facet filters for disjunctive faceting)
         builder.withQuery(q -> q.bool(bq -> {
-            buildListSearchQuery(context, bq);
+            buildFacetBaseListSearchQuery(context, bq);
             return bq;
         }));
         
-        // Add facet aggregations
-        addFacetAggregations(builder);
+        // Add facet aggregations with disjunctive filtering
+        addFacetAggregations(builder, context.getFilters());
         
         // Execute search
         SearchHits<SpeciesListIndex> results = elasticsearchOperations.search(
@@ -481,6 +481,75 @@ public class SearchHelperService {
         
         // Process and return facets
         return processFacetResults(results);
+    }
+
+    /**
+     * Builds base Elasticsearch query for facets without user filters to support disjunctive faceting
+     */
+    private void buildFacetBaseListSearchQuery(
+            ListSearchContext context, 
+            BoolQuery.Builder bq) {
+        
+        List<FieldValue> emptyList = new ArrayList<>();
+        List<Filter> emptyFilters = Collections.emptyList();
+        
+        if (StringUtils.isNotBlank(context.getSearchQuery())) {
+            if ("relevance".equalsIgnoreCase(context.getSort())) {
+                ElasticUtils.buildListSearchQuery(
+                    context.getSearchQuery(), 
+                    context.getUserId(),
+                    context.isAdmin(), 
+                    null, 
+                    emptyFilters, 
+                    bq
+                );
+            } else {
+                ElasticUtils.buildQuery(
+                    context.getSearchQuery(),
+                    emptyList,
+                    context.getUserId(),
+                    context.isAdmin(),
+                    null,
+                    emptyFilters,
+                    bq
+                );
+            }
+        } else {
+            ElasticUtils.buildQuery(
+                "",
+                emptyList,
+                context.getUserId(),
+                context.isAdmin(),
+                null,
+                emptyFilters,
+                bq
+            );
+        }
+        
+        // Apply permission-based filters
+        applyFacetPermissionFilters(context, bq);
+    }
+
+    /**
+     * Applies permission-based filters to the facet base query
+     */
+    private void applyFacetPermissionFilters(
+            ListSearchContext context, 
+            BoolQuery.Builder bq) {
+        
+        if (!context.isAuthenticated()) {
+            // Unauthenticated: only public lists
+            bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
+        } else if (context.isViewingOwnLists()) {
+            // Viewing own lists: show all their lists (public and private)
+            bq.filter(f -> f.term(t -> t.field("owner").value(context.getUserId())));
+        } else if (!context.isAdmin()) {
+            // Authenticated non-admin: only public lists (unless viewing own)
+            bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
+        } else if (context.isAdmin() && context.getUserId() != null) {
+            // Admin viewing specific user's lists
+            bq.filter(f -> f.term(t -> t.field("owner").value(context.getUserId())));
+        }
     }
 
     /**
@@ -594,9 +663,9 @@ public class SearchHelperService {
     }
 
     /**
-     * Adds facet aggregations with distinct list counts
+     * Adds facet aggregations with distinct list counts and disjunctive filtering
      */
-    private void addFacetAggregations(NativeQueryBuilder builder) {
+    private void addFacetAggregations(NativeQueryBuilder builder, List<Filter> filters) {
         List<String> facetFields = Arrays.asList(
             "isAuthoritative", "listType", "isBIE", "isSDS", 
             "isPrivate", "hasRegion", "tags", "isThreatened", 
@@ -608,23 +677,60 @@ public class SearchHelperService {
             "isThreatened", "isInvasive", "isPrivate"
         );
         
+        List<Filter> safeFilters = (filters != null) ? filters : Collections.emptyList();
+
         for (String field : facetFields) {
             String esField = booleanFields.contains(field) 
                 ? field 
                 : field + ".keyword";
-            
-            builder.withAggregation(
-                field,
-                Aggregation.of(a -> a
-                    .terms(ta -> ta.field(esField).size(50))
-                    .aggregations("distinct_list_count",
-                        Aggregation.of(ca -> ca.cardinality(
-                            c -> c.field(SPECIES_LIST_ID + ".keyword").precisionThreshold(40000)
-                        ))
-                    )
+
+            List<Filter> otherFilters = safeFilters.stream()
+                .filter(f -> !isSameFacetField(f.getKey(), field))
+                .toList();
+
+            Aggregation termsAgg = Aggregation.of(a -> a
+                .terms(ta -> ta.field(esField).size(50))
+                .aggregations("distinct_list_count",
+                    Aggregation.of(ca -> ca.cardinality(
+                        c -> c.field(SPECIES_LIST_ID + ".keyword").precisionThreshold(40000)
+                    ))
                 )
             );
+
+            if (otherFilters.isEmpty()) {
+                builder.withAggregation(field, termsAgg);
+            } else {
+                builder.withAggregation(
+                    field,
+                    Aggregation.of(a -> a
+                        .filter(f -> f.bool(fbq -> {
+                            ElasticUtils.addFilters(otherFilters, fbq);
+                            return fbq;
+                        }))
+                        .aggregations("terms", termsAgg)
+                    )
+                );
+            }
         }
+    }
+
+    /**
+     * Checks if a filter key corresponds to a given facet field
+     */
+    private boolean isSameFacetField(String filterKey, String facetField) {
+        if (filterKey == null || facetField == null) {
+            return false;
+        }
+        if (filterKey.equalsIgnoreCase(facetField)) {
+            return true;
+        }
+        String cleanFilterKey = filterKey.startsWith("properties.") 
+            ? filterKey.substring("properties.".length()) 
+            : filterKey;
+        String cleanFacetField = facetField.startsWith("properties.") 
+            ? facetField.substring("properties.".length()) 
+            : facetField;
+        return cleanFilterKey.equalsIgnoreCase(cleanFacetField);
     }
 
     /**
@@ -781,39 +887,70 @@ public class SearchHelperService {
         ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
         if (agg == null) return Collections.emptyList();
         
+        Set<String> booleanFields = Set.of(
+            "isAuthoritative", "isBIE", "isSDS", "hasRegion",
+            "isThreatened", "isInvasive", "isPrivate"
+        );
+
         List<Facet> facets = new ArrayList<>();
         
         for (ElasticsearchAggregation aggResult : agg.aggregations()) {
             String fieldName = aggResult.aggregation().getName();
             Aggregate aggregate = aggResult.aggregation().getAggregate();
             
+            Aggregate targetAgg = aggregate;
+            if (aggregate.isFilter()) {
+                targetAgg = aggregate.filter().aggregations().get("terms");
+            }
+            if (targetAgg == null) {
+                continue;
+            }
+
             Facet facet = new Facet();
             facet.setKey(fieldName);
             facet.setCounts(new ArrayList<>());
             
-            if (aggregate.isSterms()) {
+            if (targetAgg.isSterms()) {
                 // String terms
-                aggregate.sterms().buckets().array().forEach(bucket -> {
+                targetAgg.sterms().buckets().array().forEach(bucket -> {
                     long distinctCount = getDistinctListCount(bucket.aggregations());
                     facet.getCounts().add(
                         new FacetCount(bucket.key().stringValue(), distinctCount)
                     );
                 });
-            } else if (aggregate.isLterms()) {
+            } else if (targetAgg.isLterms()) {
                 // Boolean terms
-                aggregate.lterms().buckets().array().forEach(bucket -> {
+                targetAgg.lterms().buckets().array().forEach(bucket -> {
                     long distinctCount = getDistinctListCount(bucket.aggregations());
                     String key = bucket.key() == 1 ? "true" : "false";
                     facet.getCounts().add(new FacetCount(key, distinctCount));
                 });
             }
             
+            if (booleanFields.contains(fieldName)) {
+                ensureBooleanCounts(facet);
+            }
+
             if (!facet.getCounts().isEmpty()) {
                 facets.add(facet);
             }
         }
         
         return facets;
+    }
+
+    /**
+     * Ensures boolean facets always have both true and false count entries
+     */
+    private void ensureBooleanCounts(Facet facet) {
+        boolean hasTrue = facet.getCounts().stream().anyMatch(c -> "true".equalsIgnoreCase(c.getValue()));
+        boolean hasFalse = facet.getCounts().stream().anyMatch(c -> "false".equalsIgnoreCase(c.getValue()));
+        if (!hasFalse) {
+            facet.getCounts().add(0, new FacetCount("false", 0L));
+        }
+        if (!hasTrue) {
+            facet.getCounts().add(new FacetCount("true", 0L));
+        }
     }
 
     /**
@@ -859,7 +996,7 @@ public class SearchHelperService {
     }
 
     /**
-     * Get facets for a specific species list
+     * Get facets for a specific species list with disjunctive filtering
      */
     public List<Facet> getFacetsForSingleSpeciesList(
             SingleListSearchContext context,
@@ -873,19 +1010,11 @@ public class SearchHelperService {
             return bq;
         }));
         
-        // Add post-filter if filters are present
-        if (!context.getFilters().isEmpty()) {
-            builder.withFilter(q -> q.bool(bq -> {
-                buildSingleListQuery(context, bq);
-                return bq;
-            }));
-        }
+        // Add aggregations for facet fields with disjunctive filtering
+        addSingleListFacetAggregations(builder, facetFields, context.getFilters());
         
-        // Add aggregations for facet fields
-        addSingleListFacetAggregations(builder, facetFields);
-        
-        // Add classification aggregations
-        addClassificationAggregations(builder);
+        // Add classification aggregations with disjunctive filtering
+        addClassificationAggregations(builder, context.getFilters());
         
         // Add property key aggregations
         addPropertyAggregations(builder);
@@ -951,7 +1080,16 @@ public class SearchHelperService {
         
         // Apply user-provided filters (but NOT privacy filters - access already validated)
         if (context.getFilters() != null && !context.getFilters().isEmpty()) {
-            Map<String, List<Filter>> filtersByKey = context.getFilters().stream()
+            addSingleListFilters(context.getFilters(), bq);
+        }
+    }
+
+    /**
+     * Applies single list filters to a BoolQuery.Builder
+     */
+    private void addSingleListFilters(List<Filter> filters, BoolQuery.Builder bq) {
+        if (filters != null && !filters.isEmpty()) {
+            Map<String, List<Filter>> filtersByKey = filters.stream()
                     .collect(Collectors.groupingBy(Filter::getKey));
 
             for (Map.Entry<String, List<Filter>> entry : filtersByKey.entrySet()) {
@@ -981,10 +1119,13 @@ public class SearchHelperService {
             })));
         } else {
             // Property fields - use nested query
+            String propertyName = field.startsWith("properties.") 
+                ? field.substring("properties.".length()) 
+                : field;
             bq.filter(f -> f.nested(n -> n
                     .path("properties")
                     .query(q -> q.bool(b -> {
-                        b.must(m -> m.term(t -> t.field("properties.key.keyword").value(field)));
+                        b.must(m -> m.term(t -> t.field("properties.key.keyword").value(propertyName)));
                         b.must(m -> m.bool(vb -> buildOrQuery(vb, values, (val, builder) -> 
                             builder.term(t -> t.field("properties.value.keyword").value(val))
                         )));
@@ -1024,32 +1165,51 @@ public class SearchHelperService {
     }
 
     /**
-     * Adds facet aggregations for the specified fields
+     * Adds facet aggregations for the specified fields with disjunctive filtering
      */
     private void addSingleListFacetAggregations(
             NativeQueryBuilder builder,
-            List<String> facetFields) {
+            List<String> facetFields,
+            List<Filter> filters) {
         
         if (facetFields == null || facetFields.isEmpty()) {
             return;
         }
         
+        List<Filter> safeFilters = (filters != null) ? filters : Collections.emptyList();
+
         for (String field : facetFields) {
             if (field == null || field.trim().isEmpty()) {
                 continue;
             }
             String esField = getPropertiesFacetField(field);
-            builder.withAggregation(
-                field,
-                Aggregation.of(a -> a.terms(ta -> ta.field(esField).size(30)))
-            );
+            List<Filter> otherFilters = safeFilters.stream()
+                .filter(f -> !isSameFacetField(f.getKey(), field))
+                .toList();
+
+            Aggregation termsAgg = Aggregation.of(a -> a.terms(ta -> ta.field(esField).size(30)));
+
+            if (otherFilters.isEmpty()) {
+                builder.withAggregation(field, termsAgg);
+            } else {
+                builder.withAggregation(
+                    field,
+                    Aggregation.of(a -> a
+                        .filter(f -> f.bool(fbq -> {
+                            addSingleListFilters(otherFilters, fbq);
+                            return fbq;
+                        }))
+                        .aggregations("terms", termsAgg)
+                    )
+                );
+            }
         }
     }
 
     /**
-     * Adds classification field aggregations
+     * Adds classification field aggregations with disjunctive filtering
      */
-    private void addClassificationAggregations(NativeQueryBuilder builder) {
+    private void addClassificationAggregations(NativeQueryBuilder builder, List<Filter> filters) {
         List<String> classificationFields = Arrays.asList(
             "classification.family",
             "classification.order",
@@ -1062,11 +1222,29 @@ public class SearchHelperService {
             "classification.matchType"
         );
         
+        List<Filter> safeFilters = (filters != null) ? filters : Collections.emptyList();
+
         for (String field : classificationFields) {
-            builder.withAggregation(
-                field,
-                Aggregation.of(a -> a.terms(ta -> ta.field(field + ".keyword").size(500)))
-            );
+            List<Filter> otherFilters = safeFilters.stream()
+                .filter(f -> !isSameFacetField(f.getKey(), field))
+                .toList();
+
+            Aggregation termsAgg = Aggregation.of(a -> a.terms(ta -> ta.field(field + ".keyword").size(500)));
+
+            if (otherFilters.isEmpty()) {
+                builder.withAggregation(field, termsAgg);
+            } else {
+                builder.withAggregation(
+                    field,
+                    Aggregation.of(a -> a
+                        .filter(f -> f.bool(fbq -> {
+                            addSingleListFilters(otherFilters, fbq);
+                            return fbq;
+                        }))
+                        .aggregations("terms", termsAgg)
+                    )
+                );
+            }
         }
     }
 
@@ -1119,11 +1297,17 @@ public class SearchHelperService {
                 .findFirst()
                 .orElse(null);
             
-            if (aggResult != null && aggResult.aggregation().getAggregate().isSterms()) {
-                Facet facet = createFacetFromTerms(field, 
-                    aggResult.aggregation().getAggregate().sterms().buckets().array());
-                if (!facet.getCounts().isEmpty()) {
-                    facets.add(facet);
+            if (aggResult != null) {
+                Aggregate aggVal = aggResult.aggregation().getAggregate();
+                if (aggVal.isFilter()) {
+                    aggVal = aggVal.filter().aggregations().get("terms");
+                }
+                if (aggVal != null && aggVal.isSterms()) {
+                    Facet facet = createFacetFromTerms(field, 
+                        aggVal.sterms().buckets().array());
+                    if (!facet.getCounts().isEmpty()) {
+                        facets.add(facet);
+                    }
                 }
             }
         }
@@ -1208,12 +1392,20 @@ public class SearchHelperService {
     private Facet getPropertyValueFacet(String propertyKey, SingleListSearchContext context) {
         NativeQueryBuilder builder = NativeQuery.builder();
         
-        // Build base query (list ID + search query)
+        List<Filter> safeFilters = (context.getFilters() != null) ? context.getFilters() : Collections.emptyList();
+        List<Filter> otherFilters = safeFilters.stream()
+            .filter(f -> !isSameFacetField(f.getKey(), propertyKey))
+            .toList();
+
+        // Build base query (list ID + search query + otherFilters)
         builder.withQuery(q -> q.bool(bq -> {
             buildBaseListQuery(context, bq);
+            if (!otherFilters.isEmpty()) {
+                addSingleListFilters(otherFilters, bq);
+            }
             return bq;
         }));
-        
+
         // Add nested aggregation for this specific property key's values
         builder.withAggregation(
             propertyKey + "_values",

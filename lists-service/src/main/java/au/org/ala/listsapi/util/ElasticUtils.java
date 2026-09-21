@@ -341,7 +341,7 @@ public class ElasticUtils {
         return "properties." + filter + ".keyword";
     }
 
-    private static void addFilters(List<Filter> filters, BoolQuery.Builder bq) {
+    public static void addFilters(List<Filter> filters, BoolQuery.Builder bq) {
         if (filters != null && !filters.isEmpty()) {
             // Group filters by key
             Map<String, List<Filter>> filtersByKey = filters.stream()
