@@ -29,7 +29,16 @@ export const QUERY_LISTS_SEARCH = `query findList($searchQuery: String, $page: I
     totalElements
     __typename
   }
-  facets: facetSpeciesLists(searchQuery: $searchQuery, isPrivate: $isPrivate, userId: $userId) {
+  facets: facetSpeciesLists(searchQuery: $searchQuery, isPrivate: $isPrivate, userId: $userId, filters: $filters) {
+    key
+    counts {
+      value
+      count
+      __typename
+    }
+    __typename
+  }
+  baseFacets: facetSpeciesLists(searchQuery: $searchQuery, isPrivate: $isPrivate, userId: $userId) {
     key
     counts {
       value
@@ -131,6 +140,17 @@ export const QUERY_LISTS_GET = `query loadList(
     speciesListID: $speciesListID
     searchQuery: $searchQuery
     filters: $filters
+    facetFields: []
+  ) {
+    key
+    counts {
+      value
+      count
+    }
+  }
+  baseFacets: facetSpeciesList(
+    speciesListID: $speciesListID
+    searchQuery: $searchQuery
     facetFields: []
   ) {
     key
