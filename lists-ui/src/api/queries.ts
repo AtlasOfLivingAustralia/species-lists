@@ -29,7 +29,7 @@ export const QUERY_LISTS_SEARCH = `query findList($searchQuery: String, $page: I
     totalElements
     __typename
   }
-  facets: facetSpeciesLists(searchQuery: $searchQuery, isPrivate: $isPrivate, userId: $userId) {
+  facets: facetSpeciesLists(searchQuery: $searchQuery, isPrivate: $isPrivate, userId: $userId, filters: $filters) {
     key
     counts {
       value

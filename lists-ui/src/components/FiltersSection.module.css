@@ -69,6 +69,10 @@
   margin: 4px 0px 4px 0px;
   cursor: pointer;
 }
+.checkboxRootDisabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
 .checkboxLabel { 
   font-size: 10px;
   width: 100%;
@@ -99,6 +103,15 @@
   border-radius: 0;
   font-size: var(--mantine-font-size-sm);
   cursor: pointer;
+}
+
+.checkboxPaperDisabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.countsChipDisabled {
+  opacity: 0.6;
 }
 
 .facetPaper {

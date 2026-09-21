@@ -32,7 +32,7 @@ import {
   parseAsString,
   useQueryState,
 } from 'nuqs';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 
 // Icons
@@ -54,7 +54,7 @@ import {
   FiltersSection,
   ToggleFiltersButton,
 } from '#/components/FiltersSection';
-import { getErrorMessage, parseAsFilters } from '#/helpers';
+import { getErrorMessage, mergeFacetsWithBase, parseAsFilters } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
 
 // Styles
@@ -286,8 +286,30 @@ const Home = ({ routeId }: { routeId: string }) => {
 
   const hasError = Boolean(error);
 
+  // Track base facets for the current search/view query to retain 0-count items during filtering
+  const [baseFacets, setBaseFacets] = useState<Facet[]>([]);
+  const prevBaseQueryRef = useRef<string>('');
+  const currentBaseQuery = `${searchDebounced}_${view}_${routeId}_${ala.userid}`;
+
+  useEffect(() => {
+    if (prevBaseQueryRef.current !== currentBaseQuery) {
+      prevBaseQueryRef.current = currentBaseQuery;
+      if (data?.facets && data.facets.length > 0) {
+        setBaseFacets(data.facets);
+      }
+    } else if (filters.length === 0 && data?.facets && data.facets.length > 0) {
+      setBaseFacets(data.facets);
+    } else if (baseFacets.length === 0 && data?.facets && data.facets.length > 0) {
+      setBaseFacets(data.facets);
+    }
+  }, [currentBaseQuery, data?.facets, filters.length, baseFacets.length]);
+
+  const mergedFacets = useMemo(() => {
+    return mergeFacetsWithBase(baseFacets, data?.facets || []);
+  }, [baseFacets, data?.facets]);
+
   const filteredFacets = useMemo(() => {
-    return (data?.facets || []).filter(facet => {
+    return mergedFacets.filter(facet => {
       // Keep it if it's currently an active filter
       const isActive = filters.some(f => f.key === facet.key);
       if (isActive) return true;
@@ -299,7 +321,7 @@ const Home = ({ routeId }: { routeId: string }) => {
       
       return true;
     });
-  }, [data?.facets, totalElements, filters]);
+  }, [mergedFacets, totalElements, filters]);
 
   return (
     <>

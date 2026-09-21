@@ -62,7 +62,7 @@ import { IngestProgress } from '#/components/IngestProgress';
 import { SearchInput } from './components/SearchInput';
 import { Message } from '#/components/Message';
 import PageLoader from '#/components/PageLoader';
-import { getErrorMessage, ListError, parseAsFilters } from '#/helpers';
+import { getErrorMessage, ListError, mergeFacetsWithBase, parseAsFilters } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
 import { getAccessToken } from '#/helpers/utils/getAccessToken';
 import { Actions } from './components/Actions';
@@ -139,6 +139,7 @@ function List() {
 
   // Internal state (not driven by search params)
   const [facets, setFacets] = useState<Facet[]>([]);
+  const [baseFacets, setBaseFacets] = useState<Facet[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const [refresh, setRefresh] = useState<boolean>(false);
   const [editing, setEditing] = useState<boolean>(false);
@@ -191,6 +192,7 @@ function List() {
         setMeta(result.meta);
         setPageTitle(result.meta.title);
         setFacets(result.facets);
+        setBaseFacets(result.facets || []);
       } catch (err) {
         if (err instanceof ListError) setFatalError(err);
         else setError(err as Error);
@@ -256,6 +258,9 @@ function List() {
         setError(null);
         setMeta(updatedMeta);
         setList(updatedList);
+        if ((!filters || filters.length === 0) && updatedFacets) {
+          setBaseFacets(updatedFacets);
+        }
         setFacets(updatedFacets);
       } catch (error) {
         if (error instanceof ListError) setFatalError(error);
@@ -651,7 +656,7 @@ function List() {
                 <Grid.Col span={{ base: 12, sm: 4, md: 3, lg: 2 }} mt={5}>
                   <Collapse in={!hidefilters}>
                       <FiltersSection
-                        facets={facets || []}
+                        facets={mergeFacetsWithBase(baseFacets, facets || [])}
                         active={filters || []}
                         onSelect={handleFilterClick}
                         onReset={() => {setFilters([]); setPage(0);}}
