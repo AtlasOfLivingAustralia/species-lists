@@ -25,12 +25,13 @@ function useGQLQuery<T>(
 
   useEffect(() => {
     async function runQuery() {
-      if (data && options.clearDataOnUpdate) setData(null);
+      if (options.clearDataOnUpdate) {
+        setData(null);
+      }
       try {
         if (controller.current)
           controller.current.abort('New GraphQL request invoked');
         setLoading(true);
-        setData(null);
         console.log('GraphQL Query - loading:', loading);
         controller.current = new AbortController();
         // set a timer here to measure query performance
