@@ -1080,7 +1080,16 @@ public class SearchHelperService {
         
         // Apply user-provided filters (but NOT privacy filters - access already validated)
         if (context.getFilters() != null && !context.getFilters().isEmpty()) {
-            Map<String, List<Filter>> filtersByKey = context.getFilters().stream()
+            addSingleListFilters(context.getFilters(), bq);
+        }
+    }
+
+    /**
+     * Applies single list filters to a BoolQuery.Builder
+     */
+    private void addSingleListFilters(List<Filter> filters, BoolQuery.Builder bq) {
+        if (filters != null && !filters.isEmpty()) {
+            Map<String, List<Filter>> filtersByKey = filters.stream()
                     .collect(Collectors.groupingBy(Filter::getKey));
 
             for (Map.Entry<String, List<Filter>> entry : filtersByKey.entrySet()) {
@@ -1110,10 +1119,13 @@ public class SearchHelperService {
             })));
         } else {
             // Property fields - use nested query
+            String propertyName = field.startsWith("properties.") 
+                ? field.substring("properties.".length()) 
+                : field;
             bq.filter(f -> f.nested(n -> n
                     .path("properties")
                     .query(q -> q.bool(b -> {
-                        b.must(m -> m.term(t -> t.field("properties.key.keyword").value(field)));
+                        b.must(m -> m.term(t -> t.field("properties.key.keyword").value(propertyName)));
                         b.must(m -> m.bool(vb -> buildOrQuery(vb, values, (val, builder) -> 
                             builder.term(t -> t.field("properties.value.keyword").value(val))
                         )));
@@ -1184,7 +1196,7 @@ public class SearchHelperService {
                     field,
                     Aggregation.of(a -> a
                         .filter(f -> f.bool(fbq -> {
-                            ElasticUtils.addFilters(otherFilters, fbq);
+                            addSingleListFilters(otherFilters, fbq);
                             return fbq;
                         }))
                         .aggregations("terms", termsAgg)
@@ -1226,7 +1238,7 @@ public class SearchHelperService {
                     field,
                     Aggregation.of(a -> a
                         .filter(f -> f.bool(fbq -> {
-                            ElasticUtils.addFilters(otherFilters, fbq);
+                            addSingleListFilters(otherFilters, fbq);
                             return fbq;
                         }))
                         .aggregations("terms", termsAgg)
@@ -1380,23 +1392,19 @@ public class SearchHelperService {
     private Facet getPropertyValueFacet(String propertyKey, SingleListSearchContext context) {
         NativeQueryBuilder builder = NativeQuery.builder();
         
-        // Build base query (list ID + search query)
-        builder.withQuery(q -> q.bool(bq -> {
-            buildBaseListQuery(context, bq);
-            return bq;
-        }));
-        
         List<Filter> safeFilters = (context.getFilters() != null) ? context.getFilters() : Collections.emptyList();
         List<Filter> otherFilters = safeFilters.stream()
             .filter(f -> !isSameFacetField(f.getKey(), propertyKey))
             .toList();
 
-        if (!otherFilters.isEmpty()) {
-            builder.withFilter(q -> q.bool(bq -> {
-                ElasticUtils.addFilters(otherFilters, bq);
-                return bq;
-            }));
-        }
+        // Build base query (list ID + search query + otherFilters)
+        builder.withQuery(q -> q.bool(bq -> {
+            buildBaseListQuery(context, bq);
+            if (!otherFilters.isEmpty()) {
+                addSingleListFilters(otherFilters, bq);
+            }
+            return bq;
+        }));
 
         // Add nested aggregation for this specific property key's values
         builder.withAggregation(

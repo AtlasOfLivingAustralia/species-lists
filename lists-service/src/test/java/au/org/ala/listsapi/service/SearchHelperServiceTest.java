@@ -119,4 +119,37 @@ class SearchHelperServiceTest {
     assertNotNull(licenceAgg);
     assertTrue(licenceAgg.isFilter(), "licence aggregation should be wrapped in a filter aggregation");
   }
+
+  @Test
+  void getFacetsForSingleSpeciesList_withFilter_appliesDisjunctiveFiltering() {
+    Filter familyFilter = new Filter("classification.family", "Fabaceae");
+    SingleListSearchContext context = SingleListSearchContext.builder()
+        .speciesListId("list-123")
+        .searchQuery("Acacia")
+        .filters(List.of(familyFilter))
+        .build();
+
+    SearchHits<SpeciesListIndex> mockHits = org.mockito.Mockito.mock(SearchHits.class);
+    ArgumentCaptor<NativeQuery> nativeQueryCaptor = ArgumentCaptor.forClass(NativeQuery.class);
+
+    when(elasticsearchOperations.search(nativeQueryCaptor.capture(), eq(SpeciesListIndex.class)))
+        .thenReturn(mockHits);
+
+    searchHelperService.getFacetsForSingleSpeciesList(context, List.of("status"));
+
+    NativeQuery captured = nativeQueryCaptor.getValue();
+    assertNotNull(captured);
+
+    // The classification.family aggregation should NOT be wrapped in a filter (otherFilters is empty for family)
+    co.elastic.clients.elasticsearch._types.aggregations.Aggregation familyAgg = 
+        captured.getAggregations().get("classification.family");
+    assertNotNull(familyAgg);
+    assertTrue(familyAgg.isTerms(), "classification.family should be a direct terms aggregation");
+
+    // The status aggregation SHOULD be wrapped in a filter (otherFilters contains family)
+    co.elastic.clients.elasticsearch._types.aggregations.Aggregation statusAgg = 
+        captured.getAggregations().get("status");
+    assertNotNull(statusAgg);
+    assertTrue(statusAgg.isFilter(), "status aggregation should be wrapped in a filter aggregation");
+  }
 }
