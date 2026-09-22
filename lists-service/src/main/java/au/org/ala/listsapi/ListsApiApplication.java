@@ -17,6 +17,11 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.IndexOperations;
+import au.org.ala.listsapi.model.SpeciesListIndex;
+
 @SpringBootApplication
 @EnableAsync
 @EnableMongoAuditing
@@ -72,6 +77,21 @@ public class ListsApiApplication {
       // For encoded backslashes (%5C), if needed, though less common in URL paths
       // connector.setProperty("ALLOW_BACKSLASH", "true"); // Be cautious with this
     });
+  }
+
+  @Bean
+  public CommandLineRunner initElasticsearchMapping(ElasticsearchOperations elasticsearchOperations) {
+    return args -> {
+      try {
+        IndexOperations indexOps = elasticsearchOperations.indexOps(SpeciesListIndex.class);
+        if (indexOps.exists()) {
+          indexOps.putMapping();
+          logger.info("Updated Elasticsearch mapping for SpeciesListIndex");
+        }
+      } catch (Exception e) {
+        logger.warn("Failed to update Elasticsearch mapping on startup: {}", e.getMessage());
+      }
+    };
   }
 
 }

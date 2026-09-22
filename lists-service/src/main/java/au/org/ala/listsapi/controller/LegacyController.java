@@ -390,7 +390,7 @@ public class LegacyController {
             @AuthenticationPrincipal Principal principal) {
         
         // Note: Filter booleans are nullified here as path lookup is specific to one list
-        return internalSpeciesListItems(druid, null, null, null, null, null, 
+        return internalSpeciesListItems(druid, null, null, null, null, null, null, 
                                     query, null, sort, order, null, max, offset, principal);
     }
 

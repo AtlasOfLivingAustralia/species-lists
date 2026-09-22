@@ -39,7 +39,7 @@ interface FiltersDrawerProps {
   onReset: () => void;
 }
 
-const BOOLEAN_FACETS = ['isAuthoritative', 'isSDS', 'isBIE', 'hasRegion', 'isThreatened', 'isInvasive', 'isBiosecurity'];
+export const BOOLEAN_FACETS = ['isAuthoritative', 'isSDS', 'isBIE', 'hasRegion', 'isThreatened', 'isInvasive', 'isBiosecurity'];
 const CORE_FACETS = ['listType'];
 
 // Helper function to render the entire Checkbox with its label
@@ -243,8 +243,11 @@ const FacetComponent = memo(
         {isBooleanFacet ? (
           // --- Boolean Facet Rendering ---
           (() => {
-            const booleanItem = sortedCounts[1];
+            const booleanItem = sortedCounts.find((c) => c.value === 'true') || sortedCounts[1];
             const isChecked = isValueActive(booleanItem?.value);
+            if (!isChecked && (!booleanItem || booleanItem.count <= 0)) {
+              return null;
+            }
             return RenderCheckbox(
               facet.key, // Pass the facet key for proper labeling
               facet.key, // Key for the single boolean checkbox
@@ -305,7 +308,17 @@ export const FiltersSection = memo(
     const sortedFacets = useMemo(
       () =>
       facets
-        .filter((facet) => facet.counts.length > 0) // Filter out empty facets
+        .filter((facet) => {
+          if (facet.counts.length === 0) return false;
+          // For boolean facets, only show if active OR count of "true" > 0
+          if (BOOLEAN_FACETS.includes(facet.key)) {
+            const isActive = active.some((a) => a.key === facet.key);
+            if (isActive) return true;
+            const trueCount = facet.counts.find((c) => c.value === 'true')?.count ?? 0;
+            return trueCount > 0;
+          }
+          return true;
+        })
         .sort((a, b) => {
         // Sort BOOLEAN_FACETS to be the first items
         if (BOOLEAN_FACETS.includes(a.key) && !BOOLEAN_FACETS.includes(b.key)) {
@@ -324,19 +337,19 @@ export const FiltersSection = memo(
         // For other facets, sort by the key
         return a.key.localeCompare(b.key);
         }),
-      [facets]
+      [facets, active]
     );
     
     // Store the first indices of boolean facets
     const firstBooleanIndex = sortedFacets.findIndex(
-      (item) => BOOLEAN_FACETS.includes(item.key) && item.counts.length === 2 // must have counts for both true and false "counts"
+      (item) => BOOLEAN_FACETS.includes(item.key)
     );
 
     const emptyFacets = useMemo(
-      () => facets.filter((facet) => facet.counts.length <= 1), // we ignore facets with a single count value, as they are not useful
-      [facets]
+      () => sortedFacets.length === 0,
+      [sortedFacets]
     );
-    const hasEmptyFacets = emptyFacets.length === facets.length;
+    const hasEmptyFacets = emptyFacets;
 
     // Callback function for facet toggling
     const handleFacetToggle = useCallback((key: string) => {
