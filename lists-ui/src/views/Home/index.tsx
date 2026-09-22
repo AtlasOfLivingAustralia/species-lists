@@ -1,5 +1,6 @@
 // Removed a "eslint-disable react-hooks/exhaustive-deps" comment here
 import { Facet, KV, queries, SpeciesListPage, useGQLQuery } from '#/api';
+import { getConfig } from '#/config';
 import {
   ActionIcon,
   Box,
@@ -363,7 +364,7 @@ const Home = ({ routeId }: { routeId: string }) => {
                     variant='default'
                     radius='xl'
                     component={Link}
-                    to={import.meta.env.VITE_API_BASEURL}
+                    to={getConfig('VITE_API_BASEURL')}
                     target='openapi'
                     rel='noopener noreferrer'
                     title={intl.formatMessage({ id: 'openapi.button.title' })}

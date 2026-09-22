@@ -1,5 +1,6 @@
 import { userManager } from '#/main';
 import { AuthContextProps } from 'react-oidc-context';
+import { getConfig } from '#/config';
 import handleSignout from './handleSignout';
 
 interface TokenRefreshPayload {
@@ -21,7 +22,7 @@ export default async function handleRefresh(auth: AuthContextProps) {
   // Construct the form data for the request
   const params = new URLSearchParams({
     grant_type: 'refresh_token',
-    client_id: import.meta.env.VITE_AUTH_CLIENT_ID,
+    client_id: getConfig('VITE_AUTH_CLIENT_ID'),
     refresh_token: auth.user?.refresh_token || '',
   });
 

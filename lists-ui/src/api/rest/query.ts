@@ -1,4 +1,5 @@
 import { getCsrfToken } from '../csrf'; // Adjust path as needed
+import { getConfig } from '#/config';
 
 export const request = async <T>(
   input: RequestInfo | URL,
@@ -29,7 +30,7 @@ if (body && !isFormData && !headerMap['Content-Type']) {
 }
 
 // Perform the request
-const resp = await fetch(import.meta.env.VITE_API_BASEURL + input, {
+const resp = await fetch(getConfig('VITE_API_BASEURL') + input, {
   method,
   body: (body && !isFormData && typeof body === 'object') ? JSON.stringify(body) : body,
   headers: headerMap as HeadersInit, // Cast back to the expected type here

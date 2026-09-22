@@ -1,8 +1,8 @@
+import { getConfig } from '#/config';
+
 export const getAccessToken = (): string | undefined => {
   const userRaw = sessionStorage.getItem(
-    `oidc.user:${import.meta.env.VITE_AUTH_AUTHORITY}:${
-      import.meta.env.VITE_AUTH_CLIENT_ID
-    }`
+    `oidc.user:${getConfig('VITE_AUTH_AUTHORITY')}:${getConfig('VITE_AUTH_CLIENT_ID')}`
   );
 
   // Check whether a user is stored in sessionStorage

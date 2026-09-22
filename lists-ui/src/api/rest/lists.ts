@@ -1,5 +1,6 @@
 import { FileWithPath } from '@mantine/dropzone';
 import { request } from './query';
+import { getConfig } from '#/config';
 
 import {
   IngestProgress,
@@ -52,7 +53,7 @@ export default (token: string) => ({
     }
     
     const response = await fetch(
-      `${import.meta.env.VITE_API_BASEURL}${
+      `${getConfig('VITE_API_BASEURL')}${
         import.meta.env.VITE_API_LIST_DOWNLOAD
       }/${id}`,
       {

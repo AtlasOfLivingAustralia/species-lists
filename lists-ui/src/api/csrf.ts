@@ -1,4 +1,6 @@
-export async function getCsrfToken(): Promise<string> {  
+import { getConfig } from '#/config';
+
+export async function getCsrfToken(): Promise<string> {
   const getCookie = () => {
     const cookies = document.cookie.split(';');  
     for (const cookie of cookies) {  
@@ -14,7 +16,7 @@ export async function getCsrfToken(): Promise<string> {
     
   // If no cookie found, hit the backend once to trigger the 'Set-Cookie' header
   if (!token) {  
-    await fetch(import.meta.env.VITE_API_BASEURL + '/csrf', {  
+    await fetch(getConfig('VITE_API_BASEURL') + '/csrf', {
       method: 'GET',  
       credentials: 'include',  
     });  

@@ -20,6 +20,9 @@
 
 <body>
   <div id="root"></div>
+  <!-- Optional runtime config override, see public/config.example.js. Absent by
+       default (404 is harmless); falls back to build-time env vars if missing. -->
+  <script src="/config.js"></script>
   <script type="module" src="/src/index.tsx"></script>
 </body>
 

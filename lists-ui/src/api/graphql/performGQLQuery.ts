@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Variables = { [key: string]: any };
 import { getCsrfToken } from '../csrf';
+import { getConfig } from '#/config';
 
 async function performGQLQuery<T = any>(
   query: string,
@@ -17,7 +18,7 @@ async function performGQLQuery<T = any>(
   };
 
   const response = await fetch(
-    import.meta.env.VITE_API_BASEURL + import.meta.env.VITE_API_GRAPHQL,
+    getConfig('VITE_API_BASEURL') + import.meta.env.VITE_API_GRAPHQL,
     {
       method: 'POST',
       headers,
