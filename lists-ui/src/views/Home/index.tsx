@@ -51,6 +51,7 @@ import { ListRow } from './components/ListRow';
 // Helpers
 import {
   ActiveFilters,
+  BOOLEAN_FACETS,
   FiltersSection,
   ToggleFiltersButton,
 } from '#/components/FiltersSection';
@@ -297,6 +298,12 @@ const Home = ({ routeId }: { routeId: string }) => {
       const isActive = filters.some(f => f.key === facet.key);
       if (isActive) return true;
       
+      // For boolean facets, only show if count of "true" > 0
+      if (BOOLEAN_FACETS.includes(facet.key)) {
+        const trueCount = facet.counts.find(c => c.value === 'true')?.count ?? 0;
+        return trueCount > 0;
+      }
+
       // Otherwise, hide if there's only 1 option and its count equals or exceeds the total elements
       if (facet.counts.length === 1 && facet.counts[0].count >= totalElements) {
         return false;
@@ -540,6 +547,7 @@ const Home = ({ routeId }: { routeId: string }) => {
                       setPage(0);
                     }}
                     showExpand={false}
+                    loading={loading}
                   />
                 )}
                 </Collapse>
@@ -634,11 +642,12 @@ const Home = ({ routeId }: { routeId: string }) => {
                       </Skeleton>
                     )}
                     {filters && filters.length > 0 && (
-                      <Paper ml={4} className={classes.resultsSummary}>
+                      <Paper ml={4} className={`${classes.resultsSummary} ${loading ? classes.resultsTableLoading : ''}`}>
                         <ActiveFilters
                           active={filters}
                           handleFilterClick={handleFilterClick}
                           resetFilters={resetFilters}
+                          loading={loading}
                         />
                       </Paper>
                     )}

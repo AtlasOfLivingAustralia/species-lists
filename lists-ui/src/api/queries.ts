@@ -23,6 +23,7 @@ export const QUERY_LISTS_SEARCH = `query findList($searchQuery: String, $page: I
       isThreatened
       isAuthoritative
       isInvasive
+      isBiosecurity
       __typename
     }
     totalPages
@@ -83,6 +84,7 @@ export const QUERY_LISTS_GET = `query loadList(
     isBIE
     isSDS
     isThreatened
+    isBiosecurity
   }
   list: filterSpeciesList(
     speciesListID: $speciesListID
@@ -175,6 +177,7 @@ export const MUTATION_LIST_UPDATE = `mutation update(
   $isInvasive: Boolean
   $isSDS: Boolean
   $isBIE: Boolean
+  $isBiosecurity: Boolean
   $wkt: String
   $tags: [String]
   $dataResourceUid: String
@@ -193,6 +196,7 @@ export const MUTATION_LIST_UPDATE = `mutation update(
     isInvasive: $isInvasive
     isSDS: $isSDS
     isBIE: $isBIE
+    isBiosecurity: $isBiosecurity
     wkt: $wkt
     tags: $tags
     dataResourceUid: $dataResourceUid

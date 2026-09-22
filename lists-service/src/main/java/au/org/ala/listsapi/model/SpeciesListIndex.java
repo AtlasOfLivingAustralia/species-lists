@@ -69,6 +69,7 @@ public class SpeciesListIndex {
     private boolean isSDS;
     private boolean isThreatened;
     private boolean isInvasive;
+    private boolean isBiosecurity;
     private boolean hasRegion;
     private String owner;
     private List<String> editors;

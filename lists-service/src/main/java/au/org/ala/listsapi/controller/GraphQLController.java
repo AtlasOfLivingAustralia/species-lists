@@ -644,6 +644,7 @@ public class GraphQLController {
                 speciesList.getIsSDS() != null ? speciesList.getIsSDS() : false,
                 speciesList.getIsThreatened() != null ? speciesList.getIsThreatened() : false,
                 speciesList.getIsInvasive() != null ? speciesList.getIsInvasive() : false,
+                speciesList.getIsBiosecurity() != null ? speciesList.getIsBiosecurity() : false,
                 StringUtils.isNotEmpty(speciesList.getRegion()) || StringUtils.isNotEmpty(speciesList.getWkt()),
                 speciesList.getOwner(),
                 speciesList.getEditors(),
@@ -757,6 +758,7 @@ public class GraphQLController {
             @Argument Boolean isAuthoritative,
             @Argument Boolean isSDS,
             @Argument Boolean isBIE,
+            @Argument Boolean isBiosecurity,
             @Argument List<String> tags,
             @Argument String dataResourceUid,
             @AuthenticationPrincipal Principal principal) throws Exception {
@@ -783,8 +785,7 @@ public class GraphQLController {
             String oldUid = StringUtils.trimToNull(toUpdate.getDataResourceUid());
 
             if (!Objects.equals(newUid, oldUid)) {
-                AlaUserProfile profile = authUtils.getUserProfile(principal);
-                if (!authUtils.hasAdminRole(profile)) {
+                if (!authUtils.isAdmin(principal)) {
                     throw new AccessDeniedException("You don't have permission to edit the data resource UID");
                 }
                 if (StringUtils.isNotBlank(oldDataResourceUid) && StringUtils.isBlank(newUid)) {
@@ -800,6 +801,33 @@ public class GraphQLController {
                 reindexRequired = true;
             }
 
+            if (!authUtils.isAdmin(principal)) {
+                List<String> unauthorizedChanges = new ArrayList<>();
+                if (isFlagChanged(isAuthoritative, toUpdate.getIsAuthoritative())) {
+                    unauthorizedChanges.add("isAuthoritative");
+                }
+                if (isFlagChanged(isBiosecurity, toUpdate.getIsBiosecurity())) {
+                    unauthorizedChanges.add("isBiosecurity");
+                }
+                if (isFlagChanged(isInvasive, toUpdate.getIsInvasive())) {
+                    unauthorizedChanges.add("isInvasive");
+                }
+                if (isFlagChanged(isThreatened, toUpdate.getIsThreatened())) {
+                    unauthorizedChanges.add("isThreatened");
+                }
+                if (isFlagChanged(isSDS, toUpdate.getIsSDS())) {
+                    unauthorizedChanges.add("isSDS");
+                }
+                if (isFlagChanged(isBIE, toUpdate.getIsBIE())) {
+                    unauthorizedChanges.add("isBIE");
+                }
+                if (!unauthorizedChanges.isEmpty()) {
+                    throw new AccessDeniedException(
+                        "You are not authorized to modify admin-only list flags: " + String.join(", ", unauthorizedChanges)
+                    );
+                }
+            }
+
             if (title != null && !title.equalsIgnoreCase(toUpdate.getTitle())
                     || description != null && !description.equalsIgnoreCase(toUpdate.getDescription())
                     || listType != null && !listType.equalsIgnoreCase(toUpdate.getListType())
@@ -809,6 +837,7 @@ public class GraphQLController {
                     || isSDS != null && !isSDS.equals(toUpdate.getIsSDS())
                     || isInvasive != null && !isInvasive.equals(toUpdate.getIsInvasive())
                     || isThreatened != null && !isThreatened.equals(toUpdate.getIsThreatened())
+                    || isBiosecurity != null && !isBiosecurity.equals(toUpdate.getIsBiosecurity())
                     || wkt != null && !wkt.equals(toUpdate.getWkt())
                     || region != null && !region.equals(toUpdate.getRegion())
                     || licence != null && !licence.equals(toUpdate.getLicence())
@@ -829,6 +858,7 @@ public class GraphQLController {
             toUpdate.setIsAuthoritative(isAuthoritative);
             toUpdate.setIsBIE(isBIE);
             toUpdate.setIsSDS(isSDS);
+            toUpdate.setIsBiosecurity(isBiosecurity);
             toUpdate.setWkt(wkt);
             toUpdate.setLastUpdatedBy(principal.getName());
             toUpdate.setTags(tags);
@@ -836,6 +866,7 @@ public class GraphQLController {
             try {
                 if (Boolean.FALSE.equals(toUpdate.getIsPrivate()) // saved list is public
                         || Boolean.TRUE.equals(toUpdate.getIsAuthoritative()) // saved list is authoritative (private or public)
+                        || Boolean.TRUE.equals(toUpdate.getIsBiosecurity()) // saved list is biosecurity (private or public)
                         || (!previousIsPrivate && Boolean.TRUE.equals(isPrivate)) // was public, now private
                 ) {
                     metadataService.setMeta(toUpdate);
@@ -857,6 +888,13 @@ public class GraphQLController {
         } else {
             throw new AccessDeniedException("You dont have access to this list");
         }
+    }
+
+    private boolean isFlagChanged(Boolean newValue, Boolean existingValue) {
+        if (newValue == null) {
+            return false;
+        }
+        return Boolean.TRUE.equals(newValue) != Boolean.TRUE.equals(existingValue);
     }
 
     /**

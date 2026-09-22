@@ -1,7 +1,7 @@
 import sanitiseText from "#/helpers/utils/sanitiseText";
 import AlaIcon from '#/static/ala-logo-grey.svg?react';
 import { faMap, faStar } from '@fortawesome/free-regular-svg-icons';
-import { faCircleExclamation, faCircleRadiation, faShieldHalved } from '@fortawesome/free-solid-svg-icons';
+import { faBiohazard, faCircleExclamation, faCircleRadiation, faShieldHalved } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Box, Text, Tooltip } from "@mantine/core";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -13,6 +13,7 @@ const listTypeValues: Record<string, React.ReactNode> = {
   "hasRegion": <FontAwesomeIcon icon={faMap} fontSize={16} color='grey'/>,
   "isThreatened": <FontAwesomeIcon icon={faCircleExclamation} fontSize={16} color='grey'/>,
   "isInvasive": <FontAwesomeIcon icon={faCircleRadiation} fontSize={16} color='grey'/>,
+  "isBiosecurity": <FontAwesomeIcon icon={faBiohazard} fontSize={16} color='grey'/>,
 };
 
 export function ListTypeBadge({

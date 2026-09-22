@@ -22,6 +22,7 @@ interface SpeciesList {
   isBIE: boolean;
   isSDS: boolean;
   isThreatened: boolean;
+  isBiosecurity: boolean;
   lastUpdated: string;
   metadataLastUpdated: string;
   licence: string;

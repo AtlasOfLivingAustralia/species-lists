@@ -54,8 +54,8 @@ const router = createBrowserRouter([
       const url = new URL(request.url);
       const filters: string[] = [];
       
-      // Handle all filter params: isSDS, isBIE, isAuthoritative, isThreatened, isInvasive
-      const filterParams = ['isSDS', 'isBIE', 'isAuthoritative', 'isThreatened', 'isInvasive'];
+      // Handle all filter params: isSDS, isBIE, isAuthoritative, isThreatened, isInvasive, isBiosecurity
+      const filterParams = ['isSDS', 'isBIE', 'isAuthoritative', 'isThreatened', 'isInvasive', 'isBiosecurity'];
       
       filterParams.forEach((param) => {
         const value = url.searchParams.get(param);

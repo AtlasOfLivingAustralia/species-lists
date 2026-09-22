@@ -347,6 +347,7 @@ public class TaxonService {
                 speciesList.getIsSDS() != null ? speciesList.getIsSDS() : false,
                 speciesList.getIsThreatened() != null ? speciesList.getIsThreatened() : false,
                 speciesList.getIsInvasive() != null ? speciesList.getIsInvasive() : false,
+                speciesList.getIsBiosecurity() != null ? speciesList.getIsBiosecurity() : false,
                 StringUtils.isNotEmpty(speciesList.getRegion()) || StringUtils.isNotEmpty(speciesList.getWkt()),
                 speciesList.getOwner(),
                 speciesList.getEditors(),

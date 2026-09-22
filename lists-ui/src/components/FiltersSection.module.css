@@ -153,3 +153,10 @@
   max-height: 28px;
   cursor: pointer;
 }
+
+.filtersLoading {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: wait;
+  transition: opacity 150ms ease;
+}

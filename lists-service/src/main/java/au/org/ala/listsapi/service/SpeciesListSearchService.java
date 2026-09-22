@@ -228,12 +228,12 @@ public class SpeciesListSearchService {
         List<String> facetFields = List.of(
             "isAuthoritative", "listType", "isBIE", "isSDS",
             "isPrivate", "hasRegion", "tags", "isThreatened",
-            "isInvasive", "licence"
+            "isInvasive", "isBiosecurity", "licence"
         );
 
         Set<String> booleanFields = Set.of(
             "isAuthoritative", "isBIE", "isSDS", "hasRegion",
-            "isThreatened", "isInvasive", "isPrivate"
+            "isThreatened", "isInvasive", "isBiosecurity", "isPrivate"
         );
 
         for (String field : facetFields) {

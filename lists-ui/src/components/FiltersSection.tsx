@@ -37,9 +37,10 @@ interface FiltersDrawerProps {
   showExpand?: boolean;
   onSelect: (item: KV) => void;
   onReset: () => void;
+  loading?: boolean;
 }
 
-const BOOLEAN_FACETS = ['isAuthoritative', 'isSDS', 'isBIE', 'hasRegion', 'isThreatened', 'isInvasive'];
+export const BOOLEAN_FACETS = ['isAuthoritative', 'isSDS', 'isBIE', 'hasRegion', 'isThreatened', 'isInvasive', 'isBiosecurity'];
 const CORE_FACETS = ['listType'];
 
 // Helper function to render the entire Checkbox with its label
@@ -243,8 +244,11 @@ const FacetComponent = memo(
         {isBooleanFacet ? (
           // --- Boolean Facet Rendering ---
           (() => {
-            const booleanItem = sortedCounts[1];
+            const booleanItem = sortedCounts.find((c) => c.value === 'true') || sortedCounts[1];
             const isChecked = isValueActive(booleanItem?.value);
+            if (!isChecked && (!booleanItem || booleanItem.count <= 0)) {
+              return null;
+            }
             return RenderCheckbox(
               facet.key, // Pass the facet key for proper labeling
               facet.key, // Key for the single boolean checkbox
@@ -279,9 +283,14 @@ const FacetComponent = memo(
 );
 
 export const FiltersSection = memo(
-  ({ facets, active, onSelect, showExpand }: FiltersDrawerProps) => {
+  ({ facets, active, onSelect, showExpand, loading = false }: FiltersDrawerProps) => {
     const ala = useALA();
     const { constraints } = useConstraints(ala);
+
+    const handleSelect = useCallback((item: KV) => {
+      if (loading) return;
+      onSelect(item);
+    }, [loading, onSelect]);
 
     // Build a map of facet key → Constraint[] for facets whose values need label
     // resolution from the server-supplied constraints (e.g. tags, licence).
@@ -305,7 +314,17 @@ export const FiltersSection = memo(
     const sortedFacets = useMemo(
       () =>
       facets
-        .filter((facet) => facet.counts.length > 0) // Filter out empty facets
+        .filter((facet) => {
+          if (facet.counts.length === 0) return false;
+          // For boolean facets, only show if active OR count of "true" > 0
+          if (BOOLEAN_FACETS.includes(facet.key)) {
+            const isActive = active.some((a) => a.key === facet.key);
+            if (isActive) return true;
+            const trueCount = facet.counts.find((c) => c.value === 'true')?.count ?? 0;
+            return trueCount > 0;
+          }
+          return true;
+        })
         .sort((a, b) => {
         // Sort BOOLEAN_FACETS to be the first items
         if (BOOLEAN_FACETS.includes(a.key) && !BOOLEAN_FACETS.includes(b.key)) {
@@ -324,19 +343,19 @@ export const FiltersSection = memo(
         // For other facets, sort by the key
         return a.key.localeCompare(b.key);
         }),
-      [facets]
+      [facets, active]
     );
     
     // Store the first indices of boolean facets
     const firstBooleanIndex = sortedFacets.findIndex(
-      (item) => BOOLEAN_FACETS.includes(item.key) && item.counts.length === 2 // must have counts for both true and false "counts"
+      (item) => BOOLEAN_FACETS.includes(item.key)
     );
 
     const emptyFacets = useMemo(
-      () => facets.filter((facet) => facet.counts.length <= 1), // we ignore facets with a single count value, as they are not useful
-      [facets]
+      () => sortedFacets.length === 0,
+      [sortedFacets]
     );
-    const hasEmptyFacets = emptyFacets.length === facets.length;
+    const hasEmptyFacets = emptyFacets;
 
     // Callback function for facet toggling
     const handleFacetToggle = useCallback((key: string) => {
@@ -348,7 +367,7 @@ export const FiltersSection = memo(
     }, []);
 
     return (
-      <>
+      <div className={loading ? classes.filtersLoading : undefined}>
         <Text size='md' fw='bold' opacity={0.85} pb={2}>
           <FormattedMessage id='filters.title' defaultMessage='Refine results' />
         </Text>
@@ -367,7 +386,7 @@ export const FiltersSection = memo(
                 isExpanded={expanded.includes(facet.key)}
                 handleFacetToggle={handleFacetToggle}
                 active={active}
-                onSelect={onSelect}
+                onSelect={handleSelect}
                 isShowFlagLabel={isFirst}
                 showExpand={showExpand}
                 constraintMap={constraintMap}
@@ -375,7 +394,7 @@ export const FiltersSection = memo(
             );
           })}
         </Stack>
-      </>
+      </div>
     );
   }
 );
@@ -395,17 +414,19 @@ export const ActiveFilters = memo((
     active,
     handleFilterClick,
     resetFilters,
+    loading = false,
   }: {
     active: KV[];
     handleFilterClick: (item: KV) => void;
     resetFilters: () => void;
+    loading?: boolean;
 }) => {
   const intl = useIntl();
   const ala = useALA();
   const { constraints } = useConstraints(ala);
 
   return (
-    <>
+    <div className={loading ? classes.filtersLoading : undefined}>
       <Text component='span' fs='xs' className={classes.activeFiltersText}>
         <FormattedMessage id='filters.active' defaultMessage='selected filters' />:{' '}
       </Text>
@@ -443,9 +464,10 @@ export const ActiveFilters = memo((
               size='xs'
               ml='xs'
               mt={1}
+              disabled={loading}
               title={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key || 'filter.key.missing', defaultMessage: removeFilterPrefix(filter.key) })}`}
               aria-label={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key || 'filter.key.missing', defaultMessage: removeFilterPrefix(filter.key) })}`}
-              onClick={() => handleFilterClick(filter)}
+              onClick={() => !loading && handleFilterClick(filter)}
             >
               <FontAwesomeIcon icon={faClose} fontSize={14} />
             </ActionIcon>
@@ -453,10 +475,10 @@ export const ActiveFilters = memo((
         );
       })}
       <Paper 
-        fs='sm'
+        fs='sm' 
         radius='sm'
         className={classes.activeFiltersRemoveAll}
-        onClick={resetFilters}
+        onClick={() => !loading && resetFilters()}
         title={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
         aria-label={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
       >
@@ -465,7 +487,7 @@ export const ActiveFilters = memo((
         </Text>
         <FontAwesomeIcon icon={faDeleteLeft} fontSize={22} color='var(--mantine-primary-color-filled)' style={{ marginLeft: 8 }}/>
       </Paper>
-    </>
+    </div>
   )
 })
 

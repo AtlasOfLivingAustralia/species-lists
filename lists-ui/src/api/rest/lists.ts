@@ -26,6 +26,7 @@ const listToForm = (list: SpeciesListSubmit, file: string): FormData => {
   form.append('isThreatened', list.isThreatened.toString());
   form.append('isInvasive', list.isInvasive.toString());
   form.append('isSDS', list.isSDS?.toString());
+  form.append('isBiosecurity', (list.isBiosecurity ?? false).toString());
   if (list.tags != null) {
     form.append('tags', list.tags.toString());
   }

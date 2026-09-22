@@ -439,6 +439,9 @@
     "isInvasive": {
       "type": "boolean"
     },
+    "isBiosecurity": {
+      "type": "boolean"
+    },
     "hasRegion": {
       "type": "boolean"
     },

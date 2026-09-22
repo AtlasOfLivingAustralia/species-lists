@@ -55,6 +55,7 @@ const defaultList = (
   isBIE: list?.isBIE || false,
   isSDS: list?.isSDS || false,
   isThreatened: list?.isThreatened || false,
+  isBiosecurity: list?.isBiosecurity || false,
   lastUpdated: list?.lastUpdated || '',
   licence: list?.licence || '',
   listType: list?.listType || '',

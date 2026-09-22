@@ -652,6 +652,7 @@ function List() {
                         active={filters || []}
                         onSelect={handleFilterClick}
                         onReset={() => {setFilters([]); setPage(0);}}
+                        loading={loading}
                       />
                   </Collapse>
                 </Grid.Col>
@@ -707,6 +708,7 @@ function List() {
                       active={filters}
                       handleFilterClick={handleFilterClick}
                       resetFilters={resetFilters}
+                      loading={loading}
                     />
                   </Paper>
                 )}

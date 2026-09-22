@@ -76,6 +76,9 @@ export function ListRow({ list, isMobile }: ListRowProps) {
                 { list?.isInvasive && (
                   <><Space w={3} /><ListTypeBadge listTypeValue='isInvasive'/></>
                 )}
+                { list?.isBiosecurity && (
+                  <><Space w={3} /><ListTypeBadge listTypeValue='isBiosecurity'/></>
+                )}
                 { list?.region && list.region.trim() !== '' && (
                   // Not currently used as GraphQL is not reuturning this field
                   <><Space w={3} /><ListTypeBadge listTypeValue='hasRegion'/></>
