@@ -87,6 +87,15 @@ public class AuthUtils {
         return getUserProfile(principal) != null;
     }
 
+    public boolean isAdmin(Principal principal) {
+        AlaUserProfile profile = getUserProfile(principal);
+        return hasAdminRole(profile);
+    }
+
+    public boolean isAdmin(AlaUserProfile profile) {
+        return hasAdminRole(profile);
+    }
+
     public boolean isAuthorized(Principal principal) {
         AlaUserProfile profile = getUserProfile(principal);
 

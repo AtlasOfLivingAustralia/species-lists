@@ -45,6 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -154,6 +155,20 @@ public class UploadService {
     public SpeciesList ingest(
             AlaUserProfile user, InputSpeciesList speciesListMetadata, String fileIdentifier, boolean dryRun)
             throws Exception {
+
+        if (!authUtils.isAdmin(user)) {
+            List<String> unauthorizedFlags = new ArrayList<>();
+            if (Boolean.parseBoolean(speciesListMetadata.getIsAuthoritative())) unauthorizedFlags.add("isAuthoritative");
+            if (Boolean.parseBoolean(speciesListMetadata.getIsBiosecurity())) unauthorizedFlags.add("isBiosecurity");
+            if (Boolean.parseBoolean(speciesListMetadata.getIsInvasive())) unauthorizedFlags.add("isInvasive");
+            if (Boolean.parseBoolean(speciesListMetadata.getIsThreatened())) unauthorizedFlags.add("isThreatened");
+            if (Boolean.parseBoolean(speciesListMetadata.getIsSDS())) unauthorizedFlags.add("isSDS");
+            if (Boolean.parseBoolean(speciesListMetadata.getIsBIE())) unauthorizedFlags.add("isBIE");
+            if (!unauthorizedFlags.isEmpty()) {
+                throw new AccessDeniedException(
+                    "You are not authorized to set admin-only list flags: " + String.join(", ", unauthorizedFlags));
+            }
+        }
 
         // create the species list in mongo
         SpeciesList speciesList = new SpeciesList();

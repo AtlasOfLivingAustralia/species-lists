@@ -16,6 +16,8 @@ package au.org.ala.listsapi.controller;
 
 import java.io.File;
 import java.security.Principal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -29,6 +31,7 @@ import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -369,6 +372,20 @@ public class IngressController {
                 return ResponseEntity.badRequest().body("User not found");
             }
 
+            if (!authUtils.isAdmin(alaUserProfile)) {
+                List<String> unauthorizedFlags = new ArrayList<>();
+                if (Boolean.parseBoolean(speciesList.getIsAuthoritative())) unauthorizedFlags.add("isAuthoritative");
+                if (Boolean.parseBoolean(speciesList.getIsBiosecurity())) unauthorizedFlags.add("isBiosecurity");
+                if (Boolean.parseBoolean(speciesList.getIsInvasive())) unauthorizedFlags.add("isInvasive");
+                if (Boolean.parseBoolean(speciesList.getIsThreatened())) unauthorizedFlags.add("isThreatened");
+                if (Boolean.parseBoolean(speciesList.getIsSDS())) unauthorizedFlags.add("isSDS");
+                if (Boolean.parseBoolean(speciesList.getIsBIE())) unauthorizedFlags.add("isBIE");
+                if (!unauthorizedFlags.isEmpty()) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body("You are not authorized to set admin-only list flags: " + String.join(", ", unauthorizedFlags));
+                }
+            }
+
             // check that the supplied list type, region and license is valid
             if (!validationService.isListValid(speciesList)) {
                 return ResponseEntity.badRequest().body(
@@ -401,6 +418,8 @@ public class IngressController {
             SpeciesList updatedSpeciesList = uploadService.ingest(alaUserProfile, speciesList, fileIdentifier, false);
 
             return ResponseEntity.ok(updatedSpeciesList);
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (Exception e) {
             logger.error("Error while ingesting the file: " + e.getMessage(), e);
             return ResponseEntity.badRequest().body("Error while ingesting the file: " + e.getMessage());

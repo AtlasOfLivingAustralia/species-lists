@@ -785,8 +785,7 @@ public class GraphQLController {
             String oldUid = StringUtils.trimToNull(toUpdate.getDataResourceUid());
 
             if (!Objects.equals(newUid, oldUid)) {
-                AlaUserProfile profile = authUtils.getUserProfile(principal);
-                if (!authUtils.hasAdminRole(profile)) {
+                if (!authUtils.isAdmin(principal)) {
                     throw new AccessDeniedException("You don't have permission to edit the data resource UID");
                 }
                 if (StringUtils.isNotBlank(oldDataResourceUid) && StringUtils.isBlank(newUid)) {
@@ -800,6 +799,33 @@ public class GraphQLController {
                 }
                 toUpdate.setDataResourceUid(newUid);
                 reindexRequired = true;
+            }
+
+            if (!authUtils.isAdmin(principal)) {
+                List<String> unauthorizedChanges = new ArrayList<>();
+                if (isFlagChanged(isAuthoritative, toUpdate.getIsAuthoritative())) {
+                    unauthorizedChanges.add("isAuthoritative");
+                }
+                if (isFlagChanged(isBiosecurity, toUpdate.getIsBiosecurity())) {
+                    unauthorizedChanges.add("isBiosecurity");
+                }
+                if (isFlagChanged(isInvasive, toUpdate.getIsInvasive())) {
+                    unauthorizedChanges.add("isInvasive");
+                }
+                if (isFlagChanged(isThreatened, toUpdate.getIsThreatened())) {
+                    unauthorizedChanges.add("isThreatened");
+                }
+                if (isFlagChanged(isSDS, toUpdate.getIsSDS())) {
+                    unauthorizedChanges.add("isSDS");
+                }
+                if (isFlagChanged(isBIE, toUpdate.getIsBIE())) {
+                    unauthorizedChanges.add("isBIE");
+                }
+                if (!unauthorizedChanges.isEmpty()) {
+                    throw new AccessDeniedException(
+                        "You are not authorized to modify admin-only list flags: " + String.join(", ", unauthorizedChanges)
+                    );
+                }
             }
 
             if (title != null && !title.equalsIgnoreCase(toUpdate.getTitle())
@@ -862,6 +888,13 @@ public class GraphQLController {
         } else {
             throw new AccessDeniedException("You dont have access to this list");
         }
+    }
+
+    private boolean isFlagChanged(Boolean newValue, Boolean existingValue) {
+        if (newValue == null) {
+            return false;
+        }
+        return Boolean.TRUE.equals(newValue) != Boolean.TRUE.equals(existingValue);
     }
 
     /**

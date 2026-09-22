@@ -342,6 +342,7 @@ class GraphQLControllerTest {
         when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
                 .thenReturn(Optional.of(list));
         when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(authUtils.isAdmin(principal)).thenReturn(true);
         when(validationService.isValueValid(eq(ConstraintType.listType), any())).thenReturn(true);
         when(validationService.isValueValid(eq(ConstraintType.licence), any())).thenReturn(true);
         when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
@@ -358,6 +359,58 @@ class GraphQLControllerTest {
     }
 
     @Test
+    void testUpdateMetadata_NonAdminSettingBiosecurityFlag_ThrowsAccessDeniedException() {
+        String listId = "list123";
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        list.setTitle("Test List");
+        list.setIsBiosecurity(false);
+
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
+                .thenReturn(Optional.of(list));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(authUtils.isAdmin(principal)).thenReturn(false);
+        when(validationService.isValueValid(eq(ConstraintType.listType), any())).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.licence), any())).thenReturn(true);
+
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> {
+            graphQLController.updateMetadata(
+                    listId, "Test List", "description", "CC-BY", "TEST",
+                    "authority", "region", null, true, false, false,
+                    false, false, false, true, new ArrayList<>(), "", principal);
+        });
+
+        assertTrue(exception.getMessage().contains("isBiosecurity"));
+        verify(speciesListMongoRepository, never()).save(any());
+    }
+
+    @Test
+    void testUpdateMetadata_NonAdminSettingMultipleAdminFlags_ThrowsAccessDeniedException() {
+        String listId = "list123";
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        list.setTitle("Test List");
+
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
+                .thenReturn(Optional.of(list));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(authUtils.isAdmin(principal)).thenReturn(false);
+        when(validationService.isValueValid(eq(ConstraintType.listType), any())).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.licence), any())).thenReturn(true);
+
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> {
+            graphQLController.updateMetadata(
+                    listId, "Test List", "description", "CC-BY", "TEST",
+                    "authority", "region", null, true, true, false,
+                    false, false, false, true, new ArrayList<>(), "", principal);
+        });
+
+        assertTrue(exception.getMessage().contains("isThreatened"));
+        assertTrue(exception.getMessage().contains("isBiosecurity"));
+        verify(speciesListMongoRepository, never()).save(any());
+    }
+
+    @Test
     void testUpdateMetadata_AdminChangesDataResourceUid_Success() throws Exception {
         String listId = "list123";
         SpeciesList list = new SpeciesList();
@@ -369,8 +422,7 @@ class GraphQLControllerTest {
         when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
                 .thenReturn(Optional.of(list));
         when(authUtils.isAuthorized(list, principal)).thenReturn(true);
-        when(authUtils.getUserProfile(principal)).thenReturn(adminProfile);
-        when(authUtils.hasAdminRole(adminProfile)).thenReturn(true);
+        when(authUtils.isAdmin(principal)).thenReturn(true);
         when(validationService.isValueValid(eq(ConstraintType.listType), any())).thenReturn(true);
         when(validationService.isValueValid(eq(ConstraintType.licence), any())).thenReturn(true);
         when(speciesListMongoRepository.findByDataResourceUid("dr123")).thenReturn(Optional.empty());
@@ -402,8 +454,7 @@ class GraphQLControllerTest {
         when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
                 .thenReturn(Optional.of(list));
         when(authUtils.isAuthorized(list, principal)).thenReturn(true);
-        when(authUtils.getUserProfile(principal)).thenReturn(adminProfile);
-        when(authUtils.hasAdminRole(adminProfile)).thenReturn(true);
+        when(authUtils.isAdmin(principal)).thenReturn(true);
         when(validationService.isValueValid(eq(ConstraintType.listType), any())).thenReturn(true);
         when(validationService.isValueValid(eq(ConstraintType.licence), any())).thenReturn(true);
         when(speciesListMongoRepository.findByDataResourceUid("dr123")).thenReturn(Optional.of(otherList));
@@ -417,5 +468,33 @@ class GraphQLControllerTest {
 
         assertEquals("dataResourceUid is already in use by another list", exception.getMessage());
         verify(speciesListMongoRepository, never()).save(any());
+    }
+
+    @Test
+    void testUpdateMetadata_NonAdminUnchangedAdminFlags_Success() throws Exception {
+        String listId = "list123";
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        list.setTitle("Old Title");
+        list.setIsBiosecurity(true);
+        list.setIsAuthoritative(false);
+
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
+                .thenReturn(Optional.of(list));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(authUtils.isAdmin(principal)).thenReturn(false);
+        when(validationService.isValueValid(eq(ConstraintType.listType), any())).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.licence), any())).thenReturn(true);
+        when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
+
+        SpeciesList result = graphQLController.updateMetadata(
+                listId, "New Title", "description", "CC-BY", "TEST",
+                "authority", "region", null, false, false, false,
+                false, false, false, true, new ArrayList<>(), "", principal);
+
+        assertNotNull(result);
+        assertEquals("New Title", result.getTitle());
+        assertTrue(result.getIsBiosecurity());
+        verify(speciesListMongoRepository).save(list);
     }
 }

@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 
+import au.org.ala.listsapi.controller.AuthUtils;
 import au.org.ala.listsapi.model.IngestJob;
 import au.org.ala.listsapi.model.InputSpeciesList;
 import au.org.ala.listsapi.model.SpeciesList;
@@ -32,6 +33,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +48,7 @@ class UploadServiceTest {
     @Mock private ProgressService progressService;
     @Mock private SearchHelperService searchHelperService;
     @Mock private Executor processExecutor;
+    @Mock private AuthUtils authUtils;
 
     @InjectMocks private UploadService uploadService;
 
@@ -229,6 +232,7 @@ class UploadServiceTest {
         when(user.getUserId()).thenReturn("user123");
         when(user.getGivenName()).thenReturn("Test");
         when(user.getFamilyName()).thenReturn("User");
+        when(authUtils.isAdmin(user)).thenReturn(true);
 
         InputSpeciesList metadata = new InputSpeciesList();
         metadata.setTitle("Private Biosecurity List");
@@ -245,5 +249,24 @@ class UploadServiceTest {
         assertTrue(result.getIsPrivate());
         assertTrue(result.getIsBiosecurity());
         verify(metadataService).setMeta(any(SpeciesList.class));
+    }
+
+    @Test
+    void testIngest_NonAdminSettingAdminFlags_ThrowsAccessDeniedException() {
+        AlaUserProfile user = org.mockito.Mockito.mock(AlaUserProfile.class);
+        when(authUtils.isAdmin(user)).thenReturn(false);
+
+        InputSpeciesList metadata = new InputSpeciesList();
+        metadata.setTitle("Unauthorized Biosecurity List");
+        metadata.setIsBiosecurity("true");
+        metadata.setIsAuthoritative("true");
+
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> {
+            uploadService.ingest(user, metadata, "file-123", true);
+        });
+
+        assertTrue(exception.getMessage().contains("isAuthoritative"));
+        assertTrue(exception.getMessage().contains("isBiosecurity"));
+        verify(speciesListMongoRepository, never()).save(any());
     }
 }
