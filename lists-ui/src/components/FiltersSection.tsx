@@ -37,6 +37,7 @@ interface FiltersDrawerProps {
   showExpand?: boolean;
   onSelect: (item: KV) => void;
   onReset: () => void;
+  loading?: boolean;
 }
 
 export const BOOLEAN_FACETS = ['isAuthoritative', 'isSDS', 'isBIE', 'hasRegion', 'isThreatened', 'isInvasive', 'isBiosecurity'];
@@ -282,9 +283,14 @@ const FacetComponent = memo(
 );
 
 export const FiltersSection = memo(
-  ({ facets, active, onSelect, showExpand }: FiltersDrawerProps) => {
+  ({ facets, active, onSelect, showExpand, loading = false }: FiltersDrawerProps) => {
     const ala = useALA();
     const { constraints } = useConstraints(ala);
+
+    const handleSelect = useCallback((item: KV) => {
+      if (loading) return;
+      onSelect(item);
+    }, [loading, onSelect]);
 
     // Build a map of facet key → Constraint[] for facets whose values need label
     // resolution from the server-supplied constraints (e.g. tags, licence).
@@ -361,7 +367,7 @@ export const FiltersSection = memo(
     }, []);
 
     return (
-      <>
+      <div className={loading ? classes.filtersLoading : undefined}>
         <Text size='md' fw='bold' opacity={0.85} pb={2}>
           <FormattedMessage id='filters.title' defaultMessage='Refine results' />
         </Text>
@@ -380,7 +386,7 @@ export const FiltersSection = memo(
                 isExpanded={expanded.includes(facet.key)}
                 handleFacetToggle={handleFacetToggle}
                 active={active}
-                onSelect={onSelect}
+                onSelect={handleSelect}
                 isShowFlagLabel={isFirst}
                 showExpand={showExpand}
                 constraintMap={constraintMap}
@@ -388,7 +394,7 @@ export const FiltersSection = memo(
             );
           })}
         </Stack>
-      </>
+      </div>
     );
   }
 );
@@ -408,17 +414,19 @@ export const ActiveFilters = memo((
     active,
     handleFilterClick,
     resetFilters,
+    loading = false,
   }: {
     active: KV[];
     handleFilterClick: (item: KV) => void;
     resetFilters: () => void;
+    loading?: boolean;
 }) => {
   const intl = useIntl();
   const ala = useALA();
   const { constraints } = useConstraints(ala);
 
   return (
-    <>
+    <div className={loading ? classes.filtersLoading : undefined}>
       <Text component='span' fs='xs' className={classes.activeFiltersText}>
         <FormattedMessage id='filters.active' defaultMessage='selected filters' />:{' '}
       </Text>
@@ -456,9 +464,10 @@ export const ActiveFilters = memo((
               size='xs'
               ml='xs'
               mt={1}
+              disabled={loading}
               title={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key || 'filter.key.missing', defaultMessage: removeFilterPrefix(filter.key) })}`}
               aria-label={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key || 'filter.key.missing', defaultMessage: removeFilterPrefix(filter.key) })}`}
-              onClick={() => handleFilterClick(filter)}
+              onClick={() => !loading && handleFilterClick(filter)}
             >
               <FontAwesomeIcon icon={faClose} fontSize={14} />
             </ActionIcon>
@@ -466,10 +475,10 @@ export const ActiveFilters = memo((
         );
       })}
       <Paper 
-        fs='sm'
+        fs='sm' 
         radius='sm'
         className={classes.activeFiltersRemoveAll}
-        onClick={resetFilters}
+        onClick={() => !loading && resetFilters()}
         title={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
         aria-label={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
       >
@@ -478,7 +487,7 @@ export const ActiveFilters = memo((
         </Text>
         <FontAwesomeIcon icon={faDeleteLeft} fontSize={22} color='var(--mantine-primary-color-filled)' style={{ marginLeft: 8 }}/>
       </Paper>
-    </>
+    </div>
   )
 })
 

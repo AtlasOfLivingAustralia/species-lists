@@ -547,6 +547,7 @@ const Home = ({ routeId }: { routeId: string }) => {
                       setPage(0);
                     }}
                     showExpand={false}
+                    loading={loading}
                   />
                 )}
                 </Collapse>
@@ -641,11 +642,12 @@ const Home = ({ routeId }: { routeId: string }) => {
                       </Skeleton>
                     )}
                     {filters && filters.length > 0 && (
-                      <Paper ml={4} className={classes.resultsSummary}>
+                      <Paper ml={4} className={`${classes.resultsSummary} ${loading ? classes.resultsTableLoading : ''}`}>
                         <ActiveFilters
                           active={filters}
                           handleFilterClick={handleFilterClick}
                           resetFilters={resetFilters}
+                          loading={loading}
                         />
                       </Paper>
                     )}
