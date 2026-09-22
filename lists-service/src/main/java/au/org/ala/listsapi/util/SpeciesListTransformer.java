@@ -82,6 +82,7 @@ public class SpeciesListTransformer {
         version1.setIsPrivate(speciesList.getIsPrivate());
         version1.setIsSDS(speciesList.getIsSDS());
         version1.setIsBIE(speciesList.getIsBIE());
+        version1.setIsBiosecurity(speciesList.getIsBiosecurity());
         version1.setItemCount(speciesList.getRowCount());
 
         version1.setDateCreated(speciesList.getDateCreated());

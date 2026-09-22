@@ -48,6 +48,8 @@ public class RESTSpeciesListQuery {
     String isBIE;
     @Schema(description = "Whether the list is an SDS list", example = "false")
     String isSDS;
+    @Schema(description = "Whether the list is a biosecurity list", example = "false")
+    String isBiosecurity;
 
     public boolean isEmpty() {
         if ((id != null && !id.isEmpty())
@@ -66,7 +68,8 @@ public class RESTSpeciesListQuery {
                 || (isInvasive != null && !isInvasive.isEmpty())
                 || (isThreatened != null && !isThreatened.isEmpty())
                 || (isBIE != null && !isBIE.isEmpty())
-                || (isSDS != null && !isSDS.isEmpty())) {
+                || (isSDS != null && !isSDS.isEmpty())
+                || (isBiosecurity != null && !isBiosecurity.isEmpty())) {
             return false;
         }
         return true;
@@ -80,6 +83,7 @@ public class RESTSpeciesListQuery {
         s.setIsThreatened(parseBoolean(removeQueryExpr(this.isThreatened)));
         s.setIsBIE(parseBoolean(removeQueryExpr(this.isBIE)));
         s.setIsSDS(parseBoolean(removeQueryExpr(this.isSDS)));
+        s.setIsBiosecurity(parseBoolean(removeQueryExpr(this.isBiosecurity)));
         s.setOwner(this.owner);
         s.setCategory(this.category);
         s.setRegion(this.region);
@@ -125,6 +129,7 @@ public class RESTSpeciesListQuery {
                 this.isInvasive,
                 this.isThreatened,
                 this.isBIE,
-                this.isSDS);
+                this.isSDS,
+                this.isBiosecurity);
     }
 }

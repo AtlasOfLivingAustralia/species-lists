@@ -90,6 +90,9 @@ public class InputSpeciesList {
     @Schema(description = "Indicates if the species list is part of SDS", example = "true|false")
     String isSDS;
 
+    @Schema(description = "Indicates if the species list is biosecurity", example = "true|false")
+    String isBiosecurity;
+
     @Schema(description = "Owner of the species list, who created the list", accessMode = Schema.AccessMode.READ_ONLY)
     private String owner;
 

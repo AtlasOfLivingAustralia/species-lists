@@ -43,12 +43,12 @@ public final class ElasticsearchQueryBuilder {
         "id", "scientificName", "vernacularName", "licence", "taxonID",
         "kingdom", "phylum", "class", "order", "family", "genus",
         "isBIE", "listType", "isAuthoritative", "hasRegion", "isSDS",
-        "isThreatened", "isInvasive", "isPrivate", "tags"
+        "isThreatened", "isInvasive", "isBiosecurity", "isPrivate", "tags"
     );
 
     public static final List<String> CORE_BOOL_FIELDS = List.of(
         "isBIE", "isAuthoritative", "hasRegion", "isSDS",
-        "isThreatened", "isInvasive", "isPrivate"
+        "isThreatened", "isInvasive", "isBiosecurity", "isPrivate"
     );
 
     private static final Set<String> TOP_LEVEL_SEARCHABLE_FIELDS = Set.of(

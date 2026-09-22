@@ -41,6 +41,7 @@
 
 .resultsTableLoading {
   opacity: 0.6;
+  pointer-events: none;
   transition: opacity 150ms ease;
 }
 

@@ -45,6 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -155,6 +156,20 @@ public class UploadService {
             AlaUserProfile user, InputSpeciesList speciesListMetadata, String fileIdentifier, boolean dryRun)
             throws Exception {
 
+        if (!authUtils.isAdmin(user)) {
+            List<String> unauthorizedFlags = new ArrayList<>();
+            if (Boolean.parseBoolean(speciesListMetadata.getIsAuthoritative())) unauthorizedFlags.add("isAuthoritative");
+            if (Boolean.parseBoolean(speciesListMetadata.getIsBiosecurity())) unauthorizedFlags.add("isBiosecurity");
+            if (Boolean.parseBoolean(speciesListMetadata.getIsInvasive())) unauthorizedFlags.add("isInvasive");
+            if (Boolean.parseBoolean(speciesListMetadata.getIsThreatened())) unauthorizedFlags.add("isThreatened");
+            if (Boolean.parseBoolean(speciesListMetadata.getIsSDS())) unauthorizedFlags.add("isSDS");
+            if (Boolean.parseBoolean(speciesListMetadata.getIsBIE())) unauthorizedFlags.add("isBIE");
+            if (!unauthorizedFlags.isEmpty()) {
+                throw new AccessDeniedException(
+                    "You are not authorized to set admin-only list flags: " + String.join(", ", unauthorizedFlags));
+            }
+        }
+
         // create the species list in mongo
         SpeciesList speciesList = new SpeciesList();
         speciesList.setOwner(user.getUserId());
@@ -165,8 +180,8 @@ public class UploadService {
 
         extractUpdates(speciesListMetadata, speciesList);
 
-        // If the species list is public, or authoritative, create a metadata link
-        if (!speciesList.getIsPrivate() || speciesList.getIsAuthoritative()) {
+        // If the species list is public, authoritative, or biosecurity, create a metadata link
+        if (!speciesList.getIsPrivate() || speciesList.getIsAuthoritative() || Boolean.TRUE.equals(speciesList.getIsBiosecurity())) {
             metadataService.setMeta(speciesList);
         }
 
@@ -187,8 +202,7 @@ public class UploadService {
         speciesList.setIsThreatened(Boolean.parseBoolean(speciesListMetadata.getIsThreatened()));
         speciesList.setIsSDS(Boolean.parseBoolean(speciesListMetadata.getIsSDS()));
         speciesList.setIsBIE(Boolean.parseBoolean(speciesListMetadata.getIsBIE()));
-        speciesList.setIsThreatened(Boolean.parseBoolean(speciesListMetadata.getIsThreatened()));
-        speciesList.setIsInvasive(Boolean.parseBoolean(speciesListMetadata.getIsInvasive()));
+        speciesList.setIsBiosecurity(Boolean.parseBoolean(speciesListMetadata.getIsBiosecurity()));
         speciesList.setLicence(speciesListMetadata.getLicence());
         speciesList.setListType(speciesListMetadata.getListType());
         speciesList.setRegion(speciesListMetadata.getRegion());
