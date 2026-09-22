@@ -321,13 +321,40 @@ class GraphQLControllerTest {
         SpeciesList result = graphQLController.updateMetadata(
                 listId, "New Title", "description", "CC-BY", "TEST",
                 "authority", "region", null, true, false, false,
-                false, false, false, new ArrayList<>(), "", principal);
+                false, false, false, false, new ArrayList<>(), "", principal);
 
         assertNotNull(result);
         assertEquals("New Title", result.getTitle());
         assertNull(result.getDataResourceUid());
         verify(speciesListMongoRepository, never()).findByDataResourceUid(any());
         verify(speciesListMongoRepository).save(list);
+    }
+
+    @Test
+    void testUpdateMetadata_PrivateBiosecurityList_CallsSetMeta() throws Exception {
+        String listId = "list123";
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        list.setDataResourceUid(null);
+        list.setTitle("Biosecurity Alert List");
+        list.setIsPrivate(true);
+
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
+                .thenReturn(Optional.of(list));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.listType), any())).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.licence), any())).thenReturn(true);
+        when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
+
+        SpeciesList result = graphQLController.updateMetadata(
+                listId, "Biosecurity Alert List", "description", "CC-BY", "TEST",
+                "authority", "region", null, true, false, false,
+                false, false, false, true, new ArrayList<>(), "", principal);
+
+        assertNotNull(result);
+        assertTrue(result.getIsBiosecurity());
+        assertTrue(result.getIsPrivate());
+        verify(metadataService).setMeta(list);
     }
 
     @Test
@@ -352,7 +379,7 @@ class GraphQLControllerTest {
         SpeciesList result = graphQLController.updateMetadata(
                 listId, "Title", "description", "CC-BY", "TEST",
                 "authority", "region", null, true, false, false,
-                false, false, false, new ArrayList<>(), "dr123", principal);
+                false, false, false, false, new ArrayList<>(), "dr123", principal);
 
         assertNotNull(result);
         assertEquals("dr123", result.getDataResourceUid());
@@ -385,7 +412,7 @@ class GraphQLControllerTest {
             graphQLController.updateMetadata(
                     listId, "Title", "description", "CC-BY", "TEST",
                     "authority", "region", null, true, false, false,
-                    false, false, false, new ArrayList<>(), "dr123", principal);
+                    false, false, false, false, new ArrayList<>(), "dr123", principal);
         });
 
         assertEquals("dataResourceUid is already in use by another list", exception.getMessage());

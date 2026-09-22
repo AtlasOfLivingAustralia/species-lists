@@ -69,12 +69,13 @@ public class ElasticUtils {
                     "isSDS",
                     "isThreatened",
                     "isInvasive",
+                    "isBiosecurity",
                     "isPrivate",
                     "tags");
 
     public static final List<String> CORE_BOOL_FIELDS =
             List.of("isBIE", "isAuthoritative", "hasRegion", "isSDS", 
-                    "isThreatened", "isInvasive", "isPrivate");
+                    "isThreatened", "isInvasive", "isBiosecurity", "isPrivate");
 
     private static final Set<String> TOP_LEVEL_SEARCHABLE_FIELDS = Set.of(
             // Root-level fields that have a ".search" subfield

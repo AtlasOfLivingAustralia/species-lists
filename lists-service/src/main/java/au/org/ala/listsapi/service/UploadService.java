@@ -165,8 +165,8 @@ public class UploadService {
 
         extractUpdates(speciesListMetadata, speciesList);
 
-        // If the species list is public, or authoritative, create a metadata link
-        if (!speciesList.getIsPrivate() || speciesList.getIsAuthoritative()) {
+        // If the species list is public, authoritative, or biosecurity, create a metadata link
+        if (!speciesList.getIsPrivate() || speciesList.getIsAuthoritative() || Boolean.TRUE.equals(speciesList.getIsBiosecurity())) {
             metadataService.setMeta(speciesList);
         }
 
@@ -187,8 +187,7 @@ public class UploadService {
         speciesList.setIsThreatened(Boolean.parseBoolean(speciesListMetadata.getIsThreatened()));
         speciesList.setIsSDS(Boolean.parseBoolean(speciesListMetadata.getIsSDS()));
         speciesList.setIsBIE(Boolean.parseBoolean(speciesListMetadata.getIsBIE()));
-        speciesList.setIsThreatened(Boolean.parseBoolean(speciesListMetadata.getIsThreatened()));
-        speciesList.setIsInvasive(Boolean.parseBoolean(speciesListMetadata.getIsInvasive()));
+        speciesList.setIsBiosecurity(Boolean.parseBoolean(speciesListMetadata.getIsBiosecurity()));
         speciesList.setLicence(speciesListMetadata.getLicence());
         speciesList.setListType(speciesListMetadata.getListType());
         speciesList.setRegion(speciesListMetadata.getRegion());

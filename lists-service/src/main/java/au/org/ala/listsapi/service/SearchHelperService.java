@@ -111,6 +111,7 @@ public class SearchHelperService {
                     "isSDS",
                     "isThreatened",
                     "isInvasive",
+                    "isBiosecurity",
                     "isPrivate",
                     "tags");
 
@@ -361,6 +362,9 @@ public class SearchHelperService {
         }
         if (speciesListQuery.getIsSDS() != null) {
             query.addCriteria(Criteria.where("isSDS").is(speciesListQuery.getIsSDS()));
+        }
+        if (speciesListQuery.getIsBiosecurity() != null) {
+            query.addCriteria(Criteria.where("isBiosecurity").is(speciesListQuery.getIsBiosecurity()));
         }
         if (speciesListQuery.getListType() != null) {
             query.addCriteria(Criteria.where("listType").is(speciesListQuery.getListType()));
@@ -669,12 +673,12 @@ public class SearchHelperService {
         List<String> facetFields = Arrays.asList(
             "isAuthoritative", "listType", "isBIE", "isSDS", 
             "isPrivate", "hasRegion", "tags", "isThreatened", 
-            "isInvasive", "licence"
+            "isInvasive", "isBiosecurity", "licence"
         );
         
         Set<String> booleanFields = Set.of(
             "isAuthoritative", "isBIE", "isSDS", "hasRegion",
-            "isThreatened", "isInvasive", "isPrivate"
+            "isThreatened", "isInvasive", "isBiosecurity", "isPrivate"
         );
         
         List<Filter> safeFilters = (filters != null) ? filters : Collections.emptyList();
@@ -889,7 +893,7 @@ public class SearchHelperService {
         
         Set<String> booleanFields = Set.of(
             "isAuthoritative", "isBIE", "isSDS", "hasRegion",
-            "isThreatened", "isInvasive", "isPrivate"
+            "isThreatened", "isInvasive", "isBiosecurity", "isPrivate"
         );
 
         List<Facet> facets = new ArrayList<>();

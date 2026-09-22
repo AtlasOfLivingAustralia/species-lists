@@ -644,6 +644,7 @@ public class GraphQLController {
                 speciesList.getIsSDS() != null ? speciesList.getIsSDS() : false,
                 speciesList.getIsThreatened() != null ? speciesList.getIsThreatened() : false,
                 speciesList.getIsInvasive() != null ? speciesList.getIsInvasive() : false,
+                speciesList.getIsBiosecurity() != null ? speciesList.getIsBiosecurity() : false,
                 StringUtils.isNotEmpty(speciesList.getRegion()) || StringUtils.isNotEmpty(speciesList.getWkt()),
                 speciesList.getOwner(),
                 speciesList.getEditors(),
@@ -757,6 +758,7 @@ public class GraphQLController {
             @Argument Boolean isAuthoritative,
             @Argument Boolean isSDS,
             @Argument Boolean isBIE,
+            @Argument Boolean isBiosecurity,
             @Argument List<String> tags,
             @Argument String dataResourceUid,
             @AuthenticationPrincipal Principal principal) throws Exception {
@@ -809,6 +811,7 @@ public class GraphQLController {
                     || isSDS != null && !isSDS.equals(toUpdate.getIsSDS())
                     || isInvasive != null && !isInvasive.equals(toUpdate.getIsInvasive())
                     || isThreatened != null && !isThreatened.equals(toUpdate.getIsThreatened())
+                    || isBiosecurity != null && !isBiosecurity.equals(toUpdate.getIsBiosecurity())
                     || wkt != null && !wkt.equals(toUpdate.getWkt())
                     || region != null && !region.equals(toUpdate.getRegion())
                     || licence != null && !licence.equals(toUpdate.getLicence())
@@ -829,6 +832,7 @@ public class GraphQLController {
             toUpdate.setIsAuthoritative(isAuthoritative);
             toUpdate.setIsBIE(isBIE);
             toUpdate.setIsSDS(isSDS);
+            toUpdate.setIsBiosecurity(isBiosecurity);
             toUpdate.setWkt(wkt);
             toUpdate.setLastUpdatedBy(principal.getName());
             toUpdate.setTags(tags);
@@ -836,6 +840,7 @@ public class GraphQLController {
             try {
                 if (Boolean.FALSE.equals(toUpdate.getIsPrivate()) // saved list is public
                         || Boolean.TRUE.equals(toUpdate.getIsAuthoritative()) // saved list is authoritative (private or public)
+                        || Boolean.TRUE.equals(toUpdate.getIsBiosecurity()) // saved list is biosecurity (private or public)
                         || (!previousIsPrivate && Boolean.TRUE.equals(isPrivate)) // was public, now private
                 ) {
                     metadataService.setMeta(toUpdate);

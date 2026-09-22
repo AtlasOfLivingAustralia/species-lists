@@ -13,13 +13,16 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 
 import au.org.ala.listsapi.model.IngestJob;
+import au.org.ala.listsapi.model.InputSpeciesList;
 import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.ws.security.profile.AlaUserProfile;
 import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.nio.file.Files;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import org.junit.jupiter.api.BeforeEach;
@@ -218,5 +221,29 @@ class UploadServiceTest {
                 captured.contains("FileNotFoundException")
                         || captured.contains("File not uploaded yet")
                         || captured.contains("File not found"));
+    }
+
+    @Test
+    void testIngest_PrivateBiosecurityList_CallsSetMeta() throws Exception {
+        AlaUserProfile user = org.mockito.Mockito.mock(AlaUserProfile.class);
+        when(user.getUserId()).thenReturn("user123");
+        when(user.getGivenName()).thenReturn("Test");
+        when(user.getFamilyName()).thenReturn("User");
+
+        InputSpeciesList metadata = new InputSpeciesList();
+        metadata.setTitle("Private Biosecurity List");
+        metadata.setIsPrivate("true");
+        metadata.setIsBiosecurity("true");
+        metadata.setLicence("CC-BY");
+        metadata.setListType("TEST");
+
+        when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
+
+        SpeciesList result = uploadService.ingest(user, metadata, "file-123", true);
+
+        assertNotNull(result);
+        assertTrue(result.getIsPrivate());
+        assertTrue(result.getIsBiosecurity());
+        verify(metadataService).setMeta(any(SpeciesList.class));
     }
 }

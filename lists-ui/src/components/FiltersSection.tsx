@@ -39,7 +39,7 @@ interface FiltersDrawerProps {
   onReset: () => void;
 }
 
-const BOOLEAN_FACETS = ['isAuthoritative', 'isSDS', 'isBIE', 'hasRegion', 'isThreatened', 'isInvasive'];
+const BOOLEAN_FACETS = ['isAuthoritative', 'isSDS', 'isBIE', 'hasRegion', 'isThreatened', 'isInvasive', 'isBiosecurity'];
 const CORE_FACETS = ['listType'];
 
 // Helper function to render the entire Checkbox with its label

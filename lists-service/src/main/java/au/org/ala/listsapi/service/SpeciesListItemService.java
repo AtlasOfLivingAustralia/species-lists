@@ -88,7 +88,7 @@ public class SpeciesListItemService {
         "id", "scientificName", "vernacularName", "licence", "taxonID",
         "kingdom", "phylum", "class", "order", "family", "genus",
         "isBIE", "listType", "isAuthoritative", "hasRegion", "isSDS",
-        "isThreatened", "isInvasive", "isPrivate", "tags"
+        "isThreatened", "isInvasive", "isBiosecurity", "isPrivate", "tags"
     );
 
     @Autowired
@@ -662,6 +662,9 @@ public class SpeciesListItemService {
         }
         if (speciesListQuery.getIsSDS() != null) {
             query.addCriteria(Criteria.where("isSDS").is(speciesListQuery.getIsSDS()));
+        }
+        if (speciesListQuery.getIsBiosecurity() != null) {
+            query.addCriteria(Criteria.where("isBiosecurity").is(speciesListQuery.getIsBiosecurity()));
         }
         if (speciesListQuery.getDataResourceUid() != null) {
             if (speciesListQuery.getDataResourceUid().contains(",")) {

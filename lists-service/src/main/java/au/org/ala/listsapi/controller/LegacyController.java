@@ -111,6 +111,7 @@ public class LegacyController {
             @Nullable @RequestParam(name = "isInvasive") String isInvasive,
             @Nullable @RequestParam(name = "isSDS") String isSDS,
             @Nullable @RequestParam(name = "isBIE") String isBIE,
+            @Nullable @RequestParam(name = "isBiosecurity") String isBiosecurity,
             @Nullable @RequestParam(name = "listType") String listType,
             @Parameter(description = "The data resource id (or speciesListID)", example = "dr656")  
             @Nullable @RequestParam(name = "druid") String druid,
@@ -138,7 +139,7 @@ public class LegacyController {
             
             Pageable paging = PageRequest.of(page, max, pageableSort);
             RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
-            fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, isSDS, isBIE, druid, listType, speciesListQuery);
+            fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, isSDS, isBIE, isBiosecurity, druid, listType, speciesListQuery);
 
             SpeciesList convertedSpeciesListQuery = speciesListQuery.convertTo();
             AlaUserProfile profile = authUtils.getUserProfile(principal);
@@ -200,7 +201,7 @@ public class LegacyController {
      * @param speciesListQuery
      */
     private static void fixLegacyBooleanSyntax(String isAuthoritative, String isThreatened, String isInvasive,
-            String isSDS, String isBIE, String druid, String listType, RESTSpeciesListQuery speciesListQuery) {
+            String isSDS, String isBIE, String isBiosecurity, String druid, String listType, RESTSpeciesListQuery speciesListQuery) {
         if (StringUtils.isNotBlank(isAuthoritative)) {
             speciesListQuery.setIsAuthoritative(isAuthoritative.replaceAll("eq:", "")); // eq:true to true, etc.
         }            
@@ -219,6 +220,10 @@ public class LegacyController {
 
         if (StringUtils.isNotBlank(isBIE)) {
             speciesListQuery.setIsBIE(isBIE.replaceAll("eq:", "")); // eq:true to true, etc.
+        }
+
+        if (StringUtils.isNotBlank(isBiosecurity)) {
+            speciesListQuery.setIsBiosecurity(isBiosecurity.replaceAll("eq:", "")); // eq:true to true, etc.
         }
 
         if (StringUtils.isNotBlank(druid)) {
@@ -255,7 +260,7 @@ public class LegacyController {
      */
     private ResponseEntity<Object> internalSpeciesListItems(
             String druid, String isAuthoritative, String isThreatened, String isInvasive,
-            String isSDS, String isBIE, String query, Boolean nonulls, String sort, 
+            String isSDS, String isBIE, String isBiosecurity, String query, Boolean nonulls, String sort, 
             String order, String dir, Integer max, Integer offset, Principal principal) {
         try {
             if (Boolean.TRUE.equals(nonulls)) {
@@ -275,7 +280,8 @@ public class LegacyController {
 
             boolean hasListFilters = StringUtils.isNotBlank(isAuthoritative) ||
                     StringUtils.isNotBlank(isThreatened) || StringUtils.isNotBlank(isInvasive) ||
-                    StringUtils.isNotBlank(isSDS) || StringUtils.isNotBlank(isBIE);
+                    StringUtils.isNotBlank(isSDS) || StringUtils.isNotBlank(isBIE) ||
+                    StringUtils.isNotBlank(isBiosecurity);
 
             String decodedQuery = StringUtils.isNotBlank(query) ? URLDecoder.decode(query, StandardCharsets.UTF_8) : "";
 
@@ -284,7 +290,7 @@ public class LegacyController {
                 Integer page = effectiveOffset / effectiveMax;
                 Pageable paging = PageRequest.of(0, 10000);
                 RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
-                fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, isSDS, isBIE, druid, null, speciesListQuery);
+                fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, isSDS, isBIE, isBiosecurity, druid, null, speciesListQuery);
 
                 SpeciesList convertedSpeciesListQuery = speciesListQuery.convertTo();
                 AlaUserProfile profile = authUtils.getUserProfile(principal);
@@ -344,6 +350,7 @@ public class LegacyController {
             @RequestParam(name = "isInvasive", required = false) String isInvasive,
             @RequestParam(name = "isSDS", required = false) String isSDS,
             @RequestParam(name = "isBIE", required = false) String isBIE,
+            @RequestParam(name = "isBiosecurity", required = false) String isBiosecurity,
             @Parameter(description = "Query string to find items within the specified list", example = "Eucalyptus" )
             @RequestParam(name = "q", required = false) String query,
             @RequestParam(name = "nonulls", required = false) Boolean nonulls,
@@ -354,7 +361,7 @@ public class LegacyController {
             @RequestParam(name = "offset", defaultValue = "0") Integer offset,
             @AuthenticationPrincipal Principal principal) {
         
-        return internalSpeciesListItems(druid, isAuthoritative, isThreatened, isInvasive, isSDS, isBIE, 
+        return internalSpeciesListItems(druid, isAuthoritative, isThreatened, isInvasive, isSDS, isBIE, isBiosecurity, 
                                     query, nonulls, sort, order, dir, max, offset, principal);
     }
 
@@ -708,6 +715,7 @@ public class LegacyController {
             @RequestParam(name = "isInvasive", required = false) String isInvasive,
             @RequestParam(name = "isSDS", required = false) String isSDS,
             @RequestParam(name = "isBIE", required = false) String isBIE,
+            @RequestParam(name = "isBiosecurity", required = false) String isBiosecurity,
             @AuthenticationPrincipal Principal principal,
             HttpServletRequest request) {
         String uri = request.getRequestURI();
@@ -740,11 +748,12 @@ public class LegacyController {
                     || StringUtils.isNotBlank(isThreatened)
                     || StringUtils.isNotBlank(isInvasive)
                     || StringUtils.isNotBlank(isSDS)
-                    || StringUtils.isNotBlank(isBIE);
+                    || StringUtils.isNotBlank(isBIE)
+                    || StringUtils.isNotBlank(isBiosecurity);
 
             if (hasBooleanFilters) {
                 RESTSpeciesListQuery speciesListQuery = new RESTSpeciesListQuery();
-                fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, isSDS, isBIE, null, null, speciesListQuery);
+                fixLegacyBooleanSyntax(isAuthoritative, isThreatened, isInvasive, isSDS, isBIE, isBiosecurity, null, null, speciesListQuery);
 
                 AlaUserProfile profile = authUtils.getUserProfile(principal);
                 String userId = profile != null ? profile.getUserId() : null;

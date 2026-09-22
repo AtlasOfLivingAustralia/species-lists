@@ -48,6 +48,7 @@ import lombok.extern.jackson.Jacksonized;
     Boolean isThreatened;
     Boolean isBIE;
     Boolean isSDS;
+    Boolean isBiosecurity;
 
     private String owner; // user id of who created the list
     private String ownerName; // name of who created the list
@@ -88,6 +89,7 @@ import lombok.extern.jackson.Jacksonized;
         this.isThreatened = other.isThreatened;
         this.isBIE = other.isBIE;
         this.isSDS = other.isSDS;
+        this.isBiosecurity = other.isBiosecurity;
         this.owner = other.owner;
         this.ownerName = other.ownerName;
         this.lastUpdatedBy = other.lastUpdatedBy;
@@ -131,6 +133,10 @@ import lombok.extern.jackson.Jacksonized;
 
     public Boolean isBIE() {
         return isBIE;
+    }
+
+    public Boolean isBiosecurity() {
+        return isBiosecurity;
     }
 
     public Boolean isSDS() {

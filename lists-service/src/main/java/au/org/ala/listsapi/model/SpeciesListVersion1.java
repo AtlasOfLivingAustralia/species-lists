@@ -69,5 +69,6 @@ public class SpeciesListVersion1 implements Serializable {
     private Boolean isThreatened;
     private Boolean isSDS;
     private Boolean isBIE;
+    private Boolean isBiosecurity;
     private Boolean looseSearch;
 }

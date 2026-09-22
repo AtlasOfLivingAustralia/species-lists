@@ -53,6 +53,7 @@ class LegacyControllerTest {
         null,
         null,
         null,
+        null,
         "eq:PROFILE",
         null,
         null,

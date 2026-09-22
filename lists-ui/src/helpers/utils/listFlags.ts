@@ -1,4 +1,5 @@
 import {
+  faBiohazard,
   faBug,
   faExclamationCircle,
   faLock,
@@ -12,6 +13,13 @@ export default [
     label: 'Authoritative',
     description: 'List taxa indexed in ALA Biocache',
     icon: faShield,
+    admin: true,
+  },
+  {
+    flag: 'isBiosecurity',
+    label: 'Biosecurity',
+    description: 'Biosecurity alert list',
+    icon: faBiohazard,
     admin: true,
   },
   {
