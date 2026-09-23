@@ -81,9 +81,14 @@ export function Component() {
       }
     }
 
-    // If migration has started, continually check it
-    if (ala.rest.admin && migrationProgress) {
-      setTimeout(checkMigrationProgress, 10000);
+    // Check migration progress initially on mount, and continually poll if running
+    if (ala.rest.admin) {
+      if (migrationProgress) {
+        const timer = setTimeout(checkMigrationProgress, 10000);
+        return () => clearTimeout(timer);
+      } else {
+        checkMigrationProgress();
+      }
     }
   }, [migrationProgress, ala]);
 
@@ -461,3 +466,5 @@ export function Component() {
 }
 
 Object.assign(Component, { displayName: 'Admin' });
+
+export default Component;

@@ -1,4 +1,3 @@
-import { jwtDecode } from 'jwt-decode';
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, redirect } from 'react-router';
 
@@ -11,9 +10,6 @@ import List from './views/List';
 import PageError from './components/PageError';
 import PageLoader from './components/PageLoader';
 
-import { getAccessToken } from './helpers/utils/getAccessToken';
-
-// Admin API
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 const UploadPage = lazy(() => import('./views/Upload'));

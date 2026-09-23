@@ -28,7 +28,10 @@ export const ALAProvider = ({ children }: PropsWithChildren) => {
     auth.isAuthenticated && (isAdmin || (JWT_EDITOR_ROLE ? roles.includes(JWT_EDITOR_ROLE) : false));
 
   const isAuthorisedForList = (list: SpeciesList) =>
-    auth.isAuthenticated && (isAdmin || list.owner === userid);
+    auth.isAuthenticated &&
+    (isAdminOrEditor ||
+      list.owner === userid ||
+      Boolean(list.editors && list.editors.includes(userid)));
 
   // Centralized notification function
   const showAuthRequiredNotification = (type: 'auth' | 'admin' = 'auth') => {
