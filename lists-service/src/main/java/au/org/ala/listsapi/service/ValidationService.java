@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -67,10 +68,18 @@ public class ValidationService {
   }
 
   public boolean isListValid(InputSpeciesList speciesList) {
-    // check that the supplied list type, region and license is valid
-    return (
-            isValueValid(ConstraintType.listType, speciesList.getListType()) &&
-            isValueValid(ConstraintType.licence, speciesList.getLicence())
-    );
+    boolean isTypeValid = isValueValid(ConstraintType.listType, speciesList.getListType());
+    boolean isPrivate = Boolean.parseBoolean(speciesList.getIsPrivate());
+    boolean isLicenceValid;
+    if (isPrivate) {
+      isLicenceValid =
+          StringUtils.isBlank(speciesList.getLicence())
+              || isValueValid(ConstraintType.licence, speciesList.getLicence());
+    } else {
+      isLicenceValid =
+          StringUtils.isNotBlank(speciesList.getLicence())
+              && isValueValid(ConstraintType.licence, speciesList.getLicence());
+    }
+    return isTypeValid && isLicenceValid;
   }
 }

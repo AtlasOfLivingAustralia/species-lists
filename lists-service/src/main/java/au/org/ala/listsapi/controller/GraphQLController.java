@@ -775,8 +775,18 @@ public class GraphQLController {
             String oldDataResourceUid = toUpdate.getDataResourceUid();
 
             // check that the supplied list type, region and license is valid
-            if (!validationService.isValueValid(ConstraintType.listType, listType) ||
-                    !validationService.isValueValid(ConstraintType.licence, licence)) {
+            boolean effectiveIsPrivate = isPrivate != null ? isPrivate : (toUpdate.getIsPrivate() != null && toUpdate.getIsPrivate());
+            boolean isLicenceValid;
+            if (effectiveIsPrivate) {
+                isLicenceValid = StringUtils.isBlank(licence) || validationService.isValueValid(ConstraintType.licence, licence);
+            } else {
+                isLicenceValid = StringUtils.isNotBlank(licence) && validationService.isValueValid(ConstraintType.licence, licence);
+            }
+
+            if (!validationService.isValueValid(ConstraintType.listType, listType) || !isLicenceValid) {
+                if (!effectiveIsPrivate && StringUtils.isBlank(licence)) {
+                    throw new Exception("A valid licence is required for public lists");
+                }
                 throw new Exception(
                         "Updated list contains invalid properties for a controlled value (list type, license)");
             }
@@ -840,7 +850,7 @@ public class GraphQLController {
                     || isBiosecurity != null && !isBiosecurity.equals(toUpdate.getIsBiosecurity())
                     || wkt != null && !wkt.equals(toUpdate.getWkt())
                     || region != null && !region.equals(toUpdate.getRegion())
-                    || licence != null && !licence.equals(toUpdate.getLicence())
+                    || !Objects.equals(licence, toUpdate.getLicence())
                     || tags != null && !tags.equals(toUpdate.getTags())) {
                 reindexRequired = true;
             }
@@ -848,7 +858,7 @@ public class GraphQLController {
             boolean previousIsPrivate = toUpdate.getIsPrivate() != null ? toUpdate.getIsPrivate() : false;
             toUpdate.setTitle(title);
             toUpdate.setDescription(description);
-            toUpdate.setLicence(licence);
+            toUpdate.setLicence(StringUtils.trimToNull(licence));
             toUpdate.setListType(listType);
             toUpdate.setAuthority(authority);
             toUpdate.setRegion(region);

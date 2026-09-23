@@ -25,7 +25,7 @@ interface SpeciesList {
   isBiosecurity: boolean;
   lastUpdated: string;
   metadataLastUpdated: string;
-  licence: string;
+  licence: string | null;
   listType: string;
   region: string;
   rowCount: number;
