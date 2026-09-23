@@ -2,9 +2,15 @@ import { useEffect, ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { useALA } from '#/helpers/context/useALA';
 
-export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
+export const ProtectedRoute = ({
+  children,
+  adminOnly = false,
+}: {
+  children: ReactNode;
+  adminOnly?: boolean;
+}) => {
   const location = useLocation();
-  const { isAuthenticated, showAuthRequiredNotification } = useALA();
+  const { isAuthenticated, isAdmin, showAuthRequiredNotification } = useALA();
   
   useEffect(() => {
     if (!isAuthenticated) {
@@ -15,11 +21,13 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
       if (!cameFromLink) {
         showAuthRequiredNotification();
       }
+    } else if (adminOnly && !isAdmin) {
+      showAuthRequiredNotification('admin');
     }
-  }, [isAuthenticated, location, showAuthRequiredNotification]);
+  }, [isAuthenticated, isAdmin, adminOnly, location, showAuthRequiredNotification]);
 
-  if (!isAuthenticated) {
-    // Redirect to login page, but save the location they were trying to access
+  if (!isAuthenticated || (adminOnly && !isAdmin)) {
+    // Redirect to home/login page, but save the location they were trying to access
     return <Navigate to="/" state={{ from: location.pathname }} replace />;
   }
 

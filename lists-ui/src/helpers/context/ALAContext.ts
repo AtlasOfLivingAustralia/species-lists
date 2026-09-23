@@ -13,7 +13,7 @@ export interface ALAContextProps {
   isAdminOrEditor: boolean;
   isAuthenticated: boolean;
   isAuthorisedForList: (list: SpeciesList) => boolean;
-  showAuthRequiredNotification: () => void;
+  showAuthRequiredNotification: (type?: 'auth' | 'admin') => void;
 }
 
 export default createContext<ALAContextProps | null>({
