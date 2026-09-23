@@ -1,4 +1,3 @@
-import { jwtDecode } from 'jwt-decode';
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, redirect } from 'react-router';
 
@@ -11,17 +10,11 @@ import List from './views/List';
 import PageError from './components/PageError';
 import PageLoader from './components/PageLoader';
 
-import { getAccessToken } from './helpers/utils/getAccessToken';
-
-// Admin API
-import adminApi from './api/rest/admin';
 import { ProtectedRoute } from './components/ProtectedRoute';
-
-const JWT_ROLES = import.meta.env.VITE_AUTH_JWT_ROLES;
-const JWT_ADMIN_ROLE = import.meta.env.VITE_AUTH_JWT_ADMIN_ROLE;
 
 const UploadPage = lazy(() => import('./views/Upload'));
 const ReingestPage = lazy(() => import('./views/Reingest'));
+const AdminPage = lazy(() => import('./views/Admin'));
 
 // List is loaded eagerly so its header skeleton renders immediately while data fetches.
 
@@ -39,6 +32,15 @@ const ProtectedReingest = () => (
   <ProtectedRoute>
     <Suspense fallback={<PageLoader />}> {/* Use PageLoader for better consistency */}
       <ReingestPage />
+    </Suspense>
+  </ProtectedRoute>
+);
+
+// Create a protected and suspended wrapper for the Admin page (ROLE_ADMIN only)
+const ProtectedAdmin = () => (
+  <ProtectedRoute adminOnly>
+    <Suspense fallback={<PageLoader />}>
+      <AdminPage />
     </Suspense>
   </ProtectedRoute>
 );
@@ -125,28 +127,7 @@ const router = createBrowserRouter([
       },
       {
         path: '/admin',
-        lazy: () => import('./views/Admin'),
-        hydrateFallbackElement: <PageLoader />,
-        loader: async () => {
-          // Fetch the access token
-          const token = getAccessToken();
-          if (!token) return redirect('/');
-
-          // UI-only guard: jwtDecode does NOT verify the JWT signature — it only
-          // base64-decodes the payload. This check prevents unnecessary navigation
-          // for non-admin users but is NOT a security control. The server-side
-          // admin API endpoints must independently verify the token and roles.
-          const parsed = jwtDecode(token) as any;
-          if (!parsed[JWT_ROLES] || !parsed[JWT_ROLES].includes(JWT_ADMIN_ROLE))
-            return redirect('/');
-          try {
-            const admin = adminApi(token);
-            return await admin.migrateProgress();
-          } catch (error) {
-            console.log(error);
-            return redirect('/');
-          }
-        },
+        element: <ProtectedAdmin />,
         errorElement: <PageError />,
       },
       {

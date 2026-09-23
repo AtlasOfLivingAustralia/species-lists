@@ -99,6 +99,8 @@
 
   "login.required.title": "Login required",
   "login.required.message": "You need to login to view this page.",
+  "admin.required.title": "Access denied",
+  "admin.required.description": "You need administrator privileges to access this page.",
   "admin.title": "Admin",
   "admin.title.label": "Admin functions",
   "admin.migrate-all": "Migrating",

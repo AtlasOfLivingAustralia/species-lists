@@ -333,7 +333,7 @@ const Home = ({ routeId }: { routeId: string }) => {
                 defaultMessage='Species Lists'
               />
               )}
-              {ala.isAdmin && !isMyListsPage && isAdminListPage && (
+              {ala.isAdminOrEditor && !isMyListsPage && isAdminListPage && (
                 <Text component='span' inherit opacity={0.7} c='flamingo'>
                   {' '}
                   <FormattedMessage

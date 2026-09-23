@@ -45,7 +45,7 @@ export function ActionButtons() {
         >
           <FormattedMessage id='upload.button.label' defaultMessage='Upload List'/>
         </Button>
-      {ala.isAdmin && (
+      {ala.isAdminOrEditor && (
         <Menu shadow="md" width={200}>
           {/* 1. Menu Target (The visible button) */}
           <Menu.Target>
@@ -70,14 +70,16 @@ export function ActionButtons() {
               View all lists
             </Menu.Item>
 
-            {/* Second Menu Item: "Admin tasks" */}
-            <Menu.Item
-              component={Link} // Use Link for navigation
-              to="/admin"
-              leftSection={<FontAwesomeIcon icon={faTools} />}
-            >
-              Admin tasks
-            </Menu.Item>
+            {/* Second Menu Item: "Admin tasks" - strictly for ROLE_ADMIN */}
+            {ala.isAdmin && (
+              <Menu.Item
+                component={Link} // Use Link for navigation
+                to="/admin"
+                leftSection={<FontAwesomeIcon icon={faTools} />}
+              >
+                Admin tasks
+              </Menu.Item>
+            )}
           </Menu.Dropdown>
         </Menu>
       )}
