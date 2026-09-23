@@ -45,7 +45,7 @@ export function ActionButtons() {
         >
           <FormattedMessage id='upload.button.label' defaultMessage='Upload List'/>
         </Button>
-      {ala.isAdmin && (
+      {ala.isAdminOrEditor && (
         <Menu shadow="md" width={200}>
           {/* 1. Menu Target (The visible button) */}
           <Menu.Target>

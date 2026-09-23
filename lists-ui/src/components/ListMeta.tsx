@@ -176,8 +176,8 @@ export function ListMeta({
   };
 
   const filteredFlags = useMemo(
-    () => listFlags.filter(({ admin }) => ala.isAdmin || !admin),
-    [ala.isAdmin]
+    () => listFlags.filter(({ admin }) => ala.isAdminOrEditor || !admin),
+    [ala.isAdminOrEditor]
   );
 
   const visibilityLabels = useMemo(
@@ -394,7 +394,7 @@ export function ListMeta({
             onChange={(value) => form.setFieldValue('isPrivate', value === 'private')}
           />
         </Grid.Col>
-        {ala.isAdmin && (
+        {ala.isAdminOrEditor && (
             <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
                 <dialog 
                   ref={dialogRef} 
