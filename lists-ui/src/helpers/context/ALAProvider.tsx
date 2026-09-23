@@ -1,4 +1,4 @@
-import { faLock } from '@fortawesome/free-solid-svg-icons';
+import { faLock, faShield } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { notifications } from '@mantine/notifications';
 import { PropsWithChildren } from 'react';
@@ -31,13 +31,29 @@ export const ALAProvider = ({ children }: PropsWithChildren) => {
     auth.isAuthenticated && (isAdmin || list.owner === userid);
 
   // Centralized notification function
-  const showAuthRequiredNotification = () => {
+  const showAuthRequiredNotification = (type: 'auth' | 'admin' = 'auth') => {
+    const isAdminType = type === 'admin';
     notifications.show({
-      id: 'auth-required',
-      title: intl.formatMessage({ id: 'login.required.title', defaultMessage: 'Login required' }),
-      message: intl.formatMessage({ id: 'login.required.description', defaultMessage: 'You need to "Sign in" to access this page' }),
+      id: isAdminType ? 'admin-required' : 'auth-required',
+      color: isAdminType ? 'red' : undefined,
+      title: intl.formatMessage({
+        id: isAdminType ? 'admin.required.title' : 'login.required.title',
+        defaultMessage: isAdminType ? 'Access denied' : 'Login required',
+      }),
+      message: intl.formatMessage({
+        id: isAdminType ? 'admin.required.description' : 'login.required.description',
+        defaultMessage: isAdminType
+          ? 'You need administrator privileges to access this page.'
+          : 'You need to "Sign in" to access this page',
+      }),
       withBorder: true,
-      icon: <FontAwesomeIcon icon={faLock} fontSize={16}/>,
+      icon: (
+        <FontAwesomeIcon
+          icon={isAdminType ? faShield : faLock}
+          fontSize={16}
+          color={isAdminType ? 'white' : undefined}
+        />
+      ),
       autoClose: 10000,
       classNames: {
         root: classes.notification,

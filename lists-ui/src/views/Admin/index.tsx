@@ -234,7 +234,9 @@ export function Component() {
     [ala, migrationProgress]
   );
 
-  if (!ala.isAdmin) return <Navigate to='/' />;
+  if (!ala.isAdmin) {
+    return <Navigate to='/' replace />;
+  }
 
   return (
     <>
