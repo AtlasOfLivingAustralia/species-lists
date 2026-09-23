@@ -596,4 +596,88 @@ class GraphQLControllerTest {
         assertEquals("Updated list contains invalid properties for a controlled value (list type, license)", exception.getMessage());
         verify(speciesListMongoRepository, never()).save(any());
     }
+
+    @Test
+    void testUpdateMetadata_OmittedIsPrivate_PreservesExistingPrivateVisibility() throws Exception {
+        String listId = "list123";
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        list.setTitle("Old Title");
+        list.setIsPrivate(true);
+        list.setLicence(null);
+
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
+                .thenReturn(Optional.of(list));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.listType), any())).thenReturn(true);
+        when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
+
+        SpeciesList result = graphQLController.updateMetadata(
+                listId, "New Title", "description", null, "TEST",
+                "authority", "region", null, null, false, false,
+                false, false, false, false, new ArrayList<>(), "", principal);
+
+        assertNotNull(result);
+        assertTrue(result.getIsPrivate());
+        assertNull(result.getLicence());
+        verify(speciesListMongoRepository).save(list);
+    }
+
+    @Test
+    void testUpdateMetadata_OmittedIsPrivate_PreservesExistingPublicVisibility_RequiresLicence() {
+        String listId = "list123";
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        list.setTitle("Public List");
+        list.setIsPrivate(false);
+        list.setLicence("CC-BY");
+
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
+                .thenReturn(Optional.of(list));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.listType), any())).thenReturn(true);
+
+        Exception exception = assertThrows(Exception.class, () -> {
+            graphQLController.updateMetadata(
+                    listId, "Public List", "description", null, "TEST",
+                    "authority", "region", null, null, false, false,
+                    false, false, false, false, new ArrayList<>(), "", principal);
+        });
+
+        assertEquals("A valid licence is required for public lists", exception.getMessage());
+        verify(speciesListMongoRepository, never()).save(any());
+    }
+
+    @Test
+    void testUpdateMetadata_LicenceWhitespace_NormalizedAndNoFalseReindex() throws Exception {
+        String listId = "list123";
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        list.setTitle("Old Title");
+        list.setListType("TEST");
+        list.setIsPrivate(true);
+        list.setLicence(null);
+        list.setIsAuthoritative(false);
+        list.setIsSDS(false);
+        list.setIsBIE(false);
+        list.setIsBiosecurity(false);
+        list.setIsInvasive(false);
+        list.setIsThreatened(false);
+
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
+                .thenReturn(Optional.of(list));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.listType), any())).thenReturn(true);
+        when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
+
+        SpeciesList result = graphQLController.updateMetadata(
+                listId, "Old Title", null, "   ", "TEST",
+                null, null, null, true, false, false,
+                false, false, false, false, null, "", principal);
+
+        assertNotNull(result);
+        assertNull(result.getLicence());
+        verify(taxonService, never()).reindex(any());
+        verify(speciesListMongoRepository).save(list);
+    }
 }

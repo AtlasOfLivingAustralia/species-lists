@@ -39,7 +39,9 @@ public class InputSpeciesList {
     @Schema(description = "Type of the species list", requiredMode = Schema.RequiredMode.REQUIRED)
     private String listType;
 
-    @Schema(description = "Licence under which the species list is shared", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(
+            description = "Licence under which the species list is shared. Required for public lists, optional for private lists.",
+            requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String licence;
 
     @Schema(description = "Original field list provided for the species list", accessMode = Schema.AccessMode.READ_ONLY)

@@ -773,18 +773,20 @@ public class GraphQLController {
         if (authUtils.isAuthorized(toUpdate, principal)) {
             boolean reindexRequired = false;
             String oldDataResourceUid = toUpdate.getDataResourceUid();
+            boolean previousIsPrivate = toUpdate.getIsPrivate() != null ? toUpdate.getIsPrivate() : false;
+            boolean effectiveIsPrivate = isPrivate != null ? isPrivate : previousIsPrivate;
+            String normalisedLicence = StringUtils.trimToNull(licence);
 
             // check that the supplied list type, region and license is valid
-            boolean effectiveIsPrivate = isPrivate != null ? isPrivate : (toUpdate.getIsPrivate() != null && toUpdate.getIsPrivate());
             boolean isLicenceValid;
             if (effectiveIsPrivate) {
-                isLicenceValid = StringUtils.isBlank(licence) || validationService.isValueValid(ConstraintType.licence, licence);
+                isLicenceValid = normalisedLicence == null || validationService.isValueValid(ConstraintType.licence, normalisedLicence);
             } else {
-                isLicenceValid = StringUtils.isNotBlank(licence) && validationService.isValueValid(ConstraintType.licence, licence);
+                isLicenceValid = normalisedLicence != null && validationService.isValueValid(ConstraintType.licence, normalisedLicence);
             }
 
             if (!validationService.isValueValid(ConstraintType.listType, listType) || !isLicenceValid) {
-                if (!effectiveIsPrivate && StringUtils.isBlank(licence)) {
+                if (!effectiveIsPrivate && normalisedLicence == null) {
                     throw new Exception("A valid licence is required for public lists");
                 }
                 throw new Exception(
@@ -850,19 +852,18 @@ public class GraphQLController {
                     || isBiosecurity != null && !isBiosecurity.equals(toUpdate.getIsBiosecurity())
                     || wkt != null && !wkt.equals(toUpdate.getWkt())
                     || region != null && !region.equals(toUpdate.getRegion())
-                    || !Objects.equals(licence, toUpdate.getLicence())
+                    || !Objects.equals(normalisedLicence, toUpdate.getLicence())
                     || tags != null && !tags.equals(toUpdate.getTags())) {
                 reindexRequired = true;
             }
 
-            boolean previousIsPrivate = toUpdate.getIsPrivate() != null ? toUpdate.getIsPrivate() : false;
             toUpdate.setTitle(title);
             toUpdate.setDescription(description);
-            toUpdate.setLicence(StringUtils.trimToNull(licence));
+            toUpdate.setLicence(normalisedLicence);
             toUpdate.setListType(listType);
             toUpdate.setAuthority(authority);
             toUpdate.setRegion(region);
-            toUpdate.setIsPrivate(isPrivate);
+            toUpdate.setIsPrivate(effectiveIsPrivate);
             toUpdate.setIsThreatened(isThreatened);
             toUpdate.setIsInvasive(isInvasive);
             toUpdate.setIsAuthoritative(isAuthoritative);
@@ -877,7 +878,7 @@ public class GraphQLController {
                 if (Boolean.FALSE.equals(toUpdate.getIsPrivate()) // saved list is public
                         || Boolean.TRUE.equals(toUpdate.getIsAuthoritative()) // saved list is authoritative (private or public)
                         || Boolean.TRUE.equals(toUpdate.getIsBiosecurity()) // saved list is biosecurity (private or public)
-                        || (!previousIsPrivate && Boolean.TRUE.equals(isPrivate)) // was public, now private
+                        || (!previousIsPrivate && effectiveIsPrivate) // was public, now private
                 ) {
                     metadataService.setMeta(toUpdate);
                 }
