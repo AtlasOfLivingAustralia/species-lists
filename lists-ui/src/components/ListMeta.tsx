@@ -180,7 +180,10 @@ export function ListMeta({
   };
 
   const handleSumbit = (values: typeof form.values) => {
-    onSubmit(values);
+    onSubmit({
+      ...values,
+      licence: values.licence ?? '',
+    });
   };
 
   const filteredFlags = useMemo(

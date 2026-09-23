@@ -514,13 +514,67 @@ class GraphQLControllerTest {
         when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
 
         SpeciesList result = graphQLController.updateMetadata(
-                listId, "New Title", "description", null, "TEST",
+                listId, "New Title", "description", "", "TEST",
                 "authority", "region", null, true, false, false,
                 false, false, false, false, new ArrayList<>(), "", principal);
 
         assertNotNull(result);
         assertNull(result.getLicence());
         assertTrue(result.getIsPrivate());
+        verify(speciesListMongoRepository).save(list);
+    }
+
+    @Test
+    void testUpdateMetadata_OmittedLicence_PreservesExistingLicenceOnPrivateList() throws Exception {
+        String listId = "list123";
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        list.setTitle("Old Title");
+        list.setIsPrivate(true);
+        list.setLicence("CC-BY");
+
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
+                .thenReturn(Optional.of(list));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.listType), any())).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.licence), eq("CC-BY"))).thenReturn(true);
+        when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
+
+        SpeciesList result = graphQLController.updateMetadata(
+                listId, "New Title", "description", null, "TEST",
+                "authority", "region", null, true, false, false,
+                false, false, false, false, new ArrayList<>(), "", principal);
+
+        assertNotNull(result);
+        assertEquals("CC-BY", result.getLicence());
+        assertTrue(result.getIsPrivate());
+        verify(speciesListMongoRepository).save(list);
+    }
+
+    @Test
+    void testUpdateMetadata_OmittedLicence_PreservesExistingLicenceOnPublicList() throws Exception {
+        String listId = "list123";
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        list.setTitle("Public List");
+        list.setIsPrivate(false);
+        list.setLicence("CC-BY");
+
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
+                .thenReturn(Optional.of(list));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.listType), any())).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.licence), eq("CC-BY"))).thenReturn(true);
+        when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
+
+        SpeciesList result = graphQLController.updateMetadata(
+                listId, "Updated Public List", "new description", null, "TEST",
+                "authority", "region", null, false, false, false,
+                false, false, false, false, new ArrayList<>(), "", principal);
+
+        assertNotNull(result);
+        assertEquals("CC-BY", result.getLicence());
+        assertFalse(result.getIsPrivate());
         verify(speciesListMongoRepository).save(list);
     }
 
@@ -630,7 +684,7 @@ class GraphQLControllerTest {
         list.setId(listId);
         list.setTitle("Public List");
         list.setIsPrivate(false);
-        list.setLicence("CC-BY");
+        list.setLicence(null);
 
         when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
                 .thenReturn(Optional.of(list));
