@@ -775,7 +775,7 @@ public class GraphQLController {
             String oldDataResourceUid = toUpdate.getDataResourceUid();
             boolean previousIsPrivate = toUpdate.getIsPrivate() != null ? toUpdate.getIsPrivate() : false;
             boolean effectiveIsPrivate = isPrivate != null ? isPrivate : previousIsPrivate;
-            String normalisedLicence = StringUtils.trimToNull(licence);
+String normalisedLicence = licence == null ? StringUtils.trimToNull(toUpdate.getLicence()) : StringUtils.trimToNull(licence);
 
             // check that the supplied list type, region and license is valid
             boolean isLicenceValid;
