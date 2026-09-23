@@ -36,6 +36,7 @@ interface SpeciesList {
   ownerName: string | null;
   wkt: string;
   tags: string[] | null;
+  editors?: string[] | null;
 }
 
 type SpeciesListSubmit = Omit<
@@ -50,6 +51,7 @@ type SpeciesListSubmit = Omit<
   | 'owner'
   | 'ownerName'
   | 'distinctMatchCount'
+  | 'editors'
 >;
 
 interface Release {

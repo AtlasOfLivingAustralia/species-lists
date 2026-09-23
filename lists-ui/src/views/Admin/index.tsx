@@ -32,6 +32,7 @@ import { Navigate, useLoaderData, useNavigate } from 'react-router';
 // Local components
 import { MigrateProgress } from '#/api';
 import { IngestProgress } from '#/components/IngestProgress';
+import PageLoader from '#/components/PageLoader';
 import { getErrorMessage } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
 import { Breadcrumbs } from '../Dashboard/components/Breadcrumbs';
@@ -46,12 +47,15 @@ export function Component() {
   const AppVersion = () => <span>v{__APP_VERSION__}</span>
 
   // State hooks
-  const migrationLoader = useLoaderData();
+  const migrationLoader = useLoaderData() as MigrateProgress | undefined;
+  const [initialLoading, setInitialLoading] = useState<boolean>(
+    migrationLoader === undefined
+  );
   const [migrationDisabled, setMigrationDisabled] = useState<boolean>(
-    Boolean(migrationLoader)
+    migrationLoader !== undefined ? Boolean(migrationLoader) : true
   );
   const [migrationProgress, setMigrationProgress] =
-    useState<MigrateProgress | null>(migrationLoader);
+    useState<MigrateProgress | null>(migrationLoader || null);
 
   // Function hooks
   const ala = useALA();
@@ -65,11 +69,7 @@ export function Component() {
       try {
         const progress = await ala.rest.admin!.migrateProgress();
         setMigrationProgress(progress);
-        // Uncomment the following lines to reset if server was restarted during migration
-        // if (progress == null || progress?.started == null) {
-        //   setMigrationProgress(null);
-        //   setMigrationDisabled(false);
-        // }
+        setMigrationDisabled(Boolean(progress));
       } catch (error) {
         console.log('admin error', error);
         // Show error notification
@@ -78,6 +78,8 @@ export function Component() {
           position: 'bottom-left',
           radius: 'md',
         });
+      } finally {
+        setInitialLoading(false);
       }
     }
 
@@ -241,6 +243,10 @@ export function Component() {
 
   if (!ala.isAdmin) {
     return <Navigate to='/' replace />;
+  }
+
+  if (initialLoading) {
+    return <PageLoader />;
   }
 
   return (
