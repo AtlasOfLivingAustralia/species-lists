@@ -653,6 +653,7 @@ function List() {
                         onSelect={handleFilterClick}
                         onReset={() => {setFilters([]); setPage(0);}}
                         loading={loading}
+                        preserveOrder
                       />
                   </Collapse>
                 </Grid.Col>

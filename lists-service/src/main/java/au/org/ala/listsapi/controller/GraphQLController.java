@@ -19,6 +19,7 @@ import java.net.URI;
 import java.security.Principal;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -988,10 +989,19 @@ String normalisedLicence = licence == null ? StringUtils.trimToNull(toUpdate.get
             principal
         );
 
-        // Use provided facet fields or default to list's configured facets
-        List<String> effectiveFacetFields = (facetFields != null && !facetFields.isEmpty())
-            ? facetFields
-            : speciesList.getFacetList();
+        // Use provided facet fields or default to list's fieldList (or facetList) from MongoDB
+        List<String> effectiveFacetFields;
+        if (facetFields != null && !facetFields.isEmpty()) {
+            effectiveFacetFields = facetFields;
+        } else if (speciesList.getFieldList() != null && !speciesList.getFieldList().isEmpty()) {
+            effectiveFacetFields = speciesList.getFieldList();
+        } else if (speciesList.getFacetList() != null && !speciesList.getFacetList().isEmpty()) {
+            effectiveFacetFields = speciesList.getFacetList();
+        } else if (speciesList.getOriginalFieldList() != null && !speciesList.getOriginalFieldList().isEmpty()) {
+            effectiveFacetFields = speciesList.getOriginalFieldList();
+        } else {
+            effectiveFacetFields = Collections.emptyList();
+        }
 
         // Delegate to service for facet aggregation
         return searchHelperService.getFacetsForSingleSpeciesList(

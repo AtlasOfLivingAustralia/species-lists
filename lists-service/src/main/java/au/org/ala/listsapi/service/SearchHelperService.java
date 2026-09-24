@@ -115,6 +115,18 @@ public class SearchHelperService {
                     "isPrivate",
                     "tags");
 
+    public static final List<String> CLASSIFICATION_FIELDS = List.of(
+            "classification.matchType",
+            "classification.rank",
+            "classification.kingdom",
+            "classification.phylum",
+            "classification.classs",
+            "classification.order",
+            "classification.family",
+            "classification.genus",
+            "classification.vernacularName",
+            "classification.speciesSubgroup");
+
 
     /**
      * Performs a bulk update on a list of SpeciesListItem objects.
@@ -728,6 +740,10 @@ public class SearchHelperService {
         if (filterKey.equalsIgnoreCase(facetField)) {
             return true;
         }
+        if (("classification.class".equalsIgnoreCase(filterKey) && "classification.classs".equalsIgnoreCase(facetField))
+                || ("classification.classs".equalsIgnoreCase(filterKey) && "classification.class".equalsIgnoreCase(facetField))) {
+            return true;
+        }
         String cleanFilterKey = filterKey.startsWith("properties.") 
             ? filterKey.substring("properties.".length()) 
             : filterKey;
@@ -1006,6 +1022,25 @@ public class SearchHelperService {
             SingleListSearchContext context,
             List<String> facetFields) {
         
+        // Determine the field list from MongoDB speciesList if facetFields is null or empty
+        List<String> effectiveFacetFields = facetFields;
+        if (effectiveFacetFields == null || effectiveFacetFields.isEmpty()) {
+            SpeciesList sp = context.getSpeciesList();
+            if (sp == null && context.getSpeciesListId() != null) {
+                sp = speciesListMongoRepository.findByIdOrDataResourceUid(
+                    context.getSpeciesListId(), context.getSpeciesListId()).orElse(null);
+            }
+            if (sp != null) {
+                if (sp.getFieldList() != null && !sp.getFieldList().isEmpty()) {
+                    effectiveFacetFields = sp.getFieldList();
+                } else if (sp.getFacetList() != null && !sp.getFacetList().isEmpty()) {
+                    effectiveFacetFields = sp.getFacetList();
+                } else if (sp.getOriginalFieldList() != null && !sp.getOriginalFieldList().isEmpty()) {
+                    effectiveFacetFields = sp.getOriginalFieldList();
+                }
+            }
+        }
+
         NativeQueryBuilder builder = NativeQuery.builder();
         
         // Build query without filters (for base aggregations)
@@ -1015,7 +1050,7 @@ public class SearchHelperService {
         }));
         
         // Add aggregations for facet fields with disjunctive filtering
-        addSingleListFacetAggregations(builder, facetFields, context.getFilters());
+        addSingleListFacetAggregations(builder, effectiveFacetFields, context.getFilters());
         
         // Add classification aggregations with disjunctive filtering
         addClassificationAggregations(builder, context.getFilters());
@@ -1030,7 +1065,7 @@ public class SearchHelperService {
         );
         
         // Process and return facets
-        return processSingleListFacets(results, facetFields, context);
+        return processSingleListFacets(results, effectiveFacetFields, context);
     }
 
     /**
@@ -1113,12 +1148,14 @@ public class SearchHelperService {
 
         // Handle different field types
         if (CORE_FIELDS.contains(field) || field.startsWith("classification.")) {
+            String esField = "class".equals(field) ? "classs" : 
+                             ("classification.class".equals(field) ? "classification.classs" : field);
             // Core fields - apply as boolean should (OR)
             bq.filter(f -> f.bool(b -> buildOrQuery(b, values, (val, builder) -> {
                 if ("true".equalsIgnoreCase(val) || "false".equalsIgnoreCase(val)) {
-                    return builder.term(t -> t.field(field).value(Boolean.parseBoolean(val)));
+                    return builder.term(t -> t.field(esField).value(Boolean.parseBoolean(val)));
                 } else {
-                    return builder.term(t -> t.field(field + ".keyword").value(val));
+                    return builder.term(t -> t.field(esField + ".keyword").value(val));
                 }
             })));
         } else {
@@ -1214,21 +1251,9 @@ public class SearchHelperService {
      * Adds classification field aggregations with disjunctive filtering
      */
     private void addClassificationAggregations(NativeQueryBuilder builder, List<Filter> filters) {
-        List<String> classificationFields = Arrays.asList(
-            "classification.family",
-            "classification.order",
-            "classification.class",
-            "classification.phylum",
-            "classification.kingdom",
-            "classification.speciesSubgroup",
-            "classification.rank",
-            "classification.vernacularName",
-            "classification.matchType"
-        );
-        
         List<Filter> safeFilters = (filters != null) ? filters : Collections.emptyList();
 
-        for (String field : classificationFields) {
+        for (String field : CLASSIFICATION_FIELDS) {
             List<Filter> otherFilters = safeFilters.stream()
                 .filter(f -> !isSameFacetField(f.getKey(), field))
                 .toList();
@@ -1281,21 +1306,10 @@ public class SearchHelperService {
         }
         
         List<Facet> facets = new ArrayList<>();
+        Set<String> addedFacetKeys = new HashSet<>();
         
-        // Process standard facets (includes classification fields)
-        List<String> allFields = new ArrayList<>();
-        if (facetFields != null) {
-            allFields.addAll(facetFields);
-        }
-        
-        // Add classification fields
-        allFields.addAll(Arrays.asList(
-            "classification.family", "classification.order", "classification.class",
-            "classification.phylum", "classification.kingdom", "classification.speciesSubgroup",
-            "classification.rank", "classification.vernacularName", "classification.matchType"
-        ));
-        
-        for (String field : allFields) {
+        // 1. Process classification fields in proposed order
+        for (String field : CLASSIFICATION_FIELDS) {
             ElasticsearchAggregation aggResult = agg.aggregations().stream()
                 .filter(a -> field.equals(a.aggregation().getName()))
                 .findFirst()
@@ -1311,16 +1325,101 @@ public class SearchHelperService {
                         aggVal.sterms().buckets().array());
                     if (!facet.getCounts().isEmpty()) {
                         facets.add(facet);
+                        addedFacetKeys.add(field);
                     }
                 }
             }
         }
         
-        // Process property facets
-        List<Facet> propertyFacets = processPropertyFacets(agg, context);
-        facets.addAll(propertyFacets);
-        
+        // Extract available dynamic property keys
+        List<String> propertyKeys = extractPropertyKeys(agg);
+
+        // 2. Process user-supplied fields in CSV-provided order
+        if (facetFields != null) {
+            for (String field : facetFields) {
+                if (field == null || field.trim().isEmpty() || addedFacetKeys.contains(field)) {
+                    continue;
+                }
+
+                // Check standard/core aggregations first
+                ElasticsearchAggregation aggResult = agg.aggregations().stream()
+                    .filter(a -> field.equals(a.aggregation().getName()))
+                    .findFirst()
+                    .orElse(null);
+
+                if (aggResult != null) {
+                    Aggregate aggVal = aggResult.aggregation().getAggregate();
+                    if (aggVal.isFilter()) {
+                        aggVal = aggVal.filter().aggregations().get("terms");
+                    }
+                    if (aggVal != null && aggVal.isSterms()) {
+                        Facet facet = createFacetFromTerms(field, 
+                            aggVal.sterms().buckets().array());
+                        if (!facet.getCounts().isEmpty()) {
+                            facets.add(facet);
+                            addedFacetKeys.add(field);
+                            String matchingPk = findMatchingPropertyKey(field, propertyKeys);
+                            if (matchingPk != null) {
+                                addedFacetKeys.add(matchingPk);
+                            }
+                            continue;
+                        }
+                    }
+                }
+
+                // If not in root aggregations, check dynamic properties
+                String matchingPropertyKey = findMatchingPropertyKey(field, propertyKeys);
+                if (matchingPropertyKey != null && !addedFacetKeys.contains(matchingPropertyKey)) {
+                    Facet propertyFacet = getPropertyValueFacet(matchingPropertyKey, context);
+                    if (propertyFacet != null && !propertyFacet.getCounts().isEmpty()) {
+                        facets.add(propertyFacet);
+                        addedFacetKeys.add(matchingPropertyKey);
+                        addedFacetKeys.add(field);
+                    }
+                }
+            }
+        }
+
+        // 3. Process any remaining dynamic property facets not explicitly in facetFields
+        for (String propertyKey : propertyKeys) {
+            if (!addedFacetKeys.contains(propertyKey)) {
+                Facet propertyFacet = getPropertyValueFacet(propertyKey, context);
+                if (propertyFacet != null && !propertyFacet.getCounts().isEmpty()) {
+                    facets.add(propertyFacet);
+                    addedFacetKeys.add(propertyKey);
+                }
+            }
+        }
+
         return facets;
+    }
+
+    /**
+     * Finds a matching property key from available Elasticsearch property keys.
+     * Tries exact match, case-insensitive match, and space/underscore normalized match.
+     */
+    private String findMatchingPropertyKey(String field, List<String> propertyKeys) {
+        if (field == null || propertyKeys == null) {
+            return null;
+        }
+        for (String pk : propertyKeys) {
+            if (field.equals(pk)) {
+                return pk;
+            }
+        }
+        for (String pk : propertyKeys) {
+            if (field.equalsIgnoreCase(pk)) {
+                return pk;
+            }
+        }
+        String fieldNormalized = field.replace(" ", "_").replaceAll("__+", "_");
+        for (String pk : propertyKeys) {
+            String pkNormalized = pk.replace(" ", "_").replaceAll("__+", "_");
+            if (fieldNormalized.equalsIgnoreCase(pkNormalized)) {
+                return pk;
+            }
+        }
+        return null;
     }
 
     /**
@@ -1512,6 +1611,12 @@ public class SearchHelperService {
      * Helper method to determine the correct Elasticsearch field name
      */
     private String getPropertiesFacetField(String filter) {
+        if ("class".equals(filter)) {
+            return "classs.keyword";
+        }
+        if ("classification.class".equals(filter)) {
+            return "classification.classs.keyword";
+        }
         if (CORE_FIELDS.contains(filter) || 
             filter.startsWith("classification.") || 
             filter.startsWith("licence")) {
