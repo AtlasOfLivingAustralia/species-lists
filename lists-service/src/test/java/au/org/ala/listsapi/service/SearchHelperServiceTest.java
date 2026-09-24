@@ -122,6 +122,54 @@ class SearchHelperServiceTest {
   }
 
   @Test
+  void getFacetsForSpeciesLists_explicitlyPublic_appliesIsPrivateFalseForAdmin() {
+    ListSearchContext context = ListSearchContext.builder()
+        .searchQuery("birds")
+        .isAdmin(true)
+        .isAuthenticated(true)
+        .isPrivate(false)
+        .build();
+
+    SearchHits<SpeciesListIndex> mockHits = org.mockito.Mockito.mock(SearchHits.class);
+    ArgumentCaptor<NativeQuery> nativeQueryCaptor = ArgumentCaptor.forClass(NativeQuery.class);
+
+    when(elasticsearchOperations.search(nativeQueryCaptor.capture(), eq(SpeciesListIndex.class)))
+        .thenReturn(mockHits);
+
+    searchHelperService.getFacetsForSpeciesLists(context);
+
+    NativeQuery captured = nativeQueryCaptor.getValue();
+    assertNotNull(captured);
+
+    String queryStr = captured.getQuery().toString();
+    assertTrue(queryStr.contains("isPrivate"), "Query should filter on isPrivate when isPrivate is explicitly false");
+  }
+
+  @Test
+  void getFacetsForSpeciesLists_adminWithoutIsPrivate_doesNotFilterIsPrivate() {
+    ListSearchContext context = ListSearchContext.builder()
+        .searchQuery("birds")
+        .isAdmin(true)
+        .isAuthenticated(true)
+        .isPrivate(null)
+        .build();
+
+    SearchHits<SpeciesListIndex> mockHits = org.mockito.Mockito.mock(SearchHits.class);
+    ArgumentCaptor<NativeQuery> nativeQueryCaptor = ArgumentCaptor.forClass(NativeQuery.class);
+
+    when(elasticsearchOperations.search(nativeQueryCaptor.capture(), eq(SpeciesListIndex.class)))
+        .thenReturn(mockHits);
+
+    searchHelperService.getFacetsForSpeciesLists(context);
+
+    NativeQuery captured = nativeQueryCaptor.getValue();
+    assertNotNull(captured);
+
+    String queryStr = captured.getQuery().toString();
+    org.junit.jupiter.api.Assertions.assertFalse(queryStr.contains("isPrivate"), "Admin facet base query should not filter on isPrivate when isPrivate is null");
+  }
+
+  @Test
   void getFacetsForSingleSpeciesList_withFilter_appliesDisjunctiveFiltering() {
     Filter familyFilter = new Filter("classification.family", "Fabaceae");
     SingleListSearchContext context = SingleListSearchContext.builder()
@@ -169,6 +217,21 @@ class SearchHelperServiceTest {
         "classification.speciesSubgroup"
     );
     assertEquals(expectedOrder, SearchHelperService.CLASSIFICATION_FIELDS);
+  }
+
+  @Test
+  void booleanFields_containsExpectedFields() {
+    java.util.Set<String> expectedFields = java.util.Set.of(
+        "isAuthoritative",
+        "isBIE",
+        "isSDS",
+        "hasRegion",
+        "isThreatened",
+        "isInvasive",
+        "isBiosecurity",
+        "isPrivate"
+    );
+    assertEquals(expectedFields, SearchHelperService.BOOLEAN_FIELDS);
   }
 
   @Test
