@@ -127,6 +127,16 @@ public class SearchHelperService {
             "classification.vernacularName",
             "classification.speciesSubgroup");
 
+    public static final Set<String> BOOLEAN_FIELDS = Set.of(
+            "isAuthoritative",
+            "isBIE",
+            "isSDS",
+            "hasRegion",
+            "isThreatened",
+            "isInvasive",
+            "isBiosecurity",
+            "isPrivate");
+
 
     /**
      * Performs a bulk update on a list of SpeciesListItem objects.
@@ -553,8 +563,10 @@ public class SearchHelperService {
             ListSearchContext context, 
             BoolQuery.Builder bq) {
         
-        if (!context.isAuthenticated()) {
-            // Unauthenticated: only public lists
+        boolean isExplicitlyPublic = Boolean.FALSE.equals(context.getIsPrivate());
+
+        if (isExplicitlyPublic || !context.isAuthenticated()) {
+            // Explicitly public lists only (e.g. Home page) or unauthenticated
             bq.filter(f -> f.term(t -> t.field("isPrivate").value(false)));
         } else if (context.isViewingOwnLists()) {
             // Viewing own lists: show all their lists (public and private)
@@ -688,15 +700,10 @@ public class SearchHelperService {
             "isInvasive", "isBiosecurity", "licence"
         );
         
-        Set<String> booleanFields = Set.of(
-            "isAuthoritative", "isBIE", "isSDS", "hasRegion",
-            "isThreatened", "isInvasive", "isBiosecurity", "isPrivate"
-        );
-        
         List<Filter> safeFilters = (filters != null) ? filters : Collections.emptyList();
 
         for (String field : facetFields) {
-            String esField = booleanFields.contains(field) 
+            String esField = BOOLEAN_FIELDS.contains(field) 
                 ? field 
                 : field + ".keyword";
 
@@ -906,11 +913,6 @@ public class SearchHelperService {
     private List<Facet> processFacetResults(SearchHits<SpeciesListIndex> results) {
         ElasticsearchAggregations agg = (ElasticsearchAggregations) results.getAggregations();
         if (agg == null) return Collections.emptyList();
-        
-        Set<String> booleanFields = Set.of(
-            "isAuthoritative", "isBIE", "isSDS", "hasRegion",
-            "isThreatened", "isInvasive", "isBiosecurity", "isPrivate"
-        );
 
         List<Facet> facets = new ArrayList<>();
         
@@ -947,7 +949,7 @@ public class SearchHelperService {
                 });
             }
             
-            if (booleanFields.contains(fieldName)) {
+            if (BOOLEAN_FIELDS.contains(fieldName)) {
                 ensureBooleanCounts(facet);
             }
 

@@ -237,6 +237,7 @@ public class GraphQLController {
             .isAdmin(permissions.isAdmin())
             .isAuthenticated(permissions.isAuthenticated())
             .isViewingOwnLists(permissions.isViewingOwnLists())
+            .isPrivate(isPrivate)
             .build();
     }
 

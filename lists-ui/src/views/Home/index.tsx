@@ -134,12 +134,13 @@ const Home = ({ routeId }: { routeId: string }) => {
     let foundPrivate = false;
     return arr.filter(f => {
       if (f.key === 'isPrivate') {
+        if (!isAdminListPage && !isMyListsPage) return false;
         if (foundPrivate) return false;
         foundPrivate = true;
       }
       return true;
     });
-  }, [filtersRaw]);
+  }, [filtersRaw, isAdminListPage, isMyListsPage]);
   const setFilters = useCallback((value: KV[] | ((prev: KV[] | null) => KV[] | null)) => {
     if (typeof value === 'function') {
       setFiltersRaw((prev) => {
@@ -294,6 +295,11 @@ const Home = ({ routeId }: { routeId: string }) => {
 
   const filteredFacets = useMemo(() => {
     return mergedFacets.filter(facet => {
+      // Home page displays only public lists; exclude Visibility facet group
+      if (facet.key === 'isPrivate' && !isAdminListPage && !isMyListsPage) {
+        return false;
+      }
+
       // Keep it if it's currently an active filter
       const isActive = filters.some(f => f.key === facet.key);
       if (isActive) return true;
@@ -311,7 +317,7 @@ const Home = ({ routeId }: { routeId: string }) => {
       
       return true;
     });
-  }, [mergedFacets, totalElements, filters]);
+  }, [mergedFacets, totalElements, filters, isAdminListPage, isMyListsPage]);
 
   return (
     <>
