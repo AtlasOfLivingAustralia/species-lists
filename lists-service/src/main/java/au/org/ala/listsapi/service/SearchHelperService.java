@@ -1431,9 +1431,11 @@ public class SearchHelperService {
         facet.setCounts(new ArrayList<>());
         
         for (StringTermsBucket bucket : buckets) {
-            facet.getCounts().add(
-                new FacetCount(bucket.key().stringValue(), bucket.docCount())
-            );
+            if (StringUtils.isNotBlank(bucket.key().stringValue())) {
+                facet.getCounts().add(
+                    new FacetCount(bucket.key().stringValue(), bucket.docCount())
+                );
+            }
         }
         
         return facet;
@@ -1583,9 +1585,11 @@ public class SearchHelperService {
         facet.setCounts(new ArrayList<>());
         
         for (StringTermsBucket bucket : valueBuckets) {
-            facet.getCounts().add(
-                new FacetCount(bucket.key().stringValue(), bucket.docCount())
-            );
+            if (StringUtils.isNotBlank(bucket.key().stringValue())) {
+                facet.getCounts().add(
+                    new FacetCount(bucket.key().stringValue(), bucket.docCount())
+                );
+            }
         }
         
         return facet;

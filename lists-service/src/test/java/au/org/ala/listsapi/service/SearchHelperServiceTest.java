@@ -223,4 +223,35 @@ class SearchHelperServiceTest {
     assertNotNull(captured.getAggregations().get("location"), "Aggregation for field location from fieldList should be present");
     assertNotNull(captured.getAggregations().get("notes"), "Aggregation for field notes from fieldList should be present");
   }
+
+  @Test
+  void getFacetsForSingleSpeciesList_usesFieldListDirectlyWhenEmptyFacetFieldsPassed() {
+    SpeciesList speciesList = new SpeciesList();
+    speciesList.setId("list-fieldlist-order-test");
+    speciesList.setFieldList(List.of("family", "vernacularName", "status", "sourceStatus", "WildNetTaxonID", "IUCN_equivalent_status"));
+
+    SingleListSearchContext context = SingleListSearchContext.builder()
+        .speciesListId("list-fieldlist-order-test")
+        .speciesList(speciesList)
+        .filters(Collections.emptyList())
+        .build();
+
+    SearchHits<SpeciesListIndex> mockHits = org.mockito.Mockito.mock(SearchHits.class);
+    ArgumentCaptor<NativeQuery> nativeQueryCaptor = ArgumentCaptor.forClass(NativeQuery.class);
+
+    when(elasticsearchOperations.search(nativeQueryCaptor.capture(), eq(SpeciesListIndex.class)))
+        .thenReturn(mockHits);
+
+    searchHelperService.getFacetsForSingleSpeciesList(context, Collections.emptyList());
+
+    NativeQuery captured = nativeQueryCaptor.getValue();
+    assertNotNull(captured);
+
+    assertNotNull(captured.getAggregations().get("family"), "Aggregation for family should be present");
+    assertNotNull(captured.getAggregations().get("vernacularName"), "Aggregation for vernacularName should be present");
+    assertNotNull(captured.getAggregations().get("status"), "Aggregation for status should be present");
+    assertNotNull(captured.getAggregations().get("sourceStatus"), "Aggregation for sourceStatus should be present");
+    assertNotNull(captured.getAggregations().get("WildNetTaxonID"), "Aggregation for WildNetTaxonID should be present");
+    assertNotNull(captured.getAggregations().get("IUCN_equivalent_status"), "Aggregation for IUCN_equivalent_status should be present");
+  }
 }

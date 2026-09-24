@@ -8,6 +8,7 @@ import static org.mockito.Mockito.*;
 
 import java.security.Principal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.bson.types.ObjectId;
 
@@ -15,6 +16,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -27,6 +29,7 @@ import au.org.ala.listsapi.model.ConstraintType;
 import au.org.ala.listsapi.model.Facet;
 import au.org.ala.listsapi.model.Filter;
 import au.org.ala.listsapi.model.ListSearchContext;
+import au.org.ala.listsapi.model.SingleListSearchContext;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.model.InputSpeciesListItem;
@@ -160,6 +163,30 @@ class GraphQLControllerTest {
 
         assertNotNull(result);
         verify(searchHelperService).getFacetsForSpeciesLists(any(ListSearchContext.class));
+    }
+
+    @Test
+    void testFacetSpeciesList_usesFieldListWhenFacetFieldsEmpty() {
+        String listId = "list-single-test";
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        list.setIsPrivate(false);
+        list.setFieldList(List.of("family", "vernacularName", "status", "sourceStatus", "WildNetTaxonID", "IUCN_equivalent_status"));
+        list.setFacetList(List.of("status"));
+
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(listId, listId))
+                .thenReturn(Optional.of(list));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<String>> fieldsCaptor = ArgumentCaptor.forClass(List.class);
+        when(searchHelperService.getFacetsForSingleSpeciesList(any(SingleListSearchContext.class), fieldsCaptor.capture()))
+                .thenReturn(Collections.emptyList());
+
+        List<Facet> result = graphQLController.facetSpeciesList(
+                listId, null, null, Collections.emptyList(), 0, 10, principal);
+
+        assertNotNull(result);
+        assertEquals(list.getFieldList(), fieldsCaptor.getValue());
     }
 
     @Test
