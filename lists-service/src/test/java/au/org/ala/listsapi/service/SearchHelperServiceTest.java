@@ -1,5 +1,6 @@
 package au.org.ala.listsapi.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -151,5 +152,106 @@ class SearchHelperServiceTest {
         captured.getAggregations().get("status");
     assertNotNull(statusAgg);
     assertTrue(statusAgg.isFilter(), "status aggregation should be wrapped in a filter aggregation");
+  }
+
+  @Test
+  void classificationFields_preservesProposedOrder() {
+    List<String> expectedOrder = List.of(
+        "classification.matchType",
+        "classification.rank",
+        "classification.kingdom",
+        "classification.phylum",
+        "classification.classs",
+        "classification.order",
+        "classification.family",
+        "classification.genus",
+        "classification.vernacularName",
+        "classification.speciesSubgroup"
+    );
+    assertEquals(expectedOrder, SearchHelperService.CLASSIFICATION_FIELDS);
+  }
+
+  @Test
+  void getFacetsForSingleSpeciesList_includesClassificationClasssAggregation() {
+    SingleListSearchContext context = SingleListSearchContext.builder()
+        .speciesListId("list-123")
+        .filters(Collections.emptyList())
+        .build();
+
+    SearchHits<SpeciesListIndex> mockHits = org.mockito.Mockito.mock(SearchHits.class);
+    ArgumentCaptor<NativeQuery> nativeQueryCaptor = ArgumentCaptor.forClass(NativeQuery.class);
+
+    when(elasticsearchOperations.search(nativeQueryCaptor.capture(), eq(SpeciesListIndex.class)))
+        .thenReturn(mockHits);
+
+    searchHelperService.getFacetsForSingleSpeciesList(context, List.of("status"));
+
+    NativeQuery captured = nativeQueryCaptor.getValue();
+    assertNotNull(captured);
+
+    co.elastic.clients.elasticsearch._types.aggregations.Aggregation classsAgg = 
+        captured.getAggregations().get("classification.classs");
+    assertNotNull(classsAgg, "Aggregation classification.classs must be present");
+  }
+
+  @Test
+  void getFacetsForSingleSpeciesList_resolvesFieldListFromMongoWhenFacetFieldsEmpty() {
+    SpeciesList speciesList = new SpeciesList();
+    speciesList.setId("list-fieldlist-test");
+    speciesList.setFieldList(List.of("status", "location", "notes"));
+
+    SingleListSearchContext context = SingleListSearchContext.builder()
+        .speciesListId("list-fieldlist-test")
+        .speciesList(speciesList)
+        .filters(Collections.emptyList())
+        .build();
+
+    SearchHits<SpeciesListIndex> mockHits = org.mockito.Mockito.mock(SearchHits.class);
+    ArgumentCaptor<NativeQuery> nativeQueryCaptor = ArgumentCaptor.forClass(NativeQuery.class);
+
+    when(elasticsearchOperations.search(nativeQueryCaptor.capture(), eq(SpeciesListIndex.class)))
+        .thenReturn(mockHits);
+
+    // Call with empty facetFields (as sent by UI)
+    searchHelperService.getFacetsForSingleSpeciesList(context, Collections.emptyList());
+
+    NativeQuery captured = nativeQueryCaptor.getValue();
+    assertNotNull(captured);
+
+    // status, location, notes aggregations should be registered from fieldList
+    assertNotNull(captured.getAggregations().get("status"), "Aggregation for field status from fieldList should be present");
+    assertNotNull(captured.getAggregations().get("location"), "Aggregation for field location from fieldList should be present");
+    assertNotNull(captured.getAggregations().get("notes"), "Aggregation for field notes from fieldList should be present");
+  }
+
+  @Test
+  void getFacetsForSingleSpeciesList_usesFieldListDirectlyWhenEmptyFacetFieldsPassed() {
+    SpeciesList speciesList = new SpeciesList();
+    speciesList.setId("list-fieldlist-order-test");
+    speciesList.setFieldList(List.of("family", "vernacularName", "status", "sourceStatus", "WildNetTaxonID", "IUCN_equivalent_status"));
+
+    SingleListSearchContext context = SingleListSearchContext.builder()
+        .speciesListId("list-fieldlist-order-test")
+        .speciesList(speciesList)
+        .filters(Collections.emptyList())
+        .build();
+
+    SearchHits<SpeciesListIndex> mockHits = org.mockito.Mockito.mock(SearchHits.class);
+    ArgumentCaptor<NativeQuery> nativeQueryCaptor = ArgumentCaptor.forClass(NativeQuery.class);
+
+    when(elasticsearchOperations.search(nativeQueryCaptor.capture(), eq(SpeciesListIndex.class)))
+        .thenReturn(mockHits);
+
+    searchHelperService.getFacetsForSingleSpeciesList(context, Collections.emptyList());
+
+    NativeQuery captured = nativeQueryCaptor.getValue();
+    assertNotNull(captured);
+
+    assertNotNull(captured.getAggregations().get("family"), "Aggregation for family should be present");
+    assertNotNull(captured.getAggregations().get("vernacularName"), "Aggregation for vernacularName should be present");
+    assertNotNull(captured.getAggregations().get("status"), "Aggregation for status should be present");
+    assertNotNull(captured.getAggregations().get("sourceStatus"), "Aggregation for sourceStatus should be present");
+    assertNotNull(captured.getAggregations().get("WildNetTaxonID"), "Aggregation for WildNetTaxonID should be present");
+    assertNotNull(captured.getAggregations().get("IUCN_equivalent_status"), "Aggregation for IUCN_equivalent_status should be present");
   }
 }

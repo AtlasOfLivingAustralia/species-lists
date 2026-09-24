@@ -1,6 +1,7 @@
 import {
   faAngleDown,
   faAngleUp,
+  faChartDiagram,
   faClose,
   faDeleteLeft,
   faInfoCircle,
@@ -20,7 +21,7 @@ import {
   ThemeIcon,
   Tooltip
 } from '@mantine/core';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 
 import { Constraint, Facet, KV } from '#/api';
@@ -38,6 +39,7 @@ interface FiltersDrawerProps {
   onSelect: (item: KV) => void;
   onReset: () => void;
   loading?: boolean;
+  preserveOrder?: boolean;
 }
 
 export const BOOLEAN_FACETS = ['isAuthoritative', 'isSDS', 'isBIE', 'hasRegion', 'isThreatened', 'isInvasive', 'isBiosecurity'];
@@ -124,7 +126,7 @@ function RenderCheckbox(
 
 function InfoTooltip({ tooltipText }: { tooltipText: string }) {
   return (
-    <Tooltip label={tooltipText} withArrow position="top" component="span">
+    <Tooltip label={tooltipText} withArrow position="top" component="span" >
       <ThemeIcon size="sm" variant="transparent" color="main" opacity={0.8} style={{ cursor: 'pointer' }}>
         <FontAwesomeIcon icon={faInfoCircle} size="sm" />
       </ThemeIcon>
@@ -203,6 +205,14 @@ const FacetComponent = memo(
         onSelect({ key: facet.key, value: itemValue });
     }, [onSelect, facet.key]);
 
+    const isClassification = facet.key.startsWith('classification.');
+    const matchedTooltip = isClassification
+      ? intl.formatMessage({
+          id: 'filters.matched.taxonomy.tooltip',
+          defaultMessage: 'Matched via ALA taxonomy',
+        })
+      : undefined;
+
     return (
       (facet.counts.length >= 1 || active.some((activeItem) => activeItem.key === facet.key)) && (
         <Paper
@@ -213,10 +223,29 @@ const FacetComponent = memo(
         {/* Render header only for non-boolean facets */}
         {!(isBooleanFacet || isTag) && (
           <Group justify='space-between' className={classes.facetGroup}>
-            <Text size='md' className={classes.facetHeader} span>
+            <Text
+              size='md'
+              className={classes.facetHeader}
+              span
+            >
               <FormattedMessage id={facet.key || 'filter.key.missing'} defaultMessage={removeFilterPrefix(facet.key)}
               />{' '}
               {facet.key !== 'isPrivate' && <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.or.tooltip', defaultMessage: '' })} />}
+              {isClassification && (
+                <Tooltip label={matchedTooltip} withArrow position="top" component="span" title={matchedTooltip}>
+                  <ActionIcon
+                    size="sm"
+                    variant="transparent"
+                    color="main"
+                    opacity={0.8}
+                    style={{ cursor: 'pointer', display: 'inline-flex' }}
+                    aria-label={matchedTooltip}
+                    title={matchedTooltip}
+                  >
+                    <FontAwesomeIcon icon={faChartDiagram} size="sm" />
+                  </ActionIcon>
+                </Tooltip>
+              )}
             </Text>
             {showExpand && (
               <ActionIcon
@@ -234,7 +263,12 @@ const FacetComponent = memo(
           </Group>
         )}
         { ((isBooleanFacet && isShowFlagLabel) || isTag) && (
-            <Text size='md' span className={classes.facetHeader + ' ' + (isBooleanFacet ? classes.facetHeaderBoolean : classes.facetHeaderTags)} >
+            <Text 
+              size='md' 
+              span 
+              className={classes.facetHeader + ' ' + (isBooleanFacet ? classes.facetHeaderBoolean : classes.facetHeaderTags)} 
+              title={intl.formatMessage({ id: 'filters.and.tooltip', defaultMessage: '' })}
+              >
               { isTag ? <FormattedMessage id='facet.tag.label' defaultMessage='List tags' />
                 : <FormattedMessage id='facet.flag.label' defaultMessage='List flags' />}{' '} 
               <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.and.tooltip', defaultMessage: '' })} />
@@ -283,7 +317,7 @@ const FacetComponent = memo(
 );
 
 export const FiltersSection = memo(
-  ({ facets, active, onSelect, showExpand, loading = false }: FiltersDrawerProps) => {
+  ({ facets, active, onSelect, showExpand, loading = false, preserveOrder = false }: FiltersDrawerProps) => {
     const ala = useALA();
     const { constraints } = useConstraints(ala);
 
@@ -301,20 +335,10 @@ export const FiltersSection = memo(
       return map;
     }, [constraints?.tags, constraints?.licence]);
 
-    // Lazy initializer runs once on mount — replaces the useRef + useEffect
-    // "run once" pattern that was calling setState synchronously inside an effect.
-    const [expanded, setExpanded] = useState<string[]>(() =>
-      facets
-        .filter(facet => facet.counts.length > 2)
-        .slice(0, 1)
-        .map(facet => facet.key)
-    );
-
-    // Sort facets to ensure boolean facets are at the bottom
+    // Sort facets or preserve order if requested
     const sortedFacets = useMemo(
-      () =>
-      facets
-        .filter((facet) => {
+      () => {
+        const filtered = facets.filter((facet) => {
           if (facet.counts.length === 0) return false;
           // For boolean facets, only show if active OR count of "true" > 0
           if (BOOLEAN_FACETS.includes(facet.key)) {
@@ -324,27 +348,68 @@ export const FiltersSection = memo(
             return trueCount > 0;
           }
           return true;
-        })
-        .sort((a, b) => {
-        // Sort BOOLEAN_FACETS to be the first items
-        if (BOOLEAN_FACETS.includes(a.key) && !BOOLEAN_FACETS.includes(b.key)) {
-          return -1;
+        });
+
+        if (preserveOrder) {
+          return filtered;
         }
-        if (!BOOLEAN_FACETS.includes(a.key) && BOOLEAN_FACETS.includes(b.key)) {
-          return 1;
-        }
-        // Sort CORE_FACETS to be after BOOLEAN_FACETS
-        if (CORE_FACETS.includes(a.key) && !CORE_FACETS.includes(b.key)) {
-          return BOOLEAN_FACETS.includes(b.key) ? 1 : -1;
-        }
-        if (!CORE_FACETS.includes(a.key) && CORE_FACETS.includes(b.key)) {
-          return BOOLEAN_FACETS.includes(a.key) ? -1 : 1;
-        }
-        // For other facets, sort by the key
-        return a.key.localeCompare(b.key);
-        }),
-      [facets, active]
+
+        return [...filtered].sort((a, b) => {
+          // Sort BOOLEAN_FACETS to be the first items
+          if (BOOLEAN_FACETS.includes(a.key) && !BOOLEAN_FACETS.includes(b.key)) {
+            return -1;
+          }
+          if (!BOOLEAN_FACETS.includes(a.key) && BOOLEAN_FACETS.includes(b.key)) {
+            return 1;
+          }
+          // Sort CORE_FACETS to be after BOOLEAN_FACETS
+          if (CORE_FACETS.includes(a.key) && !CORE_FACETS.includes(b.key)) {
+            return BOOLEAN_FACETS.includes(b.key) ? 1 : -1;
+          }
+          if (!CORE_FACETS.includes(a.key) && CORE_FACETS.includes(b.key)) {
+            return BOOLEAN_FACETS.includes(a.key) ? -1 : 1;
+          }
+          // For other facets, sort by the key
+          return a.key.localeCompare(b.key);
+        });
+      },
+      [facets, active, preserveOrder]
     );
+
+    const isExpandableFacet = useCallback((facet: Facet) => {
+      if (!facet.counts || facet.counts.length === 0) return false;
+      if (BOOLEAN_FACETS.includes(facet.key)) return false;
+      const isBool = facet.counts.length <= 2 &&
+        (facet.counts[0]?.value === 'true' || facet.counts[0]?.value === 'false');
+      return !isBool;
+    }, []);
+
+    const initialExpandedSet = useRef(false);
+
+    // Lazy initializer runs once on mount — expands the first 2 non-boolean facets
+    const [expanded, setExpanded] = useState<string[]>(() => {
+      const toExpand = sortedFacets
+        .filter(isExpandableFacet)
+        .slice(0, 2)
+        .map(facet => facet.key);
+      if (toExpand.length > 0) {
+        initialExpandedSet.current = true;
+      }
+      return toExpand;
+    });
+
+    useEffect(() => {
+      if (!initialExpandedSet.current && sortedFacets.length > 0) {
+        const toExpand = sortedFacets
+          .filter(isExpandableFacet)
+          .slice(0, 2)
+          .map(facet => facet.key);
+        if (toExpand.length > 0) {
+          setExpanded(toExpand);
+          initialExpandedSet.current = true;
+        }
+      }
+    }, [sortedFacets, isExpandableFacet]);
     
     // Store the first indices of boolean facets
     const firstBooleanIndex = sortedFacets.findIndex(
@@ -438,6 +503,14 @@ export const ActiveFilters = memo((
           ? (constraints?.tags?.find(c => c.value === filter.value)?.label ?? sanitiseText(filter.value))
           : undefined;
 
+        const isClassificationFilter = filter.key.startsWith('classification.');
+        const filterTitle = isClassificationFilter
+          ? intl.formatMessage({
+              id: 'filters.matched.taxonomy.tooltip',
+              defaultMessage: 'Matched via ALA taxonomy',
+            })
+          : undefined;
+
         return (
           <Paper 
             key={filter.key} 
@@ -445,6 +518,7 @@ export const ActiveFilters = memo((
             radius='sm' 
             bd='1px solid var(--mantine-color-default-border)' 
             className={classes.activeFiltersPaper}
+            title={filterTitle}
           >
             <Text component='div' fs='xs' className={classes.activeFiltersText}>
               <FormattedMessage id={sanitiseText(filter.key) || 'filter.key.missing'} defaultMessage={removeFilterPrefix(filter.key)}/>
