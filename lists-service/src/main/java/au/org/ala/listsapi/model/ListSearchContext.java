@@ -33,4 +33,5 @@ public class ListSearchContext {
     private boolean isAdmin;
     private boolean isAuthenticated;
     private boolean isViewingOwnLists;
+    private Boolean isPrivate;
 }
