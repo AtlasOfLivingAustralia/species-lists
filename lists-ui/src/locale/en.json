@@ -143,8 +143,8 @@
 
   "facet.flag.label": "List flags",
   "facet.tag.label": "Tags",
-  "filters.or.tooltip":"An entry can only have one value for this filter. Selecting mulitple options will result in values being OR'ed together",
-  "filters.and.tooltip":"An entry can have multiple flags. Selecting mulitple options will result in values being AND'ed together",
+  "filters.or.tooltip":"An entry can only have one value for this filter. Selecting multiple options will result in values being OR'ed together",
+  "filters.and.tooltip":"An entry can have multiple flags. Selecting multiple options will result in values being AND'ed together",
   "filters.matched.taxonomy.tooltip": "Matched via ALA taxonomy",
   "filter.key.missing": "[No value provided]",
   "filters.toggle.label": "Toggle filters",
