@@ -19,7 +19,7 @@ const listToForm = (list: SpeciesListSubmit, file: string): FormData => {
   form.append('listType', list.listType);
   form.append('region', list.region);
   form.append('authority', list.authority);
-  form.append('licence', list.licence);
+  form.append('licence', list.licence || '');
   form.append('isPrivate', list.isPrivate.toString());
   form.append('isAuthoritative', list.isAuthoritative.toString());
   form.append('isBIE', list.isBIE.toString());

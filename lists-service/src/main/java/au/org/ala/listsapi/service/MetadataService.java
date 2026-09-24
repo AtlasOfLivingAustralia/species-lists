@@ -14,6 +14,7 @@
  */
 package au.org.ala.listsapi.service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -40,14 +41,14 @@ public class MetadataService {
     private String collectoryUrl;
 
     private Map<String, Object> listToDataResourceJSON(SpeciesList speciesList) {
-        return Map.of(
-            "name", speciesList.getTitle(),
-            "pubDescription", speciesList.getDescription(),
-            "licenseType", speciesList.getLicence(),
-            "websiteUrl", appUrl + "/list/" + speciesList.getId(),
-            "isPrivate", speciesList.getIsPrivate() != null && speciesList.getIsPrivate() == true ? "true" : "", // Collectory expects "true" or "" (Groovy truth bug)
-            "resourceType", "species-list"
-        );
+        Map<String, Object> data = new HashMap<>();
+        data.put("name", speciesList.getTitle() != null ? speciesList.getTitle() : "");
+        data.put("pubDescription", speciesList.getDescription() != null ? speciesList.getDescription() : "");
+        data.put("licenseType", speciesList.getLicence() != null ? speciesList.getLicence() : "");
+        data.put("websiteUrl", appUrl + "/list/" + speciesList.getId());
+        data.put("isPrivate", speciesList.getIsPrivate() != null && speciesList.getIsPrivate() ? "true" : ""); // Collectory expects "true" or "" (Groovy truth bug)
+        data.put("resourceType", "species-list");
+        return data;
     }
 
     /**

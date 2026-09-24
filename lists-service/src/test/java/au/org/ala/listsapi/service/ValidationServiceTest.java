@@ -72,6 +72,44 @@ class ValidationServiceTest {
         invalidLicence.setListType("TEST_TYPE");
         invalidLicence.setLicence("INVALID");
         assertFalse(validationService.isListValid(invalidLicence));
+
+        // Public list without licence is invalid
+        InputSpeciesList publicListNoLicence = new InputSpeciesList();
+        publicListNoLicence.setListType("TEST_TYPE");
+        publicListNoLicence.setIsPrivate("false");
+        assertFalse(validationService.isListValid(publicListNoLicence));
+
+        InputSpeciesList publicListBlankLicence = new InputSpeciesList();
+        publicListBlankLicence.setListType("TEST_TYPE");
+        publicListBlankLicence.setIsPrivate("false");
+        publicListBlankLicence.setLicence("   ");
+        assertFalse(validationService.isListValid(publicListBlankLicence));
+
+        // Private list without licence is valid
+        InputSpeciesList privateListNoLicence = new InputSpeciesList();
+        privateListNoLicence.setListType("TEST_TYPE");
+        privateListNoLicence.setIsPrivate("true");
+        assertTrue(validationService.isListValid(privateListNoLicence));
+
+        InputSpeciesList privateListBlankLicence = new InputSpeciesList();
+        privateListBlankLicence.setListType("TEST_TYPE");
+        privateListBlankLicence.setIsPrivate("true");
+        privateListBlankLicence.setLicence("   ");
+        assertTrue(validationService.isListValid(privateListBlankLicence));
+
+        // Private list with valid licence is valid
+        InputSpeciesList privateListValidLicence = new InputSpeciesList();
+        privateListValidLicence.setListType("TEST_TYPE");
+        privateListValidLicence.setIsPrivate("true");
+        privateListValidLicence.setLicence("CC-BY");
+        assertTrue(validationService.isListValid(privateListValidLicence));
+
+        // Private list with invalid licence is invalid
+        InputSpeciesList privateListInvalidLicence = new InputSpeciesList();
+        privateListInvalidLicence.setListType("TEST_TYPE");
+        privateListInvalidLicence.setIsPrivate("true");
+        privateListInvalidLicence.setLicence("INVALID");
+        assertFalse(validationService.isListValid(privateListInvalidLicence));
     }
 
     @Test

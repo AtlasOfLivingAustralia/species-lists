@@ -167,7 +167,7 @@ export const MUTATION_LIST_UPDATE = `mutation update(
   $id: String!
   $title: String!
   $description: String
-  $licence: String!
+  $licence: String
   $listType: String!
   $authority: String
   $region: String

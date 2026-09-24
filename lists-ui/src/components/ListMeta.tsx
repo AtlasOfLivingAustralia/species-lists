@@ -103,7 +103,15 @@ export function ListMeta({
     validate: {
       wkt: (value) => (value.length > 0 ? validWKT(value) : null),
       listType: notEmpty,
-      licence: notEmpty,
+      licence: (value, values) => {
+        if (!values.isPrivate && (!value || value.trim().length === 0)) {
+          return intl.formatMessage({
+            id: 'listmeta.validation.licenceRequiredPublic',
+            defaultMessage: 'A licence is required for public lists',
+          });
+        }
+        return null;
+      },
     },
   });
 
@@ -172,7 +180,10 @@ export function ListMeta({
   };
 
   const handleSumbit = (values: typeof form.values) => {
-    onSubmit(values);
+    onSubmit({
+      ...values,
+      licence: values.licence ?? '',
+    });
   };
 
   const filteredFlags = useMemo(
@@ -270,7 +281,27 @@ export function ListMeta({
               id: 'listmeta.licence.placeholder',
               defaultMessage: 'List licence',
             })}
-            required
+            description={
+              form.values.isPrivate
+                ? intl.formatMessage({
+                    id: 'listmeta.licence.description.private',
+                    defaultMessage: 'Optional for private lists. A licence is only required if this list is made public.',
+                  })
+                : intl.formatMessage({
+                    id: 'listmeta.licence.description.public',
+                    defaultMessage: 'Required for public lists to define terms of use.',
+                  })
+            }
+            inputWrapperOrder={['label', 'input', 'description', 'error']}
+            styles={{
+              description: {
+                color: '#343a40',
+                fontSize: '0.875rem',
+                marginTop: '4px',
+              },
+            }}
+            clearable={form.values.isPrivate}
+            required={!form.values.isPrivate}
             disabled={!loaded || loading}
             renderOption={({ option, checked }: ComboboxLikeRenderOptionInput<ComboboxItem>) => (
               <Group justify="space-between" wrap="nowrap" style={{ flex: 1 }}>
@@ -391,7 +422,13 @@ export function ListMeta({
             radius='md'
             data={visibilityLabels}
             value={form.values.isPrivate ? 'private' : 'public'}
-            onChange={(value) => form.setFieldValue('isPrivate', value === 'private')}
+            onChange={(value) => {
+              const isPriv = value === 'private';
+              form.setFieldValue('isPrivate', isPriv);
+              if (isPriv) {
+                form.clearFieldError('licence');
+              }
+            }}
           />
         </Grid.Col>
         {ala.isAdminOrEditor && (
