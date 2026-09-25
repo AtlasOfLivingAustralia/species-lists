@@ -707,8 +707,10 @@ public class SearchHelperService {
                 ? field 
                 : field + ".keyword";
 
+            // For disjunctive (OR) facets, exclude the facet's own filters to show counts of alternative options.
+            // For conjunctive (AND) facets like "tags", retain the facet's filters so counts reflect co-occurrence.
             List<Filter> otherFilters = safeFilters.stream()
-                .filter(f -> !isSameFacetField(f.getKey(), field))
+                .filter(f -> "tags".equalsIgnoreCase(field) || !isSameFacetField(f.getKey(), field))
                 .toList();
 
             Aggregation termsAgg = Aggregation.of(a -> a

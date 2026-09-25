@@ -122,6 +122,35 @@ class SearchHelperServiceTest {
   }
 
   @Test
+  void getFacetsForSpeciesLists_withTagFilter_appliesConjunctiveFilteringForTags() {
+    Filter tagFilter = new Filter("tags", "conservation");
+    ListSearchContext context = ListSearchContext.builder()
+        .searchQuery("birds")
+        .filters(List.of(tagFilter))
+        .isAdmin(true)
+        .build();
+
+    SearchHits<SpeciesListIndex> mockHits = org.mockito.Mockito.mock(SearchHits.class);
+    ArgumentCaptor<NativeQuery> nativeQueryCaptor = ArgumentCaptor.forClass(NativeQuery.class);
+
+    when(elasticsearchOperations.search(nativeQueryCaptor.capture(), eq(SpeciesListIndex.class)))
+        .thenReturn(mockHits);
+
+    searchHelperService.getFacetsForSpeciesLists(context);
+
+    NativeQuery captured = nativeQueryCaptor.getValue();
+    assertNotNull(captured);
+
+    // Unlike disjunctive facets (like listType), tags is conjunctive (AND),
+    // so the tags aggregation SHOULD be wrapped in a filter containing the selected tag,
+    // so counts for other tags reflect co-occurrence with the selected tag.
+    co.elastic.clients.elasticsearch._types.aggregations.Aggregation tagsAgg = 
+        captured.getAggregations().get("tags");
+    assertNotNull(tagsAgg);
+    assertTrue(tagsAgg.isFilter(), "tags aggregation should be wrapped in a filter aggregation to support conjunctive counts");
+  }
+
+  @Test
   void getFacetsForSpeciesLists_explicitlyPublic_appliesIsPrivateFalseForAdmin() {
     ListSearchContext context = ListSearchContext.builder()
         .searchQuery("birds")
