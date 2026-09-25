@@ -392,6 +392,11 @@ public class ElasticUtils {
                                 // Single filter for this key
                                 Filter filter = filtersForKey.get(0);
                                 keyBool.must(m -> m.term(t -> t.field(getPropertiesFacetField(filter.getKey())).value(filter.getValue())));
+                            } else if ("tags".equalsIgnoreCase(filtersForKey.get(0).getKey())) {
+                                // Multi-value tag filters require matching ALL selected tags (AND)
+                                filtersForKey.forEach(filter ->
+                                    keyBool.must(m -> m.term(t -> t.field(getPropertiesFacetField(filter.getKey())).value(filter.getValue())))
+                                );
                             } else {
                                 // Multiple filters with OR logic
                                 filtersForKey.forEach(filter ->

@@ -94,6 +94,53 @@ class ElasticsearchQueryBuilderTest {
   }
 
   @Test
+  void testAddFiltersMultipleTagsUsesAnd() {
+    BoolQuery.Builder bq = new BoolQuery.Builder();
+    Filter f1 = new Filter();
+    f1.setKey("tags");
+    f1.setValue("conservation");
+
+    Filter f2 = new Filter();
+    f2.setKey("tags");
+    f2.setValue("monitoring");
+
+    ElasticsearchQueryBuilder.buildListSearchQuery(
+        null, "user1", false, false, Arrays.asList(f1, f2), bq);
+
+    BoolQuery query = bq.build();
+    assertNotNull(query);
+    assertFalse(query.must().isEmpty());
+    // The must clause contains the tags bool query where each tag is a must clause
+    var tagBoolQuery = query.must().get(0).bool();
+    assertNotNull(tagBoolQuery);
+    assertEquals(2, tagBoolQuery.must().size(), "Multiple tags should be grouped as MUST (AND) clauses");
+    assertTrue(tagBoolQuery.should().isEmpty(), "Tags should not use SHOULD (OR) clauses");
+  }
+
+  @Test
+  void testAddFiltersMultipleNonTagsUsesOr() {
+    BoolQuery.Builder bq = new BoolQuery.Builder();
+    Filter f1 = new Filter();
+    f1.setKey("listType");
+    f1.setValue("TEST");
+
+    Filter f2 = new Filter();
+    f2.setKey("listType");
+    f2.setValue("CONSERVATION");
+
+    ElasticsearchQueryBuilder.buildListSearchQuery(
+        null, "user1", false, false, Arrays.asList(f1, f2), bq);
+
+    BoolQuery query = bq.build();
+    assertNotNull(query);
+    assertFalse(query.must().isEmpty());
+    var typeBoolQuery = query.must().get(0).bool();
+    assertNotNull(typeBoolQuery);
+    assertEquals(2, typeBoolQuery.should().size(), "Non-tag multi-filters should use SHOULD (OR) clauses");
+    assertEquals("1", typeBoolQuery.minimumShouldMatch());
+  }
+
+  @Test
   void testAddFiltersProperties() {
     BoolQuery.Builder bq = new BoolQuery.Builder();
     Filter f1 = new Filter();
