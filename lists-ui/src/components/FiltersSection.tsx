@@ -681,12 +681,13 @@ export const ActiveFilters = memo((
       ))}
       <Button
         variant="subtle"
-        color="gray"
+        color="charcoal"
         size="xs"
         radius="sm"
         disabled={loading}
         onClick={() => !loading && resetFilters()}
         leftSection={<FontAwesomeIcon icon={faDeleteLeft} />}
+        className={classes.clearAllButton}
         title={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
         aria-label={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
       >

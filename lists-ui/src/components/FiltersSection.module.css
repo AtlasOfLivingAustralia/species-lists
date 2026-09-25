@@ -175,6 +175,24 @@
   white-space: nowrap;
 }
 
+.clearAllButton {
+  color: var(--mantine-color-charcoal-9);
+  font-weight: 500;
+
+  &, & span, & svg {
+    color: var(--mantine-color-charcoal-9);
+  }
+
+  &:hover {
+    color: var(--mantine-color-charcoal-9);
+    background-color: var(--mantine-color-default-hover);
+
+    & span, & svg {
+      color: var(--mantine-color-charcoal-9);
+    }
+  }
+}
+
 .activeFiltersPaper {
   display: inline-flex;
   margin-right: 6px;
