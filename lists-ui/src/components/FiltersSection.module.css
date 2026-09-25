@@ -139,7 +139,7 @@
 }
 
 .activeFiltersLabel {
-  font-size: var(--mantine-font-size-s);
+  font-size: var(--mantine-font-size-sm);
   font-weight: 400;
   color: var(--mantine-color-dimmed);
 }
@@ -151,20 +151,20 @@
 }
 
 .activeFilterGroupLabel {
-  font-size: var(--mantine-font-size-s);
+  font-size: var(--mantine-font-size-sm);
   font-weight: 500;
   color: var(--mantine-color-dimmed);
 }
 
 .connectorText {
-  font-size: var(--mantine-font-size-s);
+  font-size: var(--mantine-font-size-sm);
   user-select: none;
   padding: 0 1px;
 }
 
 .activeFilterPill {
   max-width: 280px;
-  font-size: var(--mantine-font-size-s);
+  font-size: var(--mantine-font-size-sm);
   font-weight: 500;
   align-items: center;
 }

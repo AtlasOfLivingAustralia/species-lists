@@ -578,10 +578,10 @@ export const ActiveFilters = memo((
       } else {
         groupKey = filter.key;
         const keyMessageId = `facet.${filter.key}.label`;
-        const fallbackMessageId = sanitiseText(filter.key);
+        const fallbackMessageId = sanitiseText(filter.key) ?? filter.key;
         groupLabel = intl.messages[keyMessageId]
           ? intl.formatMessage({ id: keyMessageId })
-          : intl.messages[fallbackMessageId]
+          : (fallbackMessageId && intl.messages[fallbackMessageId])
             ? intl.formatMessage({ id: fallbackMessageId })
             : removeFilterPrefix(filter.key);
         connector = 'or';
@@ -600,17 +600,17 @@ export const ActiveFilters = memo((
 
       let displayValue = filter.value;
       if (isBoolean) {
-        const flagMessageId = sanitiseText(filter.key);
-        displayValue = intl.messages[flagMessageId]
+        const flagMessageId = sanitiseText(filter.key) ?? filter.key;
+        displayValue = (flagMessageId && intl.messages[flagMessageId])
           ? intl.formatMessage({ id: flagMessageId })
           : removeFilterPrefix(filter.key);
       } else if (filter.key === 'tags') {
-        displayValue = constraints?.tags?.find((c) => c.value === filter.value)?.label ?? sanitiseText(filter.value);
+        displayValue = constraints?.tags?.find((c) => c.value === filter.value)?.label ?? sanitiseText(filter.value) ?? filter.value;
       } else if (filter.key === 'licence') {
         displayValue = filter.value;
       } else {
-        const valMessageId = sanitiseText(filter.value);
-        if (intl.messages[valMessageId]) {
+        const valMessageId = sanitiseText(filter.value) ?? filter.value;
+        if (valMessageId && intl.messages[valMessageId]) {
           displayValue = intl.formatMessage({ id: valMessageId });
         }
       }
@@ -647,19 +647,19 @@ export const ActiveFilters = memo((
       align="center"
       className={`${classes.activeFiltersGroup} ${loading ? classes.filtersLoading : ''}`}
     >
-      <Text component="span" size="s" fw={400} className={classes.activeFiltersLabel}>
+      <Text component="span" size="sm" fw={400} className={classes.activeFiltersLabel}>
         <FormattedMessage id="filters.active" defaultMessage="Selected filters" />:
       </Text>
       {filterGroups.map((group) => (
         <Group key={group.key} gap={6} align="center" wrap="wrap" className={classes.activeFilterCluster}>
-          <Text component="span" size="s" fw={500} className={classes.activeFilterGroupLabel}>
+          <Text component="span" size="sm" fw={500} className={classes.activeFilterGroupLabel}>
             {group.label}:
           </Text>
           <Pill.Group>
             {group.items.map((item, itemIndex) => (
               <Fragment key={`${item.filter.key}-${item.filter.value}`}>
                 {itemIndex > 0 && (
-                  <Text component="span" size="s" className={classes.connectorText}>
+                  <Text component="span" size="xs" className={classes.connectorText}>
                     <FormattedMessage id={`filters.connector.${group.connector}`} defaultMessage={group.connector} />
                   </Text>
                 )}
@@ -689,7 +689,7 @@ export const ActiveFilters = memo((
       <Button
         variant="subtle"
         color="charcoal"
-        size="s"
+        size="sm"
         fw={400}
         radius="md"
         disabled={loading}
