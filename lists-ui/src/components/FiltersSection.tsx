@@ -319,11 +319,8 @@ const FacetComponent = memo(
         {isBooleanFacet ? (
           // --- Boolean Facet Rendering ---
           (() => {
-            const booleanItem = sortedCounts.find((c) => c.value === 'true') || sortedCounts[1];
+            const booleanItem = sortedCounts.find((c) => c.value === 'true') || { value: 'true', count: 0 };
             const isChecked = isValueActive(booleanItem?.value);
-            if (!isChecked && (!booleanItem || booleanItem.count <= 0)) {
-              return null;
-            }
             return RenderCheckbox(
               facet.key, // Pass the facet key for proper labeling
               facet.key, // Key for the single boolean checkbox
@@ -381,13 +378,6 @@ export const FiltersSection = memo(
       () => {
         const filtered = facets.filter((facet) => {
           if (facet.counts.length === 0) return false;
-          // For boolean facets, only show if active OR count of "true" > 0
-          if (BOOLEAN_FACETS.includes(facet.key)) {
-            const isActive = active.some((a) => a.key === facet.key);
-            if (isActive) return true;
-            const trueCount = facet.counts.find((c) => c.value === 'true')?.count ?? 0;
-            return trueCount > 0;
-          }
           return true;
         });
 
