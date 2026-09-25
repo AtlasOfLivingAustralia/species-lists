@@ -210,10 +210,8 @@ const FacetComponent = memo(
 
     // Specific onChange handler for boolean facet
     const handleBooleanChange = useCallback(() => {
-      const booleanItem = sortedCounts[1]; // Assumes second item is the one to toggle
-      if (booleanItem) {
-        onSelect({ key: facet.key, value: booleanItem.value });
-      }
+      const booleanItem = sortedCounts.find((c) => c.value === 'true');
+      onSelect({ key: facet.key, value: booleanItem?.value ?? 'true' });
     }, [onSelect, facet.key, sortedCounts]);
 
     // Specific onChange handler factory for non-boolean items

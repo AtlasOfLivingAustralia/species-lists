@@ -1151,7 +1151,12 @@ public class SearchHelperService {
                 .collect(Collectors.toList());
 
         // Handle different field types
-        if (CORE_FIELDS.contains(field) || field.startsWith("classification.")) {
+        if ("tags".equalsIgnoreCase(field)) {
+            // Tags require matching ALL selected tags (AND)
+            for (String value : values) {
+                bq.filter(f -> f.term(t -> t.field("tags.keyword").value(value)));
+            }
+        } else if (CORE_FIELDS.contains(field) || field.startsWith("classification.")) {
             String esField = "class".equals(field) ? "classs" : 
                              ("classification.class".equals(field) ? "classification.classs" : field);
             // Core fields - apply as boolean should (OR)
@@ -1229,7 +1234,7 @@ public class SearchHelperService {
             }
             String esField = getPropertiesFacetField(field);
             List<Filter> otherFilters = safeFilters.stream()
-                .filter(f -> !isSameFacetField(f.getKey(), field))
+                .filter(f -> "tags".equalsIgnoreCase(field) || !isSameFacetField(f.getKey(), field))
                 .toList();
 
             Aggregation termsAgg = Aggregation.of(a -> a.terms(ta -> ta.field(esField).size(30)));

@@ -151,6 +151,63 @@ class SearchHelperServiceTest {
   }
 
   @Test
+  void getFacetsForSingleSpeciesList_withTagFilter_appliesConjunctiveFilteringForTags() {
+    Filter tagFilter = new Filter("tags", "conservation");
+    SingleListSearchContext context = SingleListSearchContext.builder()
+        .speciesListId("testListId")
+        .filters(List.of(tagFilter))
+        .build();
+
+    SearchHits<SpeciesListIndex> mockHits = org.mockito.Mockito.mock(SearchHits.class);
+    ArgumentCaptor<NativeQuery> nativeQueryCaptor = ArgumentCaptor.forClass(NativeQuery.class);
+
+    when(elasticsearchOperations.search(nativeQueryCaptor.capture(), eq(SpeciesListIndex.class)))
+        .thenReturn(mockHits);
+
+    searchHelperService.getFacetsForSingleSpeciesList(context, List.of("tags"));
+
+    NativeQuery captured = nativeQueryCaptor.getValue();
+    assertNotNull(captured);
+
+    co.elastic.clients.elasticsearch._types.aggregations.Aggregation tagsAgg = 
+        captured.getAggregations().get("tags");
+    assertNotNull(tagsAgg);
+    assertTrue(tagsAgg.isFilter(), "Single-list tags aggregation should be wrapped in a filter to support conjunctive counts");
+  }
+
+  @Test
+  void searchSingleSpeciesList_withMultipleTags_appliesAndLogic() {
+    Filter tag1 = new Filter("tags", "conservation");
+    Filter tag2 = new Filter("tags", "monitoring");
+    SingleListSearchContext context = SingleListSearchContext.builder()
+        .speciesListId("testListId")
+        .sort("scientificName")
+        .dir("asc")
+        .filters(List.of(tag1, tag2))
+        .build();
+
+    SearchHits<SpeciesListIndex> mockHits = org.mockito.Mockito.mock(SearchHits.class);
+    ArgumentCaptor<NativeQuery> nativeQueryCaptor = ArgumentCaptor.forClass(NativeQuery.class);
+
+    when(elasticsearchOperations.search(
+            nativeQueryCaptor.capture(),
+            eq(SpeciesListIndex.class),
+            any(org.springframework.data.elasticsearch.core.mapping.IndexCoordinates.class)))
+        .thenReturn(mockHits);
+
+    searchHelperService.searchSingleSpeciesList(context, PageRequest.of(0, 10));
+
+    NativeQuery captured = nativeQueryCaptor.getValue();
+    assertNotNull(captured);
+    // The query is a bool query where each tag is added as a filter clause
+    co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery boolQuery = 
+        captured.getQuery().bool();
+    assertNotNull(boolQuery);
+    // Filters should contain listId (must) and tags.keyword for both tags in filter
+    assertEquals(2, boolQuery.filter().size(), "Should have 2 filter clauses for the 2 tags");
+  }
+
+  @Test
   void getFacetsForSpeciesLists_explicitlyPublic_appliesIsPrivateFalseForAdmin() {
     ListSearchContext context = ListSearchContext.builder()
         .searchQuery("birds")
