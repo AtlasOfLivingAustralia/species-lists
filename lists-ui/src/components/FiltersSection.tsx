@@ -40,6 +40,7 @@ interface FiltersDrawerProps {
   onReset: () => void;
   loading?: boolean;
   preserveOrder?: boolean;
+  showQualifiers?: boolean;
 }
 
 export const BOOLEAN_FACETS = ['isAuthoritative', 'isSDS', 'isBIE', 'hasRegion', 'isThreatened', 'isInvasive', 'isBiosecurity'];
@@ -165,6 +166,7 @@ const FacetComponent = memo(
     isShowFlagLabel,
     showExpand = true,
     constraintMap,
+    showQualifiers = true,
   }: {
     facet: Facet;
     isExpanded: boolean;
@@ -175,6 +177,7 @@ const FacetComponent = memo(
     showExpand?: boolean;
     /** Map of facet key → Constraint[] for facets whose values need label resolution (e.g. tags, licence) */
     constraintMap?: Map<string, Constraint[]>;
+    showQualifiers?: boolean;
   }) => {
     const isTag = facet.key === 'tags';
     // Constraints for this specific facet, if any
@@ -249,7 +252,7 @@ const FacetComponent = memo(
                   defaultMessage={removeFilterPrefix(facet.key)}
                 />
               )}
-              {facet.key !== 'isPrivate' && (
+              {showQualifiers && facet.key !== 'isPrivate' && (
                 <>
                   {' '}
                   <Text span className={classes.qualifier}>
@@ -304,15 +307,19 @@ const FacetComponent = memo(
               size='md' 
               span 
               className={classes.facetHeader + ' ' + classes.facetHeaderBoolean} 
-              title={intl.formatMessage({ id: 'filters.flags.tooltip', defaultMessage: 'Each entry can have multiple flags. Results must have all the flags you select.' })}
+              title={showQualifiers ? intl.formatMessage({ id: 'filters.flags.tooltip', defaultMessage: 'Each entry can have multiple flags. Results must have all the flags you select.' }) : undefined}
               >
               <FormattedMessage id='facet.flag.label' defaultMessage='Flags' />
-              {' '}
-              <Text span className={classes.qualifier}>
-                <FormattedMessage id='filters.qualifier.all' defaultMessage='(all)' />
-              </Text>
-              {' '} 
-              <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.flags.tooltip', defaultMessage: 'Each entry can have multiple flags. Results must have all the flags you select.' })} />
+              {showQualifiers && (
+                <>
+                  {' '}
+                  <Text span className={classes.qualifier}>
+                    <FormattedMessage id='filters.qualifier.all' defaultMessage='(all)' />
+                  </Text>
+                  {' '} 
+                  <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.flags.tooltip', defaultMessage: 'Each entry can have multiple flags. Results must have all the flags you select.' })} />
+                </>
+              )}
             </Text>
         )}
         {/* Render checkboxes using the helper */}
@@ -355,7 +362,15 @@ const FacetComponent = memo(
 );
 
 export const FiltersSection = memo(
-  ({ facets, active, onSelect, showExpand, loading = false, preserveOrder = false }: FiltersDrawerProps) => {
+  ({
+    facets,
+    active,
+    onSelect,
+    showExpand,
+    loading = false,
+    preserveOrder = false,
+    showQualifiers = true,
+  }: FiltersDrawerProps) => {
     const ala = useALA();
     const { constraints } = useConstraints(ala);
 
@@ -486,6 +501,7 @@ export const FiltersSection = memo(
                 isShowFlagLabel={isFirst}
                 showExpand={showExpand}
                 constraintMap={constraintMap}
+                showQualifiers={showQualifiers}
               />
             );
           })}
