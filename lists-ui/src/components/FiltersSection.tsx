@@ -2,7 +2,6 @@ import {
   faAngleDown,
   faAngleUp,
   faChartDiagram,
-  faClose,
   faDeleteLeft,
   faInfoCircle,
   faSliders
@@ -16,12 +15,13 @@ import {
   Collapse,
   Group,
   Paper,
+  Pill,
   Stack,
   Text,
   ThemeIcon,
   Tooltip
 } from '@mantine/core';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
 
 import { Constraint, Facet, KV } from '#/api';
@@ -134,13 +134,26 @@ function InfoTooltip({ tooltipText }: { tooltipText: string }) {
   );
 }
 
-// Function to remove the 'properties.' prefix from the key
+// Function to remove prefixes and format the filter key
 const removeFilterPrefix = (key: string) => {
-  if (key.startsWith('properties.')) {
-    return key.replace('properties.', '');
+  if (!key) return '';
+  let cleaned = key;
+  if (cleaned.startsWith('properties.')) {
+    cleaned = cleaned.replace('properties.', '');
+  } else if (cleaned.startsWith('classification.')) {
+    cleaned = cleaned.replace('classification.', '');
   }
-  return key;
-}
+  if (cleaned === 'classs') {
+    return 'Class';
+  }
+  if (cleaned === 'listType') {
+    return 'Type';
+  }
+  if (cleaned === 'tags') {
+    return 'Tags';
+  }
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+};
 
 const FacetComponent = memo(
   ({
@@ -221,16 +234,40 @@ const FacetComponent = memo(
           radius={0}
         > 
         {/* Render header only for non-boolean facets */}
-        {!(isBooleanFacet || isTag) && (
+        {!isBooleanFacet && (
           <Group justify='space-between' className={classes.facetGroup}>
             <Text
               size='md'
               className={classes.facetHeader}
               span
             >
-              <FormattedMessage id={facet.key || 'filter.key.missing'} defaultMessage={removeFilterPrefix(facet.key)}
-              />{' '}
-              {facet.key !== 'isPrivate' && <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.or.tooltip', defaultMessage: '' })} />}
+              {isTag ? (
+                <FormattedMessage id='facet.tag.label' defaultMessage='Tags' />
+              ) : (
+                <FormattedMessage
+                  id={`facet.${facet.key}.label`}
+                  defaultMessage={removeFilterPrefix(facet.key)}
+                />
+              )}
+              {facet.key !== 'isPrivate' && (
+                <>
+                  {' '}
+                  <Text span className={classes.qualifier}>
+                    <FormattedMessage
+                      id={isTag ? 'filters.qualifier.all' : 'filters.qualifier.any'}
+                      defaultMessage={isTag ? '(all)' : '(any)'}
+                    />
+                  </Text>
+                  {' '}
+                  <InfoTooltip
+                    tooltipText={intl.formatMessage(
+                      isTag
+                        ? { id: 'filters.tags.tooltip', defaultMessage: 'Each entry can have multiple tags. Results must have all the tags you select.' }
+                        : { id: 'filters.any.tooltip', defaultMessage: 'Each entry has only one value for this filter. Results can match any of the options you select.' }
+                    )}
+                  />
+                </>
+              )}
               {isClassification && (
                 <Tooltip label={matchedTooltip} withArrow position="top" component="span" title={matchedTooltip}>
                   <ActionIcon
@@ -254,24 +291,28 @@ const FacetComponent = memo(
                 color='dark'
                 size='sm'
                 onClick={handleToggle}
-                title={`${intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Toggle filters for' })} ${intl.formatMessage({ id: facet.key || 'filter.key.missing', defaultMessage: facet.key })}`}
-                aria-label={`${intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Toggle filters for' })} ${intl.formatMessage({ id: facet.key || 'filter.key.missing', defaultMessage: facet.key })}`}
+                title={`${intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Toggle filters for' })} ${intl.formatMessage({ id: isTag ? 'facet.tag.label' : (facet.key || 'filter.key.missing'), defaultMessage: isTag ? 'Tags' : facet.key })}`}
+                aria-label={`${intl.formatMessage({ id: 'filters.toggle.label', defaultMessage: 'Toggle filters for' })} ${intl.formatMessage({ id: isTag ? 'facet.tag.label' : (facet.key || 'filter.key.missing'), defaultMessage: isTag ? 'Tags' : facet.key })}`}
               >
                 <FontAwesomeIcon icon={isExpanded ? faAngleUp : faAngleDown} />
               </ActionIcon>
             )}
           </Group>
         )}
-        { ((isBooleanFacet && isShowFlagLabel) || isTag) && (
+        { (isBooleanFacet && isShowFlagLabel) && (
             <Text 
               size='md' 
               span 
-              className={classes.facetHeader + ' ' + (isBooleanFacet ? classes.facetHeaderBoolean : classes.facetHeaderTags)} 
-              title={intl.formatMessage({ id: 'filters.and.tooltip', defaultMessage: '' })}
+              className={classes.facetHeader + ' ' + classes.facetHeaderBoolean} 
+              title={intl.formatMessage({ id: 'filters.flags.tooltip', defaultMessage: 'Each entry can have multiple flags. Results must have all the flags you select.' })}
               >
-              { isTag ? <FormattedMessage id='facet.tag.label' defaultMessage='List tags' />
-                : <FormattedMessage id='facet.flag.label' defaultMessage='List flags' />}{' '} 
-              <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.and.tooltip', defaultMessage: '' })} />
+              <FormattedMessage id='facet.flag.label' defaultMessage='Flags' />
+              {' '}
+              <Text span className={classes.qualifier}>
+                <FormattedMessage id='filters.qualifier.all' defaultMessage='(all)' />
+              </Text>
+              {' '} 
+              <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.flags.tooltip', defaultMessage: 'Each entry can have multiple flags. Results must have all the flags you select.' })} />
             </Text>
         )}
         {/* Render checkboxes using the helper */}
@@ -474,6 +515,20 @@ export const FiltersSection = memo(
  * @param {Function} props.resetFilters - Function to reset all filters.
  * @returns {JSX.Element} The rendered component.
  */
+interface ActiveFilterItem {
+  filter: KV;
+  displayValue: string;
+  title?: string;
+  removeLabel: string;
+}
+
+interface ActiveFilterGroup {
+  key: string;
+  label: string;
+  connector: 'and' | 'or';
+  items: ActiveFilterItem[];
+}
+
 export const ActiveFilters = memo((
   {
     active,
@@ -490,80 +545,156 @@ export const ActiveFilters = memo((
   const ala = useALA();
   const { constraints } = useConstraints(ala);
 
+  const filterGroups = useMemo<ActiveFilterGroup[]>(() => {
+    if (!active || active.length === 0) return [];
+
+    const groups: ActiveFilterGroup[] = [];
+    const groupMap = new Map<string, ActiveFilterGroup>();
+
+    active.forEach((filter) => {
+      const isBoolean = BOOLEAN_FACETS.includes(filter.key);
+      let groupKey: string;
+      let groupLabel: string;
+      let connector: 'and' | 'or';
+
+      if (isBoolean) {
+        groupKey = 'flags';
+        groupLabel = intl.formatMessage({ id: 'filters.group.flags', defaultMessage: 'Flags' });
+        connector = 'and';
+      } else if (filter.key === 'tags') {
+        groupKey = 'tags';
+        groupLabel = intl.formatMessage({ id: 'facet.tag.label', defaultMessage: 'Tags' });
+        connector = 'and';
+      } else if (filter.key === 'listType') {
+        groupKey = 'listType';
+        groupLabel = intl.formatMessage({ id: 'filters.group.type', defaultMessage: 'Type' });
+        connector = 'or';
+      } else {
+        groupKey = filter.key;
+        const keyMessageId = `facet.${filter.key}.label`;
+        const fallbackMessageId = sanitiseText(filter.key);
+        groupLabel = intl.messages[keyMessageId]
+          ? intl.formatMessage({ id: keyMessageId })
+          : intl.messages[fallbackMessageId]
+            ? intl.formatMessage({ id: fallbackMessageId })
+            : removeFilterPrefix(filter.key);
+        connector = 'or';
+      }
+
+      if (!groupMap.has(groupKey)) {
+        const newGroup: ActiveFilterGroup = {
+          key: groupKey,
+          label: groupLabel,
+          connector,
+          items: [],
+        };
+        groupMap.set(groupKey, newGroup);
+        groups.push(newGroup);
+      }
+
+      let displayValue = filter.value;
+      if (isBoolean) {
+        const flagMessageId = sanitiseText(filter.key);
+        displayValue = intl.messages[flagMessageId]
+          ? intl.formatMessage({ id: flagMessageId })
+          : removeFilterPrefix(filter.key);
+      } else if (filter.key === 'tags') {
+        displayValue = constraints?.tags?.find((c) => c.value === filter.value)?.label ?? sanitiseText(filter.value);
+      } else if (filter.key === 'licence') {
+        displayValue = filter.value;
+      } else {
+        const valMessageId = sanitiseText(filter.value);
+        if (intl.messages[valMessageId]) {
+          displayValue = intl.formatMessage({ id: valMessageId });
+        }
+      }
+
+      const isClassificationFilter = filter.key.startsWith('classification.');
+      const title = isClassificationFilter
+        ? intl.formatMessage({
+            id: 'filters.matched.taxonomy.tooltip',
+            defaultMessage: 'Matched via ALA taxonomy',
+          })
+        : undefined;
+
+      const removeLabel = `${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${groupLabel}: ${displayValue}`;
+
+      groupMap.get(groupKey)!.items.push({
+        filter,
+        displayValue,
+        title,
+        removeLabel,
+      });
+    });
+
+    return groups;
+  }, [active, constraints?.tags, intl]);
+
+  if (filterGroups.length === 0) {
+    return null;
+  }
+
   return (
-    <div className={loading ? classes.filtersLoading : undefined}>
-      <Text component='span' fs='xs' className={classes.activeFiltersText}>
-        <FormattedMessage id='filters.active' defaultMessage='selected filters' />:{' '}
+    <Group
+      gap="md"
+      wrap="wrap"
+      align="center"
+      className={`${classes.activeFiltersGroup} ${loading ? classes.filtersLoading : ''}`}
+    >
+      <Text component="span" size="xs" fw={500} className={classes.activeFiltersLabel}>
+        <FormattedMessage id="filters.active" defaultMessage="Selected filters" />:
       </Text>
-      {active.map((filter) => {
-        // tags:    display the human-readable label (e.g. "ALA Conservation")
-        // licence: keep the raw value as the chip text (e.g. "CC-BY") — the full
-        //          description is only shown as a tooltip in the facet checkbox list
-        const constraintLabel = filter.key === 'tags'
-          ? (constraints?.tags?.find(c => c.value === filter.value)?.label ?? sanitiseText(filter.value))
-          : undefined;
-
-        const isClassificationFilter = filter.key.startsWith('classification.');
-        const filterTitle = isClassificationFilter
-          ? intl.formatMessage({
-              id: 'filters.matched.taxonomy.tooltip',
-              defaultMessage: 'Matched via ALA taxonomy',
-            })
-          : undefined;
-
-        return (
-          <Paper 
-            key={filter.key} 
-            fs='sm' 
-            radius='sm' 
-            bd='1px solid var(--mantine-color-default-border)' 
-            className={classes.activeFiltersPaper}
-            title={filterTitle}
-          >
-            <Text component='div' fs='xs' className={classes.activeFiltersText}>
-              <FormattedMessage id={sanitiseText(filter.key) || 'filter.key.missing'} defaultMessage={removeFilterPrefix(filter.key)}/>
-              { !BOOLEAN_FACETS.includes(filter.key) && (
-                <>
-                  :{' '}
-                  {constraintLabel
-                    ? constraintLabel
-                    : <FormattedMessage id={sanitiseText(filter.value) || 'filter.value.missing'} defaultMessage={sanitiseText(filter.value)}/>
-                  }
-                </>
-              )}
-            </Text>
-            <ActionIcon
-              radius='sm'
-              opacity={0.8}
-              size='xs'
-              ml='xs'
-              mt={1}
-              disabled={loading}
-              title={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key || 'filter.key.missing', defaultMessage: removeFilterPrefix(filter.key) })}`}
-              aria-label={`${intl.formatMessage({ id: 'filters.remove.label', defaultMessage: 'Remove filter for' })} ${intl.formatMessage({ id: filter.key || 'filter.key.missing', defaultMessage: removeFilterPrefix(filter.key) })}`}
-              onClick={() => !loading && handleFilterClick(filter)}
-            >
-              <FontAwesomeIcon icon={faClose} fontSize={14} />
-            </ActionIcon>
-          </Paper>
-        );
-      })}
-      <Paper 
-        fs='sm' 
-        radius='sm'
-        className={classes.activeFiltersRemoveAll}
+      {filterGroups.map((group) => (
+        <Group key={group.key} gap={6} align="center" wrap="wrap" className={classes.activeFilterCluster}>
+          <Text component="span" size="xs" fw={600} className={classes.activeFilterGroupLabel}>
+            {group.label}:
+          </Text>
+          <Pill.Group>
+            {group.items.map((item, itemIndex) => (
+              <Fragment key={`${item.filter.key}-${item.filter.value}`}>
+                {itemIndex > 0 && (
+                  <Text component="span" size="xs" c="dimmed" fs="italic" className={classes.connectorText}>
+                    <FormattedMessage id={`filters.connector.${group.connector}`} defaultMessage={group.connector} />
+                  </Text>
+                )}
+                <Pill
+                  size="sm"
+                  withRemoveButton
+                  onRemove={() => !loading && handleFilterClick(item.filter)}
+                  disabled={loading}
+                  title={item.title}
+                  classNames={{
+                    root: classes.activeFilterPill,
+                    label: classes.activeFilterPillLabel,
+                  }}
+                  removeButtonProps={{
+                    'aria-label': item.removeLabel,
+                    title: item.removeLabel,
+                  }}
+                >
+                  {item.displayValue}
+                </Pill>
+              </Fragment>
+            ))}
+          </Pill.Group>
+        </Group>
+      ))}
+      <Button
+        variant="subtle"
+        color="gray"
+        size="xs"
+        radius="sm"
+        disabled={loading}
         onClick={() => !loading && resetFilters()}
+        leftSection={<FontAwesomeIcon icon={faDeleteLeft} />}
         title={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
         aria-label={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
       >
-        <Text component='div' fs='xs' className={classes.activeFiltersText}>
-          <FormattedMessage id='filters.reset' defaultMessage='Clear all filters' />
-        </Text>
-        <FontAwesomeIcon icon={faDeleteLeft} fontSize={22} color='var(--mantine-primary-color-filled)' style={{ marginLeft: 8 }}/>
-      </Paper>
-    </div>
-  )
-})
+        <FormattedMessage id="filters.reset" defaultMessage="Clear all filters" />
+      </Button>
+    </Group>
+  );
+});
 
 /**
  * ToggleFiltersButton component that displays a button to toggle the visibility of filters.

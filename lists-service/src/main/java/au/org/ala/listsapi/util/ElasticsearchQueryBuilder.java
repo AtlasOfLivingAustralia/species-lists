@@ -291,6 +291,12 @@ public final class ElasticsearchQueryBuilder {
                 keyBool.must(m -> m.term(t -> t
                     .field(getPropertiesFacetField(filter.getKey()))
                     .value(filter.getValue())));
+            } else if ("tags".equalsIgnoreCase(filtersForKey.get(0).getKey())) {
+                // Multi-value tag filters require matching ALL selected tags (AND)
+                filtersForKey.forEach(filter ->
+                    keyBool.must(m -> m.term(t -> t
+                        .field(getPropertiesFacetField(filter.getKey()))
+                        .value(filter.getValue()))));
             } else {
                 filtersForKey.forEach(filter ->
                     keyBool.should(m -> m.term(t -> t

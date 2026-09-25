@@ -121,7 +121,58 @@
 .resultsSummary {
   font-weight: 500;
   font-size: var(--mantine-font-size-sm);
-  padding-bottom: 4px;;
+  padding-bottom: 4px;
+}
+
+.qualifier {
+  font-size: var(--mantine-font-size-xs);
+  font-weight: normal;
+  color: var(--mantine-color-dimmed);
+  margin-left: 3px;
+  text-transform: lowercase;
+}
+
+.activeFiltersGroup {
+  row-gap: 8px;
+  column-gap: 14px;
+  align-items: center;
+}
+
+.activeFiltersLabel {
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 500;
+  color: var(--mantine-color-dimmed);
+}
+
+.activeFilterCluster {
+  row-gap: 4px;
+  column-gap: 6px;
+  align-items: center;
+}
+
+.activeFilterGroupLabel {
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 600;
+  color: var(--mantine-color-dimmed);
+}
+
+.connectorText {
+  font-size: var(--mantine-font-size-xs);
+  font-style: italic;
+  color: var(--mantine-color-dimmed);
+  user-select: none;
+  padding: 0 2px;
+}
+
+.activeFilterPill {
+  max-width: 280px;
+  font-size: var(--mantine-font-size-xs);
+}
+
+.activeFilterPillLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .activeFiltersPaper {
