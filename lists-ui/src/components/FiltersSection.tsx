@@ -641,19 +641,19 @@ export const ActiveFilters = memo((
       align="center"
       className={`${classes.activeFiltersGroup} ${loading ? classes.filtersLoading : ''}`}
     >
-      <Text component="span" size="xs" fw={500} className={classes.activeFiltersLabel}>
+      <Text component="span" size="s" fw={400} className={classes.activeFiltersLabel}>
         <FormattedMessage id="filters.active" defaultMessage="Selected filters" />:
       </Text>
       {filterGroups.map((group) => (
         <Group key={group.key} gap={6} align="center" wrap="wrap" className={classes.activeFilterCluster}>
-          <Text component="span" size="xs" fw={600} className={classes.activeFilterGroupLabel}>
+          <Text component="span" size="s" fw={500} className={classes.activeFilterGroupLabel}>
             {group.label}:
           </Text>
           <Pill.Group>
             {group.items.map((item, itemIndex) => (
               <Fragment key={`${item.filter.key}-${item.filter.value}`}>
                 {itemIndex > 0 && (
-                  <Text component="span" size="xs" c="dimmed" fs="italic" className={classes.connectorText}>
+                  <Text component="span" size="s" className={classes.connectorText}>
                     <FormattedMessage id={`filters.connector.${group.connector}`} defaultMessage={group.connector} />
                   </Text>
                 )}
@@ -666,6 +666,7 @@ export const ActiveFilters = memo((
                   classNames={{
                     root: classes.activeFilterPill,
                     label: classes.activeFilterPillLabel,
+                    remove: classes.activeFilterPillRemove,
                   }}
                   removeButtonProps={{
                     'aria-label': item.removeLabel,
@@ -682,11 +683,12 @@ export const ActiveFilters = memo((
       <Button
         variant="subtle"
         color="charcoal"
-        size="xs"
-        radius="sm"
+        size="s"
+        fw={400}
+        radius="md"
         disabled={loading}
         onClick={() => !loading && resetFilters()}
-        leftSection={<FontAwesomeIcon icon={faDeleteLeft} />}
+        leftSection={<FontAwesomeIcon icon={faDeleteLeft} className={classes.clearAllIcon} />}
         className={classes.clearAllButton}
         title={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
         aria-label={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
