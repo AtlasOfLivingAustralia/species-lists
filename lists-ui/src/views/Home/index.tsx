@@ -294,6 +294,12 @@ const Home = ({ routeId }: { routeId: string }) => {
   }, [data?.baseFacets, data?.facets]);
 
   const filteredFacets = useMemo(() => {
+    const baseBooleanKeys = new Set(
+      (data?.baseFacets || [])
+        .filter(bf => BOOLEAN_FACETS.includes(bf.key) && (bf.counts.find(c => c.value === 'true')?.count ?? 0) > 0)
+        .map(bf => bf.key)
+    );
+
     return mergedFacets.filter(facet => {
       // Home page displays only public lists; exclude Visibility facet group
       if (facet.key === 'isPrivate' && !isAdminListPage && !isMyListsPage) {
@@ -304,10 +310,9 @@ const Home = ({ routeId }: { routeId: string }) => {
       const isActive = filters.some(f => f.key === facet.key);
       if (isActive) return true;
       
-      // For boolean facets, only show if count of "true" > 0
+      // For boolean facets, keep if it had records in baseFacets (so options with zero count remain visible and disabled)
       if (BOOLEAN_FACETS.includes(facet.key)) {
-        const trueCount = facet.counts.find(c => c.value === 'true')?.count ?? 0;
-        return trueCount > 0;
+        return baseBooleanKeys.has(facet.key);
       }
 
       // Otherwise, hide if there's only 1 option and its count equals or exceeds the total elements
@@ -317,7 +322,7 @@ const Home = ({ routeId }: { routeId: string }) => {
       
       return true;
     });
-  }, [mergedFacets, totalElements, filters, isAdminListPage, isMyListsPage]);
+  }, [mergedFacets, totalElements, filters, isAdminListPage, isMyListsPage, data?.baseFacets]);
 
   return (
     <>

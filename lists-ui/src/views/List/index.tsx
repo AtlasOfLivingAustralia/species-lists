@@ -654,6 +654,7 @@ function List() {
                         onReset={() => {setFilters([]); setPage(0);}}
                         loading={loading}
                         preserveOrder
+                        showQualifiers={false}
                       />
                   </Collapse>
                 </Grid.Col>
