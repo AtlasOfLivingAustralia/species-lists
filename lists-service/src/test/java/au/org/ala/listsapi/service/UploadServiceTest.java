@@ -2,6 +2,7 @@ package au.org.ala.listsapi.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,6 +34,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -268,5 +270,80 @@ class UploadServiceTest {
         assertTrue(exception.getMessage().contains("isAuthoritative"));
         assertTrue(exception.getMessage().contains("isBiosecurity"));
         verify(speciesListMongoRepository, never()).save(any());
+    }
+
+    @Test
+    void testLoadCSV_taxonFieldVariations_recognizedAsTaxonFields() throws Exception {
+        String csv = "ScientificName,taxonId,family\nAcacia dealbata,https://id.ala.org.au/1,Fabaceae\n";
+
+        IngestJob job = uploadService.loadCSV(
+                null,
+                new ByteArrayInputStream(csv.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                true,
+                true,
+                false
+        );
+
+        assertEquals(1, job.getRowCount());
+        assertNull(job.getValidationErrors(), "Valid taxon fields should not produce validation errors");
+    }
+
+    @Test
+    void testLoadCSV_rowMissingTaxon_triggersSomeRecordsWithoutScientificName() throws Exception {
+        String csv = "scientificName,family\nAcacia dealbata,Fabaceae\n   ,Fabaceae\n";
+
+        IngestJob job = uploadService.loadCSV(
+                null,
+                new ByteArrayInputStream(csv.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                true,
+                true,
+                false
+        );
+
+        assertEquals(2, job.getRowCount());
+        assertNotNull(job.getValidationErrors());
+        assertTrue(job.getValidationErrors().contains("SOME_RECORDS_WITHOUT_SCIENTIFIC_NAME"));
+    }
+
+    @Test
+    void testLoadCSV_allRowsMissingTaxon_triggersAllRecordsWithoutScientificName() throws Exception {
+        String csv = "scientificName,family\n   ,Fabaceae\nna,Myrtaceae\n";
+
+        IngestJob job = uploadService.loadCSV(
+                null,
+                new ByteArrayInputStream(csv.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                true,
+                true,
+                false
+        );
+
+        assertEquals(2, job.getRowCount());
+        assertNotNull(job.getValidationErrors());
+        assertTrue(job.getValidationErrors().contains("ALL_RECORDS_WITHOUT_SCIENTIFIC_NAME"));
+    }
+
+    @Test
+    void testUpload_localCsvFile_succeedsWithoutProbeContentTypeFailure() throws Exception {
+        byte[] content = "scientificName,family\nAcacia dealbata,Fabaceae\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "test-species.csv",
+                "text/csv",
+                content
+        );
+
+        String fileId = uploadService.uploadFile(file);
+        assertNotNull(fileId);
+
+        IngestJob job = uploadService.upload(fileId, file);
+        assertNotNull(job);
+        assertEquals(1, job.getRowCount());
+        assertNull(job.getValidationErrors());
+
+        // Cleanup temp file created by uploadFile
+        File tempFile = new File(System.getProperty("java.io.tmpdir"), fileId);
+        if (tempFile.exists()) {
+            tempFile.delete();
+        }
     }
 }

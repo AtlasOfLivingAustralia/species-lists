@@ -125,8 +125,50 @@ public class UploadService {
      */
     private static String firstNonEmpty(String... values) {
         for (String value : values) {
-            if (StringUtils.isNotEmpty(value)) {
-                return value;
+            String cleaned = cleanField(value);
+            if (StringUtils.isNotEmpty(cleaned)) {
+                return cleaned;
+            }
+        }
+        return null;
+    }
+
+    private static String removeValue(Map<String, String> values, String... candidateKeys) {
+        for (String candidate : candidateKeys) {
+            if (values.containsKey(candidate)) {
+                return values.remove(candidate);
+            }
+        }
+        for (String candidate : candidateKeys) {
+            String foundKey = null;
+            for (String key : values.keySet()) {
+                if (key.equalsIgnoreCase(candidate)
+                        || key.replace("_", " ").equalsIgnoreCase(candidate)
+                        || candidate.equalsIgnoreCase(cleanKey(key))) {
+                    foundKey = key;
+                    break;
+                }
+            }
+            if (foundKey != null) {
+                return values.remove(foundKey);
+            }
+        }
+        return null;
+    }
+
+    private static String getValue(Map<String, String> values, String... candidateKeys) {
+        for (String candidate : candidateKeys) {
+            if (values.containsKey(candidate)) {
+                return values.get(candidate);
+            }
+        }
+        for (String candidate : candidateKeys) {
+            for (Map.Entry<String, String> entry : values.entrySet()) {
+                if (entry.getKey().equalsIgnoreCase(candidate)
+                        || entry.getKey().replace("_", " ").equalsIgnoreCase(candidate)
+                        || candidate.equalsIgnoreCase(cleanKey(entry.getKey()))) {
+                    return entry.getValue();
+                }
             }
         }
         return null;
@@ -387,6 +429,10 @@ public class UploadService {
 
         if (s3Enabled) {
             String contentType = determineContentType(file);
+            if (contentType == null || !ACCEPTED_FILE_TYPES.contains(contentType)) {
+                throw new IllegalArgumentException(
+                        "Unsupported file type: " + fileIdentifier);
+            }
 
             // handle CSV
             if (contentType.equals("text/csv")) {
@@ -408,19 +454,21 @@ public class UploadService {
                 throw new Exception("Ingest failed for file: " + fileIdentifier);
             }
         } else {
-            File fileToLoad = new File(tempDir + "/" + fileIdentifier);
-
-            Path path = fileToLoad.toPath();
-            String mimeType = Files.probeContentType(path);
+            File fileToLoad = new File(tempDir, fileIdentifier);
+            String contentType = determineContentType(file.getOriginalFilename() != null ? file.getOriginalFilename() : fileToLoad.getName());
+            if (contentType == null || !ACCEPTED_FILE_TYPES.contains(contentType)) {
+                throw new IllegalArgumentException(
+                        "Unsupported file type: " + fileIdentifier);
+            }
 
             // handle CSV
-            if (mimeType.equals("text/csv")) {
+            if (contentType.equals("text/csv")) {
                 // load a CSV
                 ingestJob = ingestCSV(null, fileToLoad, true, true);
             }
 
             // handle zip file
-            if (mimeType.equals("application/zip")) {
+            if (contentType.equals("application/zip")) {
                 try (ZipFile zipFile = new ZipFile(fileToLoad)) {
                     // load a zip file
                     ingestJob = ingestZip(null, zipFile, true, true);
@@ -701,25 +749,25 @@ public class UploadService {
                 originalFieldNames.addAll(values.keySet());
             }
 
-            String scientificName = values.remove(DwcTerm.scientificName.simpleName());
-            String taxonID = values.remove(DwcTerm.taxonID.simpleName());
-            String taxonConceptID = values.remove(DwcTerm.taxonConceptID.simpleName());
-            String vernacularName = values.get(DwcTerm.vernacularName.simpleName()); // vernacularName added to KVP, as per legacy behaviour
+            String scientificName = removeValue(values, DwcTerm.scientificName.simpleName(), "scientificName", "scientific_name");
+            String taxonID = removeValue(values, DwcTerm.taxonID.simpleName(), "taxonID", "taxonId", "taxon_id");
+            String taxonConceptID = removeValue(values, DwcTerm.taxonConceptID.simpleName(), "taxonConceptID", "taxonConceptId", "taxon_concept_id");
+            String vernacularName = getValue(values, DwcTerm.vernacularName.simpleName(), "vernacularName", "vernacular_name", "commonName", "common_name"); // vernacularName added to KVP, as per legacy behaviour
 
-            String suppliedName = values.remove("Supplied Name");
+            String suppliedName = removeValue(values, "Supplied Name", "Supplied name", "supplied_name", "suppliedName");
 
-            if (suppliedName != null) {
+            if (cleanField(suppliedName) != null) {
                 String trimmed = suppliedName.trim();
                 boolean isGuid = trimmed.startsWith("urn:") || 
                                  trimmed.startsWith("http:") || 
                                  trimmed.startsWith("https:") || 
                                  UUID_PATTERN.matcher(trimmed).matches();
                 if (isGuid) {
-                    if (StringUtils.isEmpty(taxonID)) {
+                    if (cleanField(taxonID) == null) {
                         taxonID = suppliedName;
                     }
                 } else {
-                    if (StringUtils.isEmpty(scientificName)) {
+                    if (cleanField(scientificName) == null) {
                         scientificName = suppliedName; // undocumented input field, left in for backward compatibility
                     }
                 }
@@ -727,19 +775,19 @@ public class UploadService {
                 suppliedName = firstNonEmpty(scientificName, taxonID, taxonConceptID, vernacularName);
             }
 
-            if (StringUtils.isEmpty(scientificName)
-                    && StringUtils.isEmpty(vernacularName)
-                    && StringUtils.isEmpty(taxonID)
-                    && StringUtils.isEmpty(taxonConceptID)) {
+            if (cleanField(scientificName) == null
+                    && cleanField(vernacularName) == null
+                    && cleanField(taxonID) == null
+                    && cleanField(taxonConceptID) == null) {
                 recordsWithoutScientificName++;
             }
 
-            String kingdom = values.remove(DwcTerm.kingdom.simpleName());
-            String phylum = values.remove(DwcTerm.phylum.simpleName());
-            String classs = values.remove(DwcTerm.class_.simpleName());
-            String order = values.remove(DwcTerm.order.simpleName());
-            String family = values.get(DwcTerm.family.simpleName()); // family added to KVP, as per legacy behaviour
-            String genus = values.remove(DwcTerm.genus.simpleName());
+            String kingdom = removeValue(values, DwcTerm.kingdom.simpleName(), "kingdom");
+            String phylum = removeValue(values, DwcTerm.phylum.simpleName(), "phylum");
+            String classs = removeValue(values, DwcTerm.class_.simpleName(), "class", "classs");
+            String order = removeValue(values, DwcTerm.order.simpleName(), "order");
+            String family = getValue(values, DwcTerm.family.simpleName(), "family"); // family added to KVP, as per legacy behaviour
+            String genus = removeValue(values, DwcTerm.genus.simpleName(), "genus");
 
             // process remaining fields (user supplied KVP data)
             List<KeyValue> keyValues = new ArrayList<>();
@@ -747,27 +795,30 @@ public class UploadService {
             values.entrySet().stream()
                     .forEach(
                             e -> {
-                                keyValues.add(new KeyValue(cleanKey(e.getKey()), e.getValue()));
-                                properties.put(cleanKey(e.getKey()), e.getValue());
-                                fieldNames.add(cleanKey(e.getKey()));
+                                String cleanedK = cleanKey(e.getKey());
+                                if (cleanedK != null && !cleanedK.trim().isEmpty()) {
+                                    keyValues.add(new KeyValue(cleanedK, e.getValue()));
+                                    properties.put(cleanedK, e.getValue());
+                                    fieldNames.add(cleanedK);
 
-                                if (!notFacetable.contains(cleanKey(e.getKey()))) {
-                                    if (e.getValue() != null && e.getValue().length() > 30) {
-                                        notFacetable.add(cleanKey(e.getKey()));
-                                        logger.info(
-                                                e.getKey()
-                                                        + " has values greater than 30 characters. Marking as not facet-able. Example : "
-                                                        + e.getValue());
-                                    } else {
-                                        Set<String> distinctValues = facets.getOrDefault(cleanKey(e.getKey()),
-                                                new HashSet<>());
-                                        distinctValues.add(e.getValue());
-                                        facets.put(cleanKey(e.getKey()), distinctValues);
-                                        if (distinctValues.size() > 30) {
-                                            notFacetable.add(cleanKey(e.getKey()));
+                                    if (!notFacetable.contains(cleanedK)) {
+                                        if (e.getValue() != null && e.getValue().length() > 30) {
+                                            notFacetable.add(cleanedK);
                                             logger.info(
-                                                    e.getKey()
-                                                            + " has more than 30 distinct values. Marking as not facetable");
+                                                    cleanedK
+                                                            + " has values greater than 30 characters. Marking as not facet-able. Example : "
+                                                            + e.getValue());
+                                        } else {
+                                            Set<String> distinctValues = facets.getOrDefault(cleanedK,
+                                                    new HashSet<>());
+                                            distinctValues.add(e.getValue());
+                                            facets.put(cleanedK, distinctValues);
+                                            if (distinctValues.size() > 30) {
+                                                notFacetable.add(cleanedK);
+                                                logger.info(
+                                                        cleanedK
+                                                                + " has more than 30 distinct values. Marking as not facetable");
+                                            }
                                         }
                                     }
                                 }
@@ -865,19 +916,25 @@ public class UploadService {
     }
 
     public static String cleanField(String value) {
-        if (value == null || NULL_VALUES.contains(value.trim().toLowerCase())) {
+        if (value == null || value.trim().isEmpty() || NULL_VALUES.contains(value.trim().toLowerCase())) {
             return null;
         }
         return value.trim();
     }
 
     public static String cleanKey(String keyName) {
+        if (keyName == null || keyName.trim().isEmpty()) {
+            return null;
+        }
         try {
             String cleanedName = keyName
                     .replaceAll("[^\\w\\s-+^:,]", "")
                     .replaceAll("__+", "_")
                     .replaceAll(" ", "_")
                     .trim();
+            if (cleanedName.isEmpty()) {
+                return null;
+            }
             Term term = TermFactory.instance().findTerm(cleanedName);
             return (term != null) ? term.simpleName() : keyName;
         } catch (Exception e) {

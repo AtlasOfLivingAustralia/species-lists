@@ -87,7 +87,7 @@ export const FileUploadDropzone = ({
         onUploadSuccess(uploadResult, files[0].name);
       }
     } catch (error) {
-      setError(getErrorMessage(error as string || error));
+      setError(getErrorMessage(error));
     }
 
     setUploading(false);
@@ -100,6 +100,8 @@ export const FileUploadDropzone = ({
       onReset();
     }
   }, [onReset]);
+
+  const hasValidationErrors = Boolean(result?.validationErrors && result.validationErrors.length > 0);
 
   let idle: { title: ReactNode; content: ReactNode; icon: ReactNode } = {
     title: intl.formatMessage({ id: 'upload.list.description', defaultMessage: 'Drag list here, or click to select' }),
@@ -120,28 +122,46 @@ export const FileUploadDropzone = ({
       title: intl.formatMessage({ id: 'upload.error.message.title', defaultMessage: 'An error has occurred' }),
       content: (
         <Text size='sm' c='dimmed'>
-          {getErrorMessage(error)}, <FormattedMessage id='upload.error.message.tryAgain' defaultMessage='please try again with another file' />
+          {typeof error === 'string' ? error : getErrorMessage(error)}, <FormattedMessage id='upload.error.message.tryAgain' defaultMessage='please try again with another file' />
         </Text>
       ),
       icon: <CautionIcon size={40} />,
     };
   } else if (result) {
-    idle = {
-      title: `${intl.formatMessage({ id: 'upload.success.message.prefix', defaultMessage: 'Uploaded' })} ${originalName}`,
-      content: (
-        <>
-          <Badge> {<FormattedNumber value={result.rowCount} />} rows</Badge>
-          <Text lineClamp={2} size='sm' c='dimmed'>
-            <b><FormattedMessage id='upload.additional.fields' defaultMessage='Additional Fields' />:</b>{' '}
-            {result.fieldList.length > 0 ? result.fieldList.join(', ') : 'N/A'}
+    if (hasValidationErrors) {
+      idle = {
+        title: intl.formatMessage(
+          { id: 'upload.validation.error.title', defaultMessage: 'File validation failed: {fileName}' },
+          { fileName: originalName }
+        ),
+        content: (
+          <Text size='sm' c='dimmed'>
+            <FormattedMessage
+              id='upload.validation.error.description'
+              defaultMessage='The list contains invalid or missing values. Please fix the errors listed below and try again.'
+            />
           </Text>
-        </>
-      ),
-      icon: <FolderIcon size={40} />,
-    };
+        ),
+        icon: <CautionIcon size={40} />,
+      };
+    } else {
+      idle = {
+        title: `${intl.formatMessage({ id: 'upload.success.message.prefix', defaultMessage: 'Uploaded' })} ${originalName}`,
+        content: (
+          <>
+            <Badge> {<FormattedNumber value={result.rowCount} />} rows</Badge>
+            <Text lineClamp={2} size='sm' c='dimmed'>
+              <b><FormattedMessage id='upload.additional.fields' defaultMessage='Additional Fields' />:</b>{' '}
+              {result.fieldList.length > 0 ? result.fieldList.join(', ') : 'N/A'}
+            </Text>
+          </>
+        ),
+        icon: <FolderIcon size={40} />,
+      };
+    }
   }
 
-  const uploadDisabled = Boolean(result);
+  const uploadDisabled = Boolean(result) && !hasValidationErrors;
 
   return (
     <Stack>
@@ -231,31 +251,28 @@ export const FileUploadDropzone = ({
         </Flex>
       </Dropzone>
       
-      <div
-        style={{
-          overflow: 'hidden',
-          transition: 'all ease 200ms',
-          height: result?.validationErrors ? 100 : 0,
-        }}
-      >
-        <Alert icon={<CautionIcon />} radius='lg'>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            {(result?.validationErrors || []).map((message) => (
-              <FormattedMessage key={message} id={message} />
-            ))}
+      {hasValidationErrors && (
+        <Alert icon={<CautionIcon />} radius='lg' color='red'>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+            <Stack gap='xs'>
+              {(result?.validationErrors || []).map((message) => (
+                <Text key={message} size='sm'>
+                  <FormattedMessage key={message} id={message} defaultMessage={message} />
+                </Text>
+              ))}
+            </Stack>
             <Button
               size='xs'
               miw={80}
-              ml='sm'
               variant='outline'
               color='dark'
-              onClick={() => setResult(null)}
+              onClick={handleReset}
             >
               <FormattedMessage id='upload.tryAgain' defaultMessage='Try again' />
             </Button>
           </div>
         </Alert>
-      </div>
+      )}
     </Stack>
   );
 };
