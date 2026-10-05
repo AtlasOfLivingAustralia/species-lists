@@ -3,7 +3,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
-import { RUNTIME_CONFIG_FLAG, runtimeConfigPlugin } from '../viteRuntimeConfigPlugin.ts';
+import {
+  RUNTIME_CONFIG_FLAG,
+  runtimeConfigPlugin,
+  stripRuntimeConfigScripts,
+} from '../viteRuntimeConfigPlugin.ts';
 
 // The plugin is exercised through its hooks, with just enough of Vite's resolved config
 type Hook = (...args: any[]) => any;
@@ -144,5 +148,45 @@ describe('runtimeConfigPlugin, transform', () => {
       () => hooks(plugin).transform.call(ctx, 'const v = import.meta.env[name];', `${root}/src/a.ts`),
       /computed access/
     );
+  });
+});
+
+describe('stripRuntimeConfigScripts', () => {
+  const tags = '  <script src="/config.js"></script>\n  <script src="/config.local.js"></script>\n';
+  const module = '  <script type="module" src="/src/index.tsx"></script>\n';
+  const other = '  <script src="https://cdn.example.org/script.js" defer></script>\n';
+
+  it('removes the two tags and keeps every other line, scripts included', () => {
+    const html = `<body>\n${other}${tags}${module}</body>\n`;
+    assert.equal(stripRuntimeConfigScripts(html), `<body>\n${other}${module}</body>\n`);
+  });
+
+  it('handles CRLF line endings and any indentation', () => {
+    const html = '<body>\r\n\t<script src="/config.js"></script>\r\n<script src="/config.local.js"></script>  \r\n<p>x</p>\r\n</body>';
+    assert.equal(stripRuntimeConfigScripts(html), '<body>\r\n<p>x</p>\r\n</body>');
+  });
+
+  it('leaves a page without the tags unchanged', () => {
+    const html = `<body>\n${module}</body>\n`;
+    assert.equal(stripRuntimeConfigScripts(html), html);
+  });
+
+  it('never splices the text around a removed tag into a new one', () => {
+    // A pattern replace would turn this into `<script src="/config.js"></script>` again
+    const spliced = '<scr<script src="/config.js"></script>ipt src="/config.js"></script>';
+    assert.throws(() => stripRuntimeConfigScripts(spliced), /cannot remove/);
+  });
+
+  it('fails instead of shipping a tag it cannot remove', () => {
+    assert.throws(() => stripRuntimeConfigScripts('<p>a</p><script src="/config.js"></script>'), /cannot remove/);
+    assert.throws(() => stripRuntimeConfigScripts("<script src='/config.local.js'></script>x"), /cannot remove/);
+    assert.throws(() => stripRuntimeConfigScripts('<script defer src="/config.js">\n</script>'), /cannot remove/);
+  });
+
+  it('is what the plugin applies to index.html in the default build', () => {
+    delete process.env[RUNTIME_CONFIG_FLAG];
+    const plugin = runtimeConfigPlugin();
+    resolve(plugin);
+    assert.equal(hooks(plugin).html(INDEX_HTML), stripRuntimeConfigScripts(INDEX_HTML));
   });
 });

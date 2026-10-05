@@ -20,10 +20,33 @@ import { findUnsupportedAppEnvUsage, rewriteAppEnvReferences } from './runtimeAp
  */
 export const RUNTIME_CONFIG_FLAG = 'VITE_RUNTIME_CONFIG_ENABLED';
 const COMMUNITY_DIR = 'community';
-const RUNTIME_CONFIG_SCRIPTS = /[ \t]*<script\s+src="\/config(?:\.local)?\.js"><\/script>[ \t]*\r?\n?/g;
+/** A line that holds nothing but one of the two runtime config script tags. */
+const RUNTIME_CONFIG_SCRIPT_LINE = /^[ \t]*<script\s+src="\/config(?:\.local)?\.js"><\/script>[ \t]*\r?$/;
+/** Any script tag that loads one of them, however it is written. */
+const RUNTIME_CONFIG_SCRIPT_ANY = /<script\b[^>]*\bsrc=["']\/config(?:\.local)?\.js["']/i;
 /** Resolved by the `#` alias in vite.config.ts, so the rewritten sources can import it from anywhere. */
 const APP_CONFIG_HELPER = '#/helpers/utils/runtimeConfig';
 const APP_SOURCE_RE = /\.(ts|tsx|js|jsx)$/;
+
+/**
+ * Removes the config.js and config.local.js tags, which index.html keeps each on a line of its own.
+ * It drops whole lines rather than replacing a pattern inside the text, so a removal can never
+ * splice the surrounding text into a new tag. If a tag is still there afterwards (written inline,
+ * or split across lines) it fails instead of silently shipping it in the default build.
+ */
+export function stripRuntimeConfigScripts(html: string): string {
+  const out = html
+    .split('\n')
+    .filter((line) => !RUNTIME_CONFIG_SCRIPT_LINE.test(line))
+    .join('\n');
+  if (RUNTIME_CONFIG_SCRIPT_ANY.test(out)) {
+    throw new Error(
+      '[lists-runtime-config] index.html loads /config.js or /config.local.js in a form the default build ' +
+        'cannot remove. Keep each of those script tags on a line of its own.'
+    );
+  }
+  return out;
+}
 
 export function runtimeConfigPlugin(): Plugin {
   let resolved: ResolvedConfig;
@@ -50,7 +73,7 @@ export function runtimeConfigPlugin(): Plugin {
     transformIndexHtml: {
       order: 'pre',
       handler(html: string) {
-        return enabled ? html : html.replace(RUNTIME_CONFIG_SCRIPTS, '');
+        return enabled ? html : stripRuntimeConfigScripts(html);
       },
     },
 
