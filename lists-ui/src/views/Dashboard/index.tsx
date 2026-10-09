@@ -15,7 +15,7 @@ import {
 } from '@mantine/nprogress';
 
 // Routing
-import { Outlet, useNavigation } from 'react-router';
+import { Outlet, ScrollRestoration, useNavigation } from 'react-router';
 
 // Authentication
 import { ExternalBanner } from '#/components/ExternalBanner';
@@ -39,6 +39,7 @@ function Dashboard() {
 
   return (
     <>
+      <ScrollRestoration getKey={(location) => location.pathname} />
       <NavigationProgress
         stepInterval={20}
         aria-label='Navigation progress bar'
