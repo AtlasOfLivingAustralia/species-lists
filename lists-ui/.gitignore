@@ -28,3 +28,6 @@ yarn-error.log*
 /schema.graphql
 /dist/*
 /dist
+
+# runtime config owned by a deployment
+/community/config.local.js

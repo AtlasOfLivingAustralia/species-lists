@@ -34,6 +34,32 @@ yarn run dev
 
 View the app at `http://localhost:5173/`
 
+## Runtime configuration (community build)
+
+By default `VITE_*` values are baked into the build, so each deployment has to edit `config/.env.*` and rebuild. For deployments that want to point a built app at their own backend and identity provider without rebuilding, there is a second build profile from the same code:
+
+```bash
+yarn build:community   # tsc && vite build --mode community
+```
+
+It is `config/.env.production` plus `config/.env.community` on top (which only sets `VITE_RUNTIME_CONFIG_ENABLED=true`). The output keeps `<script src="/config.js">` and `config.local.js` in `index.html` and ships `community/config.js`:
+
+- `config.js` holds the defaults and documents every key. It is replaced on every deploy.
+- `config.local.js` belongs to the deployment and is never shipped or overwritten. It only needs the keys it changes, and its values win. It is optional; a 404 for it is harmless.
+
+```js
+// dist/config.local.js
+window.APP_CONFIG_LOCAL = {
+  VITE_API_BASEURL: 'https://lists-api.example.org',
+  VITE_AUTH_AUTHORITY: 'https://auth.example.org/cas/oidc/.well-known',
+  VITE_AUTH_CLIENT_ID: 'your-public-client-id',
+};
+```
+
+Any `VITE_*` variable can be set this way: the community build rewrites every `import.meta.env.VITE_X` in the app's sources to `getAppConfigValue('VITE_X', import.meta.env.VITE_X)`, so there is no list of keys to maintain and nothing to do when adding a variable. Read variables as the literal `import.meta.env.VITE_X`; computed access (`import.meta.env[key]`), destructuring or passing `import.meta.env` whole fails the community build with a clear error, so a key cannot silently ignore `config.js`.
+
+The default build (`yarn build:production` and the other modes) removes those tags, does not copy `community/` and does not rewrite anything, so it is unchanged. To try it with the dev server, run `yarn dev --mode community` and create `community/config.local.js` (git-ignored).
+
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:

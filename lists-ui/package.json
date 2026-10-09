@@ -8,9 +8,11 @@
     "dev": "vite",
     "dev:clean": "vite --force",
     "build:production": "tsc && vite build",
+    "build:community": "tsc && vite build --mode community",
     "build:staging": "tsc && vite build --mode staging",
     "build:testing": "tsc && vite build --mode testing",
     "build:development": "tsc && vite build --mode development",
+    "test": "node --test --experimental-strip-types 'test/*.test.ts'",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
