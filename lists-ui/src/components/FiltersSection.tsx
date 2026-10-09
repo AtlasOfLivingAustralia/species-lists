@@ -277,11 +277,12 @@ const FacetComponent = memo(
                     variant="transparent"
                     color="main"
                     opacity={0.8}
+                    ml={6}
                     style={{ cursor: 'pointer', display: 'inline-flex' }}
                     aria-label={matchedTooltip}
                     title={matchedTooltip}
                   >
-                    <FontAwesomeIcon icon={faChartDiagram} size="sm" />
+                    <FontAwesomeIcon icon={faChartDiagram} size="xs" opacity={0.75} />
                   </ActionIcon>
                 </Tooltip>
               )}
