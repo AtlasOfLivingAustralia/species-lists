@@ -493,7 +493,7 @@ export const FiltersSection = memo(
       <div className={loading ? classes.filtersLoading : undefined}>
         <Group justify="space-between" align="center" pb={2} wrap="wrap">
           <Text size='md' fw='bold' opacity={0.85}>
-            <FormattedMessage id='filters.title' defaultMessage='Refine results' />
+            <FormattedMessage id='filters.title' defaultMessage='Filters' />
           </Text>
           {showSidebarClear && (
             <Button
@@ -515,7 +515,7 @@ export const FiltersSection = memo(
               title={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
               aria-label={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
             >
-              <FormattedMessage id="filters.clear" defaultMessage="clear all" />
+              <FormattedMessage id="filters.clear" defaultMessage="Clear all" />
             </Button>
           )}
         </Group>
