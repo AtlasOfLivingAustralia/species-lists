@@ -289,12 +289,10 @@ function List() {
     setSearch(newValue);
   }, [setPage, setSearch]);
 
-  const resetFilters = useCallback(async () => {
-    await setFilters(null);
-    if (page !== 0) {
-      await setPage(0);
-    }
-  }, [setFilters, setPage, page]);
+  const resetFilters = useCallback(() => {
+    setPage(0);
+    setFilters(null);
+  }, [setFilters, setPage]);
 
   const handleSizeChange = (newSize: string | null) => {
     const newSizeInt = parseInt(newSize || '20');

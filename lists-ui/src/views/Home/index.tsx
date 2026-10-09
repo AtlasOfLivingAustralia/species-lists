@@ -273,12 +273,10 @@ const Home = ({ routeId }: { routeId: string }) => {
     [filters, setFilters, setPage]
   );
 
-  const resetFilters = useCallback(async () => {
-    await setFilters([]);
-    if (page !== 0) {
-      await setPage(0);
-    }
-  }, [setFilters, setPage, page]);
+  const resetFilters = useCallback(() => {
+    setPage(0);
+    setFilters([]);
+  }, [setFilters, setPage]);
 
   // Handler for the Enter key press
   interface KeyDownEvent extends React.KeyboardEvent<HTMLInputElement> {}

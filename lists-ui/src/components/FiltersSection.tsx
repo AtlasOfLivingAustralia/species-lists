@@ -664,7 +664,7 @@ export const ActiveFilters = memo((
     });
 
     return groups;
-  }, [active, constraints?.tags, intl]);
+  }, [active, constraints?.tags, displayTags, intl]);
 
   if (!active || active.length === 0 || !displayTags || filterGroups.length === 0) {
     return null;
