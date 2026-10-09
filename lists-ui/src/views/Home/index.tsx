@@ -55,7 +55,7 @@ import {
   FiltersSection,
   ToggleFiltersButton,
 } from '#/components/FiltersSection';
-import { getErrorMessage, mergeFacetsWithBase, parseAsFilters } from '#/helpers';
+import { getErrorMessage, mergeFacetsWithBase, parseAsFilters, showActiveFilterTags } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
 
 // Styles
@@ -89,6 +89,7 @@ const Home = ({ routeId }: { routeId: string }) => {
   const isMyListsPage = routeId === 'my-lists';
   const isAdminListPage = routeId === 'admin-lists';
   const isUser = routeId === 'my-lists';
+  const showFilterTags = showActiveFilterTags();
 
   // Search
   const [search, setSearch] = useQueryState<string>(
@@ -273,7 +274,7 @@ const Home = ({ routeId }: { routeId: string }) => {
   );
 
   const resetFilters = useCallback(() => {
-    setPage(0); // Reset 'page' when filters are reset
+    setPage(0);
     setFilters([]);
   }, [setFilters, setPage]);
 
@@ -553,10 +554,7 @@ const Home = ({ routeId }: { routeId: string }) => {
                     facets={filteredFacets}
                     active={filters || []}
                     onSelect={handleFilterClick}
-                    onReset={() => {
-                      setFilters([]);
-                      setPage(0);
-                    }}
+                    onReset={resetFilters}
                     showExpand={false}
                     loading={loading}
                   />
@@ -614,7 +612,7 @@ const Home = ({ routeId }: { routeId: string }) => {
                             id='home.results.records'
                             defaultMessage='records'
                           />
-                          {filters && filters.length > 0 && (
+                          {filters && filters.length > 0 && showFilterTags && (
                             <>
                               <Space w={5} />–<Space w={2} />
                             </>
@@ -648,17 +646,18 @@ const Home = ({ routeId }: { routeId: string }) => {
                           ) : (
                             <> </>
                           )}
-                          {filters && filters.length > 0 && <>with </>}
+                          {filters && filters.length > 0 && showFilterTags && <>with </>}
                         </Text>
                       </Skeleton>
                     )}
-                    {filters && filters.length > 0 && (
+                    {filters && filters.length > 0 && showFilterTags && (
                       <Paper ml={4} className={`${classes.resultsSummary} ${loading ? classes.resultsTableLoading : ''}`}>
                         <ActiveFilters
                           active={filters}
                           handleFilterClick={handleFilterClick}
                           resetFilters={resetFilters}
                           loading={loading}
+                          showTags={showFilterTags}
                         />
                       </Paper>
                     )}
