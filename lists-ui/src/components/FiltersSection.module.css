@@ -131,6 +131,12 @@
   margin-left: 3px;
   text-transform: lowercase;
   cursor: help;
+  outline: none;
+}
+
+.qualifier:focus-visible {
+  outline: 1px dotted var(--mantine-color-dimmed);
+  outline-offset: 1px;
 }
 
 .activeFiltersGroup {

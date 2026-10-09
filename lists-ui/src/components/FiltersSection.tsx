@@ -251,8 +251,10 @@ const FacetComponent = memo(
                     withArrow
                     position="top"
                     component="span"
+                    inline
+                    events={{ hover: true, focus: true, touch: true }}
                   >
-                    <Text span className={classes.qualifier}>
+                    <Text span className={classes.qualifier} tabIndex={0} role="button">
                       <FormattedMessage
                         id={isTag ? 'filters.qualifier.all' : 'filters.qualifier.any'}
                         defaultMessage={isTag ? '(all)' : '(any)'}
@@ -262,7 +264,14 @@ const FacetComponent = memo(
                 </>
               )}
               {isClassification && (
-                <Tooltip label={matchedTooltip} withArrow position="top" component="span" title={matchedTooltip}>
+                <Tooltip
+                  label={matchedTooltip}
+                  withArrow
+                  position="top"
+                  component="span"
+                  inline
+                  events={{ hover: true, focus: true, touch: true }}
+                >
                   <ActionIcon
                     size="sm"
                     variant="transparent"
@@ -271,7 +280,6 @@ const FacetComponent = memo(
                     ml={6}
                     style={{ cursor: 'pointer', display: 'inline-flex' }}
                     aria-label={matchedTooltip}
-                    title={matchedTooltip}
                   >
                     <FontAwesomeIcon icon={faChartDiagram} size="xs" opacity={0.75} />
                   </ActionIcon>
@@ -308,8 +316,10 @@ const FacetComponent = memo(
                     withArrow
                     position="top"
                     component="span"
+                    inline
+                    events={{ hover: true, focus: true, touch: true }}
                   >
-                    <Text span className={classes.qualifier}>
+                    <Text span className={classes.qualifier} tabIndex={0} role="button">
                       <FormattedMessage id='filters.qualifier.all' defaultMessage='(all)' />
                     </Text>
                   </Tooltip>
