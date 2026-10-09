@@ -164,6 +164,7 @@
   "filters.remove.label": "Remove filter for",
   "filters.clearAll.label": "Clear all filters",
   "filters.reset": "Clear all filters",
+  "filters.clear": "clear all",
   "filters.hide": "Hide filters",
   "filters.show": "Show filters",
 

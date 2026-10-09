@@ -28,6 +28,7 @@ import { Constraint, Facet, KV } from '#/api';
 import { useConstraints } from '#/api/graphql/useConstraints';
 import { useALA } from '#/helpers/context/useALA';
 import sanitiseText from '#/helpers/utils/sanitiseText';
+import { showActiveFilterTags } from '#/helpers/utils/featureFlags';
 import { ListTypeBadge } from './ListTypeBadge';
 
 import classes from './FiltersSection.module.css';
@@ -364,13 +365,18 @@ export const FiltersSection = memo(
     facets,
     active,
     onSelect,
+    onReset,
     showExpand,
     loading = false,
     preserveOrder = false,
     showQualifiers = true,
   }: FiltersDrawerProps) => {
+    const intl = useIntl();
     const ala = useALA();
     const { constraints } = useConstraints(ala);
+    const showFilterTags = showActiveFilterTags();
+    const hasActiveFilters = active && active.length > 0;
+    const showSidebarClear = hasActiveFilters && !showFilterTags;
 
     const handleSelect = useCallback((item: KV) => {
       if (loading) return;
@@ -477,9 +483,34 @@ export const FiltersSection = memo(
 
     return (
       <div className={loading ? classes.filtersLoading : undefined}>
-        <Text size='md' fw='bold' opacity={0.85} pb={2}>
-          <FormattedMessage id='filters.title' defaultMessage='Refine results' />
-        </Text>
+        <Group justify="space-between" align="center" pb={2} wrap="wrap">
+          <Text size='md' fw='bold' opacity={0.85}>
+            <FormattedMessage id='filters.title' defaultMessage='Refine results' />
+          </Text>
+          {showSidebarClear && (
+            <Button
+              variant="subtle"
+              color="charcoal"
+              size="compact-xs"
+              fw={400}
+              radius="md"
+              disabled={loading}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!loading) {
+                  onReset?.();
+                }
+              }}
+              leftSection={<FontAwesomeIcon icon={faDeleteLeft} className={classes.clearAllIcon} />}
+              className={classes.clearAllButton}
+              title={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
+              aria-label={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
+            >
+              <FormattedMessage id="filters.clear" defaultMessage="clear all" />
+            </Button>
+          )}
+        </Group>
         <Stack gap={2} mt={3} mb="md" pb={4}>
           { hasEmptyFacets && (
             <Text size='sm' color='dimmed'>
@@ -539,18 +570,21 @@ export const ActiveFilters = memo((
     handleFilterClick,
     resetFilters,
     loading = false,
+    showTags,
   }: {
     active: KV[];
     handleFilterClick: (item: KV) => void;
     resetFilters: () => void;
     loading?: boolean;
+    showTags?: boolean;
 }) => {
   const intl = useIntl();
   const ala = useALA();
   const { constraints } = useConstraints(ala);
+  const displayTags = showTags ?? showActiveFilterTags();
 
   const filterGroups = useMemo<ActiveFilterGroup[]>(() => {
-    if (!active || active.length === 0) return [];
+    if (!displayTags || !active || active.length === 0) return [];
 
     const groups: ActiveFilterGroup[] = [];
     const groupMap = new Map<string, ActiveFilterGroup>();
@@ -634,9 +668,27 @@ export const ActiveFilters = memo((
     return groups;
   }, [active, constraints?.tags, intl]);
 
-  if (filterGroups.length === 0) {
+  if (!active || active.length === 0 || !displayTags || filterGroups.length === 0) {
     return null;
   }
+
+  const clearAllButton = (
+    <Button
+      variant="subtle"
+      color="charcoal"
+      size="sm"
+      fw={400}
+      radius="md"
+      disabled={loading}
+      onClick={() => !loading && resetFilters()}
+      leftSection={<FontAwesomeIcon icon={faDeleteLeft} className={classes.clearAllIcon} />}
+      className={classes.clearAllButton}
+      title={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
+      aria-label={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
+    >
+      <FormattedMessage id="filters.reset" defaultMessage="Clear all filters" />
+    </Button>
+  );
 
   return (
     <Group
@@ -684,21 +736,7 @@ export const ActiveFilters = memo((
           </Pill.Group>
         </Group>
       ))}
-      <Button
-        variant="subtle"
-        color="charcoal"
-        size="sm"
-        fw={400}
-        radius="md"
-        disabled={loading}
-        onClick={() => !loading && resetFilters()}
-        leftSection={<FontAwesomeIcon icon={faDeleteLeft} className={classes.clearAllIcon} />}
-        className={classes.clearAllButton}
-        title={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
-        aria-label={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
-      >
-        <FormattedMessage id="filters.reset" defaultMessage="Clear all filters" />
-      </Button>
+      {clearAllButton}
     </Group>
   );
 });
