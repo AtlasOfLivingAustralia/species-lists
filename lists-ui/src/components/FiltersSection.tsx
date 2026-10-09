@@ -3,7 +3,6 @@ import {
   faAngleUp,
   faChartDiagram,
   faDeleteLeft,
-  faInfoCircle,
   faSliders
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -18,7 +17,6 @@ import {
   Pill,
   Stack,
   Text,
-  ThemeIcon,
   Tooltip
 } from '@mantine/core';
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -125,16 +123,6 @@ function RenderCheckbox(
     />
   );
 };
-
-function InfoTooltip({ tooltipText }: { tooltipText: string }) {
-  return (
-    <Tooltip label={tooltipText} withArrow position="top" component="span" >
-      <ThemeIcon size="sm" variant="transparent" color="main" opacity={0.8} style={{ cursor: 'pointer' }}>
-        <FontAwesomeIcon icon={faInfoCircle} size="sm" />
-      </ThemeIcon>
-    </Tooltip>
-  );
-}
 
 // Function to remove prefixes and format the filter key
 const removeFilterPrefix = (key: string) => {
@@ -254,20 +242,23 @@ const FacetComponent = memo(
               {showQualifiers && facet.key !== 'isPrivate' && (
                 <>
                   {' '}
-                  <Text span className={classes.qualifier}>
-                    <FormattedMessage
-                      id={isTag ? 'filters.qualifier.all' : 'filters.qualifier.any'}
-                      defaultMessage={isTag ? '(all)' : '(any)'}
-                    />
-                  </Text>
-                  {' '}
-                  <InfoTooltip
-                    tooltipText={intl.formatMessage(
+                  <Tooltip
+                    label={intl.formatMessage(
                       isTag
                         ? { id: 'filters.tags.tooltip', defaultMessage: 'Each entry can have multiple tags. Results must have all the tags you select.' }
                         : { id: 'filters.any.tooltip', defaultMessage: 'Each entry has only one value for this filter. Results can match any of the options you select.' }
                     )}
-                  />
+                    withArrow
+                    position="top"
+                    component="span"
+                  >
+                    <Text span className={classes.qualifier}>
+                      <FormattedMessage
+                        id={isTag ? 'filters.qualifier.all' : 'filters.qualifier.any'}
+                        defaultMessage={isTag ? '(all)' : '(any)'}
+                      />
+                    </Text>
+                  </Tooltip>
                 </>
               )}
               {isClassification && (
@@ -307,17 +298,21 @@ const FacetComponent = memo(
               size='md' 
               span 
               className={classes.facetHeader + ' ' + classes.facetHeaderBoolean} 
-              title={showQualifiers ? intl.formatMessage({ id: 'filters.flags.tooltip', defaultMessage: 'Each entry can have multiple flags. Results must have all the flags you select.' }) : undefined}
-              >
+            >
               <FormattedMessage id='facet.flag.label' defaultMessage='Flags' />
               {showQualifiers && (
                 <>
                   {' '}
-                  <Text span className={classes.qualifier}>
-                    <FormattedMessage id='filters.qualifier.all' defaultMessage='(all)' />
-                  </Text>
-                  {' '} 
-                  <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.flags.tooltip', defaultMessage: 'Each entry can have multiple flags. Results must have all the flags you select.' })} />
+                  <Tooltip
+                    label={intl.formatMessage({ id: 'filters.flags.tooltip', defaultMessage: 'Each entry can have multiple flags. Results must have all the flags you select.' })}
+                    withArrow
+                    position="top"
+                    component="span"
+                  >
+                    <Text span className={classes.qualifier}>
+                      <FormattedMessage id='filters.qualifier.all' defaultMessage='(all)' />
+                    </Text>
+                  </Tooltip>
                 </>
               )}
             </Text>
