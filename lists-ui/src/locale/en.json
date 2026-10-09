@@ -193,6 +193,12 @@
   "search.button.label": "Search",
 
   "list.page.size.label": "Select number of results",
+  "page.size.ariaLabel": "Select number of results",
+  "sort.field.ariaLabel": "Select field to sort results",
+  "sort.label": "Sort by",
+
+  "error.error.title": "An error occurred",
+  "error.action.label": "Retry",
 
   "wkt": "Geographic coordinates (Well Known Text format)",
   "wkt.help": "Well Known Text (WKT) is a text markup language for representing vector geometry objects on a map. For example, a point in WKT looks like this: POINT (30 10).",
