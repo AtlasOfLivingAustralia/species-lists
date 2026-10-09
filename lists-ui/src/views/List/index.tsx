@@ -62,7 +62,7 @@ import { IngestProgress } from '#/components/IngestProgress';
 import { SearchInput } from './components/SearchInput';
 import { Message } from '#/components/Message';
 import PageLoader from '#/components/PageLoader';
-import { getErrorMessage, ListError, mergeFacetsWithBase, parseAsFilters } from '#/helpers';
+import { getErrorMessage, ListError, mergeFacetsWithBase, parseAsFilters, showActiveFilterTags } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
 import { getAccessToken } from '#/helpers/utils/getAccessToken';
 import { Actions } from './components/Actions';
@@ -152,6 +152,7 @@ function List() {
   const mounted = useMounted();
   const ala = useALA();
   const intl = useIntl();
+  const showFilterTags = showActiveFilterTags();
 
   const throwListNotFound = () => {
     throw new ListError(
@@ -288,12 +289,10 @@ function List() {
     setSearch(newValue);
   }, [setPage, setSearch]);
 
-  const resetFilters = useCallback(
-    () => {
-      setPage(0); // Reset 'page' when filters are reset
-      setFilters([]);
-    }, [setFilters, setPage]
-  );
+  const resetFilters = useCallback(() => {
+    setPage(0);
+    setFilters(null);
+  }, [setFilters, setPage]);
 
   const handleSizeChange = (newSize: string | null) => {
     const newSizeInt = parseInt(newSize || '20');
@@ -651,7 +650,7 @@ function List() {
                         facets={mergedFacets}
                         active={filters || []}
                         onSelect={handleFilterClick}
-                        onReset={() => {setFilters([]); setPage(0);}}
+                        onReset={resetFilters}
                         loading={loading}
                         preserveOrder
                         showQualifiers={false}
@@ -678,7 +677,7 @@ function List() {
                           {')'}
                         </>
                       }
-                      { filters && filters.length > 0 && (
+                      { filters && filters.length > 0 && showFilterTags && (
                         <><Space w={5} />–<Space w={2} /></>
                       )}
                       { endPage == MAX_ENTRIES &&
@@ -696,12 +695,12 @@ function List() {
                     ) : (
                       <>{' '}</>
                     )}
-                    { filters && filters.length > 0 && (
+                    { filters && filters.length > 0 && showFilterTags && (
                       <><FormattedMessage id='with' defaultMessage='with'/>{' '}</>
                     )}
                   </Text>
                 )}
-                { filters && filters.length > 0 && (
+                { filters && filters.length > 0 && showFilterTags && (
                   <Paper
                     ml={4} 
                     className={classes.resultsSummary}
@@ -711,6 +710,7 @@ function List() {
                       handleFilterClick={handleFilterClick}
                       resetFilters={resetFilters}
                       loading={loading}
+                      showTags={showFilterTags}
                     />
                   </Paper>
                 )}

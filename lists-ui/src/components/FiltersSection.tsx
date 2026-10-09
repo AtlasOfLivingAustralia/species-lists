@@ -3,7 +3,6 @@ import {
   faAngleUp,
   faChartDiagram,
   faDeleteLeft,
-  faInfoCircle,
   faSliders
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -18,16 +17,16 @@ import {
   Pill,
   Stack,
   Text,
-  ThemeIcon,
   Tooltip
 } from '@mantine/core';
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
+import { FormattedMessage, FormattedNumber, IntlShape, useIntl } from 'react-intl';
 
 import { Constraint, Facet, KV } from '#/api';
 import { useConstraints } from '#/api/graphql/useConstraints';
 import { useALA } from '#/helpers/context/useALA';
 import sanitiseText from '#/helpers/utils/sanitiseText';
+import { showActiveFilterTags } from '#/helpers/utils/featureFlags';
 import { ListTypeBadge } from './ListTypeBadge';
 
 import classes from './FiltersSection.module.css';
@@ -54,9 +53,9 @@ function RenderCheckbox(
   isChecked: boolean,
   isBooleanFacet: boolean,
   onChange: () => void, // Accept the specific onChange handler
+  intl: IntlShape,
   facetConstraints?: Constraint[]
 ) {
-  const intl = useIntl();
 
   // Determine the correct message ID with fallback (needed for isPrivate facet)
   const primaryKey = `facet.${facetName}.${key}`; // isPrivate values only
@@ -124,16 +123,6 @@ function RenderCheckbox(
     />
   );
 };
-
-function InfoTooltip({ tooltipText }: { tooltipText: string }) {
-  return (
-    <Tooltip label={tooltipText} withArrow position="top" component="span" >
-      <ThemeIcon size="sm" variant="transparent" color="main" opacity={0.8} style={{ cursor: 'pointer' }}>
-        <FontAwesomeIcon icon={faInfoCircle} size="sm" />
-      </ThemeIcon>
-    </Tooltip>
-  );
-}
 
 // Function to remove prefixes and format the filter key
 const removeFilterPrefix = (key: string) => {
@@ -253,20 +242,23 @@ const FacetComponent = memo(
               {showQualifiers && facet.key !== 'isPrivate' && (
                 <>
                   {' '}
-                  <Text span className={classes.qualifier}>
-                    <FormattedMessage
-                      id={isTag ? 'filters.qualifier.all' : 'filters.qualifier.any'}
-                      defaultMessage={isTag ? '(all)' : '(any)'}
-                    />
-                  </Text>
-                  {' '}
-                  <InfoTooltip
-                    tooltipText={intl.formatMessage(
+                  <Tooltip
+                    label={intl.formatMessage(
                       isTag
                         ? { id: 'filters.tags.tooltip', defaultMessage: 'Each entry can have multiple tags. Results must have all the tags you select.' }
                         : { id: 'filters.any.tooltip', defaultMessage: 'Each entry has only one value for this filter. Results can match any of the options you select.' }
                     )}
-                  />
+                    withArrow
+                    position="top"
+                    component="span"
+                  >
+                    <Text span className={classes.qualifier}>
+                      <FormattedMessage
+                        id={isTag ? 'filters.qualifier.all' : 'filters.qualifier.any'}
+                        defaultMessage={isTag ? '(all)' : '(any)'}
+                      />
+                    </Text>
+                  </Tooltip>
                 </>
               )}
               {isClassification && (
@@ -276,11 +268,12 @@ const FacetComponent = memo(
                     variant="transparent"
                     color="main"
                     opacity={0.8}
+                    ml={6}
                     style={{ cursor: 'pointer', display: 'inline-flex' }}
                     aria-label={matchedTooltip}
                     title={matchedTooltip}
                   >
-                    <FontAwesomeIcon icon={faChartDiagram} size="sm" />
+                    <FontAwesomeIcon icon={faChartDiagram} size="xs" opacity={0.75} />
                   </ActionIcon>
                 </Tooltip>
               )}
@@ -305,17 +298,21 @@ const FacetComponent = memo(
               size='md' 
               span 
               className={classes.facetHeader + ' ' + classes.facetHeaderBoolean} 
-              title={showQualifiers ? intl.formatMessage({ id: 'filters.flags.tooltip', defaultMessage: 'Each entry can have multiple flags. Results must have all the flags you select.' }) : undefined}
-              >
+            >
               <FormattedMessage id='facet.flag.label' defaultMessage='Flags' />
               {showQualifiers && (
                 <>
                   {' '}
-                  <Text span className={classes.qualifier}>
-                    <FormattedMessage id='filters.qualifier.all' defaultMessage='(all)' />
-                  </Text>
-                  {' '} 
-                  <InfoTooltip tooltipText={intl.formatMessage({ id: 'filters.flags.tooltip', defaultMessage: 'Each entry can have multiple flags. Results must have all the flags you select.' })} />
+                  <Tooltip
+                    label={intl.formatMessage({ id: 'filters.flags.tooltip', defaultMessage: 'Each entry can have multiple flags. Results must have all the flags you select.' })}
+                    withArrow
+                    position="top"
+                    component="span"
+                  >
+                    <Text span className={classes.qualifier}>
+                      <FormattedMessage id='filters.qualifier.all' defaultMessage='(all)' />
+                    </Text>
+                  </Tooltip>
                 </>
               )}
             </Text>
@@ -333,6 +330,7 @@ const FacetComponent = memo(
               isChecked,
               isBooleanFacet,
               handleBooleanChange, // Pass the specific handler
+              intl,
               facetConstraints
             );
           })()
@@ -348,6 +346,7 @@ const FacetComponent = memo(
                 isChecked,
                 isBooleanFacet,
                 handleItemChange(item.value), // Pass the specific handler for this item
+                intl,
                 facetConstraints
               );
             })}
@@ -364,13 +363,18 @@ export const FiltersSection = memo(
     facets,
     active,
     onSelect,
+    onReset,
     showExpand,
     loading = false,
     preserveOrder = false,
     showQualifiers = true,
   }: FiltersDrawerProps) => {
+    const intl = useIntl();
     const ala = useALA();
     const { constraints } = useConstraints(ala);
+    const showFilterTags = showActiveFilterTags();
+    const hasActiveFilters = active && active.length > 0;
+    const showSidebarClear = hasActiveFilters && !showFilterTags;
 
     const handleSelect = useCallback((item: KV) => {
       if (loading) return;
@@ -477,9 +481,34 @@ export const FiltersSection = memo(
 
     return (
       <div className={loading ? classes.filtersLoading : undefined}>
-        <Text size='md' fw='bold' opacity={0.85} pb={2}>
-          <FormattedMessage id='filters.title' defaultMessage='Refine results' />
-        </Text>
+        <Group justify="space-between" align="center" pb={2} wrap="wrap">
+          <Text size='md' fw='bold' opacity={0.85}>
+            <FormattedMessage id='filters.title' defaultMessage='Refine results' />
+          </Text>
+          {showSidebarClear && (
+            <Button
+              variant="subtle"
+              color="charcoal"
+              size="compact-xs"
+              fw={400}
+              radius="md"
+              disabled={loading}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!loading) {
+                  onReset?.();
+                }
+              }}
+              leftSection={<FontAwesomeIcon icon={faDeleteLeft} className={classes.clearAllIcon} />}
+              className={classes.clearAllButton}
+              title={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
+              aria-label={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
+            >
+              <FormattedMessage id="filters.clear" defaultMessage="clear all" />
+            </Button>
+          )}
+        </Group>
         <Stack gap={2} mt={3} mb="md" pb={4}>
           { hasEmptyFacets && (
             <Text size='sm' color='dimmed'>
@@ -539,18 +568,21 @@ export const ActiveFilters = memo((
     handleFilterClick,
     resetFilters,
     loading = false,
+    showTags,
   }: {
     active: KV[];
     handleFilterClick: (item: KV) => void;
     resetFilters: () => void;
     loading?: boolean;
+    showTags?: boolean;
 }) => {
   const intl = useIntl();
   const ala = useALA();
   const { constraints } = useConstraints(ala);
+  const displayTags = showTags ?? showActiveFilterTags();
 
   const filterGroups = useMemo<ActiveFilterGroup[]>(() => {
-    if (!active || active.length === 0) return [];
+    if (!displayTags || !active || active.length === 0) return [];
 
     const groups: ActiveFilterGroup[] = [];
     const groupMap = new Map<string, ActiveFilterGroup>();
@@ -632,11 +664,29 @@ export const ActiveFilters = memo((
     });
 
     return groups;
-  }, [active, constraints?.tags, intl]);
+  }, [active, constraints?.tags, displayTags, intl]);
 
-  if (filterGroups.length === 0) {
+  if (!active || active.length === 0 || !displayTags || filterGroups.length === 0) {
     return null;
   }
+
+  const clearAllButton = (
+    <Button
+      variant="subtle"
+      color="charcoal"
+      size="sm"
+      fw={400}
+      radius="md"
+      disabled={loading}
+      onClick={() => !loading && resetFilters()}
+      leftSection={<FontAwesomeIcon icon={faDeleteLeft} className={classes.clearAllIcon} />}
+      className={classes.clearAllButton}
+      title={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
+      aria-label={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
+    >
+      <FormattedMessage id="filters.reset" defaultMessage="Clear all filters" />
+    </Button>
+  );
 
   return (
     <Group
@@ -684,21 +734,7 @@ export const ActiveFilters = memo((
           </Pill.Group>
         </Group>
       ))}
-      <Button
-        variant="subtle"
-        color="charcoal"
-        size="sm"
-        fw={400}
-        radius="md"
-        disabled={loading}
-        onClick={() => !loading && resetFilters()}
-        leftSection={<FontAwesomeIcon icon={faDeleteLeft} className={classes.clearAllIcon} />}
-        className={classes.clearAllButton}
-        title={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
-        aria-label={intl.formatMessage({ id: 'filters.clearAll.label', defaultMessage: 'Clear all filters' })}
-      >
-        <FormattedMessage id="filters.reset" defaultMessage="Clear all filters" />
-      </Button>
+      {clearAllButton}
     </Group>
   );
 });
