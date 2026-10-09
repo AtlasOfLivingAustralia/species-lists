@@ -22,7 +22,7 @@ import {
   Tooltip
 } from '@mantine/core';
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FormattedMessage, FormattedNumber, useIntl } from 'react-intl';
+import { FormattedMessage, FormattedNumber, IntlShape, useIntl } from 'react-intl';
 
 import { Constraint, Facet, KV } from '#/api';
 import { useConstraints } from '#/api/graphql/useConstraints';
@@ -55,9 +55,9 @@ function RenderCheckbox(
   isChecked: boolean,
   isBooleanFacet: boolean,
   onChange: () => void, // Accept the specific onChange handler
+  intl: IntlShape,
   facetConstraints?: Constraint[]
 ) {
-  const intl = useIntl();
 
   // Determine the correct message ID with fallback (needed for isPrivate facet)
   const primaryKey = `facet.${facetName}.${key}`; // isPrivate values only
@@ -334,6 +334,7 @@ const FacetComponent = memo(
               isChecked,
               isBooleanFacet,
               handleBooleanChange, // Pass the specific handler
+              intl,
               facetConstraints
             );
           })()
@@ -349,6 +350,7 @@ const FacetComponent = memo(
                 isChecked,
                 isBooleanFacet,
                 handleItemChange(item.value), // Pass the specific handler for this item
+                intl,
                 facetConstraints
               );
             })}
