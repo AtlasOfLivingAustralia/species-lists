@@ -146,6 +146,7 @@ function List() {
   const [lastProgress, setLastProgress] = useState<boolean>(false);
   const [pageTitle, setPageTitle] = useState<string | null>(null);
   const [paginationLoading, setPaginationLoading] = useState<boolean>(false);
+  const [fetching, setFetching] = useState<boolean>(false);
   const [fatalError, setFatalError] = useState<ListError | null>(null);
 
   const location = useLocation();
@@ -222,11 +223,13 @@ function List() {
   // Update the search query
   useEffect(() => {
     async function runQuery() {
-      try {
-        if (controller.current)
-          controller.current.abort('New GraphQL request invoked');
-        controller.current = new AbortController();
+      if (controller.current)
+        controller.current.abort('New GraphQL request invoked');
+      const requestController = new AbortController();
+      controller.current = requestController;
+      setFetching(true);
 
+      try {
         const result = await performGQLQuery(
           queries.QUERY_LISTS_GET,
           {
@@ -240,7 +243,7 @@ function List() {
             dir,
           },
           ala.token,
-          controller.current.signal
+          requestController.signal
         );
 
         controller.current = null;
@@ -252,12 +255,15 @@ function List() {
         setMeta(result.meta);
         setList(result.list);
       } catch (error) {
+        // Superseded requests (e.g. rapid sorting) may reject with a generic AbortError
+        if (requestController.signal.aborted) return;
         if (error instanceof ListError) setFatalError(error);
-        else if (error !== 'New GraphQL request invoked') {
-          setError(error as Error);
-        }
+        else setError(error as Error);
       } finally {
-        setPaginationLoading(false);
+        if (!requestController.signal.aborted) {
+          setPaginationLoading(false);
+          setFetching(false);
+        }
       }
     }
 
@@ -651,7 +657,7 @@ function List() {
                         active={filters || []}
                         onSelect={handleFilterClick}
                         onReset={resetFilters}
-                        loading={loading}
+                        loading={loading || fetching}
                         preserveOrder
                         showQualifiers={false}
                       />
@@ -703,18 +709,18 @@ function List() {
                 { filters && filters.length > 0 && showFilterTags && (
                   <Paper
                     ml={4} 
-                    className={classes.resultsSummary}
+                    className={`${classes.resultsSummary} ${fetching ? classes.resultsLoading : ''}`}
                   >
                     <ActiveFilters
                       active={filters}
                       handleFilterClick={handleFilterClick}
                       resetFilters={resetFilters}
-                      loading={loading}
+                      loading={loading || fetching}
                       showTags={showFilterTags}
                     />
                   </Paper>
                 )}
-                <Box style={{ overflowX: 'auto' }}>
+                <Box style={{ overflowX: 'auto' }} className={fetching ? classes.resultsLoading : undefined}>
                   {error ? (
                   <Message
                     title={intl.formatMessage({ id: 'list.page.error.title', defaultMessage: 'An error occured' })}
