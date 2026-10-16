@@ -9,7 +9,8 @@ import { findUnsupportedAppEnvUsage, rewriteAppEnvReferences } from './runtimeAp
  *   default (ALA) build   adds nothing: the <script src="/config.js"> and config.local.js tags are
  *                         removed from index.html and community/ is not copied to the output.
  *   community build       with VITE_RUNTIME_CONFIG_ENABLED=true (see config/.env.community and
- *                         `yarn build:community`) the tags stay and community/ is copied, so a
+ *                         `yarn build:community`) the tags stay and community/ is copied
+ *                         (except config.local.js, which belongs to each deployment), so a
  *                         deployer can point the built app at their own backend and identity
  *                         provider afterwards, without rebuilding. Every
  *                         `import.meta.env.VITE_*` in the app's sources is also rewritten to
@@ -20,6 +21,8 @@ import { findUnsupportedAppEnvUsage, rewriteAppEnvReferences } from './runtimeAp
  */
 export const RUNTIME_CONFIG_FLAG = 'VITE_RUNTIME_CONFIG_ENABLED';
 const COMMUNITY_DIR = 'community';
+/** Deployment-owned, so it is served by the dev server but never copied to the build output. */
+const LOCAL_CONFIG_FILE = 'config.local.js';
 /** A line that holds nothing but one of the two runtime config script tags. */
 const RUNTIME_CONFIG_SCRIPT_LINE = /^[ \t]*<script\s+src="\/config(?:\.local)?\.js"><\/script>[ \t]*\r?$/;
 /** Any script tag that loads one of them, however it is written. */
@@ -86,14 +89,14 @@ export function runtimeConfigPlugin(): Plugin {
         const file = id.split('?')[0].replace(/\\/g, '/');
         const src = `${resolved.root.replace(/\\/g, '/')}/src/`;
         if (!file.startsWith(src) || !APP_SOURCE_RE.test(file) || file.endsWith('.d.ts')) return null;
-        const unsupported = findUnsupportedAppEnvUsage(code);
+        const unsupported = findUnsupportedAppEnvUsage(code, file);
         if (unsupported.length > 0) {
           this.error(
             `[lists-runtime-config] ${file}: ${unsupported.join('; ')}. Only the literal form ` +
               '`import.meta.env.VITE_X` can be overridden from config.js; use it, or the key will ignore config.js.'
           );
         }
-        const out = rewriteAppEnvReferences(code, APP_CONFIG_HELPER);
+        const out = rewriteAppEnvReferences(code, APP_CONFIG_HELPER, file);
         return out === null ? null : { code: out, map: null };
       },
     },
@@ -111,7 +114,7 @@ export function runtimeConfigPlugin(): Plugin {
         if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
           // config.local.js is optional: answer 404 instead of letting the SPA fallback serve
           // index.html as a script
-          if (url === '/config.local.js') {
+          if (url === `/${LOCAL_CONFIG_FILE}`) {
             res.statusCode = 404;
             return res.end();
           }
@@ -126,6 +129,9 @@ export function runtimeConfigPlugin(): Plugin {
       if (resolved.command !== 'build' || !enabled || !fs.existsSync(communityDir)) return;
       fs.cpSync(communityDir, path.resolve(resolved.root, resolved.build.outDir), {
         recursive: true,
+        // a developer's own config.local.js must not ship: in a deployment it would override, or
+        // overwrite, the settings the deployment owns
+        filter: (src) => path.relative(communityDir, src) !== LOCAL_CONFIG_FILE,
       });
     },
   };

@@ -56,7 +56,7 @@ window.APP_CONFIG_LOCAL = {
 };
 ```
 
-Any `VITE_*` variable can be set this way: the community build rewrites every `import.meta.env.VITE_X` in the app's sources to `getAppConfigValue('VITE_X', import.meta.env.VITE_X)`, so there is no list of keys to maintain and nothing to do when adding a variable. Read variables as the literal `import.meta.env.VITE_X`; computed access (`import.meta.env[key]`), destructuring or passing `import.meta.env` whole fails the community build with a clear error, so a key cannot silently ignore `config.js`.
+Any `VITE_*` variable can be set this way: the community build rewrites every `import.meta.env.VITE_X` in the app's sources to `getAppConfigValue('VITE_X', import.meta.env.VITE_X)`, so there is no list of keys to maintain and nothing to do when adding a variable. Read variables as the literal `import.meta.env.VITE_X`; the sources are parsed, so the same text inside a string or a comment is left alone. Any other use of `import.meta.env` (computed access `import.meta.env[key]`, destructuring, spreading or passing it whole, `import.meta.env?.VITE_X`, or assigning to a key) fails the community build with a clear error, so a key cannot silently ignore `config.js`. The build copies `community/` to the output except `config.local.js`, which belongs to each deployment.
 
 The default build (`yarn build:production` and the other modes) removes those tags, does not copy `community/` and does not rewrite anything, so it is unchanged. To try it with the dev server, run `yarn dev --mode community` and create `community/config.local.js` (git-ignored).
 

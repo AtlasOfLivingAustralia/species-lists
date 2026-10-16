@@ -97,6 +97,16 @@ describe('runtimeConfigPlugin, community build', () => {
     );
   });
 
+  it('does not copy the developer\'s config.local.js to the output', () => {
+    process.env[RUNTIME_CONFIG_FLAG] = 'true';
+    fs.writeFileSync(path.join(root, 'community', 'config.local.js'), 'window.APP_CONFIG_LOCAL = {};\n');
+    const plugin = runtimeConfigPlugin();
+    resolve(plugin);
+    hooks(plugin).closeBundle();
+    assert.equal(fs.existsSync(path.join(root, 'dist', 'config.js')), true);
+    assert.equal(fs.existsSync(path.join(root, 'dist', 'config.local.js')), false);
+  });
+
   it('does not copy anything when the dev server closes', () => {
     process.env[RUNTIME_CONFIG_FLAG] = 'true';
     const plugin = runtimeConfigPlugin();
