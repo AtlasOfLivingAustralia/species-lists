@@ -5,27 +5,30 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Date;
-import java.util.stream.StreamSupport;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.http.converter.autoconfigure.HttpMessageConvertersAutoConfiguration;
-import org.springframework.boot.http.converter.autoconfigure.ServerHttpMessageConvertersCustomizer;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.http.converter.HttpMessageConverters;
+import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
+import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration;
+import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 
 import au.org.ala.listsapi.model.SpeciesList;
 import tools.jackson.databind.json.JsonMapper;
 
 class JacksonDateFormatTest {
 
-    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+    private final WebApplicationContextRunner contextRunner = new WebApplicationContextRunner()
             .withPropertyValues("spring.jackson.datatype.datetime.write-dates-as-timestamps=true")
+            .withUserConfiguration(WebConfig.class)
             .withConfiguration(AutoConfigurations.of(
                     JacksonAutoConfiguration.class,
-                    HttpMessageConvertersAutoConfiguration.class));
+                    HttpMessageConvertersAutoConfiguration.class,
+                    WebMvcAutoConfiguration.class));
 
     @Test
     void dateFieldsAreSerializedAsNumericTimestamps() {
@@ -50,17 +53,13 @@ class JacksonDateFormatTest {
     }
 
     @Test
-    void serverHttpMessageConvertersConfiguredWithNumericTimestamps() {
+    void webMvcHttpMessageConvertersSerializeDatesAsNumericTimestamps() {
         contextRunner.run(context -> {
-            assertThat(context).hasBean("jacksonJsonHttpMessageConvertersCustomizer");
-            ServerHttpMessageConvertersCustomizer customizer =
-                    context.getBean("jacksonJsonHttpMessageConvertersCustomizer", ServerHttpMessageConvertersCustomizer.class);
+            assertThat(context).hasSingleBean(RequestMappingHandlerAdapter.class);
+            RequestMappingHandlerAdapter adapter = context.getBean(RequestMappingHandlerAdapter.class);
+            List<HttpMessageConverter<?>> converters = adapter.getMessageConverters();
 
-            HttpMessageConverters.ServerBuilder builder = HttpMessageConverters.forServer();
-            customizer.customize(builder);
-            HttpMessageConverters converters = builder.build();
-
-            JacksonJsonHttpMessageConverter jsonConverter = StreamSupport.stream(converters.spliterator(), false)
+            JacksonJsonHttpMessageConverter jsonConverter = converters.stream()
                     .filter(JacksonJsonHttpMessageConverter.class::isInstance)
                     .map(JacksonJsonHttpMessageConverter.class::cast)
                     .findFirst()
@@ -70,10 +69,12 @@ class JacksonDateFormatTest {
             SpeciesList list = SpeciesList.builder()
                     .id("test-list-2")
                     .dateCreated(now)
+                    .lastUpdated(now)
                     .build();
 
             String json = jsonConverter.getMapper().writeValueAsString(list);
             assertTrue(json.contains("\"dateCreated\":1779062778909"));
+            assertTrue(json.contains("\"lastUpdated\":1779062778909"));
             assertFalse(json.contains("\"dateCreated\":\""));
         });
     }
