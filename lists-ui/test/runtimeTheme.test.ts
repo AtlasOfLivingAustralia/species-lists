@@ -144,25 +144,40 @@ describe('injectThemeBaseCss', () => {
 });
 
 describe('extractInertTemplates', () => {
-  const banner =
-    '<div id="autocompleteSearchALA"></div>\n' +
-    '<script type="text/html" id="autoCompleteTemplate">\n  <li><%=matchedNames[0]%></li>\n</script>\n' +
-    '<script>alert(1)</script>\n' +
-    '<script type="text/javascript" id="code">alert(2)</script>\n' +
-    '<script type="text/html">no id</script>\n' +
-    "<SCRIPT ID='other' TYPE='TEXT/HTML'><b>x</b></SCRIPT>\n" +
-    '<script data-id="fake" type="text/html">data-id is not an id</script>\n' +
-    '<script defer src="https://example.org/init.js"></script>';
+  /** What the browser's parser gives for `script[id]`: the attributes and the text of each. */
+  function parsed(scripts: { id: string; type?: string; text: string }[]) {
+    const selectors: string[] = [];
+    const root = {
+      querySelectorAll: (selector: string) => {
+        selectors.push(selector);
+        return scripts.map((s) => ({
+          id: s.id,
+          textContent: s.text,
+          getAttribute: (name: string) => (name === 'type' ? (s.type ?? null) : null),
+        }));
+      },
+    };
+    return { root: root as unknown as Pick<ParentNode, 'querySelectorAll'>, selectors };
+  }
 
   it('returns only the text/html blocks that have an id, with their content as is', () => {
-    assert.deepEqual(extractInertTemplates(banner), [
+    const { root, selectors } = parsed([
+      { id: 'autoCompleteTemplate', type: 'text/html', text: '\n  <li><%=matchedNames[0]%></li>\n' },
+      { id: 'code', type: 'text/javascript', text: 'alert(2)' },
+      { id: 'classic', text: 'alert(1)' },
+      { id: 'other', type: ' TEXT/HTML ', text: '<b>x</b>' },
+      { id: '', type: 'text/html', text: 'no id' },
+    ]);
+    assert.deepEqual(extractInertTemplates(root), [
       { id: 'autoCompleteTemplate', content: '\n  <li><%=matchedNames[0]%></li>\n' },
       { id: 'other', content: '<b>x</b>' },
     ]);
+    // the parsed document is queried; no HTML is matched by hand
+    assert.deepEqual(selectors, ['script[id]']);
   });
 
   it('returns nothing for a template without them', () => {
-    assert.deepEqual(extractInertTemplates('<footer>{{containerClass}}</footer>'), []);
+    assert.deepEqual(extractInertTemplates(parsed([]).root), []);
   });
 });
 

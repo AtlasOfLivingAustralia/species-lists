@@ -86,7 +86,8 @@ function ExternalChrome({
     if (!root || !template) return;
     root.replaceChildren(DOMPurify.sanitize(template, { RETURN_DOM_FRAGMENT: true }));
     // Inert templates for theme scripts (e.g. #autoCompleteTemplate), as text, never run
-    for (const { id, content } of extractInertTemplates(template)) {
+    const parsed = new DOMParser().parseFromString(template, 'text/html');
+    for (const { id, content } of extractInertTemplates(parsed)) {
       if (document.getElementById(id)) continue;
       const script = document.createElement('script');
       script.type = 'text/html';
