@@ -85,7 +85,7 @@ export const SearchInput = memo(function SearchInput({
           },
         }}
         style={{
-          '--button-hover': 'var(--mantine-color-rust-filled-hover)',
+          '--button-hover': 'var(--mantine-primary-color-filled-hover)',
           '--button-hover-color': 'white',
         }}
         radius='md'

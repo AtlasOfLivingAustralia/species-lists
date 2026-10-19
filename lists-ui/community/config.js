@@ -27,6 +27,32 @@
  *     VITE_AUTH_REDIRECT_URI: 'https://lists.example.org',
  *     VITE_AUTH_SCOPE: 'openid profile email roles',
  *     VITE_AUTH_END_SESSION_URI: 'https://auth.example.org/cas/logout',
+ *
+ *     // --- Portal name ---------------------------------------------------------------------------
+ *     VITE_APP_NAME: 'Example Species Lists',      // home page title (default 'ALA Species Lists')
+ *     VITE_APP_TITLE_PREFIX: 'Example Lists',      // "<prefix> | Upload" (default 'ALA Lists')
+ *     VITE_SUPPORT_EMAIL: 'support@example.org',   // default 'support@ala.org.au'
+ *     VITE_FAVICON_URL: '/theme/my-portal/favicon.svg',
+ *
+ *     // --- Theme ---------------------------------------------------------------------------------
+ *     // Header and footer from mustache templates, with the same contract as atlas-index, so one
+ *     // banner.mustache / footer.mustache serves both apps. When set, they replace the ALA header,
+ *     // footer and acknowledgement. Unset, nothing changes. See theme/example/README.md.
+ *     VITE_THEME_HEADER_URL: '/theme/example/banner.mustache',
+ *     VITE_THEME_FOOTER_URL: '/theme/example/footer.mustache',
+ *     VITE_THEME_CONTAINER_CLASS: 'container-fluid',   // {{containerClass}} in the templates
+ *     VITE_THEME_SEARCH_URL: 'https://species.example.org/search', // {{searchServer}}{{searchPath}}
+ *     // Comma-separated, loaded in this order after the app's own CSS, so the last one wins.
+ *     VITE_THEME_CSS_URL: '/theme/example/accent-override.css',
+ *     // Comma-separated, loaded in order once the header is in the page.
+ *     VITE_THEME_JS_URL: '',
+ *     // A Mantine palette name (violet, teal, indigo... or ala-mantine's rust, flamingo...) or a
+ *     // hex colour such as '#6b2fb3'. Anything else is ignored with a console warning.
+ *     VITE_THEME_PRIMARY_COLOR: 'violet',
+ *
+ *     // --- Analytics -----------------------------------------------------------------------------
+ *     // Fathom site id. Empty in the community build, so it sends no analytics unless set.
+ *     VITE_APP_FATHOM_ID: '',
  *   };
  *
  * To make a new variable overridable there is nothing to do: read it as `import.meta.env.VITE_X`

@@ -5,7 +5,7 @@ import '@mantine/notifications/styles.css';
 import '@mantine/nprogress/styles.css';
 
 import { theme } from '@atlasoflivingaustralia/ala-mantine';
-import { MantineProvider } from '@mantine/core';
+import { DEFAULT_THEME, MantineProvider, MantineThemeOverride, mergeThemeOverrides } from '@mantine/core';
 import { ModalsProvider } from '@mantine/modals';
 import { Notifications } from '@mantine/notifications';
 import notificationStyles from './Notifications.module.css';
@@ -22,6 +22,28 @@ import en from './locale/en.json';
 // Application
 import App from './App';
 import router from './Router';
+import { getAppTitlePrefix } from './helpers/utils/branding';
+import {
+  injectFathom,
+  injectThemeCss,
+  primaryColorOverride,
+  setFavicon,
+} from './helpers/utils/runtimeTheme';
+
+// Portal look & feel that a deployment can change without rebuilding (see runtimeTheme.ts). With
+// none of these set, as in the ALA build, the app looks as it always has.
+document.title = getAppTitlePrefix();
+setFavicon(import.meta.env.VITE_FAVICON_URL);
+injectThemeCss(import.meta.env.VITE_THEME_CSS_URL);
+injectFathom(import.meta.env.VITE_APP_FATHOM_ID);
+
+const primaryColor = primaryColorOverride(import.meta.env.VITE_THEME_PRIMARY_COLOR, [
+  ...Object.keys(DEFAULT_THEME.colors),
+  ...Object.keys(theme.colors ?? {}),
+]);
+const appTheme = primaryColor
+  ? mergeThemeOverrides(theme, primaryColor as MantineThemeOverride)
+  : theme;
 
 export const userManager = new UserManager({
   authority: import.meta.env.VITE_AUTH_AUTHORITY,
@@ -46,7 +68,7 @@ function Main() {
 
   return (
     <AuthProvider userManager={userManager} onSigninCallback={handleCallback}>
-      <MantineProvider theme={theme}>
+      <MantineProvider theme={appTheme}>
         <IntlProvider messages={en} locale='en'>
           <ModalsProvider modalProps={{ radius: 'lg' }}>
             <ALAProvider>

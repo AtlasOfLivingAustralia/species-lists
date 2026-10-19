@@ -42,7 +42,7 @@ By default `VITE_*` values are baked into the build, so each deployment has to e
 yarn build:community   # tsc && vite build --mode community
 ```
 
-It is `config/.env.production` plus `config/.env.community` on top (which only sets `VITE_RUNTIME_CONFIG_ENABLED=true`). The output keeps `<script src="/config.js">` and `config.local.js` in `index.html` and ships `community/config.js`:
+It is `config/.env.production` plus `config/.env.community` on top (which sets `VITE_RUNTIME_CONFIG_ENABLED=true` and empties `VITE_APP_FATHOM_ID`). The output keeps `<script src="/config.js">` and `config.local.js` in `index.html` and ships `community/config.js`:
 
 - `config.js` holds the defaults and documents every key. It is replaced on every deploy.
 - `config.local.js` belongs to the deployment and is never shipped or overwritten. It only needs the keys it changes, and its values win. It is optional; a 404 for it is harmless.
@@ -57,6 +57,25 @@ window.APP_CONFIG_LOCAL = {
 ```
 
 Any `VITE_*` variable can be set this way: the community build rewrites every `import.meta.env.VITE_X` in the app's sources to `getAppConfigValue('VITE_X', import.meta.env.VITE_X)`, so there is no list of keys to maintain and nothing to do when adding a variable. Read variables as the literal `import.meta.env.VITE_X`; the sources are parsed, so the same text inside a string or a comment is left alone. Any other use of `import.meta.env` (computed access `import.meta.env[key]`, destructuring, spreading or passing it whole, `import.meta.env?.VITE_X`, or assigning to a key) fails the community build with a clear error, so a key cannot silently ignore `config.js`. The build copies `community/` to the output except `config.local.js`, which belongs to each deployment.
+
+### Look & feel
+
+The same mechanism covers the portal's branding. All of these are optional and empty or ALA's by default, so the ALA build looks as it always has:
+
+| Key | What it does |
+|---|---|
+| `VITE_THEME_HEADER_URL`, `VITE_THEME_FOOTER_URL` | Mustache templates that replace the ala-mantine header, and the footer plus acknowledgement. Same contract as atlas-index (`{{containerClass}}`, `{{searchServer}}{{searchPath}}`, `.loginStatus`, `.loginBtn` / `.logoutBtn`), so one template serves both apps. Sanitised with DOMPurify, so `<script>` in a template does not run. |
+| `VITE_THEME_CONTAINER_CLASS` | `{{containerClass}}`, default `container-fluid`. |
+| `VITE_THEME_SEARCH_URL` | `{{searchServer}}{{searchPath}}` and the ALA header's search button, default `https://bie.ala.org.au`. |
+| `VITE_THEME_CSS_URL` | Comma-separated stylesheets added after the app's CSS, in order (the last one wins). |
+| `VITE_THEME_JS_URL` | Comma-separated scripts, loaded in order once the header is in the page. |
+| `VITE_THEME_PRIMARY_COLOR` | A Mantine palette name or a hex colour; default ala-mantine's `rust`. |
+| `VITE_APP_NAME`, `VITE_APP_TITLE_PREFIX` | Page titles, default `ALA Species Lists` and `ALA Lists`. |
+| `VITE_SUPPORT_EMAIL` | Contact shown on error pages, default `support@ala.org.au`. |
+| `VITE_FAVICON_URL` | Page icon. |
+| `VITE_APP_FATHOM_ID` | Fathom analytics; loaded only when set. Empty in the community build. |
+
+`community/theme/example/` is a small theme to try this locally; see its README.
 
 The default build (`yarn build:production` and the other modes) removes those tags, does not copy `community/` and does not rewrite anything, so it is unchanged. To try it with the dev server, run `yarn dev --mode community` and create `community/config.local.js` (git-ignored).
 
