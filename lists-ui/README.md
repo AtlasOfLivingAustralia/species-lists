@@ -64,9 +64,10 @@ The same mechanism covers the portal's branding. All of these are optional and e
 
 | Key | What it does |
 |---|---|
-| `VITE_THEME_HEADER_URL`, `VITE_THEME_FOOTER_URL` | Mustache templates that replace the ala-mantine header, and the footer plus acknowledgement. Same contract as atlas-index (`{{containerClass}}`, `{{searchServer}}{{searchPath}}`, `.loginStatus`, `.loginBtn` / `.logoutBtn`), so one template serves both apps. Sanitised with DOMPurify, so `<script>` in a template does not run. |
+| `VITE_THEME_HEADER_URL`, `VITE_THEME_FOOTER_URL` | Mustache templates that replace the ala-mantine header, and the footer plus acknowledgement. Same contract as atlas-index (`{{containerClass}}`, `{{searchServer}}{{searchPath}}`, `.loginStatus`, `.loginBtn` / `.logoutBtn`), so one template serves both apps. Sanitised with DOMPurify, so `<script>` in a template does not run; only `<script type="text/html" id="...">` blocks are kept, as inert text, for theme scripts that read them as templates (ALA's autocomplete), which may compile them into code, so templates need the same trust as `VITE_THEME_JS_URL`. |
 | `VITE_THEME_CONTAINER_CLASS` | `{{containerClass}}`, default `container-fluid`. |
 | `VITE_THEME_SEARCH_URL` | `{{searchServer}}{{searchPath}}` and the ALA header's search button, default `https://bie.ala.org.au`. |
+| `VITE_THEME_BASE_CSS_URL` | Comma-separated stylesheets inserted before the app's CSS, in order, as atlas-index does with its base theme. For a base such as Bootstrap: its element rules (`body`, `a`, `label`...) then lose to the app's. |
 | `VITE_THEME_CSS_URL` | Comma-separated stylesheets added after the app's CSS, in order (the last one wins). |
 | `VITE_THEME_JS_URL` | Comma-separated scripts, loaded in order once the header is in the page. |
 | `VITE_THEME_PRIMARY_COLOR` | A Mantine palette name or a hex colour; default ala-mantine's `rust`. |
@@ -75,7 +76,7 @@ The same mechanism covers the portal's branding. All of these are optional and e
 | `VITE_FAVICON_URL` | Page icon. |
 | `VITE_APP_FATHOM_ID` | Fathom analytics; loaded only when set. Empty in the community build. |
 
-`community/theme/example/` is a small theme to try this locally; see its README.
+`community/theme/example/` is a small theme to try this locally, and `community/theme/bs5/` explains how to use base-branding's Bootstrap 5 output (`dist/bs5`) as is, with the stylesheet that adapts it to lists-ui; see their READMEs.
 
 The default build (`yarn build:production` and the other modes) removes those tags, does not copy `community/` and does not rewrite anything, so it is unchanged. To try it with the dev server, run `yarn dev --mode community` and create `community/config.local.js` (git-ignored).
 

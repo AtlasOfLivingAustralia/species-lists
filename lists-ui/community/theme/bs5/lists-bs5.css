@@ -1,0 +1,24 @@
+/*
+ * Fixes for lists-ui when its theme is base-branding's Bootstrap 5 output (dist/bs5). Load it LAST
+ * in VITE_THEME_CSS_URL, after branding-bs5.css. See README.md next to it.
+ */
+
+/* ALA's Bootstrap 5 build sets a 14px root; Mantine and ala-mantine size everything in rem, so the
+   whole app would shrink by 1/8. Back to the browser default: the header is then sized as plain
+   Bootstrap 5, a little larger than in the Grails apps. */
+:root {
+  --bs-root-font-size: 16px;
+}
+
+/* ala-styles.css makes every <label> bold with a bottom margin. Mantine's labels set what they need
+   by class, which wins over these element rules, so this only reaches what they inherit or leave
+   at the browser default, such as the filter checkboxes' labels. */
+label {
+  font-weight: inherit;
+  margin-bottom: 0;
+}
+
+/* Bootstrap's reboot aligns every <svg> to the middle; the app's icons sit on the baseline. */
+svg {
+  vertical-align: baseline;
+}

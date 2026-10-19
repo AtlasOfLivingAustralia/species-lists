@@ -42,6 +42,9 @@
  *     VITE_THEME_FOOTER_URL: '/theme/example/footer.mustache',
  *     VITE_THEME_CONTAINER_CLASS: 'container-fluid',   // {{containerClass}} in the templates
  *     VITE_THEME_SEARCH_URL: 'https://species.example.org/search', // {{searchServer}}{{searchPath}}
+ *     // Comma-separated, inserted in this order BEFORE the app's own CSS: a base theme such as
+ *     // Bootstrap, whose element rules should not override the app's. See theme/bs5/README.md.
+ *     VITE_THEME_BASE_CSS_URL: '',
  *     // Comma-separated, loaded in this order after the app's own CSS, so the last one wins.
  *     VITE_THEME_CSS_URL: '/theme/example/accent-override.css',
  *     // Comma-separated, loaded in order once the header is in the page.

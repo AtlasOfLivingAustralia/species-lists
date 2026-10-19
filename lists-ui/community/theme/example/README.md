@@ -38,11 +38,15 @@ Then `yarn dev --mode community`, or `yarn build:community` and serve `dist/`.
 
 ## Differences with atlas-index
 
-- Templates are sanitised with DOMPurify, so `<script>` blocks are removed. ALA's banner carries a
-  `<script type="text/html" id="autoCompleteTemplate">` for ala-combined.js's autocomplete; that
-  template does not survive here, so the autocomplete widget does not work in lists-ui. Search still
-  submits the form.
+- Templates are sanitised with DOMPurify, so `<script>` blocks are removed and do not run. The one
+  exception is `<script type="text/html" id="...">`, which the browser never runs: lists-ui re-adds
+  it as inert text, because theme scripts read it as a template (the banner's
+  `#autoCompleteTemplate` for ALA's autocomplete). The browser never runs it, but a theme script may
+  compile it into code (ALA's `tmpl()` does), so serve templates with the same trust as
+  `VITE_THEME_JS_URL`. An inline script that writes into the page, such
+  as a footer's copyright year, does not run.
 - The keys carry the `VITE_` prefix (`VITE_THEME_HEADER_URL` rather than `THEME_HEADER_URL`), which the
   community build needs to make them overridable.
-- `VITE_THEME_CSS_URL` loads after the app's CSS (atlas-index loads its base theme before), because
-  lists-ui does not depend on a Bootstrap base theme: the stylesheets here are overrides.
+- `VITE_THEME_CSS_URL` loads after the app's CSS, for overrides such as this example's.
+  `VITE_THEME_BASE_CSS_URL` loads before it, as atlas-index does with its base theme, for a base such
+  as Bootstrap. See `../bs5/README.md` to use base-branding's Bootstrap 5 output.

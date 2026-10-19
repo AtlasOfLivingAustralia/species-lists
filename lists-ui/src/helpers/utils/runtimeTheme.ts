@@ -14,7 +14,8 @@
  * can be tested with node:test.
  */
 
-/** The parts of `document` these helpers touch, so tests can pass a stand-in. */
+/** The parts of `document` these helpers touch, so tests can pass a stand-in (`head` is only
+ * used for appendChild and insertBefore). */
 export type ThemeDocument = Pick<Document, 'createElement' | 'head' | 'body' | 'querySelector'>;
 
 /**
@@ -50,6 +51,50 @@ export function injectThemeCss(value: string | undefined, doc: ThemeDocument = d
     link.href = url;
     doc.head.appendChild(link);
   }
+}
+
+/**
+ * Inserts one stylesheet per URL BEFORE the app's own CSS, in the order given, the way
+ * atlas-index loads its base theme. For a base such as Bootstrap: its element rules (reboot's
+ * `body`, `a`, `label`...) then lose to the app's, while its classes still style the header and
+ * footer. Without any stylesheet in <head> yet, they are appended.
+ */
+export function injectThemeBaseCss(value: string | undefined, doc: ThemeDocument = document): void {
+  const firstStyle = doc.querySelector('head link[rel="stylesheet"], head style');
+  for (const url of splitUrlList(value)) {
+    const link = doc.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = url;
+    if (firstStyle) doc.head.insertBefore(link, firstStyle);
+    else doc.head.appendChild(link);
+  }
+}
+
+export interface InertTemplate {
+  id: string;
+  content: string;
+}
+
+/** Value of attribute `name` in a tag's attribute text, or undefined. */
+function attribute(attrs: string, name: string): string | undefined {
+  return attrs.match(new RegExp(`(?:^|\\s)${name}\\s*=\\s*["']([^"']*)["']`, 'i'))?.[1];
+}
+
+/**
+ * The `<script type="text/html" id="...">` blocks of a header/footer template, which DOMPurify
+ * removes with every other <script>. Theme scripts read them as templates by id: ALA's
+ * autocomplete (application.js) renders each suggestion from `#autoCompleteTemplate`. The browser
+ * never runs a script of that type, so the caller re-adds them as inert elements with this
+ * content as text. Other types, and blocks without an id, are not returned.
+ */
+export function extractInertTemplates(html: string): InertTemplate[] {
+  const templates: InertTemplate[] = [];
+  for (const [, attrs, content] of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
+    const type = attribute(attrs, 'type')?.trim().toLowerCase();
+    const id = attribute(attrs, 'id');
+    if (type === 'text/html' && id) templates.push({ id, content });
+  }
+  return templates;
 }
 
 /**

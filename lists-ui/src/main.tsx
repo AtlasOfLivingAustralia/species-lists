@@ -25,6 +25,7 @@ import router from './Router';
 import { getAppTitlePrefix } from './helpers/utils/branding';
 import {
   injectFathom,
+  injectThemeBaseCss,
   injectThemeCss,
   primaryColorOverride,
   setFavicon,
@@ -34,6 +35,7 @@ import {
 // none of these set, as in the ALA build, the app looks as it always has.
 document.title = getAppTitlePrefix();
 setFavicon(import.meta.env.VITE_FAVICON_URL);
+injectThemeBaseCss(import.meta.env.VITE_THEME_BASE_CSS_URL);
 injectThemeCss(import.meta.env.VITE_THEME_CSS_URL);
 injectFathom(import.meta.env.VITE_APP_FATHOM_ID);
 

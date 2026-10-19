@@ -3,9 +3,14 @@ import { useEffect, useRef, useState } from 'react';
 
 import {
   cleanMustache,
+  extractInertTemplates,
   injectThemeJs,
   showLoginStatus,
 } from '#/helpers/utils/runtimeTheme';
+
+// Theme scripts (jQuery, Bootstrap...) must load once per page, even if the header remounts, e.g.
+// after the router shows its error page and recovers
+let themeJsLoaded = false;
 
 interface ExternalChromeProps {
   /** URL of the mustache template; nothing renders without it. */
@@ -34,7 +39,10 @@ interface ExternalHeaderProps extends ExternalChromeProps {
  *   .loginBtn / .logoutBtn          sign in / out through OIDC; their href is removed
  *
  * The template is sanitised with DOMPurify into DOM nodes, so a <script> in it never runs; theme
- * scripts go in VITE_THEME_JS_URL instead.
+ * scripts go in VITE_THEME_JS_URL instead. Only `<script type="text/html" id="...">` blocks are
+ * re-added, as inert text, because theme scripts read them as templates (ALA's autocomplete). The
+ * browser never runs them, but a theme script may compile one into code (ALA's tmpl() does), so a
+ * template needs the same trust as VITE_THEME_JS_URL.
  */
 function ExternalChrome({
   url,
@@ -77,6 +85,15 @@ function ExternalChrome({
     const root = ref.current;
     if (!root || !template) return;
     root.replaceChildren(DOMPurify.sanitize(template, { RETURN_DOM_FRAGMENT: true }));
+    // Inert templates for theme scripts (e.g. #autoCompleteTemplate), as text, never run
+    for (const { id, content } of extractInertTemplates(template)) {
+      if (document.getElementById(id)) continue;
+      const script = document.createElement('script');
+      script.type = 'text/html';
+      script.id = id;
+      script.textContent = content;
+      root.appendChild(script);
+    }
     root.querySelectorAll('.loginBtn, .logoutBtn').forEach((el) => el.removeAttribute('href'));
     ready.current?.();
   }, [template]);
@@ -107,11 +124,10 @@ function ExternalChrome({
 }
 
 export function ExternalHeader({ jsUrl, ...props }: ExternalHeaderProps) {
-  // Theme scripts look for the header's elements, so they load once it is in the DOM, and only once
-  const jsLoaded = useRef(false);
+  // Theme scripts look for the header's elements, so they load once it is in the DOM
   const loadJs = () => {
-    if (jsLoaded.current || !jsUrl) return;
-    jsLoaded.current = true;
+    if (themeJsLoaded || !jsUrl) return;
+    themeJsLoaded = true;
     injectThemeJs(jsUrl);
   };
   return <ExternalChrome {...props} onReady={loadJs} />;
