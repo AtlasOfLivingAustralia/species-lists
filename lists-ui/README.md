@@ -76,7 +76,7 @@ The same mechanism covers the portal's branding. All of these are optional and e
 | `VITE_FAVICON_URL` | Page icon. |
 | `VITE_APP_FATHOM_ID` | Fathom analytics; loaded only when set. Empty in the community build. |
 
-`community/theme/example/` is a small theme to try this locally, and `community/theme/bs5/` explains how to use base-branding's Bootstrap 5 output (`dist/bs5`) as is, with the stylesheet that adapts it to lists-ui; see their READMEs.
+`community/theme/example/` is a small theme to try this locally. Living Atlas portals that build their header and footer with [base-branding](https://github.com/living-atlases/base-branding) can use its Bootstrap 5 output (`dist/bs5`) as is; `community/theme/bs5/` explains how, with the stylesheet that adapts it to lists-ui. The ALA build does not use base-branding and is unaffected.
 
 The default build (`yarn build:production` and the other modes) removes those tags, does not copy `community/` and does not rewrite anything, so it is unchanged. To try it with the dev server, run `yarn dev --mode community` and create `community/config.local.js` (git-ignored).
 

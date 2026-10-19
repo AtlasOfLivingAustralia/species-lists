@@ -77,15 +77,9 @@ With these, every element of the content below the header had the same computed 
 the theme, on the home page (809 elements) and on a list page (25,096), and so did the page-size
 dropdown, which Mantine renders outside that content.
 
-## What works and what does not
+## Notes
 
-- Header, footer, translations (`data-i18n`) and the language menu, the "More" dropdown, the search
-  form (to `VITE_THEME_SEARCH_URL`), and sign in / out, which go through lists-ui's OIDC client.
-- The autocomplete runs: lists-ui keeps the banner's `#autoCompleteTemplate` and suggestions are
-  fetched and rendered. `application.js` compiles that template into code (`tmpl()` uses
-  `new Function`), so the banner needs the same trust as the scripts in `VITE_THEME_JS_URL`. But `banner.mustache` puts its container, `#autocompleteSearchALA`, in a
-  Bootstrap `collapse` that nothing opens (in ALA's banner a search button toggles it), so the list
-  stays hidden. That is in base-branding and affects its other Bootstrap 5 apps the same way.
-- The footer's year is written by an inline `<script>`, which the sanitiser removes: it shows
-  "© 2020-".
-- base-branding's cookie notice (from `init.js`) shows as in its other apps.
+- `application.js` compiles the banner's `#autoCompleteTemplate` into code (`tmpl()` uses
+  `new Function`), so the banner needs the same trust as the scripts in `VITE_THEME_JS_URL`.
+- Some limits of the bs5 output itself (the autocomplete list stays hidden, the footer year, the
+  init files in the banner, CORS) are base-branding's to fix, not lists-ui's.

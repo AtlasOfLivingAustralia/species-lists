@@ -60,7 +60,7 @@ function Dashboard() {
         url={import.meta.env.VITE_ALA_MESSAGES}
         services={['lists']}
       />
-      {themeHeaderUrl ? (
+      {themeHeaderUrl && (
         <ExternalHeader
           url={themeHeaderUrl}
           containerClass={containerClass}
@@ -70,28 +70,28 @@ function Dashboard() {
           onLogin={signIn}
           onLogout={signOut}
         />
-      ) : (
-        <Header
-          isAuthenticated={auth.isAuthenticated}
-          onAuthClick={() => {
-            if (auth.isAuthenticated) {
-              signOut();
-            } else {
-              signIn();
-            }
-          }}
-          homeUrl={import.meta.env.VITE_ALA_HOME_PAGE || ''}
-          onSearchClick={() => (window.location.href = searchUrl)}
-          fullWidth
-          compact
-          myProfileUrl={import.meta.env.VITE_ALA_USER_PROFILE || ''}
-          isLegacySkin={isLegacySkin}
-        />
       )}
+      {!themeHeaderUrl && <Header
+        isAuthenticated={auth.isAuthenticated}
+        onAuthClick={() => {
+          if (auth.isAuthenticated) {
+            handleSignout(auth);
+          } else {
+            auth.signinRedirect({ state: { targetUrl: window.location.pathname + window.location.search } });
+          }
+        }}
+        homeUrl={import.meta.env.VITE_ALA_HOME_PAGE || ''}
+        onSearchClick={() => (window.location.href = searchUrl)
+        }
+        fullWidth 
+        compact
+        myProfileUrl={import.meta.env.VITE_ALA_USER_PROFILE || ''}
+        isLegacySkin={isLegacySkin}
+      />}
       <Divider />
       <Outlet />
       <Divider mt='xl' />
-      {themeFooterUrl ? (
+      {themeFooterUrl && (
         <ExternalFooter
           url={themeFooterUrl}
           containerClass={containerClass}
@@ -99,12 +99,9 @@ function Dashboard() {
           onLogin={signIn}
           onLogout={signOut}
         />
-      ) : (
-        <>
-          <Footer fullWidth />
-          <IndigenousAcknowledgement />
-        </>
       )}
+      {!themeFooterUrl && <Footer fullWidth />}
+      {!themeFooterUrl && <IndigenousAcknowledgement />}
     </>
   );
 }
