@@ -1,6 +1,5 @@
 # Species lists
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/AtlasOfLivingAustralia/species-lists)
 | Build | Status |
 |---|---|
 | lists-frontend-develop |[![AWS CodePipeline Build Status](https://img.shields.io/badge/CodePipeline-passing-brightgreen?logo=amazon-aws&logoColor=white)](https://console.aws.amazon.com/codepipeline/home?region=ap-southeast-2#/view/lists-frontend-develop) |
@@ -18,6 +17,8 @@ This consists of two components:
 * [lists-service](lists-service) - Spring boot REST and GraphQL web services for accessing, modifying species lists
 
 For detailed information about this project, see the DeepWiki page: [Species Lists Management System Overview](https://deepwiki.com/AtlasOfLivingAustralia/species-lists).
+
+[![Ask DeepWiki](https://img.shields.io/badge/Ask-DeepWiki-blue)](https://deepwiki.com/AtlasOfLivingAustralia/species-lists)
 
 ## Architecture
 
