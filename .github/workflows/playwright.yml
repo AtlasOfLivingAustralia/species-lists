@@ -1,5 +1,8 @@
 name: Playwright Functional Tests
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [ main, testing, develop ]
