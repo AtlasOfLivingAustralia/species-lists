@@ -80,6 +80,29 @@ The same mechanism covers the portal's branding. All of these are optional and e
 
 The default build (`yarn build:production` and the other modes) removes those tags, does not copy `community/` and does not rewrite anything, so it is unchanged. To try it with the dev server, run `yarn dev --mode community` and create `community/config.local.js` (git-ignored).
 
+## Running Playwright Functional Tests
+
+Playwright functional tests live in `lists-ui/e2e/`. They test core user journeys based on the test plan, with mock OIDC session injection for authenticated/admin flows and network route mocking for CI reproducibility.
+
+```bash
+# Run tests headlessly
+yarn test:e2e
+
+# Run tests with the interactive Playwright UI
+yarn test:e2e:ui
+
+# Run tests in headed browser mode
+yarn test:e2e:headed
+
+# View test HTML report
+yarn test:e2e:report
+```
+
+To run against a live running environment instead of the local dev server:
+```bash
+BASE_URL=https://lists.test.ala.org.au yarn test:e2e
+```
+
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:

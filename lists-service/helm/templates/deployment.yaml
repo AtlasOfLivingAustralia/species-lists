@@ -133,7 +133,7 @@ spec:
             - "-Djavax.net.ssl.trustStoreType=jks"
             - "-jar"
             - "app.jar"
-            - "--spring.config.location=file:/data/lists-service/config/lists-service-config.properties"
+            - "--spring.config.additional-location=file:/data/lists-service/config/lists-service-config.properties"
           volumeMounts:
             - name: shared-truststore
               mountPath: /truststore
