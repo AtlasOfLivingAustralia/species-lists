@@ -7,7 +7,8 @@
 | lists-backend-develop | [![AWS CodePipeline Build Status](https://img.shields.io/badge/CodePipeline-passing-brightgreen?logo=amazon-aws&logoColor=white)](https://console.aws.amazon.com/codepipeline/home?region=ap-southeast-2#/view/lists-backend-develop) |
 | lists-frontend-testing |[![AWS CodePipeline Build Status](https://img.shields.io/badge/CodePipeline-passing-brightgreen?logo=amazon-aws&logoColor=white)](https://console.aws.amazon.com/codepipeline/home?region=ap-southeast-2#/view/lists-frontend-testing) |
 | lists-backend-testing | [![AWS CodePipeline Build Status](https://img.shields.io/badge/CodePipeline-passing-brightgreen?logo=amazon-aws&logoColor=white)](https://console.aws.amazon.com/codepipeline/home?region=ap-southeast-2#/view/lists-backend-testing) |
-
+| Actions - Java build | [![Java CI with Maven](https://github.com/AtlasOfLivingAustralia/species-lists/actions/workflows/maven.yml/badge.svg)](https://github.com/AtlasOfLivingAustralia/species-lists/actions/workflows/maven.yml) |
+| Actions - E2E tests | [![Playwright Functional Tests](https://github.com/AtlasOfLivingAustralia/species-lists/actions/workflows/playwright.yml/badge.svg)](https://github.com/AtlasOfLivingAustralia/species-lists/actions/workflows/playwright.yml) |
 
 System for managing species lists in the ALA.
 
