@@ -42,6 +42,29 @@ By default `VITE_*` values are baked into the build, so each deployment has to e
 yarn build:community   # tsc && vite build --mode community
 ```
 
+## Running Playwright Functional Tests
+
+Playwright functional tests live in `lists-ui/e2e/`. They test core user journeys based on the test plan, with mock OIDC session injection for authenticated/admin flows and network route mocking for CI reproducibility.
+
+```bash
+# Run tests headlessly
+yarn test:e2e
+
+# Run tests with the interactive Playwright UI
+yarn test:e2e:ui
+
+# Run tests in headed browser mode
+yarn test:e2e:headed
+
+# View test HTML report
+yarn test:e2e:report
+```
+
+To run against a live running environment instead of the local dev server:
+```bash
+BASE_URL=https://lists.test.ala.org.au yarn test:e2e
+```
+
 It is `config/.env.production` plus `config/.env.community` on top (which only sets `VITE_RUNTIME_CONFIG_ENABLED=true`). The output keeps `<script src="/config.js">` and `config.local.js` in `index.html` and ships `community/config.js`:
 
 - `config.js` holds the defaults and documents every key. It is replaced on every deploy.
