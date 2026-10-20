@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { SpeciesListSubmit, UploadResult } from '#/api';
 import { getErrorMessage } from '#/helpers';
+import { getPageTitle } from '#/helpers/utils/branding';
 import {
   Container,
   Grid,
@@ -32,7 +33,7 @@ const convertFileNameToTitle = (fileName: string): string => {
  * @returns {JSX.Element} - The rendered Upload component
  */
 export default function Component() {
-  useDocumentTitle('ALA Lists | Upload');
+  useDocumentTitle(getPageTitle('Upload'));
 
   const [ingesting, setIngesting] = useState<boolean>(false);
   const [originalName, setOriginalName] = useState<string | null>(null);
