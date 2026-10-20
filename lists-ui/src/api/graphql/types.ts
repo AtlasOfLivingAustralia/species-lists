@@ -167,6 +167,7 @@ interface Classification {
   genusID: string;
   rank: string;
   rankID: number;
+  matchType?: string;
 }
 
 interface ListsUser {
