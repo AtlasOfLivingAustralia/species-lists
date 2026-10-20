@@ -29,6 +29,24 @@ export async function setupMockApi(page: Page, options: MockApiOptions = {}) {
     });
   });
 
+  // Intercept Admin migrate progress
+  await page.route('**/admin/migrate/progress', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(null),
+    });
+  });
+
+  // Intercept Admin indexes
+  await page.route('**/admin/indexes', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    });
+  });
+
   // Intercept CSRF
   await page.route('**/csrf', async (route) => {
     await route.fulfill({
@@ -66,22 +84,6 @@ export async function setupMockApi(page: Page, options: MockApiOptions = {}) {
     });
   });
 
-  // Intercept Ingest
-  await page.route('**/v2/ingest', async (route) => {
-    if (route.request().method() === 'POST') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          id: 'list-acacia-1',
-          title: 'Acacia characters testing',
-        }),
-      });
-      return;
-    }
-    await route.continue();
-  });
-
   // Intercept Ingest Progress
   await page.route('**/v2/ingest/*/progress', async (route) => {
     await route.fulfill({
@@ -97,6 +99,22 @@ export async function setupMockApi(page: Page, options: MockApiOptions = {}) {
         completed: true,
       }),
     });
+  });
+
+  // Intercept Ingest & Reingest (/v2/ingest and /v2/ingest/:id)
+  await page.route(/\/v2\/ingest(?:\/[^/]+)?$/, async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'list-acacia-1',
+          title: 'Acacia characters testing',
+        }),
+      });
+      return;
+    }
+    await route.continue();
   });
 
   // Intercept Download
@@ -129,26 +147,6 @@ export async function setupMockApi(page: Page, options: MockApiOptions = {}) {
       contentType: 'application/json',
       body: JSON.stringify({ status: 'COMPLETE' }),
     });
-  });
-
-  // Intercept Species lookup API (/ws/species/* and /v1/species/*)
-  await page.route('**/*species/**', async (route) => {
-    const url = route.request().url();
-    if (url.includes('/ws/species/') || url.includes('/v1/species/')) {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([
-          {
-            id: 'list-acacia-1',
-            speciesList: sampleList1,
-            scientificName: 'Acacia dealbata',
-          },
-        ]),
-      });
-      return;
-    }
-    await route.continue();
   });
 
   // Intercept GraphQL
@@ -254,9 +252,13 @@ export async function setupMockApi(page: Page, options: MockApiOptions = {}) {
       // Sort
       if (variables.sort) {
         const dir = variables.dir === 'desc' ? -1 : 1;
+        const getNestedVal = (obj: any, path: string): string => {
+          const val = path.split('.').reduce((acc, part) => (acc != null ? acc[part] : undefined), obj);
+          return val != null ? String(val) : '';
+        };
         items.sort((a: any, b: any) => {
-          const valA = a[variables.sort] || '';
-          const valB = b[variables.sort] || '';
+          const valA = getNestedVal(a, variables.sort);
+          const valB = getNestedVal(b, variables.sort);
           return valA.localeCompare(valB) * dir;
         });
       }
@@ -280,8 +282,11 @@ export async function setupMockApi(page: Page, options: MockApiOptions = {}) {
       return;
     }
 
-    // 3. MUTATION_LIST_UPDATE (update)
-    if (operationName === 'update' || (query && query.includes('updateMetadata'))) {
+    // 3. MUTATION_LIST_UPDATE (updateMetadata)
+    if (
+      (query && query.includes('updateMetadata')) ||
+      (operationName === 'update' && variables.id && !variables.editItem)
+    ) {
       const targetIndex = currentLists.findIndex((l) => l.id === variables.id);
       if (targetIndex >= 0) {
         currentLists[targetIndex] = {
@@ -320,7 +325,7 @@ export async function setupMockApi(page: Page, options: MockApiOptions = {}) {
           family: 'Fabaceae',
           order: 'Fabales',
           rank: 'species',
-          matchType: 'Exact Match',
+          matchType: 'exactMatch',
         },
         dateCreated: new Date().toISOString(),
         lastUpdated: new Date().toISOString(),
@@ -340,7 +345,10 @@ export async function setupMockApi(page: Page, options: MockApiOptions = {}) {
     }
 
     // 5. MUTATION_LIST_ITEM_UPDATE (updateSpeciesListItem)
-    if (operationName === 'update' || (query && query.includes('updateSpeciesListItem'))) {
+    if (
+      (query && query.includes('updateSpeciesListItem')) ||
+      (operationName === 'update' && variables.editItem)
+    ) {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

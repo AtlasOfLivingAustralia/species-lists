@@ -16,6 +16,9 @@ on:
       - '.github/workflows/playwright.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   test-functional:
     runs-on: ubuntu-latest

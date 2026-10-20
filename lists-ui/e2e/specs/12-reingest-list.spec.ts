@@ -26,5 +26,9 @@ test.describe('20. Reingest Species List', () => {
     const confirmReingestBtn = adminPage.getByRole('button', { name: /Confirm re-ingestion/i });
     await expect(confirmReingestBtn).toBeVisible();
     await confirmReingestBtn.click();
+
+    // Verify reingestion completes and returns to list view
+    await expect(adminPage).toHaveURL(/\/list\/list-acacia-1(?:\?.*)?$/);
+    await expect(adminPage.getByRole('button', { name: /Reingest list/i })).toBeVisible();
   });
 });

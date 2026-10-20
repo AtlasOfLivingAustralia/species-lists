@@ -5,18 +5,19 @@ test.describe('24. Table Column Sorting', () => {
     await page.goto('/list/list-acacia-1');
     await expect(page).toHaveURL(/.*\/list\/list-acacia-1/);
 
-    // Initial table records loaded
-    await expect(page.getByRole('link', { name: 'Acacia dealbata' })).toBeVisible();
+    // Initial table records loaded - first record is Acacia dealbata
+    const firstRowLink = page.locator('table tbody tr').first().locator('a').first();
+    await expect(firstRowLink).toHaveText('Acacia dealbata');
 
-    // Find sort buttons in table header
-    const sortButtons = page.locator('th button');
-    const count = await sortButtons.count();
-    expect(count).toBeGreaterThan(0);
-
-    // Click first sort button
-    await sortButtons.first().click();
+    // Click "Scientific name" column sort button
+    const scientificNameSort = page.locator('th').filter({ hasText: 'Scientific name' }).locator('button');
+    await expect(scientificNameSort).toBeVisible();
+    await scientificNameSort.click();
 
     // Verify sort or dir param is updated in URL
     await expect(page).toHaveURL(/(sort=|dir=)/);
+
+    // Verify row re-ordering in the DOM (descending sort puts Emblema pictum first)
+    await expect(firstRowLink).toHaveText('Emblema pictum');
   });
 });

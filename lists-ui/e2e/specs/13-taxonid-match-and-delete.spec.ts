@@ -8,7 +8,7 @@ test.describe('21, 22. TaxonID List Creation and List Deletion', () => {
     await expect(authenticatedPage).toHaveURL(/.*\/list\/list-acacia-1/);
 
     // Verify Taxon ID match is indicated in table or classification
-    await expect(authenticatedPage.getByText('Taxon ID Match', { exact: true }).first()).toBeVisible();
+    await expect(authenticatedPage.getByText('Taxon ID match', { exact: true }).first()).toBeVisible();
 
     // Click "Delete list" (trash can) button
     const deleteBtn = authenticatedPage.getByRole('button', { name: /Delete list/i });
