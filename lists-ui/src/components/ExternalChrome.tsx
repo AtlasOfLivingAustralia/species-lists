@@ -3,14 +3,20 @@ import { useEffect, useRef, useState } from 'react';
 
 import {
   cleanMustache,
+  createThemeJsGate,
   extractInertTemplates,
   injectThemeJs,
+  prepareAuthLinks,
   showLoginStatus,
 } from '#/helpers/utils/runtimeTheme';
 
-// Theme scripts (jQuery, Bootstrap...) must load once per page, even if the header remounts, e.g.
-// after the router shows its error page and recovers
-let themeJsLoaded = false;
+// Theme scripts (jQuery, Bootstrap...) load once per page, after every header/footer is in the DOM
+const themeJs = createThemeJsGate((jsUrl) => injectThemeJs(jsUrl));
+
+// Each header/footer once built, by template URL. Theme scripts set it up only once (translations,
+// handlers), so when the Dashboard remounts, e.g. after the router shows its error page and
+// recovers, these same nodes go back rather than an uninitialised copy
+const built = new Map<string, Node[]>();
 
 interface ExternalChromeProps {
   /** URL of the mustache template; nothing renders without it. */
@@ -36,7 +42,7 @@ interface ExternalHeaderProps extends ExternalChromeProps {
  *   {{searchServer}}{{searchPath}}  search URL (VITE_THEME_SEARCH_URL), header only
  *   other {{name}}                  braces removed, e.g. class="{{loginStatus}}" -> "loginStatus"
  *   .loginStatus                    gets `signedIn` or `signedOut` with the sign-in state
- *   .loginBtn / .logoutBtn          sign in / out through OIDC; their href is removed
+ *   .loginBtn / .logoutBtn          sign in / out through OIDC; their href becomes #
  *
  * The template is sanitised with DOMPurify into DOM nodes, so a <script> in it never runs; theme
  * scripts go in VITE_THEME_JS_URL instead. Only `<script type="text/html" id="...">` blocks are
@@ -51,18 +57,17 @@ function ExternalChrome({
   isAuthenticated,
   onLogin,
   onLogout,
-  onReady,
-}: ExternalChromeProps & { searchUrl?: string; onReady?: () => void }) {
-  const [template, setTemplate] = useState('');
+}: ExternalChromeProps & { searchUrl?: string }) {
+  const [nodes, setNodes] = useState(() => built.get(url));
   const ref = useRef<HTMLDivElement>(null);
 
-  // The click handler is bound once; these keep it calling the current callbacks
+  // The click handler is bound once; this keeps it calling the current callbacks
   const handlers = useRef({ onLogin, onLogout });
   handlers.current = { onLogin, onLogout };
-  const ready = useRef(onReady);
-  ready.current = onReady;
 
   useEffect(() => {
+    if (built.has(url)) return;
+    themeJs.expect(url);
     let cancelled = false;
     fetch(url)
       .then((response) => {
@@ -70,10 +75,15 @@ function ExternalChrome({
         return response.text();
       })
       .then((text) => {
-        if (!cancelled) setTemplate(cleanMustache(text, containerClass, searchUrl));
+        if (cancelled) return;
+        const chrome = buildChrome(cleanMustache(text, containerClass, searchUrl));
+        built.set(url, chrome);
+        setNodes(chrome);
       })
       .catch((error) => {
         console.error(`[lists-theme] Could not load ${url}`, error);
+        // The theme scripts still load for the other part
+        if (!cancelled) themeJs.ready(url);
       });
     return () => {
       cancelled = true;
@@ -83,25 +93,14 @@ function ExternalChrome({
   // Added by hand rather than rendered, so React never re-applies it over the classes toggled below
   useEffect(() => {
     const root = ref.current;
-    if (!root || !template) return;
-    root.replaceChildren(DOMPurify.sanitize(template, { RETURN_DOM_FRAGMENT: true }));
-    // Inert templates for theme scripts (e.g. #autoCompleteTemplate), as text, never run
-    const parsed = new DOMParser().parseFromString(template, 'text/html');
-    for (const { id, content } of extractInertTemplates(parsed)) {
-      if (document.getElementById(id)) continue;
-      const script = document.createElement('script');
-      script.type = 'text/html';
-      script.id = id;
-      script.textContent = content;
-      root.appendChild(script);
-    }
-    root.querySelectorAll('.loginBtn, .logoutBtn').forEach((el) => el.removeAttribute('href'));
-    ready.current?.();
-  }, [template]);
+    if (!root || !nodes) return;
+    root.replaceChildren(...nodes);
+    themeJs.ready(url);
+  }, [nodes, url]);
 
   useEffect(() => {
-    if (ref.current && template) showLoginStatus(ref.current, isAuthenticated);
-  }, [template, isAuthenticated]);
+    if (ref.current && nodes) showLoginStatus(ref.current, isAuthenticated);
+  }, [nodes, isAuthenticated]);
 
   // One delegated listener on the container, so re-renders never stack handlers
   useEffect(() => {
@@ -124,14 +123,30 @@ function ExternalChrome({
   return <div ref={ref} />;
 }
 
+/** The sanitised template as DOM nodes, plus its inert templates for theme scripts. */
+function buildChrome(template: string): Node[] {
+  const holder = document.createElement('div');
+  holder.appendChild(DOMPurify.sanitize(template, { RETURN_DOM_FRAGMENT: true }));
+  // Inert templates for theme scripts (e.g. #autoCompleteTemplate), as text, never run
+  const parsed = new DOMParser().parseFromString(template, 'text/html');
+  for (const { id, content } of extractInertTemplates(parsed)) {
+    if (document.getElementById(id)) continue;
+    const script = document.createElement('script');
+    script.type = 'text/html';
+    script.id = id;
+    script.textContent = content;
+    holder.appendChild(script);
+  }
+  prepareAuthLinks(holder);
+  return Array.from(holder.childNodes);
+}
+
 export function ExternalHeader({ jsUrl, ...props }: ExternalHeaderProps) {
   // Theme scripts look for the header's elements, so they load once it is in the DOM
-  const loadJs = () => {
-    if (themeJsLoaded || !jsUrl) return;
-    themeJsLoaded = true;
-    injectThemeJs(jsUrl);
-  };
-  return <ExternalChrome {...props} onReady={loadJs} />;
+  useEffect(() => {
+    if (jsUrl) themeJs.setJs(jsUrl);
+  }, [jsUrl]);
+  return <ExternalChrome {...props} />;
 }
 
 export function ExternalFooter(props: ExternalChromeProps) {

@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import { afterEach, describe, it, mock } from 'node:test';
 import {
   cleanMustache,
+  createThemeJsGate,
   extractInertTemplates,
   injectFathom,
   injectThemeBaseCss,
   injectThemeCss,
   injectThemeJs,
+  prepareAuthLinks,
   primaryColorOverride,
   setFavicon,
   splitUrlList,
@@ -255,5 +257,93 @@ describe('primaryColorOverride', () => {
     const warn = mock.method(console, 'warn', () => {});
     assert.equal(primaryColorOverride('purple-ish', names), null);
     assert.equal(warn.mock.callCount(), 1);
+  });
+});
+
+describe('prepareAuthLinks', () => {
+  const link = (cls: string, attrs: Record<string, string>) => ({
+    cls,
+    attrs: { ...attrs },
+    getAttribute(name: string) {
+      return this.attrs[name] ?? null;
+    },
+    setAttribute(name: string, value: string) {
+      this.attrs[name] = value;
+    },
+    removeAttribute(name: string) {
+      delete this.attrs[name];
+    },
+  });
+
+  it('keeps login/logout in the tab order as plain links', () => {
+    const login = link('loginBtn', { href: 'loginURL', role: 'button' });
+    const logout = link('logoutBtn', { href: 'logoutURL', 'data-i18n': 'nav.logout' });
+    const other = link('nav-link', { href: '/about', role: 'button' });
+    const root = {
+      querySelectorAll: (selector: string) =>
+        [login, logout, other].filter((el) => selector.includes(`.${el.cls}`)),
+    };
+    prepareAuthLinks(root as unknown as ParentNode);
+    assert.deepEqual(login.attrs, { href: '#' });
+    assert.deepEqual(logout.attrs, { href: '#', 'data-i18n': 'nav.logout' });
+    assert.deepEqual(other.attrs, { href: '/about', role: 'button' });
+  });
+});
+
+describe('createThemeJsGate', () => {
+  it('loads the scripts once the header and the footer are both in the DOM', () => {
+    const load = mock.fn();
+    const gate = createThemeJsGate(load);
+    gate.expect('header');
+    gate.setJs('a.js,b.js');
+    gate.expect('footer');
+    gate.ready('header');
+    assert.equal(load.mock.callCount(), 0);
+    gate.ready('footer');
+    assert.deepEqual(load.mock.calls.map((c) => c.arguments), [['a.js,b.js']]);
+  });
+
+  it('does not wait for a footer that is not configured', () => {
+    const load = mock.fn();
+    const gate = createThemeJsGate(load);
+    gate.expect('header');
+    gate.setJs('a.js');
+    gate.ready('header');
+    assert.equal(load.mock.callCount(), 1);
+  });
+
+  it('counts a footer that failed to load as ready', () => {
+    const load = mock.fn();
+    const gate = createThemeJsGate(load);
+    gate.expect('header');
+    gate.expect('footer');
+    gate.setJs('a.js');
+    gate.ready('footer');
+    gate.ready('header');
+    assert.equal(load.mock.callCount(), 1);
+  });
+
+  it('loads only once, even when the header remounts', () => {
+    const load = mock.fn();
+    const gate = createThemeJsGate(load);
+    gate.expect('header');
+    gate.setJs('a.js');
+    gate.ready('header');
+    gate.expect('header');
+    gate.setJs('a.js');
+    gate.ready('header');
+    assert.equal(load.mock.callCount(), 1);
+  });
+
+  it('loads nothing without scripts or before anything is expected', () => {
+    const load = mock.fn();
+    const gate = createThemeJsGate(load);
+    gate.setJs('a.js');
+    assert.equal(load.mock.callCount(), 0);
+    const noJs = createThemeJsGate(load);
+    noJs.expect('header');
+    noJs.setJs('');
+    noJs.ready('header');
+    assert.equal(load.mock.callCount(), 0);
   });
 });

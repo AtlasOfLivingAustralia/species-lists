@@ -181,3 +181,57 @@ export function showLoginStatus(root: ParentNode, isLoggedIn: boolean): void {
     el.classList.toggle('signedOut', !isLoggedIn);
   });
 }
+
+/**
+ * Makes the template's `.loginBtn` / `.logoutBtn` plain in-page links: `href="#"` keeps them in the
+ * tab order (Enter fires the click that signs in or out through OIDC), and `role="button"` goes,
+ * since a link does not answer Space as a button would. Their own href (`{{loginURL}}`...) is not
+ * filled by lists-ui, so it would point nowhere.
+ */
+export function prepareAuthLinks(root: Pick<ParentNode, 'querySelectorAll'>): void {
+  root.querySelectorAll('.loginBtn, .logoutBtn').forEach((el) => {
+    el.setAttribute('href', '#');
+    if (el.getAttribute('role') === 'button') el.removeAttribute('role');
+  });
+}
+
+export interface ThemeJsGate {
+  /** A header/footer that is going to be added; the scripts wait for it. */
+  expect(part: string): void;
+  /** That part is in the DOM, or failed to load (a broken footer must not block the header's). */
+  ready(part: string): void;
+  /** The scripts to load (VITE_THEME_JS_URL). */
+  setJs(jsUrl: string): void;
+}
+
+/**
+ * Loads the theme scripts once, after every expected header/footer is in the DOM. A theme script
+ * such as base-branding's init.js translates the page once (`$('body').localize()`), so a footer
+ * that arrived later would stay untranslated.
+ */
+export function createThemeJsGate(load: (jsUrl: string) => void): ThemeJsGate {
+  const pending = new Set<string>();
+  let expected = false;
+  let jsUrl = '';
+  let loaded = false;
+  const check = () => {
+    if (loaded || !expected || pending.size > 0 || !jsUrl) return;
+    loaded = true;
+    load(jsUrl);
+  };
+  return {
+    expect(part) {
+      if (loaded) return;
+      expected = true;
+      pending.add(part);
+    },
+    ready(part) {
+      pending.delete(part);
+      check();
+    },
+    setJs(value) {
+      jsUrl = value;
+      check();
+    },
+  };
+}
