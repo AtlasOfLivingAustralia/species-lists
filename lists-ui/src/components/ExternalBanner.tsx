@@ -32,7 +32,7 @@ function ExternalBanner({ url, services }: ExternalBannerProps) {
   const theme = useMantineTheme();
   const mounted = useMounted();
   const turndownService = new TurndownService();
-  const containsHtml = (str) => /<[a-z][\s\S]*>/i.test(str);
+  const containsHtml = (str: string) => /<[a-z][\s\S]*>/i.test(str);
 
   const styles = useMemo(
     () => ({

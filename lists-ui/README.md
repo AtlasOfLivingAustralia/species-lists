@@ -39,8 +39,20 @@ View the app at `http://localhost:5173/`
 By default `VITE_*` values are baked into the build, so each deployment has to edit `config/.env.*` and rebuild. For deployments that want to point a built app at their own backend and identity provider without rebuilding, there is a second build profile from the same code:
 
 ```bash
-yarn build:community   # tsc && vite build --mode community
+yarn build:community   # yarn typecheck && vite build --mode community
 ```
+
+## Checks before a commit
+
+```bash
+yarn lint        # ESLint (eslint.config.js), zero warnings allowed
+yarn typecheck   # tsc -b, plus the e2e and unit test projects
+yarn test        # node:test unit tests in test/
+```
+
+`yarn typecheck` goes through the referenced projects on purpose: the root `tsconfig.json` is a
+solution file (`files: []`, `references`), so a plain `tsc --noEmit` checks nothing at all. CI runs
+these three in the `checks` job of `.github/workflows/playwright.yml`.
 
 ## Running Playwright Functional Tests
 
@@ -85,22 +97,16 @@ The default build (`yarn build:production` and the other modes) removes those ta
 
 ## Expanding the ESLint configuration
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+`eslint.config.js` is an ESLint 9 flat config and deliberately small: TypeScript already covers
+unused symbols and types, so it adds the React hook rules and a handful of correctness rules.
 
-- Configure the top-level `parserOptions` property like this:
+The next two steps, both failing today, are the rules the sources already carry `eslint-disable`
+comments for: `react-hooks/exhaustive-deps` (19 findings) and
+`@typescript-eslint/no-explicit-any` (15). Turning one on means fixing those, and an
+exhaustive-deps fix changes when an effect re-runs, so it needs reading rather than a bulk edit.
+Once they are on, put `--report-unused-disable-directives` back in the `lint` script so stale
+disable comments are reported.
 
-```js
-export default {
-  // other rules...
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-  },
-}
-```
-
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+Type-aware rules (`@typescript-eslint/recommended-type-checked`) would need
+`parserOptions.projectService` and a slower lint run; they are worth it once the two rules above
+pass.

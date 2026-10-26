@@ -30,7 +30,7 @@ export default function Reingest() {
   const { id } = useParams();
   const [ingesting, setIngesting] = useState<boolean>(false);
   const [started, setStarted] = useState<boolean>(false);
-  const [error, setError] = useState<string | Error | null>(null);
+  const [_error, setError] = useState<string | Error | null>(null);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [meta, setMeta] = useState<SpeciesList | null>(null);
   const [_loading, setLoading] = useState(true);

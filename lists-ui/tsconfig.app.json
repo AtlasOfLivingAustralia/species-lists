@@ -23,10 +23,10 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
-    /* Absolute paths */
-    "baseUrl": "./",
+    /* Absolute paths. No baseUrl: it is deprecated in TypeScript 6 and stops working in 7, and
+       paths entries are resolved relative to this file without it. */
     "paths": {
-      "#/*": ["src/*"]
+      "#/*": ["./src/*"]
     }
   },
   "include": ["src"]

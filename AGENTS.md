@@ -80,10 +80,13 @@ yarn build:testing      # Testing build
 yarn build:development  # Development build
 ```
 
-Type-check is run as part of every build (`tsc && vite build`). To type-check only:
+Type-check is run as part of every build (`yarn typecheck && vite build`). To type-check only:
 ```bash
-npx tsc --noEmit
+yarn typecheck
 ```
+> Not `npx tsc --noEmit`: the root `tsconfig.json` is a solution file (`files: []`, `references`),
+> so plain `tsc` checks none of the projects. `yarn typecheck` runs `tsc -b` plus the `e2e/` and
+> `test/` projects.
 
 ### Linting
 ```bash
@@ -91,7 +94,20 @@ npx tsc --noEmit
 yarn lint
 ```
 
-> There are no automated frontend unit tests at this time. Manual testing via `yarn dev` is the primary verification method.
+Configured in `lists-ui/eslint.config.js` (ESLint 9 flat config). `react-hooks/exhaustive-deps`
+and `@typescript-eslint/no-explicit-any` are off for now; see the README before turning them on.
+
+### Testing
+```bash
+# Unit tests (node:test, in test/)
+yarn test
+
+# Functional tests (Playwright, in e2e/): starts the dev server itself
+yarn test:e2e
+```
+
+CI runs `yarn lint`, `yarn typecheck` and `yarn test` in the `checks` job of
+`.github/workflows/playwright.yml`, and `yarn test:e2e` in `test-functional`.
 
 ---
 
@@ -216,6 +232,7 @@ All runtime config is injected via Vite `VITE_*` env vars loaded from `config/` 
 1. **Analyze** – read relevant source files before making changes.
 2. **Implement** – follow the style guide for the relevant sub-project.
 3. **Format** (service) – run `mvn spotless:apply` after any Java changes.
-4. **Type-check** (ui) – run `npx tsc --noEmit` after any TypeScript changes.
+4. **Type-check** (ui) – run `yarn typecheck` after any TypeScript changes.
 5. **Lint** (ui) – run `yarn lint` and fix all warnings before committing.
-6. **Verify** – run targeted tests: `mvn -Dtest=RelevantTest test` for backend changes.
+6. **Verify** – run targeted tests: `mvn -Dtest=RelevantTest test` for backend changes, and
+   `yarn test` / `yarn test:e2e` for frontend changes.

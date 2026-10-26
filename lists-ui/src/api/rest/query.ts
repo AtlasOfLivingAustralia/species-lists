@@ -42,7 +42,7 @@ const resp = await fetch(import.meta.env.VITE_API_BASEURL + input, {
   if (resp.ok) {
     try {
       return JSON.parse(text) as T;
-    } catch (error) {
+    } catch {
       return text as T;
     }
   }

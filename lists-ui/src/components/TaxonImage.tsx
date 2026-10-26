@@ -27,7 +27,7 @@ export function TaxonImage({ taxonID, ...rest }: TaxonImageProps) {
         } else {
           setLoaded(true);
         }
-      } catch (error) {
+      } catch {
         setLoaded(true);
       }
     }

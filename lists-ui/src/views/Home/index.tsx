@@ -316,8 +316,9 @@ const Home = ({ routeId }: { routeId: string }) => {
         return baseBooleanKeys.has(facet.key);
       }
 
-      // Otherwise, hide if there's only 1 option and its count equals or exceeds the total elements
-      if (facet.counts.length === 1 && facet.counts[0].count >= totalElements) {
+      // Otherwise, hide if there's only 1 option and its count equals or exceeds the total elements.
+      // While the total is unknown, keep the facet (?? Infinity), as comparing with undefined did before.
+      if (facet.counts.length === 1 && facet.counts[0].count >= (totalElements ?? Infinity)) {
         return false;
       }
       

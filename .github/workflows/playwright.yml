@@ -17,6 +17,39 @@ permissions:
   contents: read
 
 jobs:
+  # Lint, types and unit tests: everything that needs no browser, in a job of its own so a broken
+  # type or a failing unit test is reported in about a minute, in parallel with the functional
+  # suite. Until this job existed, CI ran neither `yarn lint`, `yarn typecheck` nor `yarn test`,
+  # and the Playwright job starts the app with `yarn dev`, which type-checks nothing.
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: lists-ui
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'yarn'
+          cache-dependency-path: lists-ui/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Lint
+        run: yarn lint
+
+      # Through the referenced projects: plain `tsc` on the root solution file checks nothing
+      - name: Type-check
+        run: yarn typecheck
+
+      - name: Unit tests
+        run: yarn test
+
   test-functional:
     runs-on: ubuntu-24.04
     timeout-minutes: 30

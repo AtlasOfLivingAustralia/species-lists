@@ -1,4 +1,3 @@
-import path from 'path';
 import { test, expect } from '../fixtures/test';
 
 test.describe('21, 22. TaxonID List Creation and List Deletion', () => {

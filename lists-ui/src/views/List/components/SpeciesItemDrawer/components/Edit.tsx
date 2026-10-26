@@ -6,10 +6,6 @@ import { FormattedMessage } from 'react-intl';
 import { useForm } from '@mantine/form';
 import { useEffect } from 'react';
 
-interface ListLoaderData {
-  meta: SpeciesList;
-}
-
 interface SpeciesItemEditProps {
   item: SpeciesListItem;
   onItemUpdated: (item: InputSpeciesList) => void;
