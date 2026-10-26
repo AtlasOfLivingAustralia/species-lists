@@ -1,8 +1,12 @@
 import { FileWithPath } from '@mantine/dropzone';
+
+import { serializeFilters } from '#/helpers';
+
 import { request } from './query';
 
 import {
   IngestProgress,
+  KV,
   SpeciesList,
   SpeciesListConstraints,
   SpeciesListSubmit,
@@ -136,9 +140,12 @@ export default (token: string) => ({
       'GET',
       null
     ),
-  qid: async (id: string): Promise<string> => {
+  qid: async (id: string, filters?: KV[]): Promise<string> => {
+    const query = filters?.length
+      ? `?filters=${encodeURIComponent(serializeFilters(filters))}`
+      : '';
     const { qid } = await request<{ qid: string }>(
-      `${import.meta.env.VITE_API_LIST_QID}/${id}`,
+      `${import.meta.env.VITE_API_LIST_QID}/${id}${query}`,
       'GET'
     );
     return qid;

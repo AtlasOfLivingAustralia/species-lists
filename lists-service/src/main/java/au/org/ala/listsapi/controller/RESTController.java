@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import java.net.URLDecoder;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +52,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import au.org.ala.listsapi.model.Filter;
 import au.org.ala.listsapi.model.RESTSpeciesListQuery;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListIndex;
@@ -392,7 +394,7 @@ public class RESTController {
         }
     }
 
-    @Operation(tags = "REST v2", summary = "Generate a Biocache query ID (QID) for up to 4000 taxa from a given species list")
+    @Operation(tags = "REST v2", summary = "Generate a Biocache query ID (QID) for up to 2000 taxa from a given species list, optionally restricted to the items matching the given filters")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Species list found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = SpeciesListPage.class))),
             @ApiResponse(responseCode = "404", description = "Species list not found", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "string", example = "Species list not found")))
@@ -400,14 +402,22 @@ public class RESTController {
     @GetMapping("/v2/speciesListQid/{speciesListID}")
     public ResponseEntity<Object> speciesListQid(
             @Parameter(description = "The species list ID or data resource ID", example = "dr656", required = true)
-            @PathVariable("speciesListID") String speciesListID) {
+            @PathVariable("speciesListID") String speciesListID,
+            @Parameter(description = "Optional item filters as key:value pairs, using the same keys as the single list page facets", example = "classification.kingdom:Animalia")
+            @RequestParam(required = false) List<String> filters) {
         try {
             Optional<SpeciesList> speciesList = speciesListMongoRepository.findByIdOrDataResourceUid(speciesListID,
                     speciesListID);
 
             // Ensure the species list exists
             if (speciesList.isPresent()) {
-                String qid = biocacheService.getQidForSpeciesList(speciesList.get().getId());
+                List<Filter> parsedFilters = parseFilters(filters);
+                String qid;
+                if (!parsedFilters.isEmpty()) {
+                    qid = biocacheService.getQidForSpeciesList(speciesList.get(), parsedFilters);
+                } else {
+                    qid = biocacheService.getQidForSpeciesList(speciesList.get().getId());
+                }
                 return new ResponseEntity<>(Collections.singletonMap("qid", qid), HttpStatus.OK);
             }
 
@@ -415,6 +425,20 @@ public class RESTController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    /**
+     * Parses filter strings in "key:value" form (the same serialization used by the
+     * UI URL state) into Filter objects. Malformed entries are ignored.
+     */
+    private List<Filter> parseFilters(List<String> filters) {
+        if (filters == null)
+            return Collections.emptyList();
+        return filters.stream()
+                .map(filter -> filter.split(":", 2))
+                .filter(parts -> parts.length == 2)
+                .map(parts -> new Filter(parts[0], parts[1]))
+                .collect(Collectors.toList());
     }
 
     @Operation(tags = "REST v2", summary = "Get a list of keys from (user provided) key value pairs (KVP) that are common across multiple species lists")

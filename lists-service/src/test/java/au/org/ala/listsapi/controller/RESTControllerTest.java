@@ -2,6 +2,8 @@ package au.org.ala.listsapi.controller;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -21,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import au.org.ala.listsapi.model.Filter;
 import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListPage;
 import au.org.ala.listsapi.repo.SpeciesListCustomRepository;
@@ -147,7 +150,7 @@ class RESTControllerTest {
                 .thenReturn(Optional.of(publicList));
         when(biocacheService.getQidForSpeciesList("public123")).thenReturn("qid-12345");
 
-        ResponseEntity<Object> response = restController.speciesListQid("public123");
+        ResponseEntity<Object> response = restController.speciesListQid("public123", null);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -159,8 +162,63 @@ class RESTControllerTest {
         when(speciesListMongoRepository.findByIdOrDataResourceUid("unknown", "unknown"))
                 .thenReturn(Optional.empty());
 
-        ResponseEntity<Object> response = restController.speciesListQid("unknown");
+        ResponseEntity<Object> response = restController.speciesListQid("unknown", null);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    void testSpeciesListQid_WithFilters_parsesAndDelegates() throws Exception {
+        when(speciesListMongoRepository.findByIdOrDataResourceUid("public123", "public123"))
+                .thenReturn(Optional.of(publicList));
+        when(biocacheService.getQidForSpeciesList(eq(publicList), anyList())).thenReturn("qid-filtered");
+
+        ResponseEntity<Object> response = restController.speciesListQid(
+                "public123", List.of("classification.kingdom:Animalia", "risk:high"));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody().toString().contains("qid-filtered"));
+
+        verify(biocacheService).getQidForSpeciesList(eq(publicList), argThat(parsed -> {
+            assertEquals(2, parsed.size());
+            assertEquals("classification.kingdom", parsed.get(0).getKey());
+            assertEquals("Animalia", parsed.get(0).getValue());
+            assertEquals("risk", parsed.get(1).getKey());
+            assertEquals("high", parsed.get(1).getValue());
+            return true;
+        }));
+
+        // The unfiltered overload must not be used when filters are present
+        verify(biocacheService, never()).getQidForSpeciesList("public123");
+    }
+
+    @Test
+    void testSpeciesListQid_WithMalformedFilters_ignoresThem() throws Exception {
+        when(speciesListMongoRepository.findByIdOrDataResourceUid("public123", "public123"))
+                .thenReturn(Optional.of(publicList));
+        when(biocacheService.getQidForSpeciesList("public123")).thenReturn("qid-12345");
+
+        // Entries without a ":" separator can't be parsed and fall back to the unfiltered QID
+        ResponseEntity<Object> response = restController.speciesListQid("public123", List.of("notAFilter"));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody().toString().contains("qid-12345"));
+        verify(biocacheService, never()).getQidForSpeciesList(eq(publicList), anyList());
+    }
+
+    @Test
+    void testSpeciesListQid_WithFilterValueContainingColon_keepsValueIntact() throws Exception {
+        when(speciesListMongoRepository.findByIdOrDataResourceUid("public123", "public123"))
+                .thenReturn(Optional.of(publicList));
+        when(biocacheService.getQidForSpeciesList(eq(publicList), anyList())).thenReturn("qid-filtered");
+
+        restController.speciesListQid("public123", List.of("key:value:with:colons"));
+
+        verify(biocacheService).getQidForSpeciesList(eq(publicList), argThat(parsed -> {
+            assertEquals(1, parsed.size());
+            assertEquals("key", parsed.get(0).getKey());
+            assertEquals("value:with:colons", parsed.get(0).getValue());
+            return true;
+        }));
     }
 }

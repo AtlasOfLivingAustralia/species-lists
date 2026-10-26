@@ -1,5 +1,8 @@
-import { KV } from '#/api';
+import type { KV } from '#/api';
 import { createParser } from 'nuqs';
+
+export const serializeFilters = (filters: KV[]): string =>
+  filters.map(({ key, value }) => `${key}:${value}`).join(',');
 
 export default createParser({
   parse(query): KV[] | null {
@@ -14,6 +17,6 @@ export default createParser({
     return decodedParts.map(([key, value]) => ({ key, value }));
   },
   serialize(value: KV[]): string {
-    return value.map(({ key, value }) => `${key}:${value}`).join(',');
+    return serializeFilters(value);
   },
 });
