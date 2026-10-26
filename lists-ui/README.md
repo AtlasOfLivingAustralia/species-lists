@@ -103,6 +103,19 @@ To run against a live running environment instead of the local dev server:
 BASE_URL=https://lists.test.ala.org.au yarn test:e2e
 ```
 
+`e2e/specs/17-ala-look-and-feel.spec.ts` checks that the ALA build keeps ALA's header, footer,
+acknowledgement, titles, favicon, colours, Fathom analytics, header search and login: the defaults
+every runtime setting falls back to.
+
+The specs in `e2e/specs/community/` cover the runtime theming above, which only exists with
+`--mode community`, so they run as a second Playwright project (`community`) against a dev server
+of their own on port 5174, started automatically. They serve their own `config.local.js` to act as
+a deployment that has configured a theme. To point them at a deployed community build instead:
+
+```bash
+COMMUNITY_BASE_URL=https://lists.example.org yarn test:e2e --project=community
+```
+
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
