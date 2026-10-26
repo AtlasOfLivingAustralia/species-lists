@@ -121,6 +121,16 @@ export function ListMeta({
     [constraints?.licence]
   );
 
+  // Translate list type labels from the constraints API via the locale files
+  const listTypeData = useMemo(
+    () =>
+      (constraints?.listType || []).map(({ value, label }) => ({
+        value,
+        label: intl.messages[value] ? intl.formatMessage({ id: value }) : label,
+      })),
+    [constraints?.listType, intl]
+  );
+
   const licenceLabelMap = useMemo(() =>
     Object.fromEntries((constraints?.licence ?? []).map(l => [l.value, l.label])),
     [constraints?.licence]
@@ -245,7 +255,7 @@ export function ListMeta({
             label={
               <FormattedMessage id="listmeta.type.label" defaultMessage="Type" />
             }
-            data={constraints?.listType || []}
+            data={listTypeData}
             placeholder={intl.formatMessage({ id: 'listmeta.type.placeholder', defaultMessage: 'List type' })}
             required
             disabled={!loaded || loading}
