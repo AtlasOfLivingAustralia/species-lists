@@ -1,0 +1,3 @@
+{
+  "actions.qidExpiryWarning": "Omdat de query voor deze soortenlijst erg lang is, kan die niet direct in de link worden opgenomen. In plaats daarvan is er een tijdelijke query-ID (QID) aangemaakt waarnaar de link verwijst. Links die deze QID gebruiken werken na één week niet meer - bezoek deze soortenlijst opnieuw voor een verse link."
+}

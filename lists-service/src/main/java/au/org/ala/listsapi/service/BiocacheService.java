@@ -21,8 +21,15 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -31,10 +38,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import au.org.ala.listsapi.model.Classification;
+import au.org.ala.listsapi.model.Filter;
+import au.org.ala.listsapi.model.SingleListSearchContext;
+import au.org.ala.listsapi.model.SpeciesList;
 import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
 
@@ -43,12 +54,53 @@ public class BiocacheService {
     @Autowired
     protected SpeciesListItemMongoRepository speciesListItemMongoRepository;
 
+    @Autowired
+    protected SearchHelperService searchHelperService;
+
     public static final Logger log = LoggerFactory.getLogger(BiocacheService.class);
 
     @Value("${biocache.api.url}")
     private String biocacheUrl;
 
     private final int maxBooleanClause = 1000;
+
+    // Page size used when paging through list items, and maximum number of taxa
+    // included in a QID (10 batches of 200 = 2000)
+    private static final int PAGE_SIZE = 200;
+    private static final int MAX_TAXA = 10 * PAGE_SIZE;
+
+    // Lifetime of QIDs created for species lists, in seconds. Sent to biocache
+    // as the maxage param (in milliseconds) - biocache deletes expired QIDs and
+    // fails requests referencing them with HTTP 400, so the local scoped QID
+    // cache below must never outlive this. A negative value disables expiry:
+    // no maxage is sent and QIDs never expire.
+    @Value("${qid.max.age.seconds:-1}")
+    private long qidMaxAgeSeconds;
+
+    // Maximum length of a raw query string returned instead of a QID. Raw queries
+    // are put into shareable ?q= URLs that never expire; typical servlet containers
+    // reject request lines beyond ~8KB, so stay well under that.
+    @Value("${qid.max.raw.length:6000}")
+    private int maxRawQueryLength;
+
+    // Sources reported to biocache when creating a QID, so QID volume from this
+    // service can be attributed and cleaned independently
+    public static final String SOURCE_UNFILTERED = "species-lists:full";
+    public static final String SOURCE_FILTERED = "species-lists:scoped";
+
+    // Cache of query results: identical (list, filters) pairs are common (repeat
+    // clicks), so the item scan and biocache POST are skipped within the TTL.
+    // Cached entries may be stale for up to the TTL if the list content changes.
+    // The TTL is capped at the biocache QID maxage (qidMaxAgeSeconds) when expiry
+    // is enabled; larger values are capped.
+    @Value("${qid.cache.max.entries:1000}")
+    private int maxCachedScopedQids;
+    private final ConcurrentHashMap<String, CachedQid> scopedQidCache = new ConcurrentHashMap<>();
+
+    @Value("${qid.cache.ttl.seconds:604800}")
+    private long scopedQidCacheTtlSeconds;
+
+    private record CachedQid(Map<String, String> result, long expiresAtEpochMs) {}
 
     // Helper method to batch lists
     private <T> Stream<List<T>> batches(List<T> source) {
@@ -74,35 +126,146 @@ public class BiocacheService {
         })).filter(Objects::nonNull).collect(Collectors.joining(" OR ")) + ")";
     }
 
-    public String getQidForSpeciesList(String speciesListId) throws Exception {
-        int page = 0;
-        int pageSize = 200;
-        List<String> batchQueries = new java.util.ArrayList<>();
+    /**
+     * Builds a biocache query for a species list, optionally restricted to the
+     * items matching the given filters. Returns the raw query string under key
+     * "query" when it fits qid.max.raw.length - a shareable ?q= URL
+     * that never expires. Only when the query is too large for a URL is a QID
+     * built (key "qid"); QIDs expire when qid.max.age.seconds is positive.
+     *
+     * <p>Results are cached by (list ID, filters) for {@code qid.cache.ttl.seconds}
+     * (capped at the QID maxage when expiry is enabled) to avoid re-scanning the
+     * items and re-POSTing to biocache for repeated clicks.
+     */
+    public Map<String, String> getSpeciesListQuery(SpeciesList speciesList, List<Filter> filters) throws Exception {
+        List<Filter> effectiveFilters = filters != null ? filters : List.of();
+        boolean scoped = !effectiveFilters.isEmpty();
+        long now = System.currentTimeMillis();
+        String cacheKey = scopedCacheKey(speciesList.getId(), effectiveFilters);
+
+        CachedQid cached = scopedQidCache.get(cacheKey);
+        if (cached != null && cached.expiresAtEpochMs() > now) {
+            return cached.result();
+        }
+
+        List<SpeciesListItem> items = scoped
+                ? collectFilteredItems(speciesList, effectiveFilters)
+                : collectUnfilteredItems(speciesList.getId());
+
+        Map<String, String> result = new LinkedHashMap<>();
+        String query = items.isEmpty() ? null : buildQuery(items);
+        if (query != null && query.length() <= maxRawQueryLength) {
+            result.put("query", query);
+        } else {
+            result.put("qid", getQidForItems(items, scoped ? SOURCE_FILTERED : SOURCE_UNFILTERED,
+                    TimeUnit.SECONDS.toMillis(qidMaxAgeSeconds)));
+        }
+
+        // Cap the local TTL at the biocache maxage when expiry is enabled
+        long ttlSeconds = qidMaxAgeSeconds > 0
+                ? Math.min(scopedQidCacheTtlSeconds, qidMaxAgeSeconds)
+                : scopedQidCacheTtlSeconds;
+        scopedQidCache.put(cacheKey, new CachedQid(result, now + TimeUnit.SECONDS.toMillis(ttlSeconds)));
+
+        if (scopedQidCache.size() > maxCachedScopedQids) {
+            scopedQidCache.entrySet().removeIf(entry -> entry.getValue().expiresAtEpochMs() <= now);
+        }
+
+        return result;
+    }
+
+    static String scopedCacheKey(String speciesListId, List<Filter> filters) {
+        // Sorted so the same filter set in any order shares one cache entry
+        String canonical = filters.stream()
+                .map(filter -> filter.getKey() + "\u001f" + filter.getValue())
+                .sorted()
+                .collect(Collectors.joining("\u001e"));
+        return speciesListId + ":" + sha256Hex(canonical);
+    }
+
+    private static String sha256Hex(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    List<SpeciesListItem> collectUnfilteredItems(String speciesListId) {
+        List<SpeciesListItem> items = new ArrayList<>();
         List<SpeciesListItem> batch;
 
-        int maxBatches = 10; // 2000 terms total, with 200 per batch
+        int page = 0;
         int batchCount = 0;
         do {
-            if (batchCount >= maxBatches) {
-                log.warn("Reached the maximum number of batches: {}", maxBatches);
+            if (batchCount * PAGE_SIZE >= MAX_TAXA) {
+                log.warn("Reached the maximum number of taxa: {}", MAX_TAXA);
                 break;
             }
 
             batch = speciesListItemMongoRepository
-                .findNextBatch(speciesListId, null, PageRequest.of(page, pageSize));
+                .findNextBatch(speciesListId, null, PageRequest.of(page, PAGE_SIZE));
             if (batch != null && !batch.isEmpty()) {
-                String batchQuery = listBatchToString(batch);
-                batchQueries.add(batchQuery);
+                items.addAll(batch);
             }
 
             page++;
             batchCount++;
-        } while (batch != null && batch.size() == pageSize);
+        } while (batch != null && batch.size() == PAGE_SIZE);
 
-        // Build the final query string: ((batch1) OR (batch2) OR ...)
-        String finalQuery = batchQueries.stream()
-            .collect(Collectors.joining(" OR "));
-        String formData = "q=" + URLEncoder.encode("(" + finalQuery + ")", StandardCharsets.UTF_8);
+        return items;
+    }
+
+    List<SpeciesListItem> collectFilteredItems(SpeciesList speciesList, List<Filter> filters) {
+        // Mirror the defaults used by the single list page
+        // (see GraphQLController#buildSingleListSearchContext)
+        SingleListSearchContext context = SingleListSearchContext.builder()
+            .speciesListId(speciesList.getId())
+            .speciesList(speciesList)
+            .searchQuery("")
+            .filters(filters)
+            .sort("scientificName")
+            .dir("asc")
+            .build();
+
+        List<SpeciesListItem> items = new ArrayList<>();
+        int page = 0;
+        while (items.size() < MAX_TAXA) {
+            Page<SpeciesListItem> result =
+                searchHelperService.searchSingleSpeciesList(context, PageRequest.of(page, PAGE_SIZE));
+            items.addAll(result.getContent());
+            if (result.getContent().size() < PAGE_SIZE)
+                break;
+            page++;
+        }
+
+        if (items.size() >= MAX_TAXA)
+            log.warn("Reached the maximum number of taxa: {}, results may be truncated", MAX_TAXA);
+
+        return items;
+    }
+
+    // Build the final query string: ((batch1) OR (batch2) OR ...)
+    String buildQuery(List<SpeciesListItem> items) {
+        return batches(items).map(this::listBatchToString).collect(Collectors.joining(" OR "));
+    }
+
+    String formData(List<SpeciesListItem> items, String source) {
+        return formData(items, source, TimeUnit.SECONDS.toMillis(qidMaxAgeSeconds));
+    }
+
+    String formData(List<SpeciesListItem> items, String source, long maxAgeMs) {
+        String formData = "q=" + URLEncoder.encode("(" + buildQuery(items) + ")", StandardCharsets.UTF_8)
+                + "&source=" + source;
+        if (maxAgeMs > 0) {
+            formData += "&maxage=" + maxAgeMs;
+        }
+        return formData;
+    }
+
+    String getQidForItems(List<SpeciesListItem> items, String source, long maxAgeMs) throws Exception {
+        String formData = formData(items, source, maxAgeMs);
 
         HttpClient client = HttpClient.newBuilder()
             .proxy(ProxySelector.getDefault())

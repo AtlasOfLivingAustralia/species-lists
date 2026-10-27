@@ -18,6 +18,7 @@ import { ALAProvider } from './helpers/context/ALAProvider';
 // Internationalization
 import { IntlProvider } from 'react-intl';
 import en from './locale/en.json';
+import nl from './locale/nl.json';
 
 // Application
 import App from './App';
@@ -57,6 +58,10 @@ export const userManager = new UserManager({
 });
 
 function Main() {
+  // Only the overridden messages are provided per locale; react-intl falls
+  // back to each message's defaultMessage (English) for the rest
+  const messages = { en, nl }[import.meta.env.VITE_LOCALE || 'en'] ?? en;
+  const locale = import.meta.env.VITE_LOCALE || 'en';
 
   async function handleCallback(user: User | void) {
     // If there's a user, it's a sign-in callback

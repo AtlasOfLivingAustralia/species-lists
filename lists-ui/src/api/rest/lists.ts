@@ -1,8 +1,12 @@
 import { FileWithPath } from '@mantine/dropzone';
+
+import { serializeFilters } from '#/helpers';
+
 import { request } from './query';
 
 import {
   IngestProgress,
+  KV,
   SpeciesList,
   SpeciesListConstraints,
   SpeciesListSubmit,
@@ -136,11 +140,15 @@ export default (token: string) => ({
       'GET',
       null
     ),
-  qid: async (id: string): Promise<string> => {
-    const { qid } = await request<{ qid: string }>(
-      `${import.meta.env.VITE_API_LIST_QID}/${id}`,
+  // Returns either {query} - a raw biocache q string small enough for a URL,
+  // never expires - or {qid} for queries too large to share directly
+  qid: async (id: string, filters?: KV[]): Promise<{ query?: string; qid?: string }> => {
+    const query = filters?.length
+      ? `?filters=${encodeURIComponent(serializeFilters(filters))}`
+      : '';
+    return await request<{ query?: string; qid?: string }>(
+      `${import.meta.env.VITE_API_LIST_QID}/${id}${query}`,
       'GET'
     );
-    return qid;
   },
 });

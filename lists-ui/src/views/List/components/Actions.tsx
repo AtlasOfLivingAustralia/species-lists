@@ -18,6 +18,7 @@ import {
   Group,
   Menu,
   Paper,
+  Radio,
   Stack,
   Switch,
   Text,
@@ -31,7 +32,7 @@ import { modals } from '@mantine/modals';
 import { notifications } from '@mantine/notifications';
 
 // API & Helpers
-import { performGQLQuery, SpeciesList, SpeciesListSubmit } from '#/api';
+import { KV, performGQLQuery, SpeciesList, SpeciesListSubmit } from '#/api';
 import { MUTATION_LIST_UPDATE } from '#/api/queries';
 import { ListMeta } from '#/components/ListMeta';
 import { getErrorMessage } from '#/helpers';
@@ -41,8 +42,37 @@ import { useALA } from '#/helpers/context/useALA';
 import { FormattedMessage, useIntl } from 'react-intl';
 import classes from './Actions.module.css';
 
+// Radio choice shown in the action modals when list filters are active:
+// search all species of the list, or only the filtered ones currently shown
+function ScopeChoice({ onChange }: { onChange: (scope: 'all' | 'filtered') => void }) {
+  const intl = useIntl();
+
+  return (
+    <Radio.Group
+      label={intl.formatMessage({ id: 'actions.scope.label', defaultMessage: 'Species to include' })}
+      defaultValue='filtered'
+      onChange={(value) => onChange(value as 'all' | 'filtered')}
+    >
+      <Stack gap='xs' mt='xs'>
+        <Radio
+          value='filtered'
+          label={intl.formatMessage({
+            id: 'actions.scope.filtered',
+            defaultMessage: 'Only the filtered species currently shown'
+          })}
+        />
+        <Radio
+          value='all'
+          label={intl.formatMessage({ id: 'actions.scope.all', defaultMessage: 'All species in this list' })}
+        />
+      </Stack>
+    </Radio.Group>
+  );
+}
+
 interface ActionsProps {
   meta: SpeciesList;
+  filters: KV[];
   editing: boolean;
   rematching: boolean;
   onEditingChange: (editing: boolean) => void;
@@ -53,6 +83,7 @@ interface ActionsProps {
 
 export function Actions({
   meta,
+  filters,
   editing,
   rematching,
   onEditingChange,
@@ -63,21 +94,27 @@ export function Actions({
   const [updating, setUpdating] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
   const [fetchingQid, setFetchingQid] = useState<string | null>(null);
-  const listQid = useRef<string | null>(null);
+  const listQuery = useRef<{ query?: string; qid?: string } | null>(null);
+  // Species scope ('all' | 'filtered') chosen in the modals, kept in a ref to
+  // avoid stale closures in the modal onConfirm callbacks
+  const scopeRef = useRef<'all' | 'filtered'>('filtered');
   const navigate = useNavigate();
   const intl = useIntl();
   const isReingest = location.pathname.endsWith('reingest');
 
   const ala = useALA();
   const authorisedForList = ala.isAuthorisedForList(meta);
+  const hasFilters = filters.length > 0;
   // Maximum entries to use in a Biocache records search
   // Value may change, see lists-service/src/main/java/au/org/ala/listsapi/service/BiocacheService.java#getQidForSpeciesList
   const maxTaxaSearch = 2000; 
 
   // Authoritative Biocache link handler (moved before handleBiocacheLink)
+  // Unfiltered authoritative lists link with the species list id as an fq -
+  // biocache expands species_list:<id> server-side, so no QID is needed
   const handleAuthoritativeBiocacheLink = useCallback((dataResourceId: string) => {
     const url = import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH;
-    window.open(`${url}?q=species_list_uid:${dataResourceId}`, '_blank');
+    window.open(`${url}?q=*:*&fq=species_list:${dataResourceId}`, '_blank');
   }, []);
 
   // Public list Biocache link handler
@@ -86,48 +123,210 @@ export function Actions({
     window.open(`${url}?q=species_list:${dataResourceId}`, '_blank');
   }, []);
 
-  // Biocache QID callback handler
-  // NOTE: Biocache can handle more than 2000 taxa for non-authoritative lists, 
-  // as long they are public (it calls the API). We could implement this service
-  // in the future but it won't easily work with private lists, so might not be worth 
-  // implementing yet another way of linking to biocache records page.
-  const handleQidRedirect = useCallback(
-    async (url: string) => {
-      if (!listQid.current) {
-        setFetchingQid(url);
-        try {
-          listQid.current = await ala.rest.lists.qid(meta.id);
-        } catch (error) {
-          notifications.show({
-            message: getErrorMessage(error),
-            position: 'bottom-left',
-            radius: 'md',
-          });
+  // Open a hub URL with the given service result: raw query when available,
+  // otherwise the QID plus a warning about its limited shelf life
+  const openWithQuery = useCallback(
+    (url: string, result: { query?: string; qid?: string }) => {
+      if (result.query) {
+        window.open(`${url}?q=${encodeURIComponent(result.query)}`, '_blank');
+      } else if (result.qid) {
+        window.open(`${url}?q=qid:${result.qid}`, '_blank');
+        notifications.show({
+          message: intl.formatMessage({
+            id: 'actions.qidExpiryWarning',
+            defaultMessage:
+              'Because the query for this list is very long, it cannot be included in the link directly. Instead a temporary query ID (QID) was created and the link refers to it. Links using this QID stop working after one week - please revisit this list to get a fresh link.'
+          }),
+          color: 'yellow',
+          position: 'bottom-left',
+          radius: 'md',
+        });
+      }
+    },
+    [intl]
+  );
 
-          return;
-        }
-        setFetchingQid(null);
+  // Redirect to a hub URL using the query built by the lists-service for this
+  // list. The service returns a raw query string when it is small enough to
+  // live in a URL (shareable, never expires); only oversized queries come back
+  // as a QID, which expires after one week - the user is warned about that.
+  const handleQueryRedirect = useCallback(
+    async (url: string, scopedFilters?: KV[]) => {
+      const scoped = Boolean(scopedFilters?.length);
+
+      if (!scoped && listQuery.current) {
+        openWithQuery(url, listQuery.current);
+        return;
       }
 
-      if (listQid.current)
-        window.open(`${url}?q=qid:${listQid.current}`, '_blank');
+      setFetchingQid(url);
+      try {
+        const result = await ala.rest.lists.qid(meta.id, scoped ? scopedFilters : undefined);
+        if (!scoped) listQuery.current = result;
+
+        openWithQuery(url, result);
+      } catch (error) {
+        notifications.show({
+          message: getErrorMessage(error),
+          position: 'bottom-left',
+          radius: 'md',
+        });
+
+        return;
+      } finally {
+        setFetchingQid(null);
+      }
     },
-    [ala, meta]
+    [ala, meta, intl, openWithQuery]
   );
-  
+
   // Handle Biocache links (now can reference the above functions)
   const handleBiocacheLink = useCallback(
-    (dataResourceId: string) => {
-      if (meta.isAuthoritative && !meta.isPrivate) {
+    (dataResourceId: string, scopedFilters?: KV[]) => {
+      // A filtered subset of the list can only be expressed through a query
+      // built from the filtered item set. Public lists are resolved by
+      // biocache itself via species_list:<id>; private lists and scoped
+      // filters go through the lists-service query/QID flow.
+      if (scopedFilters && scopedFilters.length > 0) {
+        handleQueryRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH, scopedFilters);
+      } else if (meta.isAuthoritative && !meta.isPrivate) {
         handleAuthoritativeBiocacheLink(dataResourceId);
       } else if (!meta.isPrivate) {
         handlePublicBiocacheLink(dataResourceId);
       } else {
-        handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH);
+        handleQueryRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH, undefined);
       }
     },
-    [meta.isAuthoritative, meta.isPrivate, handleAuthoritativeBiocacheLink, handlePublicBiocacheLink, handleQidRedirect]
+    [meta.isAuthoritative, meta.isPrivate, handleAuthoritativeBiocacheLink, handlePublicBiocacheLink, handleQueryRedirect]
   );
+
+  // Occurrence records modal: the existing confirm modal, extended with a
+  // species-scope choice when filters are active
+  const handleOccurrenceRecordsClick = useCallback(() => {
+    const description = ((meta.isAuthoritative && !meta.isPrivate) || !meta.isPrivate) ? (
+      <Text>
+        {intl.formatMessage({
+          id: 'actions.occurrenceRecords.authoritative',
+          defaultMessage: 'All taxa from this list will be used in the following Biocache search.'
+        })}{' '}
+        {!meta.isAuthoritative && intl.formatMessage({
+          id: 'actions.occurrenceRecords.delayMsg',
+          defaultMessage: 'Note: There may be a delay in the occurrence record page loading with larger lists.'
+        })}
+      </Text>
+    ) : (
+      <Text>
+        {intl.formatMessage({
+        id: 'actions.occurrenceRecords.limited',
+        defaultMessage: 'Only the first {limit} taxa from this list will be used in the following Biocache search, due to querying limitations.'
+        }, { limit: maxTaxaSearch })}
+      </Text>
+    );
+
+    scopeRef.current = 'filtered';
+
+    modals.openConfirmModal({
+      title: (
+        <Text fw='bold' size='lg'>
+          {intl.formatMessage({
+            id: 'actions.occurrenceRecords.title',
+            defaultMessage: 'View Occurrence Records'
+          })}
+        </Text>
+      ),
+
+      children: (
+        <Stack gap='sm'>
+          {description}
+          {hasFilters && <ScopeChoice onChange={(scope) => (scopeRef.current = scope)} />}
+        </Stack>
+      ),
+      labels: {
+        confirm: hasFilters
+          ? intl.formatMessage({ id: 'actions.occurrenceRecords.viewRecords', defaultMessage: 'View records' })
+          : intl.formatMessage({ id: 'actions.occurrenceRecords.proceed', defaultMessage: 'View all records' }),
+        cancel: intl.formatMessage({ id: 'actions.cancel', defaultMessage: 'Cancel' })
+      },
+      confirmProps: {
+        variant: 'filled',
+        radius: 'md',
+      },
+      cancelProps: { radius: 'md' },
+      onConfirm: () => {
+        handleBiocacheLink(
+          meta.dataResourceUid,
+          hasFilters && scopeRef.current === 'filtered' ? filters : undefined
+        );
+      },
+      centered: true
+    });
+  }, [intl, meta, hasFilters, filters, handleBiocacheLink]);
+
+  // Spatial portal: the spatial-hub accepts any biocache q term as a plain URL
+  // parameter (urlParamsService.js) and registers its own QID server-side, so
+  // public lists can be linked directly with the species_list filter. Only
+  // private lists and scoped (filtered) subsets need the lists-service flow.
+  const handleSpatialPortalLink = useCallback(
+    (dataResourceId: string, scopedFilters?: KV[]) => {
+      if (scopedFilters && scopedFilters.length > 0) {
+        handleQueryRedirect(import.meta.env.VITE_ALA_SPATIAL, scopedFilters);
+      } else if (!meta.isPrivate) {
+        window.open(`${import.meta.env.VITE_ALA_SPATIAL}?q=species_list:${dataResourceId}`, '_blank');
+      } else {
+        handleQueryRedirect(import.meta.env.VITE_ALA_SPATIAL, undefined);
+      }
+    },
+    [meta.isPrivate, handleQueryRedirect]
+  );
+
+  // Spatial portal: only asks about the scope when filters are active,
+  // otherwise redirects straight away as before
+  const handleSpatialPortalClick = useCallback(() => {
+    if (!hasFilters) {
+      handleSpatialPortalLink(meta.dataResourceUid);
+      return;
+    }
+
+    scopeRef.current = 'filtered';
+
+    modals.openConfirmModal({
+      title: (
+        <Text fw='bold' size='lg'>
+          {intl.formatMessage({ id: 'actions.spatialPortal.title', defaultMessage: 'View in Spatial Portal' })}
+        </Text>
+      ),
+      children: (
+        <Stack gap='sm'>
+          <Text>
+            {intl.formatMessage({
+              id: 'actions.spatialPortal.filtersActive',
+              defaultMessage: 'Filters are active on this list. Choose which species to include in the search.'
+            })}
+          </Text>
+          <ScopeChoice onChange={(scope) => (scopeRef.current = scope)} />
+        </Stack>
+      ),
+      labels: {
+        confirm: intl.formatMessage({
+          id: 'actions.spatialPortal.proceed',
+          defaultMessage: 'View in spatial portal'
+        }),
+        cancel: intl.formatMessage({ id: 'actions.cancel', defaultMessage: 'Cancel' })
+      },
+      confirmProps: {
+        variant: 'filled',
+        radius: 'md',
+      },
+      cancelProps: { radius: 'md' },
+      onConfirm: () => {
+        handleSpatialPortalLink(
+          meta.dataResourceUid,
+          scopeRef.current === 'filtered' ? filters : undefined
+        );
+      },
+      centered: true
+    });
+  }, [intl, hasFilters, filters, handleSpatialPortalLink]);
 
   // Download callback handler
   const handleDownload = useCallback(async () => {
@@ -304,16 +503,14 @@ export function Actions({
             {intl.formatMessage({ id: 'actions.downloadList', defaultMessage: 'Download list' })}
           </Menu.Item>
           <Menu.Item
-            onClick={() =>
-              handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH)
-            }
+            onClick={handleOccurrenceRecordsClick}
             disabled={Boolean(fetchingQid)}
             leftSection={<FontAwesomeIcon icon={faSearch} />}
           >
             Occurrence records
           </Menu.Item>
           <Menu.Item
-            onClick={() => handleQidRedirect(import.meta.env.VITE_ALA_SPATIAL)}
+            onClick={handleSpatialPortalClick}
             disabled={Boolean(fetchingQid)}
             leftSection={<FontAwesomeIcon icon={faGlobe} />}
           >
@@ -503,51 +700,7 @@ export function Actions({
             </Button>
             <Divider />
             <Button
-              onClick={() => {
-                modals.openConfirmModal({
-                  title: (
-                    <Text fw='bold' size='lg'>
-                      {intl.formatMessage({
-                        id: 'actions.occurrenceRecords.title',
-                        defaultMessage: 'View Occurrence Records'
-                      })}
-                    </Text>
-                  ),
-
-                  children: ((meta.isAuthoritative && !meta.isPrivate) || !meta.isPrivate) ? (
-                    <Text>
-                      {intl.formatMessage({
-                        id: 'actions.occurrenceRecords.authoritative',
-                        defaultMessage: 'All taxa from this list will be used in the following Biocache search.'
-                      })}{' '}
-                      {!meta.isAuthoritative && intl.formatMessage({
-                        id: 'actions.occurrenceRecords.delayMsg',
-                        defaultMessage: 'Note: There may be a delay in the occurrence record page loading with larger lists.'
-                      })}
-                    </Text>
-                  ) : (
-                    <Text>
-                      {intl.formatMessage({
-                      id: 'actions.occurrenceRecords.limited',
-                      defaultMessage: 'Only the first {limit} taxa from this list will be used in the following Biocache search, due to querying limitations.'
-                      }, { limit: maxTaxaSearch })}
-                    </Text>
-                  ),
-                  labels: { 
-                    confirm: intl.formatMessage({ id: 'actions.occurrenceRecords.proceed', defaultMessage: 'View all records' }), 
-                    cancel: intl.formatMessage({ id: 'actions.cancel', defaultMessage: 'Cancel' }) 
-                  },
-                  confirmProps: {
-                    variant: 'filled',
-                    radius: 'md',
-                  },
-                  cancelProps: { radius: 'md' },
-                  onConfirm: () => {
-                    handleBiocacheLink(meta.dataResourceUid);
-                  },
-                  centered: true
-                });
-              }}
+              onClick={handleOccurrenceRecordsClick}
               loading={
                 fetchingQid === import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH
               }
@@ -568,9 +721,7 @@ export function Actions({
             </Button>
             <Divider />
             <Button
-              onClick={() =>
-                handleQidRedirect(import.meta.env.VITE_ALA_SPATIAL)
-              }
+              onClick={handleSpatialPortalClick}
               loading={fetchingQid === import.meta.env.VITE_ALA_SPATIAL}
               disabled={Boolean(fetchingQid)}
               fullWidth
