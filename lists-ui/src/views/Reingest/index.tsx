@@ -52,7 +52,7 @@ export default function Reingest() {
         );
 
         if (result.meta === null || result.list === null) {
-          throw new Error(intl.formatMessage({ id: 'reingest.error.list.notFount', defaultMessage: 'List not found' }));
+          throw new Error(intl.formatMessage({ id: 'reingest.error.list.notFound', defaultMessage: 'List not found' }));
         }
 
         setMeta(result.meta);
@@ -121,7 +121,7 @@ export default function Reingest() {
             </Stack>
             <Group>
               <Button onClick={handleIngest}><FormattedMessage id='reingest.confirm.reingestion' defaultMessage='Confirm re-ingestion'/></Button>
-              <Button onClick={handleReset}><FormattedMessage id='reingest.cacel.reingestion' defaultMessage='Cancel'/></Button>
+              <Button onClick={handleReset}><FormattedMessage id='reingest.cancel.reingestion' defaultMessage='Cancel'/></Button>
             </Group>
           </Group>
         </Paper>

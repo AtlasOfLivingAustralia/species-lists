@@ -41,7 +41,7 @@ export const SearchInput = memo(function SearchInput({
         onChange={(event) => setSearchInputValue(event.currentTarget.value)}
         onKeyDown={handleKeyDown}
         placeholder={intl.formatMessage({
-          id: 'search.input.placeholder',
+          id: 'search.withinList.placeholder',
           defaultMessage: 'Search within list',
         })}
         aria-label={intl.formatMessage({

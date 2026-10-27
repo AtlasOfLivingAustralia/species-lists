@@ -180,7 +180,7 @@ export const FileUploadDropzone = ({
               <Code block className={classes.codeBlock}>
                 <FormattedMessage
                   id='upload.help.csv.content'
-                  defaultMessage='scienficificName, commonName, state, country, size, weight,'
+                  defaultMessage='scientificName, commonName, state, country, size, weight,'
                   values={{ 
                     br: <br />,
                   }}

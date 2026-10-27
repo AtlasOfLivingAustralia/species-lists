@@ -475,7 +475,7 @@ export function Actions({
                     disabled={updating || rematching || deleting}
                     mr='xs'
                     size='xs'
-                    label={intl.formatMessage({ id: 'actions.editFields', defaultMessage: 'Edit column headings' })}
+                    label={intl.formatMessage({ id: 'actions.editFields.columnHeadings', defaultMessage: 'Edit column headings' })}
                     checked={editing}
                     onChange={(ev) => onEditingChange(ev.currentTarget.checked)}
                   />

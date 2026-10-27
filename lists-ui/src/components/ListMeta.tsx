@@ -126,7 +126,9 @@ export function ListMeta({
     () =>
       (constraints?.listType || []).map(({ value, label }) => ({
         value,
-        label: intl.messages[value] ? intl.formatMessage({ id: value }) : label,
+        label: intl.messages[`listType.${value}`]
+          ? intl.formatMessage({ id: `listType.${value}` })
+          : label,
       })),
     [constraints?.listType, intl]
   );
