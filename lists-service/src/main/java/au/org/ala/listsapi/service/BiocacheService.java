@@ -74,7 +74,8 @@ public class BiocacheService {
 
     // Cache of scoped QIDs: identical filter sets are common (repeat clicks), so
     // the item scan and biocache POST are skipped within the TTL. Cached entries
-    // may be stale for up to the TTL if the list content changes.
+    // may be stale for up to the TTL if the list content changes. The same TTL
+    // doubles as the maxage sent to biocache for scoped QIDs.
     private static final int MAX_CACHED_SCOPED_QIDS = 1000;
     private final ConcurrentHashMap<String, CachedQid> scopedQidCache = new ConcurrentHashMap<>();
 
@@ -108,7 +109,7 @@ public class BiocacheService {
     }
 
     public String getQidForSpeciesList(String speciesListId) throws Exception {
-        return getQidForItems(collectUnfilteredItems(speciesListId), SOURCE_UNFILTERED);
+        return getQidForItems(collectUnfilteredItems(speciesListId), SOURCE_UNFILTERED, -1);
     }
 
     /**
@@ -119,6 +120,10 @@ public class BiocacheService {
      *
      * <p>Scoped QIDs are cached by (list ID, filters) for {@code qid.cache.ttl.seconds}
      * to avoid re-scanning the items and re-POSTing to biocache for repeated clicks.
+     * The same TTL is sent to biocache as the QID's maxage, so the stored query
+     * expires on the biocache side when the local cache entry does. Unfiltered QIDs
+     * never expire (maxage -1) because the frontend caches the unfiltered QID for
+     * the whole page session.
      */
     public String getQidForSpeciesList(SpeciesList speciesList, List<Filter> filters) throws Exception {
         String key = scopedCacheKey(speciesList.getId(), filters);
@@ -129,7 +134,8 @@ public class BiocacheService {
             return cached.qid();
         }
 
-        String qid = getQidForItems(collectFilteredItems(speciesList, filters), SOURCE_FILTERED);
+        String qid = getQidForItems(collectFilteredItems(speciesList, filters), SOURCE_FILTERED,
+                TimeUnit.SECONDS.toMillis(scopedQidCacheTtlSeconds));
         scopedQidCache.put(key, new CachedQid(qid, now + TimeUnit.SECONDS.toMillis(scopedQidCacheTtlSeconds)));
 
         if (scopedQidCache.size() > MAX_CACHED_SCOPED_QIDS) {
@@ -217,12 +223,20 @@ public class BiocacheService {
     }
 
     String formData(List<SpeciesListItem> items, String source) {
-        return "q=" + URLEncoder.encode("(" + buildQuery(items) + ")", StandardCharsets.UTF_8)
-                + "&source=" + source;
+        return formData(items, source, -1);
     }
 
-    String getQidForItems(List<SpeciesListItem> items, String source) throws Exception {
-        String formData = formData(items, source);
+    String formData(List<SpeciesListItem> items, String source, long maxAgeMs) {
+        String formData = "q=" + URLEncoder.encode("(" + buildQuery(items) + ")", StandardCharsets.UTF_8)
+                + "&source=" + source;
+        if (maxAgeMs > 0) {
+            formData += "&maxage=" + maxAgeMs;
+        }
+        return formData;
+    }
+
+    String getQidForItems(List<SpeciesListItem> items, String source, long maxAgeMs) throws Exception {
+        String formData = formData(items, source, maxAgeMs);
 
         HttpClient client = HttpClient.newBuilder()
             .proxy(ProxySelector.getDefault())

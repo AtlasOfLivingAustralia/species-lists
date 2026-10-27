@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -231,6 +232,8 @@ class BiocacheServiceTest {
 
             assertTrue(formData.startsWith("q=%28"));
             assertTrue(formData.endsWith("&source=" + BiocacheService.SOURCE_UNFILTERED));
+            // Unfiltered QIDs never expire: no maxage is sent
+            assertTrue(formData.indexOf("maxage") == -1);
         }
 
         @Test
@@ -238,6 +241,20 @@ class BiocacheServiceTest {
             String formData = biocacheService.formData(List.of(itemWithLsid("lsid:1")), BiocacheService.SOURCE_FILTERED);
 
             assertTrue(formData.endsWith("&source=" + BiocacheService.SOURCE_FILTERED));
+        }
+
+        @Test
+        void scopedItems_carryMaxAgeInMilliseconds() {
+            String formData = biocacheService.formData(List.of(itemWithLsid("lsid:1")), BiocacheService.SOURCE_FILTERED, 600_000);
+
+            assertTrue(formData.endsWith("&source=" + BiocacheService.SOURCE_FILTERED + "&maxage=600000"));
+        }
+
+        @Test
+        void nonPositiveMaxAge_isOmitted() {
+            String formData = biocacheService.formData(List.of(itemWithLsid("lsid:1")), BiocacheService.SOURCE_FILTERED, 0);
+
+            assertTrue(formData.indexOf("maxage") == -1);
         }
     }
 
@@ -266,7 +283,7 @@ class BiocacheServiceTest {
             list.setId("list1");
             List<Filter> filters = List.of(new Filter("classification.kingdom", "Animalia"));
             filteredItems(2);
-            doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString());
+            doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
 
             String qid1 = biocacheService.getQidForSpeciesList(list, filters);
             String qid2 = biocacheService.getQidForSpeciesList(list, filters);
@@ -287,7 +304,7 @@ class BiocacheServiceTest {
 
             when(searchHelperService.searchSingleSpeciesList(any(), any(Pageable.class)))
                     .thenReturn(pageOf(items(1), 0, 200));
-            doReturn("qid-a").doReturn("qid-b").when(biocacheService).getQidForItems(anyList(), anyString());
+            doReturn("qid-a").doReturn("qid-b").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
 
             String qidA = biocacheService.getQidForSpeciesList(list, filtersA);
             String qidB = biocacheService.getQidForSpeciesList(list, filtersB);
@@ -305,7 +322,7 @@ class BiocacheServiceTest {
 
             when(searchHelperService.searchSingleSpeciesList(any(), any(Pageable.class)))
                     .thenReturn(pageOf(items(1), 0, 200));
-            doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString());
+            doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
 
             biocacheService.getQidForSpeciesList(list, filters);
             biocacheService.getQidForSpeciesList(list, filters);
@@ -318,7 +335,7 @@ class BiocacheServiceTest {
         void unfilteredQids_areNotCached() throws Exception {
             when(speciesListItemMongoRepository.findNextBatch(eq("list1"), eq(null), eq(PageRequest.of(0, 200))))
                     .thenReturn(List.of(itemWithLsid("lsid:1")));
-            doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString());
+            doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
 
             String qid1 = biocacheService.getQidForSpeciesList("list1");
             String qid2 = biocacheService.getQidForSpeciesList("list1");
@@ -342,7 +359,7 @@ class BiocacheServiceTest {
 
             when(searchHelperService.searchSingleSpeciesList(any(), any(Pageable.class)))
                     .thenReturn(pageOf(items(1), 0, 200));
-            doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString());
+            doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
 
             String qidA = biocacheService.getQidForSpeciesList(list, filtersA);
             String qidB = biocacheService.getQidForSpeciesList(list, filtersB);
