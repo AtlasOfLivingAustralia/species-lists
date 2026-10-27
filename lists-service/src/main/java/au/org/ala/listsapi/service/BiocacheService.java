@@ -67,6 +67,13 @@ public class BiocacheService {
     private static final int PAGE_SIZE = 200;
     private static final int MAX_TAXA = 10 * PAGE_SIZE;
 
+    // Lifetime of QIDs created for species lists: one week. Sent to biocache as
+    // the maxage param (in milliseconds) - biocache deletes expired QIDs and
+    // fails requests referencing them with HTTP 400, so the local scoped QID
+    // cache below must never outlive this.
+    public static final long QID_MAX_AGE_SECONDS = 604800;
+    private static final long QID_MAX_AGE_MS = TimeUnit.SECONDS.toMillis(QID_MAX_AGE_SECONDS);
+
     // Sources reported to biocache when creating a QID, so QID volume from this
     // service can be attributed and cleaned independently
     public static final String SOURCE_UNFILTERED = "species-lists:full";
@@ -74,12 +81,13 @@ public class BiocacheService {
 
     // Cache of scoped QIDs: identical filter sets are common (repeat clicks), so
     // the item scan and biocache POST are skipped within the TTL. Cached entries
-    // may be stale for up to the TTL if the list content changes. The same TTL
-    // doubles as the maxage sent to biocache for scoped QIDs.
+    // may be stale for up to the TTL if the list content changes. The TTL must
+    // never exceed the biocache QID maxage (QID_MAX_AGE_SECONDS); larger values
+    // are capped.
     private static final int MAX_CACHED_SCOPED_QIDS = 1000;
     private final ConcurrentHashMap<String, CachedQid> scopedQidCache = new ConcurrentHashMap<>();
 
-    @Value("${qid.cache.ttl.seconds:600}")
+    @Value("${qid.cache.ttl.seconds:604800}")
     private long scopedQidCacheTtlSeconds;
 
     private record CachedQid(String qid, long expiresAtEpochMs) {}
@@ -109,7 +117,7 @@ public class BiocacheService {
     }
 
     public String getQidForSpeciesList(String speciesListId) throws Exception {
-        return getQidForItems(collectUnfilteredItems(speciesListId), SOURCE_UNFILTERED, -1);
+        return getQidForItems(collectUnfilteredItems(speciesListId), SOURCE_UNFILTERED, QID_MAX_AGE_MS);
     }
 
     /**
@@ -119,11 +127,9 @@ public class BiocacheService {
      * matches exactly what a user sees when the filters are applied in the UI.
      *
      * <p>Scoped QIDs are cached by (list ID, filters) for {@code qid.cache.ttl.seconds}
-     * to avoid re-scanning the items and re-POSTing to biocache for repeated clicks.
-     * The same TTL is sent to biocache as the QID's maxage, so the stored query
-     * expires on the biocache side when the local cache entry does. Unfiltered QIDs
-     * never expire (maxage -1) because the frontend caches the unfiltered QID for
-     * the whole page session.
+     * (capped at the QID maxage) to avoid re-scanning the items and re-POSTing to
+     * biocache for repeated clicks. The QID is created with a maxage of one week
+     * (QID_MAX_AGE_SECONDS), so biocache deletes the stored query when it expires.
      */
     public String getQidForSpeciesList(SpeciesList speciesList, List<Filter> filters) throws Exception {
         String key = scopedCacheKey(speciesList.getId(), filters);
@@ -134,9 +140,9 @@ public class BiocacheService {
             return cached.qid();
         }
 
-        String qid = getQidForItems(collectFilteredItems(speciesList, filters), SOURCE_FILTERED,
-                TimeUnit.SECONDS.toMillis(scopedQidCacheTtlSeconds));
-        scopedQidCache.put(key, new CachedQid(qid, now + TimeUnit.SECONDS.toMillis(scopedQidCacheTtlSeconds)));
+        String qid = getQidForItems(collectFilteredItems(speciesList, filters), SOURCE_FILTERED, QID_MAX_AGE_MS);
+        long ttlSeconds = Math.min(scopedQidCacheTtlSeconds, QID_MAX_AGE_SECONDS);
+        scopedQidCache.put(key, new CachedQid(qid, now + TimeUnit.SECONDS.toMillis(ttlSeconds)));
 
         if (scopedQidCache.size() > MAX_CACHED_SCOPED_QIDS) {
             scopedQidCache.entrySet().removeIf(entry -> entry.getValue().expiresAtEpochMs() <= now);
@@ -223,7 +229,7 @@ public class BiocacheService {
     }
 
     String formData(List<SpeciesListItem> items, String source) {
-        return formData(items, source, -1);
+        return formData(items, source, QID_MAX_AGE_MS);
     }
 
     String formData(List<SpeciesListItem> items, String source, long maxAgeMs) {

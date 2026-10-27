@@ -15,6 +15,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
@@ -231,16 +232,18 @@ class BiocacheServiceTest {
             String formData = biocacheService.formData(List.of(itemWithLsid("lsid:1")), BiocacheService.SOURCE_UNFILTERED);
 
             assertTrue(formData.startsWith("q=%28"));
-            assertTrue(formData.endsWith("&source=" + BiocacheService.SOURCE_UNFILTERED));
-            // Unfiltered QIDs never expire: no maxage is sent
-            assertTrue(formData.indexOf("maxage") == -1);
+            assertTrue(formData.endsWith("&source=" + BiocacheService.SOURCE_UNFILTERED
+                    + "&maxage=" + TimeUnit.SECONDS.toMillis(BiocacheService.QID_MAX_AGE_SECONDS)));
+            // QIDs expire after one week on the biocache side
+            assertEquals(TimeUnit.SECONDS.toMillis(604800), TimeUnit.SECONDS.toMillis(BiocacheService.QID_MAX_AGE_SECONDS));
         }
 
         @Test
         void filteredItems_reportFilteredSource() {
             String formData = biocacheService.formData(List.of(itemWithLsid("lsid:1")), BiocacheService.SOURCE_FILTERED);
 
-            assertTrue(formData.endsWith("&source=" + BiocacheService.SOURCE_FILTERED));
+            assertTrue(formData.endsWith("&source=" + BiocacheService.SOURCE_FILTERED
+                    + "&maxage=" + TimeUnit.SECONDS.toMillis(BiocacheService.QID_MAX_AGE_SECONDS)));
         }
 
         @Test

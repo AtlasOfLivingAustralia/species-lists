@@ -110,9 +110,11 @@ export function Actions({
   const maxTaxaSearch = 2000; 
 
   // Authoritative Biocache link handler (moved before handleBiocacheLink)
+  // Unfiltered authoritative lists link with the species list id as an fq -
+  // biocache expands species_list:<id> server-side, so no QID is needed
   const handleAuthoritativeBiocacheLink = useCallback((dataResourceId: string) => {
     const url = import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH;
-    window.open(`${url}?q=species_list_uid:${dataResourceId}`, '_blank');
+    window.open(`${url}?q=*:*&fq=species_list:${dataResourceId}`, '_blank');
   }, []);
 
   // Public list Biocache link handler
@@ -126,7 +128,8 @@ export function Actions({
   // as long they are public (it calls the API). We could implement this service
   // in the future but it won't easily work with private lists, so might not be worth
   // implementing yet another way of linking to biocache records page.
-  // When scoped filters are passed, a fresh QID is built from the filtered item
+  // Authoritative public lists skip the QID flow entirely (fq=species_list:<id>);
+  // when scoped filters are passed, a fresh QID is built from the filtered item
   // set; only the unfiltered QID is cached in listQid.
   const handleQidRedirect = useCallback(
     async (url: string, scopedFilters?: KV[]) => {
