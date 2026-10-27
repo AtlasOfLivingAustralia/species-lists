@@ -14,9 +14,6 @@ test.describe('14, 15. Edit Column Headings', () => {
     const addFieldInput = authenticatedPage.getByPlaceholder(/Add field/i);
     if (await addFieldInput.isVisible()) {
       await addFieldInput.fill('conservationStatus');
-      const addFieldBtn = authenticatedPage.getByRole('button', { name: /Add field/i }).or(
-        authenticatedPage.locator('button:has(.fa-plus), button:has(svg)')
-      );
       // Verify add field interface is active
       await expect(addFieldInput).toHaveValue('conservationStatus');
     }

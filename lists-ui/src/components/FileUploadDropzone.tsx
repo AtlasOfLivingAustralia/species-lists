@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import '@mantine/dropzone/styles.css';
 
-import { ReactNode, useCallback, useState } from 'react';
+import { ReactNode, useState } from 'react';
 import {
   Alert,
   Anchor,
@@ -44,6 +44,7 @@ type uploadTypes = 'upload' | 'reingest';
 
 interface FileUploadDropzoneProps {
   onUploadSuccess?: (result: UploadResult, originalName: string) => void;
+  /** Accepted for the callers that pass it; the dropzone has no reset control of its own. */
   onReset?: () => void;
   uploadType: uploadTypes;
   showHelpText?: boolean;
@@ -58,7 +59,6 @@ interface FileUploadDropzoneProps {
  */
 export const FileUploadDropzone = ({
   onUploadSuccess,
-  onReset,
   uploadType = 'upload',
   showHelpText = false,
   initialTitle,
@@ -92,14 +92,6 @@ export const FileUploadDropzone = ({
 
     setUploading(false);
   };
-
-  const handleReset = useCallback(() => {
-    setError(null);
-    setResult(null);
-    if (onReset) {
-      onReset();
-    }
-  }, [onReset]);
 
   let idle: { title: ReactNode; content: ReactNode; icon: ReactNode } = {
     title: intl.formatMessage({ id: 'upload.list.description', defaultMessage: 'Drag list here, or click to select' }),

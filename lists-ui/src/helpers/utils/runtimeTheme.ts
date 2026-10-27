@@ -1,0 +1,237 @@
+/**
+ * Portal look & feel that a deployment can change without rebuilding: header and footer templates,
+ * extra CSS/JS, the primary colour, the favicon and analytics.
+ *
+ * The values come from `import.meta.env.VITE_THEME_*` and friends, read by the callers (main.tsx,
+ * Dashboard) in the literal form, so the community build makes each of them overridable from
+ * config.js / config.local.js (see runtimeConfig.ts). The default (ALA) build leaves them empty and
+ * renders exactly as before.
+ *
+ * The header/footer contract is the one atlas-index uses (common-ui/src/components/header.tsx), so
+ * one banner.mustache / footer.mustache serves both apps.
+ *
+ * Everything here is a plain function that takes its values and the document as arguments, so it
+ * can be tested with node:test.
+ */
+
+/** The parts of `document` these helpers touch, so tests can pass a stand-in (`head` is only
+ * used for appendChild and insertBefore). */
+export type ThemeDocument = Pick<Document, 'createElement' | 'head' | 'body' | 'querySelector'>;
+
+/**
+ * Fills a header/footer mustache template the same way atlas-index does:
+ *   {{containerClass}}               -> containerClass
+ *   {{searchServer}}{{searchPath}}   -> searchUrl, when given
+ *   any other {{ / }}                -> removed, keeping the name ({{loginStatus}} -> loginStatus)
+ */
+export function cleanMustache(template: string, containerClass: string, searchUrl?: string): string {
+  let out = template.replace(/\{\{containerClass}}/g, containerClass);
+  if (searchUrl) {
+    out = out.replace(/\{\{searchServer}}\{\{searchPath}}/g, searchUrl);
+  }
+  return out.replace(/\{\{|}}/g, '');
+}
+
+/** A comma-separated list of URLs, trimmed, without empty entries. */
+export function splitUrlList(value: string | undefined): string[] {
+  return (value ?? '')
+    .split(',')
+    .map((url) => url.trim())
+    .filter((url) => url.length > 0);
+}
+
+/**
+ * Appends one stylesheet per URL to <head>, in the order given. They go after the app's own CSS,
+ * so for equal specificity the theme wins, and among them the last one wins.
+ */
+export function injectThemeCss(value: string | undefined, doc: ThemeDocument = document): void {
+  for (const url of splitUrlList(value)) {
+    const link = doc.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = url;
+    doc.head.appendChild(link);
+  }
+}
+
+/**
+ * Inserts one stylesheet per URL BEFORE the app's own CSS, in the order given, the way
+ * atlas-index loads its base theme. For a base such as Bootstrap: its element rules (reboot's
+ * `body`, `a`, `label`...) then lose to the app's, while its classes still style the header and
+ * footer. Without any stylesheet in <head> yet, they are appended.
+ */
+export function injectThemeBaseCss(value: string | undefined, doc: ThemeDocument = document): void {
+  const firstStyle = doc.querySelector('head link[rel="stylesheet"], head style');
+  for (const url of splitUrlList(value)) {
+    const link = doc.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = url;
+    if (firstStyle) doc.head.insertBefore(link, firstStyle);
+    else doc.head.appendChild(link);
+  }
+}
+
+export interface InertTemplate {
+  id: string;
+  content: string;
+}
+
+/**
+ * The `<script type="text/html" id="...">` blocks of a header/footer template, which DOMPurify
+ * removes with every other <script>. Theme scripts read them as templates by id: ALA's
+ * autocomplete (application.js) renders each suggestion from `#autoCompleteTemplate`. The browser
+ * never runs a script of that type, so the caller re-adds them as inert elements with this
+ * content as text. Other types, and blocks without an id, are not returned.
+ *
+ * `parsed` is the template already parsed by the browser (DOMParser, which runs no script), so no
+ * HTML is matched by hand here.
+ */
+export function extractInertTemplates(parsed: Pick<ParentNode, 'querySelectorAll'>): InertTemplate[] {
+  const templates: InertTemplate[] = [];
+  parsed.querySelectorAll('script[id]').forEach((script) => {
+    const type = (script.getAttribute('type') ?? '').trim().toLowerCase();
+    if (type === 'text/html' && script.id) {
+      templates.push({ id: script.id, content: script.textContent ?? '' });
+    }
+  });
+  return templates;
+}
+
+/**
+ * Loads scripts one after another, in the order given, so a later one can depend on an earlier
+ * one. Call it once the header is in the DOM: theme scripts usually look for its elements.
+ */
+export function injectThemeJs(value: string | undefined, doc: ThemeDocument = document): void {
+  const urls = splitUrlList(value);
+  const loadNext = (index: number) => {
+    if (index >= urls.length) return;
+    const script = doc.createElement('script');
+    script.src = urls[index];
+    script.onload = () => loadNext(index + 1);
+    script.onerror = () => loadNext(index + 1);
+    doc.body.appendChild(script);
+  };
+  loadNext(0);
+}
+
+/** Fathom analytics, only when a site id is set. The community build leaves it empty. */
+export function injectFathom(siteId: string | undefined, doc: ThemeDocument = document): void {
+  if (!siteId || !siteId.trim()) return;
+  const script = doc.createElement('script');
+  script.src = 'https://cdn.usefathom.com/script.js';
+  script.defer = true;
+  script.setAttribute('data-site', siteId.trim());
+  script.setAttribute('data-spa', 'auto');
+  doc.head.appendChild(script);
+}
+
+/** Points the page's icon at `url`, when given. */
+export function setFavicon(url: string | undefined, doc: ThemeDocument = document): void {
+  if (!url || !url.trim()) return;
+  let link = doc.querySelector<HTMLLinkElement>('link[rel="icon"]');
+  if (!link) {
+    link = doc.createElement('link');
+    link.rel = 'icon';
+    doc.head.appendChild(link);
+  }
+  link.removeAttribute('type');
+  link.href = url.trim();
+}
+
+/** Name of the palette built from a CSS colour given as the primary colour. */
+export const PORTAL_COLOR = 'portal';
+const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+export interface PrimaryColorOverride {
+  primaryColor: string;
+  colors?: Record<string, string[]>;
+}
+
+/**
+ * Theme override for a primary colour, or null to keep the build's own.
+ *
+ * `value` is either the name of a palette the theme already has (`colorNames`: Mantine's defaults
+ * such as `violet` or `teal`, and ala-mantine's such as `rust`), or a hex colour, which becomes a
+ * flat ten-shade palette. Anything else is ignored with a warning: Mantine fails to render with a
+ * primary colour it does not know.
+ */
+export function primaryColorOverride(
+  value: string | undefined,
+  colorNames: string[]
+): PrimaryColorOverride | null {
+  const color = value?.trim();
+  if (!color) return null;
+  if (colorNames.includes(color)) return { primaryColor: color };
+  if (HEX_COLOR.test(color)) {
+    return { primaryColor: PORTAL_COLOR, colors: { [PORTAL_COLOR]: Array(10).fill(color) } };
+  }
+  console.warn(
+    `[lists-theme] VITE_THEME_PRIMARY_COLOR "${color}" is neither a theme colour (${colorNames.join(', ')}) ` +
+      'nor a hex colour; keeping the default.'
+  );
+  return null;
+}
+
+/**
+ * Toggles `signedIn` / `signedOut` on every `.loginStatus` element under `root`, which the
+ * template's CSS uses to show the login or the logout button.
+ */
+export function showLoginStatus(root: ParentNode, isLoggedIn: boolean): void {
+  root.querySelectorAll('.loginStatus').forEach((el) => {
+    el.classList.toggle('signedIn', isLoggedIn);
+    el.classList.toggle('signedOut', !isLoggedIn);
+  });
+}
+
+/**
+ * Makes the template's `.loginBtn` / `.logoutBtn` plain in-page links: `href="#"` keeps them in the
+ * tab order (Enter fires the click that signs in or out through OIDC), and `role="button"` goes,
+ * since a link does not answer Space as a button would. Their own href (`{{loginURL}}`...) is not
+ * filled by lists-ui, so it would point nowhere.
+ */
+export function prepareAuthLinks(root: Pick<ParentNode, 'querySelectorAll'>): void {
+  root.querySelectorAll('.loginBtn, .logoutBtn').forEach((el) => {
+    el.setAttribute('href', '#');
+    if (el.getAttribute('role') === 'button') el.removeAttribute('role');
+  });
+}
+
+export interface ThemeJsGate {
+  /** A header/footer that is going to be added; the scripts wait for it. */
+  expect(part: string): void;
+  /** That part is in the DOM, or failed to load (a broken footer must not block the header's). */
+  ready(part: string): void;
+  /** The scripts to load (VITE_THEME_JS_URL). */
+  setJs(jsUrl: string): void;
+}
+
+/**
+ * Loads the theme scripts once, after every expected header/footer is in the DOM. A theme script
+ * such as base-branding's init.js translates the page once (`$('body').localize()`), so a footer
+ * that arrived later would stay untranslated.
+ */
+export function createThemeJsGate(load: (jsUrl: string) => void): ThemeJsGate {
+  const pending = new Set<string>();
+  let expected = false;
+  let jsUrl = '';
+  let loaded = false;
+  const check = () => {
+    if (loaded || !expected || pending.size > 0 || !jsUrl) return;
+    loaded = true;
+    load(jsUrl);
+  };
+  return {
+    expect(part) {
+      if (loaded) return;
+      expected = true;
+      pending.add(part);
+    },
+    ready(part) {
+      pending.delete(part);
+      check();
+    },
+    setJs(value) {
+      jsUrl = value;
+      check();
+    },
+  };
+}
