@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,15 @@ class BiocacheServiceTest {
     @Spy
     @InjectMocks
     private BiocacheService biocacheService;
+
+    @BeforeEach
+    void setDefaults() {
+        // @Value fields have no defaults without a Spring context
+        ReflectionTestUtils.setField(biocacheService, "qidMaxAgeSeconds", 604800L);
+        ReflectionTestUtils.setField(biocacheService, "maxRawQueryLength", 6000);
+        ReflectionTestUtils.setField(biocacheService, "maxCachedScopedQids", 1000);
+        ReflectionTestUtils.setField(biocacheService, "scopedQidCacheTtlSeconds", 604800L);
+    }
 
     private SpeciesListItem itemWithLsid(String lsid) {
         SpeciesListItem item = new SpeciesListItem();
@@ -240,9 +250,7 @@ class BiocacheServiceTest {
 
             assertTrue(formData.startsWith("q=%28"));
             assertTrue(formData.endsWith("&source=" + BiocacheService.SOURCE_UNFILTERED
-                    + "&maxage=" + TimeUnit.SECONDS.toMillis(BiocacheService.QID_MAX_AGE_SECONDS)));
-            // QIDs expire after one week on the biocache side
-            assertEquals(TimeUnit.SECONDS.toMillis(604800), TimeUnit.SECONDS.toMillis(BiocacheService.QID_MAX_AGE_SECONDS));
+                    + "&maxage=" + TimeUnit.SECONDS.toMillis(604800)));
         }
 
         @Test
@@ -250,7 +258,25 @@ class BiocacheServiceTest {
             String formData = biocacheService.formData(List.of(itemWithLsid("lsid:1")), BiocacheService.SOURCE_FILTERED);
 
             assertTrue(formData.endsWith("&source=" + BiocacheService.SOURCE_FILTERED
-                    + "&maxage=" + TimeUnit.SECONDS.toMillis(BiocacheService.QID_MAX_AGE_SECONDS)));
+                    + "&maxage=" + TimeUnit.SECONDS.toMillis(604800)));
+        }
+
+        @Test
+        void disabledMaxAge_isOmitted() {
+            ReflectionTestUtils.setField(biocacheService, "qidMaxAgeSeconds", -1L);
+
+            String formData = biocacheService.formData(List.of(itemWithLsid("lsid:1")), BiocacheService.SOURCE_FILTERED);
+
+            assertTrue(formData.indexOf("maxage") == -1);
+        }
+
+        @Test
+        void customMaxAge_isUsedInFormData() {
+            ReflectionTestUtils.setField(biocacheService, "qidMaxAgeSeconds", 3600L);
+
+            String formData = biocacheService.formData(List.of(itemWithLsid("lsid:1")), BiocacheService.SOURCE_FILTERED);
+
+            assertTrue(formData.endsWith("&maxage=3600000"));
         }
 
         @Test
@@ -280,23 +306,22 @@ class BiocacheServiceTest {
             return items;
         }
 
-        // ~16 chars per item in the built query: 420 items exceed MAX_RAW_QUERY_LENGTH
-        private static final int OVERSIZED_COUNT = 420;
-
         @Test
         void smallQuery_returnsRawQueryWithoutCreatingQid() throws Exception {
+            ReflectionTestUtils.setField(biocacheService, "maxRawQueryLength", 100000);
             when(speciesListItemMongoRepository.findNextBatch(eq("list1"), eq(null), eq(PageRequest.of(0, 200))))
-                    .thenReturn(List.of(itemWithLsid("lsid:1")));
+                    .thenReturn(items(2));
 
             Map<String, String> result = biocacheService.getSpeciesListQuery(list("list1"), null);
 
-            assertEquals(Map.of("query", "(lsid:lsid:1)"), result);
+            assertEquals(Map.of("query", "(lsid:lsid:0 OR lsid:lsid:1)"), result);
         }
 
         @Test
         void oversizedQuery_fallsBackToQid() throws Exception {
+            ReflectionTestUtils.setField(biocacheService, "maxRawQueryLength", 1);
             when(speciesListItemMongoRepository.findNextBatch(eq("list1"), eq(null), eq(PageRequest.of(0, 200))))
-                    .thenReturn(items(OVERSIZED_COUNT));
+                    .thenReturn(items(2));
             doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
 
             Map<String, String> result = biocacheService.getSpeciesListQuery(list("list1"), null);
@@ -317,11 +342,8 @@ class BiocacheServiceTest {
     }
 
     @Nested
-    @DisplayName("scoped query cache")
+    @DisplayName("query result cache")
     class ScopedQidCacheTests {
-
-        // 420 items build a query past MAX_RAW_QUERY_LENGTH, forcing the QID path
-        private static final int OVERSIZED_COUNT = 420;
 
         private List<SpeciesListItem> items(int count) {
             List<SpeciesListItem> items = new ArrayList<>();
@@ -331,23 +353,19 @@ class BiocacheServiceTest {
             return items;
         }
 
-        // Stubs consecutive pages of 200 items, ending with a short page
-        private void stubFilteredItems(int count) {
-            List<SpeciesListItem> all = items(count);
-            int page = 0;
-            for (int i = 0; i < all.size(); i += 200) {
-                List<SpeciesListItem> batch = new ArrayList<>(all.subList(i, Math.min(i + 200, all.size())));
-                when(searchHelperService.searchSingleSpeciesList(any(), eq(PageRequest.of(page, 200))))
-                        .thenReturn(pageOf(batch, page, 200));
-                page++;
-            }
+        private List<SpeciesListItem> filteredItems(int count) {
+            when(searchHelperService.searchSingleSpeciesList(any(), eq(PageRequest.of(0, 200))))
+                    .thenReturn(pageOf(items(count), 0, 200));
+            return items(count);
         }
 
         @Test
         void identicalFilters_areCachedWithinTtl() throws Exception {
             ReflectionTestUtils.setField(biocacheService, "scopedQidCacheTtlSeconds", 600L);
+            // Force the QID path regardless of query size
+            ReflectionTestUtils.setField(biocacheService, "maxRawQueryLength", 1);
             List<Filter> filters = List.of(new Filter("classification.kingdom", "Animalia"));
-            stubFilteredItems(OVERSIZED_COUNT);
+            filteredItems(2);
             doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
 
             Map<String, String> result1 = biocacheService.getSpeciesListQuery(list("list1"), filters);
@@ -355,44 +373,47 @@ class BiocacheServiceTest {
 
             assertEquals(Map.of("qid", "qid-list1"), result1);
             assertEquals(result1, result2);
-            // The item scan runs only once (3 pages): the second call is served from the cache
-            verify(searchHelperService, times(3)).searchSingleSpeciesList(any(), any(Pageable.class));
+            // The item scan runs only once: the second call is served from the cache
+            verify(searchHelperService, times(1)).searchSingleSpeciesList(any(), any(Pageable.class));
         }
 
         @Test
         void differentFilters_getSeparateQids() throws Exception {
             ReflectionTestUtils.setField(biocacheService, "scopedQidCacheTtlSeconds", 600L);
+            ReflectionTestUtils.setField(biocacheService, "maxRawQueryLength", 1);
             List<Filter> filtersA = List.of(new Filter("classification.kingdom", "Animalia"));
             List<Filter> filtersB = List.of(new Filter("classification.kingdom", "Plantae"));
 
-            stubFilteredItems(OVERSIZED_COUNT);
+            when(searchHelperService.searchSingleSpeciesList(any(), any(Pageable.class)))
+                    .thenReturn(pageOf(items(1), 0, 200));
             doReturn("qid-a").doReturn("qid-b").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
 
             Map<String, String> resultA = biocacheService.getSpeciesListQuery(list("list1"), filtersA);
             Map<String, String> resultB = biocacheService.getSpeciesListQuery(list("list1"), filtersB);
 
             assertNotEquals(resultA, resultB);
-            // Two separate scans (3 pages each)
-            verify(searchHelperService, times(6)).searchSingleSpeciesList(any(), any(Pageable.class));
+            verify(searchHelperService, times(2)).searchSingleSpeciesList(any(), any(Pageable.class));
         }
 
         @Test
         void expiredEntries_areRefetched() throws Exception {
             ReflectionTestUtils.setField(biocacheService, "scopedQidCacheTtlSeconds", 0L);
+            ReflectionTestUtils.setField(biocacheService, "maxRawQueryLength", 1);
             List<Filter> filters = List.of(new Filter("classification.kingdom", "Animalia"));
 
-            stubFilteredItems(OVERSIZED_COUNT);
+            when(searchHelperService.searchSingleSpeciesList(any(), any(Pageable.class)))
+                    .thenReturn(pageOf(items(1), 0, 200));
             doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
 
             biocacheService.getSpeciesListQuery(list("list1"), filters);
             biocacheService.getSpeciesListQuery(list("list1"), filters);
 
-            // TTL of 0 means the entry is expired immediately: two scans (3 pages each)
-            verify(searchHelperService, times(6)).searchSingleSpeciesList(any(), any(Pageable.class));
+            // TTL of 0 means the entry is expired immediately
+            verify(searchHelperService, times(2)).searchSingleSpeciesList(any(), any(Pageable.class));
         }
 
         @Test
-        void unfilteredQueries_areNotCached() throws Exception {
+        void unfilteredQueries_areCached() throws Exception {
             when(speciesListItemMongoRepository.findNextBatch(eq("list1"), eq(null), eq(PageRequest.of(0, 200))))
                     .thenReturn(List.of(itemWithLsid("lsid:1")));
 
@@ -401,12 +422,14 @@ class BiocacheServiceTest {
 
             assertEquals(result1, result2);
             assertEquals(Map.of("query", "(lsid:lsid:1)"), result1);
-            verify(speciesListItemMongoRepository, times(2)).findNextBatch(eq("list1"), eq(null), any(Pageable.class));
+            // The item scan runs only once: the second call is served from the cache
+            verify(speciesListItemMongoRepository, times(1)).findNextBatch(eq("list1"), eq(null), any(Pageable.class));
         }
 
         @Test
         void sameFiltersInDifferentOrder_shareOneCacheEntry() throws Exception {
             ReflectionTestUtils.setField(biocacheService, "scopedQidCacheTtlSeconds", 600L);
+            ReflectionTestUtils.setField(biocacheService, "maxRawQueryLength", 1);
             List<Filter> filtersA = List.of(
                     new Filter("classification.kingdom", "Animalia"),
                     new Filter("classification.family", "Fabaceae"));
@@ -414,15 +437,15 @@ class BiocacheServiceTest {
                     new Filter("classification.family", "Fabaceae"),
                     new Filter("classification.kingdom", "Animalia"));
 
-            stubFilteredItems(OVERSIZED_COUNT);
+            when(searchHelperService.searchSingleSpeciesList(any(), any(Pageable.class)))
+                    .thenReturn(pageOf(items(1), 0, 200));
             doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
 
             Map<String, String> resultA = biocacheService.getSpeciesListQuery(list("list1"), filtersA);
             Map<String, String> resultB = biocacheService.getSpeciesListQuery(list("list1"), filtersB);
 
             assertEquals(resultA, resultB);
-            // One scan (3 pages) serves both orderings
-            verify(searchHelperService, times(3)).searchSingleSpeciesList(any(), any(Pageable.class));
+            verify(searchHelperService, times(1)).searchSingleSpeciesList(any(), any(Pageable.class));
         }
     }
 }

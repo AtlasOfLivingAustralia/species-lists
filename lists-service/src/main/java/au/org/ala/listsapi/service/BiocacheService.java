@@ -69,29 +69,32 @@ public class BiocacheService {
     private static final int PAGE_SIZE = 200;
     private static final int MAX_TAXA = 10 * PAGE_SIZE;
 
-    // Lifetime of QIDs created for species lists: one week. Sent to biocache as
-    // the maxage param (in milliseconds) - biocache deletes expired QIDs and
+    // Lifetime of QIDs created for species lists, in seconds. Sent to biocache
+    // as the maxage param (in milliseconds) - biocache deletes expired QIDs and
     // fails requests referencing them with HTTP 400, so the local scoped QID
-    // cache below must never outlive this.
-    public static final long QID_MAX_AGE_SECONDS = 604800;
-    private static final long QID_MAX_AGE_MS = TimeUnit.SECONDS.toMillis(QID_MAX_AGE_SECONDS);
+    // cache below must never outlive this. A negative value disables expiry:
+    // no maxage is sent and QIDs never expire.
+    @Value("${qid.max.age.seconds:-1}")
+    private long qidMaxAgeSeconds;
 
     // Maximum length of a raw query string returned instead of a QID. Raw queries
     // are put into shareable ?q= URLs that never expire; typical servlet containers
     // reject request lines beyond ~8KB, so stay well under that.
-    public static final int MAX_RAW_QUERY_LENGTH = 6000;
+    @Value("${qid.max.raw.length:6000}")
+    private int maxRawQueryLength;
 
     // Sources reported to biocache when creating a QID, so QID volume from this
     // service can be attributed and cleaned independently
     public static final String SOURCE_UNFILTERED = "species-lists:full";
     public static final String SOURCE_FILTERED = "species-lists:scoped";
 
-    // Cache of scoped QIDs: identical filter sets are common (repeat clicks), so
-    // the item scan and biocache POST are skipped within the TTL. Cached entries
-    // may be stale for up to the TTL if the list content changes. The TTL must
-    // never exceed the biocache QID maxage (QID_MAX_AGE_SECONDS); larger values
-    // are capped.
-    private static final int MAX_CACHED_SCOPED_QIDS = 1000;
+    // Cache of query results: identical (list, filters) pairs are common (repeat
+    // clicks), so the item scan and biocache POST are skipped within the TTL.
+    // Cached entries may be stale for up to the TTL if the list content changes.
+    // The TTL is capped at the biocache QID maxage (qidMaxAgeSeconds) when expiry
+    // is enabled; larger values are capped.
+    @Value("${qid.cache.max.entries:1000}")
+    private int maxCachedScopedQids;
     private final ConcurrentHashMap<String, CachedQid> scopedQidCache = new ConcurrentHashMap<>();
 
     @Value("${qid.cache.ttl.seconds:604800}")
@@ -126,45 +129,46 @@ public class BiocacheService {
     /**
      * Builds a biocache query for a species list, optionally restricted to the
      * items matching the given filters. Returns the raw query string under key
-     * "query" when it fits {@link #MAX_RAW_QUERY_LENGTH} - a shareable ?q= URL
+     * "query" when it fits qid.max.raw.length - a shareable ?q= URL
      * that never expires. Only when the query is too large for a URL is a QID
-     * built (key "qid"); QIDs expire after one week on the biocache side.
+     * built (key "qid"); QIDs expire when qid.max.age.seconds is positive.
      *
-     * <p>Scoped results are cached by (list ID, filters) for
-     * {@code qid.cache.ttl.seconds} (capped at the QID maxage) to avoid
-     * re-scanning the items and re-POSTing to biocache for repeated clicks.
+     * <p>Results are cached by (list ID, filters) for {@code qid.cache.ttl.seconds}
+     * (capped at the QID maxage when expiry is enabled) to avoid re-scanning the
+     * items and re-POSTing to biocache for repeated clicks.
      */
     public Map<String, String> getSpeciesListQuery(SpeciesList speciesList, List<Filter> filters) throws Exception {
-        boolean scoped = filters != null && !filters.isEmpty();
+        List<Filter> effectiveFilters = filters != null ? filters : List.of();
+        boolean scoped = !effectiveFilters.isEmpty();
         long now = System.currentTimeMillis();
-        String cacheKey = scoped ? scopedCacheKey(speciesList.getId(), filters) : null;
+        String cacheKey = scopedCacheKey(speciesList.getId(), effectiveFilters);
 
-        if (scoped) {
-            CachedQid cached = scopedQidCache.get(cacheKey);
-            if (cached != null && cached.expiresAtEpochMs() > now) {
-                return cached.result();
-            }
+        CachedQid cached = scopedQidCache.get(cacheKey);
+        if (cached != null && cached.expiresAtEpochMs() > now) {
+            return cached.result();
         }
 
         List<SpeciesListItem> items = scoped
-                ? collectFilteredItems(speciesList, filters)
+                ? collectFilteredItems(speciesList, effectiveFilters)
                 : collectUnfilteredItems(speciesList.getId());
 
         Map<String, String> result = new LinkedHashMap<>();
         String query = items.isEmpty() ? null : buildQuery(items);
-        if (query != null && query.length() <= MAX_RAW_QUERY_LENGTH) {
+        if (query != null && query.length() <= maxRawQueryLength) {
             result.put("query", query);
         } else {
-            result.put("qid", getQidForItems(items, scoped ? SOURCE_FILTERED : SOURCE_UNFILTERED, QID_MAX_AGE_MS));
+            result.put("qid", getQidForItems(items, scoped ? SOURCE_FILTERED : SOURCE_UNFILTERED,
+                    TimeUnit.SECONDS.toMillis(qidMaxAgeSeconds)));
         }
 
-        if (scoped) {
-            long ttlSeconds = Math.min(scopedQidCacheTtlSeconds, QID_MAX_AGE_SECONDS);
-            scopedQidCache.put(cacheKey, new CachedQid(result, now + TimeUnit.SECONDS.toMillis(ttlSeconds)));
+        // Cap the local TTL at the biocache maxage when expiry is enabled
+        long ttlSeconds = qidMaxAgeSeconds > 0
+                ? Math.min(scopedQidCacheTtlSeconds, qidMaxAgeSeconds)
+                : scopedQidCacheTtlSeconds;
+        scopedQidCache.put(cacheKey, new CachedQid(result, now + TimeUnit.SECONDS.toMillis(ttlSeconds)));
 
-            if (scopedQidCache.size() > MAX_CACHED_SCOPED_QIDS) {
-                scopedQidCache.entrySet().removeIf(entry -> entry.getValue().expiresAtEpochMs() <= now);
-            }
+        if (scopedQidCache.size() > maxCachedScopedQids) {
+            scopedQidCache.entrySet().removeIf(entry -> entry.getValue().expiresAtEpochMs() <= now);
         }
 
         return result;
@@ -248,7 +252,7 @@ public class BiocacheService {
     }
 
     String formData(List<SpeciesListItem> items, String source) {
-        return formData(items, source, QID_MAX_AGE_MS);
+        return formData(items, source, TimeUnit.SECONDS.toMillis(qidMaxAgeSeconds));
     }
 
     String formData(List<SpeciesListItem> items, String source, long maxAgeMs) {
