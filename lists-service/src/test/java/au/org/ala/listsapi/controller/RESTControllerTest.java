@@ -9,6 +9,7 @@ import static org.mockito.Mockito.*;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -148,7 +149,8 @@ class RESTControllerTest {
     void testSpeciesListQid_Found() throws Exception {
         when(speciesListMongoRepository.findByIdOrDataResourceUid("public123", "public123"))
                 .thenReturn(Optional.of(publicList));
-        when(biocacheService.getQidForSpeciesList("public123")).thenReturn("qid-12345");
+        when(biocacheService.getSpeciesListQuery(eq(publicList), anyList()))
+                .thenReturn(Map.of("qid", "qid-12345"));
 
         ResponseEntity<Object> response = restController.speciesListQid("public123", null);
 
@@ -171,7 +173,8 @@ class RESTControllerTest {
     void testSpeciesListQid_WithFilters_parsesAndDelegates() throws Exception {
         when(speciesListMongoRepository.findByIdOrDataResourceUid("public123", "public123"))
                 .thenReturn(Optional.of(publicList));
-        when(biocacheService.getQidForSpeciesList(eq(publicList), anyList())).thenReturn("qid-filtered");
+        when(biocacheService.getSpeciesListQuery(eq(publicList), anyList()))
+                .thenReturn(Map.of("qid", "qid-filtered"));
 
         ResponseEntity<Object> response = restController.speciesListQid(
                 "public123", List.of("classification.kingdom:Animalia", "risk:high"));
@@ -179,7 +182,7 @@ class RESTControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(response.getBody().toString().contains("qid-filtered"));
 
-        verify(biocacheService).getQidForSpeciesList(eq(publicList), argThat(parsed -> {
+        verify(biocacheService).getSpeciesListQuery(eq(publicList), argThat(parsed -> {
             assertEquals(2, parsed.size());
             assertEquals("classification.kingdom", parsed.get(0).getKey());
             assertEquals("Animalia", parsed.get(0).getValue());
@@ -187,34 +190,33 @@ class RESTControllerTest {
             assertEquals("high", parsed.get(1).getValue());
             return true;
         }));
-
-        // The unfiltered overload must not be used when filters are present
-        verify(biocacheService, never()).getQidForSpeciesList("public123");
     }
 
     @Test
     void testSpeciesListQid_WithMalformedFilters_ignoresThem() throws Exception {
         when(speciesListMongoRepository.findByIdOrDataResourceUid("public123", "public123"))
                 .thenReturn(Optional.of(publicList));
-        when(biocacheService.getQidForSpeciesList("public123")).thenReturn("qid-12345");
+        when(biocacheService.getSpeciesListQuery(eq(publicList), anyList()))
+                .thenReturn(Map.of("qid", "qid-12345"));
 
-        // Entries without a ":" separator can't be parsed and fall back to the unfiltered QID
+        // Entries without a ":" separator can't be parsed and fall back to the unfiltered query
         ResponseEntity<Object> response = restController.speciesListQid("public123", List.of("notAFilter"));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(response.getBody().toString().contains("qid-12345"));
-        verify(biocacheService, never()).getQidForSpeciesList(eq(publicList), anyList());
+        verify(biocacheService).getSpeciesListQuery(eq(publicList), argThat(List::isEmpty));
     }
 
     @Test
     void testSpeciesListQid_WithFilterValueContainingColon_keepsValueIntact() throws Exception {
         when(speciesListMongoRepository.findByIdOrDataResourceUid("public123", "public123"))
                 .thenReturn(Optional.of(publicList));
-        when(biocacheService.getQidForSpeciesList(eq(publicList), anyList())).thenReturn("qid-filtered");
+        when(biocacheService.getSpeciesListQuery(eq(publicList), anyList()))
+                .thenReturn(Map.of("qid", "qid-filtered"));
 
         restController.speciesListQid("public123", List.of("key:value:with:colons"));
 
-        verify(biocacheService).getQidForSpeciesList(eq(publicList), argThat(parsed -> {
+        verify(biocacheService).getSpeciesListQuery(eq(publicList), argThat(parsed -> {
             assertEquals(1, parsed.size());
             assertEquals("key", parsed.get(0).getKey());
             assertEquals("value:with:colons", parsed.get(0).getValue());

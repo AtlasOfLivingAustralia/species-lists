@@ -412,13 +412,8 @@ public class RESTController {
             // Ensure the species list exists
             if (speciesList.isPresent()) {
                 List<Filter> parsedFilters = parseFilters(filters);
-                String qid;
-                if (!parsedFilters.isEmpty()) {
-                    qid = biocacheService.getQidForSpeciesList(speciesList.get(), parsedFilters);
-                } else {
-                    qid = biocacheService.getQidForSpeciesList(speciesList.get().getId());
-                }
-                return new ResponseEntity<>(Collections.singletonMap("qid", qid), HttpStatus.OK);
+                return new ResponseEntity<>(
+                        biocacheService.getSpeciesListQuery(speciesList.get(), parsedFilters), HttpStatus.OK);
             }
 
             return ResponseEntity.status(404).body("Species list not found");

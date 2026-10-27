@@ -140,14 +140,15 @@ export default (token: string) => ({
       'GET',
       null
     ),
-  qid: async (id: string, filters?: KV[]): Promise<string> => {
+  // Returns either {query} - a raw biocache q string small enough for a URL,
+  // never expires - or {qid} for queries too large to share directly
+  qid: async (id: string, filters?: KV[]): Promise<{ query?: string; qid?: string }> => {
     const query = filters?.length
       ? `?filters=${encodeURIComponent(serializeFilters(filters))}`
       : '';
-    const { qid } = await request<{ qid: string }>(
+    return await request<{ query?: string; qid?: string }>(
       `${import.meta.env.VITE_API_LIST_QID}/${id}${query}`,
       'GET'
     );
-    return qid;
   },
 });

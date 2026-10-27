@@ -24,7 +24,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -74,6 +76,11 @@ public class BiocacheService {
     public static final long QID_MAX_AGE_SECONDS = 604800;
     private static final long QID_MAX_AGE_MS = TimeUnit.SECONDS.toMillis(QID_MAX_AGE_SECONDS);
 
+    // Maximum length of a raw query string returned instead of a QID. Raw queries
+    // are put into shareable ?q= URLs that never expire; typical servlet containers
+    // reject request lines beyond ~8KB, so stay well under that.
+    public static final int MAX_RAW_QUERY_LENGTH = 6000;
+
     // Sources reported to biocache when creating a QID, so QID volume from this
     // service can be attributed and cleaned independently
     public static final String SOURCE_UNFILTERED = "species-lists:full";
@@ -90,7 +97,7 @@ public class BiocacheService {
     @Value("${qid.cache.ttl.seconds:604800}")
     private long scopedQidCacheTtlSeconds;
 
-    private record CachedQid(String qid, long expiresAtEpochMs) {}
+    private record CachedQid(Map<String, String> result, long expiresAtEpochMs) {}
 
     // Helper method to batch lists
     private <T> Stream<List<T>> batches(List<T> source) {
@@ -116,39 +123,51 @@ public class BiocacheService {
         })).filter(Objects::nonNull).collect(Collectors.joining(" OR ")) + ")";
     }
 
-    public String getQidForSpeciesList(String speciesListId) throws Exception {
-        return getQidForItems(collectUnfilteredItems(speciesListId), SOURCE_UNFILTERED, QID_MAX_AGE_MS);
-    }
-
     /**
-     * Generates a QID for a species list restricted to the items matching the given
-     * filters. Uses the same Elasticsearch query as the single list page
-     * (see SearchHelperService#searchSingleSpeciesList), so the resulting taxa set
-     * matches exactly what a user sees when the filters are applied in the UI.
+     * Builds a biocache query for a species list, optionally restricted to the
+     * items matching the given filters. Returns the raw query string under key
+     * "query" when it fits {@link #MAX_RAW_QUERY_LENGTH} - a shareable ?q= URL
+     * that never expires. Only when the query is too large for a URL is a QID
+     * built (key "qid"); QIDs expire after one week on the biocache side.
      *
-     * <p>Scoped QIDs are cached by (list ID, filters) for {@code qid.cache.ttl.seconds}
-     * (capped at the QID maxage) to avoid re-scanning the items and re-POSTing to
-     * biocache for repeated clicks. The QID is created with a maxage of one week
-     * (QID_MAX_AGE_SECONDS), so biocache deletes the stored query when it expires.
+     * <p>Scoped results are cached by (list ID, filters) for
+     * {@code qid.cache.ttl.seconds} (capped at the QID maxage) to avoid
+     * re-scanning the items and re-POSTing to biocache for repeated clicks.
      */
-    public String getQidForSpeciesList(SpeciesList speciesList, List<Filter> filters) throws Exception {
-        String key = scopedCacheKey(speciesList.getId(), filters);
+    public Map<String, String> getSpeciesListQuery(SpeciesList speciesList, List<Filter> filters) throws Exception {
+        boolean scoped = filters != null && !filters.isEmpty();
         long now = System.currentTimeMillis();
+        String cacheKey = scoped ? scopedCacheKey(speciesList.getId(), filters) : null;
 
-        CachedQid cached = scopedQidCache.get(key);
-        if (cached != null && cached.expiresAtEpochMs() > now) {
-            return cached.qid();
+        if (scoped) {
+            CachedQid cached = scopedQidCache.get(cacheKey);
+            if (cached != null && cached.expiresAtEpochMs() > now) {
+                return cached.result();
+            }
         }
 
-        String qid = getQidForItems(collectFilteredItems(speciesList, filters), SOURCE_FILTERED, QID_MAX_AGE_MS);
-        long ttlSeconds = Math.min(scopedQidCacheTtlSeconds, QID_MAX_AGE_SECONDS);
-        scopedQidCache.put(key, new CachedQid(qid, now + TimeUnit.SECONDS.toMillis(ttlSeconds)));
+        List<SpeciesListItem> items = scoped
+                ? collectFilteredItems(speciesList, filters)
+                : collectUnfilteredItems(speciesList.getId());
 
-        if (scopedQidCache.size() > MAX_CACHED_SCOPED_QIDS) {
-            scopedQidCache.entrySet().removeIf(entry -> entry.getValue().expiresAtEpochMs() <= now);
+        Map<String, String> result = new LinkedHashMap<>();
+        String query = items.isEmpty() ? null : buildQuery(items);
+        if (query != null && query.length() <= MAX_RAW_QUERY_LENGTH) {
+            result.put("query", query);
+        } else {
+            result.put("qid", getQidForItems(items, scoped ? SOURCE_FILTERED : SOURCE_UNFILTERED, QID_MAX_AGE_MS));
         }
 
-        return qid;
+        if (scoped) {
+            long ttlSeconds = Math.min(scopedQidCacheTtlSeconds, QID_MAX_AGE_SECONDS);
+            scopedQidCache.put(cacheKey, new CachedQid(result, now + TimeUnit.SECONDS.toMillis(ttlSeconds)));
+
+            if (scopedQidCache.size() > MAX_CACHED_SCOPED_QIDS) {
+                scopedQidCache.entrySet().removeIf(entry -> entry.getValue().expiresAtEpochMs() <= now);
+            }
+        }
+
+        return result;
     }
 
     static String scopedCacheKey(String speciesListId, List<Filter> filters) {

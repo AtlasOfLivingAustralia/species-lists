@@ -15,6 +15,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.List;
 
@@ -65,6 +66,12 @@ class BiocacheServiceTest {
         SpeciesListItem item = new SpeciesListItem();
         item.setScientificName(name);
         return item;
+    }
+
+    private SpeciesList list(String id) {
+        SpeciesList list = new SpeciesList();
+        list.setId(id);
+        return list;
     }
 
     private PageImpl<SpeciesListItem> pageOf(List<SpeciesListItem> items, int page, int pageSize) {
@@ -262,8 +269,8 @@ class BiocacheServiceTest {
     }
 
     @Nested
-    @DisplayName("scoped QID cache")
-    class ScopedQidCacheTests {
+    @DisplayName("getSpeciesListQuery")
+    class GetSpeciesListQueryTests {
 
         private List<SpeciesListItem> items(int count) {
             List<SpeciesListItem> items = new ArrayList<>();
@@ -273,86 +280,133 @@ class BiocacheServiceTest {
             return items;
         }
 
-        private List<SpeciesListItem> filteredItems(int count) {
-            when(searchHelperService.searchSingleSpeciesList(any(), eq(PageRequest.of(0, 200))))
-                    .thenReturn(pageOf(items(count), 0, 200));
-            return items(count);
+        // ~16 chars per item in the built query: 420 items exceed MAX_RAW_QUERY_LENGTH
+        private static final int OVERSIZED_COUNT = 420;
+
+        @Test
+        void smallQuery_returnsRawQueryWithoutCreatingQid() throws Exception {
+            when(speciesListItemMongoRepository.findNextBatch(eq("list1"), eq(null), eq(PageRequest.of(0, 200))))
+                    .thenReturn(List.of(itemWithLsid("lsid:1")));
+
+            Map<String, String> result = biocacheService.getSpeciesListQuery(list("list1"), null);
+
+            assertEquals(Map.of("query", "(lsid:lsid:1)"), result);
+        }
+
+        @Test
+        void oversizedQuery_fallsBackToQid() throws Exception {
+            when(speciesListItemMongoRepository.findNextBatch(eq("list1"), eq(null), eq(PageRequest.of(0, 200))))
+                    .thenReturn(items(OVERSIZED_COUNT));
+            doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
+
+            Map<String, String> result = biocacheService.getSpeciesListQuery(list("list1"), null);
+
+            assertEquals(Map.of("qid", "qid-list1"), result);
+        }
+
+        @Test
+        void emptyItems_fallBackToQid() throws Exception {
+            when(speciesListItemMongoRepository.findNextBatch(eq("list1"), eq(null), eq(PageRequest.of(0, 200))))
+                    .thenReturn(List.of());
+            doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
+
+            Map<String, String> result = biocacheService.getSpeciesListQuery(list("list1"), null);
+
+            assertEquals(Map.of("qid", "qid-list1"), result);
+        }
+    }
+
+    @Nested
+    @DisplayName("scoped query cache")
+    class ScopedQidCacheTests {
+
+        // 420 items build a query past MAX_RAW_QUERY_LENGTH, forcing the QID path
+        private static final int OVERSIZED_COUNT = 420;
+
+        private List<SpeciesListItem> items(int count) {
+            List<SpeciesListItem> items = new ArrayList<>();
+            for (int i = 0; i < count; i++) {
+                items.add(itemWithLsid("lsid:" + i));
+            }
+            return items;
+        }
+
+        // Stubs consecutive pages of 200 items, ending with a short page
+        private void stubFilteredItems(int count) {
+            List<SpeciesListItem> all = items(count);
+            int page = 0;
+            for (int i = 0; i < all.size(); i += 200) {
+                List<SpeciesListItem> batch = new ArrayList<>(all.subList(i, Math.min(i + 200, all.size())));
+                when(searchHelperService.searchSingleSpeciesList(any(), eq(PageRequest.of(page, 200))))
+                        .thenReturn(pageOf(batch, page, 200));
+                page++;
+            }
         }
 
         @Test
         void identicalFilters_areCachedWithinTtl() throws Exception {
             ReflectionTestUtils.setField(biocacheService, "scopedQidCacheTtlSeconds", 600L);
-            SpeciesList list = new SpeciesList();
-            list.setId("list1");
             List<Filter> filters = List.of(new Filter("classification.kingdom", "Animalia"));
-            filteredItems(2);
+            stubFilteredItems(OVERSIZED_COUNT);
             doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
 
-            String qid1 = biocacheService.getQidForSpeciesList(list, filters);
-            String qid2 = biocacheService.getQidForSpeciesList(list, filters);
+            Map<String, String> result1 = biocacheService.getSpeciesListQuery(list("list1"), filters);
+            Map<String, String> result2 = biocacheService.getSpeciesListQuery(list("list1"), filters);
 
-            assertEquals("qid-list1", qid1);
-            assertEquals(qid1, qid2);
-            // The item scan runs only once: the second call is served from the cache
-            verify(searchHelperService, times(1)).searchSingleSpeciesList(any(), any(Pageable.class));
+            assertEquals(Map.of("qid", "qid-list1"), result1);
+            assertEquals(result1, result2);
+            // The item scan runs only once (3 pages): the second call is served from the cache
+            verify(searchHelperService, times(3)).searchSingleSpeciesList(any(), any(Pageable.class));
         }
 
         @Test
         void differentFilters_getSeparateQids() throws Exception {
             ReflectionTestUtils.setField(biocacheService, "scopedQidCacheTtlSeconds", 600L);
-            SpeciesList list = new SpeciesList();
-            list.setId("list1");
             List<Filter> filtersA = List.of(new Filter("classification.kingdom", "Animalia"));
             List<Filter> filtersB = List.of(new Filter("classification.kingdom", "Plantae"));
 
-            when(searchHelperService.searchSingleSpeciesList(any(), any(Pageable.class)))
-                    .thenReturn(pageOf(items(1), 0, 200));
+            stubFilteredItems(OVERSIZED_COUNT);
             doReturn("qid-a").doReturn("qid-b").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
 
-            String qidA = biocacheService.getQidForSpeciesList(list, filtersA);
-            String qidB = biocacheService.getQidForSpeciesList(list, filtersB);
+            Map<String, String> resultA = biocacheService.getSpeciesListQuery(list("list1"), filtersA);
+            Map<String, String> resultB = biocacheService.getSpeciesListQuery(list("list1"), filtersB);
 
-            assertNotEquals(qidA, qidB);
-            verify(searchHelperService, times(2)).searchSingleSpeciesList(any(), any(Pageable.class));
+            assertNotEquals(resultA, resultB);
+            // Two separate scans (3 pages each)
+            verify(searchHelperService, times(6)).searchSingleSpeciesList(any(), any(Pageable.class));
         }
 
         @Test
         void expiredEntries_areRefetched() throws Exception {
             ReflectionTestUtils.setField(biocacheService, "scopedQidCacheTtlSeconds", 0L);
-            SpeciesList list = new SpeciesList();
-            list.setId("list1");
             List<Filter> filters = List.of(new Filter("classification.kingdom", "Animalia"));
 
-            when(searchHelperService.searchSingleSpeciesList(any(), any(Pageable.class)))
-                    .thenReturn(pageOf(items(1), 0, 200));
+            stubFilteredItems(OVERSIZED_COUNT);
             doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
 
-            biocacheService.getQidForSpeciesList(list, filters);
-            biocacheService.getQidForSpeciesList(list, filters);
+            biocacheService.getSpeciesListQuery(list("list1"), filters);
+            biocacheService.getSpeciesListQuery(list("list1"), filters);
 
-            // TTL of 0 means the entry is expired immediately
-            verify(searchHelperService, times(2)).searchSingleSpeciesList(any(), any(Pageable.class));
+            // TTL of 0 means the entry is expired immediately: two scans (3 pages each)
+            verify(searchHelperService, times(6)).searchSingleSpeciesList(any(), any(Pageable.class));
         }
 
         @Test
-        void unfilteredQids_areNotCached() throws Exception {
+        void unfilteredQueries_areNotCached() throws Exception {
             when(speciesListItemMongoRepository.findNextBatch(eq("list1"), eq(null), eq(PageRequest.of(0, 200))))
                     .thenReturn(List.of(itemWithLsid("lsid:1")));
-            doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
 
-            String qid1 = biocacheService.getQidForSpeciesList("list1");
-            String qid2 = biocacheService.getQidForSpeciesList("list1");
+            Map<String, String> result1 = biocacheService.getSpeciesListQuery(list("list1"), null);
+            Map<String, String> result2 = biocacheService.getSpeciesListQuery(list("list1"), null);
 
-            assertEquals("qid-list1", qid1);
-            assertEquals(qid1, qid2);
+            assertEquals(result1, result2);
+            assertEquals(Map.of("query", "(lsid:lsid:1)"), result1);
             verify(speciesListItemMongoRepository, times(2)).findNextBatch(eq("list1"), eq(null), any(Pageable.class));
         }
 
         @Test
         void sameFiltersInDifferentOrder_shareOneCacheEntry() throws Exception {
             ReflectionTestUtils.setField(biocacheService, "scopedQidCacheTtlSeconds", 600L);
-            SpeciesList list = new SpeciesList();
-            list.setId("list1");
             List<Filter> filtersA = List.of(
                     new Filter("classification.kingdom", "Animalia"),
                     new Filter("classification.family", "Fabaceae"));
@@ -360,15 +414,15 @@ class BiocacheServiceTest {
                     new Filter("classification.family", "Fabaceae"),
                     new Filter("classification.kingdom", "Animalia"));
 
-            when(searchHelperService.searchSingleSpeciesList(any(), any(Pageable.class)))
-                    .thenReturn(pageOf(items(1), 0, 200));
+            stubFilteredItems(OVERSIZED_COUNT);
             doReturn("qid-list1").when(biocacheService).getQidForItems(anyList(), anyString(), anyLong());
 
-            String qidA = biocacheService.getQidForSpeciesList(list, filtersA);
-            String qidB = biocacheService.getQidForSpeciesList(list, filtersB);
+            Map<String, String> resultA = biocacheService.getSpeciesListQuery(list("list1"), filtersA);
+            Map<String, String> resultB = biocacheService.getSpeciesListQuery(list("list1"), filtersB);
 
-            assertEquals(qidA, qidB);
-            verify(searchHelperService, times(1)).searchSingleSpeciesList(any(), any(Pageable.class));
+            assertEquals(resultA, resultB);
+            // One scan (3 pages) serves both orderings
+            verify(searchHelperService, times(3)).searchSingleSpeciesList(any(), any(Pageable.class));
         }
     }
 }
