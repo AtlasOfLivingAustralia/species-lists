@@ -21,9 +21,13 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -63,6 +67,22 @@ public class BiocacheService {
     private static final int PAGE_SIZE = 200;
     private static final int MAX_TAXA = 10 * PAGE_SIZE;
 
+    // Sources reported to biocache when creating a QID, so QID volume from this
+    // service can be attributed and cleaned independently
+    public static final String SOURCE_UNFILTERED = "species-lists:full";
+    public static final String SOURCE_FILTERED = "species-lists:scoped";
+
+    // Cache of scoped QIDs: identical filter sets are common (repeat clicks), so
+    // the item scan and biocache POST are skipped within the TTL. Cached entries
+    // may be stale for up to the TTL if the list content changes.
+    private static final int MAX_CACHED_SCOPED_QIDS = 1000;
+    private final ConcurrentHashMap<String, CachedQid> scopedQidCache = new ConcurrentHashMap<>();
+
+    @Value("${qid.cache.ttl.seconds:600}")
+    private long scopedQidCacheTtlSeconds;
+
+    private record CachedQid(String qid, long expiresAtEpochMs) {}
+
     // Helper method to batch lists
     private <T> Stream<List<T>> batches(List<T> source) {
         int size = source.size();
@@ -88,7 +108,7 @@ public class BiocacheService {
     }
 
     public String getQidForSpeciesList(String speciesListId) throws Exception {
-        return getQidForItems(collectUnfilteredItems(speciesListId));
+        return getQidForItems(collectUnfilteredItems(speciesListId), SOURCE_UNFILTERED);
     }
 
     /**
@@ -96,9 +116,45 @@ public class BiocacheService {
      * filters. Uses the same Elasticsearch query as the single list page
      * (see SearchHelperService#searchSingleSpeciesList), so the resulting taxa set
      * matches exactly what a user sees when the filters are applied in the UI.
+     *
+     * <p>Scoped QIDs are cached by (list ID, filters) for {@code qid.cache.ttl.seconds}
+     * to avoid re-scanning the items and re-POSTing to biocache for repeated clicks.
      */
     public String getQidForSpeciesList(SpeciesList speciesList, List<Filter> filters) throws Exception {
-        return getQidForItems(collectFilteredItems(speciesList, filters));
+        String key = scopedCacheKey(speciesList.getId(), filters);
+        long now = System.currentTimeMillis();
+
+        CachedQid cached = scopedQidCache.get(key);
+        if (cached != null && cached.expiresAtEpochMs() > now) {
+            return cached.qid();
+        }
+
+        String qid = getQidForItems(collectFilteredItems(speciesList, filters), SOURCE_FILTERED);
+        scopedQidCache.put(key, new CachedQid(qid, now + TimeUnit.SECONDS.toMillis(scopedQidCacheTtlSeconds)));
+
+        if (scopedQidCache.size() > MAX_CACHED_SCOPED_QIDS) {
+            scopedQidCache.entrySet().removeIf(entry -> entry.getValue().expiresAtEpochMs() <= now);
+        }
+
+        return qid;
+    }
+
+    static String scopedCacheKey(String speciesListId, List<Filter> filters) {
+        // Sorted so the same filter set in any order shares one cache entry
+        String canonical = filters.stream()
+                .map(filter -> filter.getKey() + "\u001f" + filter.getValue())
+                .sorted()
+                .collect(Collectors.joining("\u001e"));
+        return speciesListId + ":" + sha256Hex(canonical);
+    }
+
+    private static String sha256Hex(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
     }
 
     List<SpeciesListItem> collectUnfilteredItems(String speciesListId) {
@@ -160,8 +216,13 @@ public class BiocacheService {
         return batches(items).map(this::listBatchToString).collect(Collectors.joining(" OR "));
     }
 
-    private String getQidForItems(List<SpeciesListItem> items) throws Exception {
-        String formData = "q=" + URLEncoder.encode("(" + buildQuery(items) + ")", StandardCharsets.UTF_8);
+    String formData(List<SpeciesListItem> items, String source) {
+        return "q=" + URLEncoder.encode("(" + buildQuery(items) + ")", StandardCharsets.UTF_8)
+                + "&source=" + source;
+    }
+
+    String getQidForItems(List<SpeciesListItem> items, String source) throws Exception {
+        String formData = formData(items, source);
 
         HttpClient client = HttpClient.newBuilder()
             .proxy(ProxySelector.getDefault())

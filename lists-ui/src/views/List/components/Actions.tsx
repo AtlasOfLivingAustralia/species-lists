@@ -162,7 +162,9 @@ export function Actions({
   const handleBiocacheLink = useCallback(
     (dataResourceId: string, scopedFilters?: KV[]) => {
       // A filtered subset of the list can only be expressed through a QID built
-      // from the filtered item set
+      // from the filtered item set. Scoped QIDs are cached server-side, and
+      // spatial portal uses the QID flow too, so biocache does the same to keep
+      // a single flow for both hubs.
       if (scopedFilters && scopedFilters.length > 0) {
         handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH, scopedFilters);
       } else if (meta.isAuthoritative && !meta.isPrivate) {
@@ -170,7 +172,7 @@ export function Actions({
       } else if (!meta.isPrivate) {
         handlePublicBiocacheLink(dataResourceId);
       } else {
-        handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH);
+        handleQidRedirect(import.meta.env.VITE_ALA_BIOCACHE_OCC_SEARCH, undefined);
       }
     },
     [meta.isAuthoritative, meta.isPrivate, handleAuthoritativeBiocacheLink, handlePublicBiocacheLink, handleQidRedirect]
