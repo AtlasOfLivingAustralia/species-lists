@@ -111,8 +111,17 @@ export function Breadcrumbs({ listTitle }: BreadcrumbsProps) {
     // render it as a link. Otherwise, if it's the '/list' page itself (pathParts.length === 1 && pathParts[0] === 'list'), render as text.
     if (item.to === '/' && pathParts[0] === 'list' && pathParts.length > 1) {
       return (
-        <Anchor component={Link} to={item.to} className={classes.link} size='sm' key={`breadcrumbLink-${item.id}-${index}`}>
-          {item.label}
+        <Anchor
+          component={Link}
+          to={item.to}
+          className={classes.link}
+          size="sm"
+          key={`breadcrumbLink-${item.id}-${index}`}
+        >
+          <FormattedMessage
+            id={`breadcrumb.${item.id}`}
+            defaultMessage={item.label}
+          />
         </Anchor>
       );
     }

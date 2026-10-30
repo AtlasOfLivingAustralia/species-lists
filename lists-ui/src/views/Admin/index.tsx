@@ -133,19 +133,33 @@ export function Component() {
           <Group>
             <FontAwesomeIcon icon={faWarning} />
             <Text fw='bold' size='lg'>
-              Proceed with caution
+              <FormattedMessage
+                id='admin.confirm.caution.title'
+                defaultMessage='Proceed with caution'
+              />
             </Text>
           </Group>
         ),
         children: (
           <Stack>
             <Text mt='md'>
-              Please only trigger any these functions during low usage.
+              <FormattedMessage
+                id='admin.confirm.caution.body'
+                defaultMessage='Please only trigger these functions during low usage.'
+              />
             </Text>
-            <Text fw='bold'>Please click confirm to acknowledge this.</Text>
+            <Text fw='bold'>
+              <FormattedMessage
+                id='admin.confirm.caution.acknowledge'
+                defaultMessage='Please click confirm to acknowledge this.'
+              />
+            </Text>
           </Stack>
         ),
-        labels: { confirm: 'Confirm', cancel: 'Cancel' },
+        labels: {
+          confirm: intl.formatMessage({ id: 'listmeta.button.confirm.label', defaultMessage: 'Confirm' }),
+          cancel: intl.formatMessage({ id: 'listmeta.button.cancel.label', defaultMessage: 'Cancel' }),
+        },
         confirmProps: {
           variant: 'filled',
           radius: 'md',
@@ -159,28 +173,47 @@ export function Component() {
         },
       });
     }
-  }, [mounted]);
+  }, [mounted, intl]);
 
   const handleClick = useCallback(
-    (action: string, verb: string) => {
+    (action: string) => {
       setRunAction(action);
+      const actionLabel = intl.formatMessage({
+        id: `admin.${action}`,
+        defaultMessage: action,
+      });
       modals.openConfirmModal({
         title: (
           <Text fw='bold' size='lg'>
-            Confirm {verb}
+            <FormattedMessage
+              id='admin.confirm.title'
+              defaultMessage='Confirm: {action}'
+              values={{ action: actionLabel }}
+            />
           </Text>
         ),
         children: (
           <Stack>
-            <Text>Please confirm that you wish to perform this action</Text>
+            <Text>
+              <FormattedMessage
+                id='admin.confirm.body'
+                defaultMessage='Please confirm that you wish to perform this action'
+              />
+            </Text>
             {action.startsWith('wipe') && (
               <Text fw='bold' c='rust'>
-                This deletion will be irreversible!
+                <FormattedMessage
+                  id='admin.confirm.irreversible'
+                  defaultMessage='This deletion will be irreversible!'
+                />
               </Text>
             )}
           </Stack>
         ),
-        labels: { confirm: 'Confirm', cancel: 'Cancel' },
+        labels: {
+          confirm: intl.formatMessage({ id: 'listmeta.button.confirm.label', defaultMessage: 'Confirm' }),
+          cancel: intl.formatMessage({ id: 'listmeta.button.cancel.label', defaultMessage: 'Cancel' }),
+        },
         confirmProps: {
           variant: 'filled',
           radius: 'md',
@@ -221,7 +254,10 @@ export function Component() {
             if (!cancelSucessNotification) {
               // Show success notification
               notifications.show({
-                message: `${verb} started successfully`,
+                message: intl.formatMessage(
+                  { id: 'admin.started', defaultMessage: '{action} started successfully' },
+                  { action: actionLabel }
+                ),
                 position: 'bottom-left',
                 radius: 'md',
               });
@@ -238,7 +274,7 @@ export function Component() {
         },
       });
     },
-    [ala, migrationProgress]
+    [ala, intl]
   );
 
   if (!ala.isAdmin) {
@@ -258,12 +294,12 @@ export function Component() {
           </Grid.Col>
           <Grid.Col span={6}>
             <Title order={3} classNames={{ root: classes.title }} >
-              <FormattedMessage id='admin.title.label' defaultMessage='Admin Functions' />
+              <FormattedMessage id='admin.title.label' defaultMessage='Admin functions' />
             </Title>
           </Grid.Col>
           <Grid.Col span={6} ta='right'>
             <Title order={4} classNames={{ root: classes.title }} >
-               AppVersion: <AppVersion />
+               <FormattedMessage id='admin.appVersion' defaultMessage='App version' />: <AppVersion />
             </Title>
           </Grid.Col>
         </Grid>
@@ -319,7 +355,10 @@ export function Component() {
                               {migrationProgress.currentSpeciesList.title}
                             </>
                           ) : (
-                            `Starting ${intl.formatMessage({ id: `admin.${runAction}`, defaultMessage: "Migrating" })}`
+                            intl.formatMessage(
+                              { id: 'admin.progress.starting', defaultMessage: 'Starting {action}' },
+                              { action: intl.formatMessage({ id: `admin.${runAction}`, defaultMessage: 'Migrating' }) }
+                            )
                           )}
                         </Text>
                         <Badge miw={80} ml='xs'>
@@ -346,72 +385,87 @@ export function Component() {
             <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
               <ActionCard
                 disabled={Boolean(migrationProgress) || migrationDisabled}
-                title='All lists'
+                title={intl.formatMessage({ id: 'admin.card.migrateAll.title', defaultMessage: 'All lists' })}
                 description={
-                  <>
-                    Migrate <b>all</b> lists from the legacy lists tool
-                  </>
+                  <FormattedMessage
+                    id='admin.card.migrateAll.description'
+                    defaultMessage='Migrate <b>all</b> lists from the legacy lists tool'
+                    values={{ b: (chunks) => <b>{chunks}</b> }}
+                  />
                 }
                 icon={faRightLeft}
-                onClick={() => handleClick('migrate-all', 'All Migration')}
+                onClick={() => handleClick('migrate-all')}
               />
             </Grid.Col>
               <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
                 <ActionCard
                   disabled={!(Boolean(migrationProgress) || migrationDisabled)}
-                  title='Reset'
+                  title={intl.formatMessage({ id: 'admin.card.reset.title', defaultMessage: 'Reset' })}
                   description={
                     <>
-                      Clears migration progress and re-enables UI<br />
-                      <b>Only use when the migration is stuck</b>
+                      <FormattedMessage
+                        id='admin.card.reset.description'
+                        defaultMessage='Clears migration progress and re-enables UI'
+                      />
+                      <br />
+                      <b>
+                        <FormattedMessage
+                          id='admin.card.reset.stuck'
+                          defaultMessage='Only use when the migration is stuck'
+                        />
+                      </b>
                     </>
                   }
                   icon={faCode}
-                  onClick={() =>
-                    handleClick('migrate-reset', 'Reset Migration')
-                  }
+                  onClick={() => handleClick('migrate-reset')}
                 />
               </Grid.Col>
           </Grid>
           <Grid>
             <Grid.Col span={12}>
               <Stack>
-                <Title order={4}>Tools</Title>
+                <Title order={4}><FormattedMessage id='admin.tools.title' defaultMessage='Tools' /></Title>
                 <Text c='dimmed'>
-                  Please use the following tools <b>with caution</b> and{' '}
-                  <b>verify</b> that these really need to be run first.
+                  <FormattedMessage
+                    id='admin.tools.description'
+                    defaultMessage='Please use the following tools <b>with caution</b> and <b>verify</b> that these really need to be run first.'
+                    values={{ b: (chunks) => <b>{chunks}</b> }}
+                  />
                 </Text>
               </Stack>
             </Grid.Col>
             <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
               <ActionCard
                 disabled={Boolean(migrationProgress) || migrationDisabled}
-                title='Rematch'
-                description='Rematch the taxonomy for all lists'
+                title={intl.formatMessage({ id: 'admin.card.rematch.title', defaultMessage: 'Rematch' })}
+                description={intl.formatMessage({ id: 'admin.card.rematch.description', defaultMessage: 'Rematch the taxonomy for all lists' })}
                 icon={faIdCard}
-                onClick={() => handleClick('rematch', 'Rematching')}
+                onClick={() => handleClick('rematch')}
               />
             </Grid.Col>
             <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
               <ActionCard
                 disabled={Boolean(migrationProgress) || migrationDisabled}
-                title='Reindex'
-                description='Regenerate the elastic search index for all lists'
+                title={intl.formatMessage({ id: 'admin.card.reindex.title', defaultMessage: 'Reindex' })}
+                description={intl.formatMessage({ id: 'admin.card.reindex.description', defaultMessage: 'Regenerate the elastic search index for all lists' })}
                 icon={faArrowsRotate}
-                onClick={() => handleClick('reindex', 'Reindexing')}
+                onClick={() => handleClick('reindex')}
               />
             </Grid.Col>
             <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
               <ActionCard
-                title='Mongo indexes'
-                description='View indexed fields for MongoDB collections'
+                title={intl.formatMessage({ id: 'admin.card.mongoIndexes.title', defaultMessage: 'Mongo indexes' })}
+                description={intl.formatMessage({ id: 'admin.card.mongoIndexes.description', defaultMessage: 'View indexed fields for MongoDB collections' })}
                 icon={faSearch}
                 onClick={() => {
                   modals.open({
                     size: 'xl',
                     title: (
                       <Text fw='bold' size='lg'>
-                        Mongo Indexes
+                        <FormattedMessage
+                          id='admin.mongoIndexes.modal.title'
+                          defaultMessage='Mongo Indexes'
+                        />
                       </Text>
                     ),
                     children: <FetchInfo fetcher={ala.rest.admin?.indexes} />,
@@ -424,43 +478,46 @@ export function Component() {
             <Grid>
               <Grid.Col span={12}>
                 <Stack>
-                  <Title order={4}>Danger Zone</Title>
+                  <Title order={4}><FormattedMessage id='admin.danger.title' defaultMessage='Danger Zone' /></Title>
                   <Alert
                     icon={<FontAwesomeIcon icon={faWarning} color='white' />}
-                    title='Danger Zone'
+                    title={intl.formatMessage({ id: 'admin.danger.title', defaultMessage: 'Danger Zone' })}
                     variant='filled'
                     radius='md'
                   >
-                    Extremely massive danger zone here.{' '}
-                    <b>Run these ONLY in development/testing environments.</b>
+                    <FormattedMessage
+                      id='admin.danger.description'
+                      defaultMessage='Extremely massive danger zone here. <b>Run these ONLY in development/testing environments.</b>'
+                      values={{ b: (chunks) => <b>{chunks}</b> }}
+                    />
                   </Alert>
                 </Stack>
               </Grid.Col>
               <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
                 <ActionCard
                   disabled={Boolean(migrationProgress) || migrationDisabled}
-                  title='Delete index'
-                  description='Clear all data from the Elasticsearch index (requires reboot after running)'
+                  title={intl.formatMessage({ id: 'admin.card.deleteIndex.title', defaultMessage: 'Delete index' })}
+                  description={intl.formatMessage({ id: 'admin.card.deleteIndex.description', defaultMessage: 'Clear all data from the Elasticsearch index (requires reboot after running)' })}
                   icon={faTrash}
-                  onClick={() => handleClick('wipe-index', 'Index Deletion')}
+                  onClick={() => handleClick('wipe-index')}
                 />
               </Grid.Col>
               <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
                 <ActionCard
                   disabled={Boolean(migrationProgress) || migrationDisabled}
-                  title='Delete docs'
-                  description='Clear all data from the MongoDB collections (requires reimport)'
+                  title={intl.formatMessage({ id: 'admin.card.deleteDocs.title', defaultMessage: 'Delete docs' })}
+                  description={intl.formatMessage({ id: 'admin.card.deleteDocs.description', defaultMessage: 'Clear all data from the MongoDB collections (requires reimport)' })}
                   icon={faTrash}
-                  onClick={() => handleClick('wipe-docs', 'Document Deletion')}
+                  onClick={() => handleClick('wipe-docs')}
                 />
               </Grid.Col>
               <Grid.Col span={{ base: 12, xs: 6, sm: 4, md: 4 }}>
                 <ActionCard
                   disabled={Boolean(migrationProgress) || migrationDisabled}
-                  title='Reboot'
-                  description='Reboot the lists application'
+                  title={intl.formatMessage({ id: 'admin.card.reboot.title', defaultMessage: 'Reboot' })}
+                  description={intl.formatMessage({ id: 'admin.card.reboot.description', defaultMessage: 'Reboot the lists application' })}
                   icon={faRefresh}
-                  onClick={() => handleClick('reboot', 'Reboot')}
+                  onClick={() => handleClick('reboot')}
                 />
               </Grid.Col>
             </Grid>
