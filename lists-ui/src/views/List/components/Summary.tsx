@@ -80,12 +80,21 @@ function MetaBadge({
 
 export function Summary({ meta, ...rest }: SummaryProps) {
   const ala = useALA();
+  const intl = useIntl();
   const { constraints } = useConstraints(ala);
 
   // These resolve to undefined until loaded — that's fine, we fall back to raw meta values
   const listType    = constraints?.listType?.find(t => t.value === meta.listType);
   const listLicence = constraints?.licence?.find(l => l.value === meta.licence);
   const listRegion  = constraints?.region?.find(r => r.value === meta.region);
+
+  // Translate a value via the locale files (same pattern as ListMeta); null when no key exists
+  const tr = (key: string) => (intl.messages[key] ? intl.formatMessage({ id: key }) : null);
+
+  const listTypeLabel = tr(meta.listType) ?? listType?.label ?? meta.listType;
+  const licenceValue = listLicence?.value ?? meta.licence;
+  const licenceLabel = tr(`licence.${licenceValue}`) ?? licenceValue;
+  const regionLabel = tr(`region.${meta.region}`) ?? listRegion?.label ?? meta.region;
 
   return (
     <Group {...rest} gap='xs' align='center' mt={10} ml={0}>
@@ -94,8 +103,7 @@ export function Summary({ meta, ...rest }: SummaryProps) {
       {meta.listType && (
         <MetaBadge
           typeName='listType'
-          typeValue={listType?.label ?? meta.listType}
-          title={`List type: ${listType?.label ?? meta.listType}`}
+          typeValue={listTypeLabel}
           color=''
           icon={faBookmark}
         />
@@ -103,23 +111,23 @@ export function Summary({ meta, ...rest }: SummaryProps) {
 
       <MetaBadge typeName='ownerName' typeValue={meta.ownerName ?? '–'} icon={faUser} />
 
-      {/* Licence: only meaningful if we have a resolved label (to build the CC link),
-          but show the raw value as a fallback while loading */}
+      {/* Licence: the pill keeps the short code (same in every language);
+          the tooltip shows the full translated name via the licence.* keys */}
       {meta.licence && (
         <MetaBadge
           typeName='licence'
-          typeValue={listLicence?.value ?? meta.licence}
+          typeValue={licenceValue}
           icon={faCreativeCommons}
           href={listLicence ? generateCCLink(listLicence.value) : undefined}
-          title={`Licence: ${listLicence?.label ?? meta.licence}`}
+          title={licenceLabel}
         />
       )}
 
+      {/* Region: translated country name via the region.* keys */}
       {meta.region && (
         <MetaBadge
           typeName='region'
-          typeValue={listRegion?.value ?? meta.region}
-          title={`Region: ${listRegion?.label ?? meta.region}`}
+          typeValue={regionLabel}
           icon={faGlobe}
         />
       )}
