@@ -20,7 +20,7 @@ species-lists/
 
 ## 2. lists-service – Build, Test & Lint
 
-**Language:** Java 21 | **Framework:** Spring Boot 3.5.x | **Build:** Maven
+**Language:** Java 21 | **Framework:** Spring Boot 4.1.x | **Build:** Maven
 **Databases:** MongoDB (primary), Elasticsearch (search index)
 **Formatting:** Google Java Format 
 
@@ -31,9 +31,17 @@ mvn clean package -DskipTests
 ```
 
 ### Testing
+
+Unit tests (`*Test`) run under Surefire and need nothing but a JVM. Integration tests (`*IT`) run
+under Failsafe and start a real MongoDB and Elasticsearch with Testcontainers, so they need Docker;
+without it they are skipped, not failed.
+
 ```bash
-# Run all tests
+# Unit tests only: fast, no containers
 mvn test
+
+# Everything: unit tests, integration tests, coverage report and its minimum, then the jar
+mvn verify
 
 # Run a single test class
 mvn -Dtest=ClassName test
@@ -41,11 +49,37 @@ mvn -Dtest=ClassName test
 # Run a single test method
 mvn -Dtest=ClassName#methodName test
 
+# Run a single integration test
+mvn verify -Dit.test=SpeciesListRepositoryIT -Dtest='!*' -Dsurefire.failIfNoSpecifiedTests=false
+
 # Examples
 mvn -Dtest=AuthUtilsTest test
 mvn -Dtest=AuthUtilsTest#adminUser_isAuthorized test
 mvn -Dtest=SpeciesListTransformerTest test
 ```
+
+Coverage: `mvn verify` writes `target/site/jacoco/index.html` and fails below the minimum in
+pom.xml (30% of lines, 24% of branches, a floor just under where it stands). Raise it when adding
+tests rather than leaving it where it is.
+
+The floor counts the integration tests, so **`mvn verify` needs Docker**: without it they skip,
+coverage is 27%, and the build fails on the coverage check rather than on a test. With no Docker,
+run `mvn test`, or `mvn verify -Djacoco.skip=true`.
+
+Write a new test as a unit test unless the thing it checks is what a datastore or HTTP does with it:
+a query, criteria or SpEL expression, an index mapping, a status code, or the JSON a client
+receives. Those belong in an `*IT`, on one of the three base classes in
+`src/test/java/au/org/ala/listsapi/support/`:
+
+| Base class | Context | For |
+|---|---|---|
+| `AbstractMongoIT` | `@DataMongoTest` + MongoDB | repository queries |
+| `AbstractElasticIT` | `@DataElasticsearchTest` + Elasticsearch + `Config` | index mappings, search queries |
+| `AbstractApplicationIT` | whole application + both | endpoints over HTTP |
+
+A test-only `@Configuration` in `au.org.ala.listsapi.**` is picked up by the application's own
+component scan, test classes being on the classpath, and can break the full context. Annotate it
+`@TestConfiguration` and `@Import` it where it is needed.
 
 ### Linting & Formatting
 ```bash
@@ -56,6 +90,10 @@ mvn spotless:check
 mvn spotless:apply
 ```
 > Always ask user before running  `mvn spotless:apply` 
+
+> Both currently fail: the configured google-java-format 1.7 cannot run on a JVM 21 and asks for
+> 1.17.0 or later. Bumping it reformats the whole codebase, so match the surrounding style by hand
+> (4 spaces, K&R braces) until that is done deliberately.
 
 ---
 
@@ -215,7 +253,9 @@ All runtime config is injected via Vite `VITE_*` env vars loaded from `config/` 
 
 1. **Analyze** – read relevant source files before making changes.
 2. **Implement** – follow the style guide for the relevant sub-project.
-3. **Format** (service) – run `mvn spotless:apply` after any Java changes.
+3. **Format** (service) – run `mvn spotless:apply` after any Java changes (see the note above: it
+   does not currently run).
 4. **Type-check** (ui) – run `npx tsc --noEmit` after any TypeScript changes.
 5. **Lint** (ui) – run `yarn lint` and fix all warnings before committing.
-6. **Verify** – run targeted tests: `mvn -Dtest=RelevantTest test` for backend changes.
+6. **Verify** – run targeted tests: `mvn -Dtest=RelevantTest test` for backend changes, and
+   `mvn verify` when touching a repository, an index mapping or an endpoint.

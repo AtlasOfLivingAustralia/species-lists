@@ -63,6 +63,31 @@ Run the following command:
 docker-compose -f lists-service/src/main/docker/docker-compose.yml up -d
 ```
 
+## Tests
+
+```bash
+# Unit tests only: fast, no containers
+mvn test
+
+# Everything: unit tests, then the integration tests, the coverage report and the jar
+mvn verify
+```
+
+The integration tests (`*IT`) start their own MongoDB and Elasticsearch with Testcontainers, from
+the same images as `src/main/docker/docker-compose.yml`, so they need Docker running; without it
+they are skipped rather than failed, and `mvn test` never needs it. They cover what only a
+datastore or an HTTP response can show: the repository queries and criteria, the index built from
+`src/main/resources/elasticsearch/`, the search queries that keep private lists out of other
+people's results, and the v2 endpoints as a client sees them. The three base classes in
+`src/test/java/au/org/ala/listsapi/support/` set up a MongoDB slice, an Elasticsearch slice and the
+whole application respectively.
+
+Coverage goes to `target/site/jacoco/index.html`. `mvn verify` fails below the minimum set in
+pom.xml, which is a floor just under current coverage, not a target. That floor counts the
+integration tests, so `mvn verify` does need Docker: without it they skip, coverage is 27% instead
+of 32.5%, and the coverage check is what fails. Use `mvn test`, or `mvn verify -Djacoco.skip=true`,
+on a machine without Docker.
+
 ## GraphQL
 
 The GraphQL test interface is available at `http://localhost:8080/graphiql`.
