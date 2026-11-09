@@ -1,4 +1,5 @@
 import { Checkbox, CheckboxCardProps, Flex, Text } from '@mantine/core';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 import classes from './FlagCard.module.css';
 import { ListTypeBadge } from './ListTypeBadge';
@@ -15,8 +16,17 @@ export function FlagCard({
   flag,
   ...props
 }: FlagCardProps) {
+  const intl = useIntl();
+  const translatedLabel = intl.formatMessage({
+    id: `listflag.${flag}.label`,
+    defaultMessage: label,
+  });
+  const translatedDescription = intl.formatMessage({
+    id: `listflag.${flag}.description`,
+    defaultMessage: description,
+  });
   const labelText = (<>
-    <strong>{label}</strong>
+    <strong>{translatedLabel}</strong>
   </>);
   return (
     <Checkbox.Card {...props} className={classes.root} radius='lg' h='100%'>
@@ -27,7 +37,7 @@ export function FlagCard({
             <ListTypeBadge listTypeValue={flag} titleText={labelText} iconSide='right' />
           </Flex>
           <Text opacity={0.75} className={classes.description}>
-            {description}
+            {translatedDescription}
           </Text>
         </Flex>
       </Flex>

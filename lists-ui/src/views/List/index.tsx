@@ -723,7 +723,7 @@ function List() {
                 <Box style={{ overflowX: 'auto' }} className={fetching ? classes.resultsLoading : undefined}>
                   {error ? (
                   <Message
-                    title={intl.formatMessage({ id: 'list.page.error.title', defaultMessage: 'An error occured' })}
+                    title={intl.formatMessage({ id: 'list.page.error.title', defaultMessage: 'An error occurred' })}
                     subtitle={getErrorMessage(error)}
                     icon={<StopIcon size={18} />}
                     action={intl.formatMessage({ id: 'retry', defaultMessage: 'Retry' })}

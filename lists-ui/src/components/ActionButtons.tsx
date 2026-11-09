@@ -55,7 +55,7 @@ export function ActionButtons() {
               leftSection={<FontAwesomeIcon icon={faCog} />}
               rightSection={<FontAwesomeIcon icon={faChevronDown} size="xs" />}
             >
-              Admin Menu
+              <FormattedMessage id='admin.menu.label' defaultMessage='Admin Menu' />
             </Button>
           </Menu.Target>
 
@@ -67,7 +67,7 @@ export function ActionButtons() {
               to="/admin-lists"
               leftSection={<FontAwesomeIcon icon={faList} />}
             >
-              View all lists
+              <FormattedMessage id='admin.menu.viewAllLists' defaultMessage='View all lists' />
             </Menu.Item>
 
             {/* Second Menu Item: "Admin tasks" - strictly for ROLE_ADMIN */}
@@ -77,7 +77,7 @@ export function ActionButtons() {
                 to="/admin"
                 leftSection={<FontAwesomeIcon icon={faTools} />}
               >
-                Admin tasks
+                <FormattedMessage id='admin.menu.adminTasks' defaultMessage='Admin tasks' />
               </Menu.Item>
             )}
           </Menu.Dropdown>

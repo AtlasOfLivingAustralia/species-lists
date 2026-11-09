@@ -649,7 +649,9 @@ export const ActiveFilters = memo((
       } else if (filter.key === 'licence') {
         displayValue = filter.value;
       } else {
-        const valMessageId = sanitiseText(filter.value) ?? filter.value;
+        const valMessageId = filter.key === 'listType'
+          ? `listType.${filter.value}` // listType values are translated under the listType.* prefix
+          : (sanitiseText(filter.value) ?? filter.value);
         if (valMessageId && intl.messages[valMessageId]) {
           displayValue = intl.formatMessage({ id: valMessageId });
         }
