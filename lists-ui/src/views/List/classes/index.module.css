@@ -6,6 +6,12 @@
   padding-bottom: 4px;
 }
 
+.resultsLoading {
+  opacity: 0.6;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
 .title {
   font-weight: 600;
   margin-bottom: 0px;

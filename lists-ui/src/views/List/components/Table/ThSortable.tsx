@@ -26,9 +26,17 @@ export function ThSortable({
 }: ThSortableProps) {
   const Component = match ? ThMatch : ThNoWrap;
   return (
-    <Component {...rest}>
-      {children}
-      <UnstyledButton onClick={onSort}>
+    <Component
+      aria-sort={!active ? 'none' : dir === 'desc' ? 'descending' : 'ascending'}
+      {...rest}
+    >
+      <UnstyledButton
+        onClick={onSort}
+        fw='inherit'
+        fz='inherit'
+        style={{ display: 'flex', alignItems: 'center', width: '100%' }}
+      >
+        {children}
         <FontAwesomeIcon
           icon={!active ? faSort : dir === 'desc' ? faSortDown : faSortUp}
           fontSize={12}
