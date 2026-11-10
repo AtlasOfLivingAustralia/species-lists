@@ -115,6 +115,9 @@ public class UploadService {
 
     private static final Pattern UUID_PATTERN = Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
 
+    // Bare numeric identifiers (e.g. GBIF taxon keys) are never valid scientific names
+    private static final Pattern NUMERIC_ID_PATTERN = Pattern.compile("^[0-9]+$");
+
     public static Set<String> getAcceptedFileTypes() {
         return ACCEPTED_FILE_TYPES;
     }
@@ -713,7 +716,8 @@ public class UploadService {
                 boolean isGuid = trimmed.startsWith("urn:") || 
                                  trimmed.startsWith("http:") || 
                                  trimmed.startsWith("https:") || 
-                                 UUID_PATTERN.matcher(trimmed).matches();
+                                 UUID_PATTERN.matcher(trimmed).matches() ||
+                                 NUMERIC_ID_PATTERN.matcher(trimmed).matches();
                 if (isGuid) {
                     if (StringUtils.isEmpty(taxonID)) {
                         taxonID = suppliedName;

@@ -2,6 +2,7 @@ package au.org.ala.listsapi.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -16,6 +17,7 @@ import au.org.ala.listsapi.controller.AuthUtils;
 import au.org.ala.listsapi.model.IngestJob;
 import au.org.ala.listsapi.model.InputSpeciesList;
 import au.org.ala.listsapi.model.SpeciesList;
+import au.org.ala.listsapi.model.SpeciesListItem;
 import au.org.ala.ws.security.profile.AlaUserProfile;
 import au.org.ala.listsapi.repo.SpeciesListIndexElasticRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
@@ -23,7 +25,9 @@ import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import org.junit.jupiter.api.BeforeEach;
@@ -112,6 +116,73 @@ class UploadServiceTest {
         for (String facet : job.getFacetList()) {
             assertTrue(facet != null && !facet.trim().isEmpty(), "Facet list should not contain empty strings");
         }
+    }
+
+    @Test
+    void testLoadCSV_migratedSuppliedNameIdentifiersBecomeTaxonID() throws Exception {
+        // Legacy export format: the supplied name can be a taxon identifier rather than a name
+        String csv =
+                "\"Supplied Name\",\"guid\",\"scientificName\",\"family\",\"kingdom\"\n"
+                        + "\"5218465\",\"5218465\",\"Pipistrellus pipistrellus\",\"Vespertilionidae\",\"Animalia\"\n"
+                        + "\"https://id.biodiversity.org.au/node/apni/2904909\",\"x\",\"Acacia dealbata\",\"Fabaceae\",\"Plantae\"\n"
+                        + "\"Myotis nattereri\",\"2432389\",\"Myotis nattereri\",\"Vespertilionidae\",\"Animalia\"\n";
+
+        when(speciesListMongoRepository.findById("testList")).thenReturn(Optional.of(new SpeciesList()));
+
+        List<SpeciesListItem> saved = new ArrayList<>();
+        doAnswer(invocation -> {
+            // copy, as the service clears the batch after saving
+            saved.addAll(invocation.<List<SpeciesListItem>>getArgument(0));
+            return null;
+        }).when(searchHelperService).speciesListItemsBulkSave(any());
+
+        IngestJob job = uploadService.loadCSV(
+                "testList",
+                new ByteArrayInputStream(csv.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                false,
+                true,
+                true);
+
+        assertEquals(3, job.getRowCount());
+        assertEquals(3, saved.size());
+
+        // bare numeric identifier (e.g. GBIF taxon key)
+        assertEquals("5218465", saved.get(0).getTaxonID());
+        assertEquals("5218465", saved.get(0).getSuppliedName());
+        assertNull(saved.get(0).getScientificName());
+
+        // URL style identifier
+        assertEquals("https://id.biodiversity.org.au/node/apni/2904909", saved.get(1).getTaxonID());
+        assertNull(saved.get(1).getScientificName());
+
+        // a real name is still treated as a scientific name
+        assertNull(saved.get(2).getTaxonID());
+        assertEquals("Myotis nattereri", saved.get(2).getScientificName());
+    }
+
+    @Test
+    void testLoadCSV_numericSuppliedNameKeepsExplicitScientificName() throws Exception {
+        // Regular (non-migration) upload: an explicit scientificName column is not overridden
+        String csv = "Supplied Name,scientificName\n5218465,Pipistrellus pipistrellus\n";
+
+        when(speciesListMongoRepository.findById("testList")).thenReturn(Optional.of(new SpeciesList()));
+
+        List<SpeciesListItem> saved = new ArrayList<>();
+        doAnswer(invocation -> {
+            saved.addAll(invocation.<List<SpeciesListItem>>getArgument(0));
+            return null;
+        }).when(searchHelperService).speciesListItemsBulkSave(any());
+
+        uploadService.loadCSV(
+                "testList",
+                new ByteArrayInputStream(csv.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                false,
+                true,
+                false);
+
+        assertEquals(1, saved.size());
+        assertEquals("5218465", saved.get(0).getTaxonID());
+        assertEquals("Pipistrellus pipistrellus", saved.get(0).getScientificName());
     }
 
     @Test
