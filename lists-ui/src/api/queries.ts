@@ -181,6 +181,7 @@ export const MUTATION_LIST_UPDATE = `mutation update(
   $wkt: String
   $tags: [String]
   $dataResourceUid: String
+  $owner: String
 ) {
   updateMetadata(
     id: $id
@@ -200,6 +201,7 @@ export const MUTATION_LIST_UPDATE = `mutation update(
     wkt: $wkt
     tags: $tags
     dataResourceUid: $dataResourceUid
+    owner: $owner
   ) {
     id
   }

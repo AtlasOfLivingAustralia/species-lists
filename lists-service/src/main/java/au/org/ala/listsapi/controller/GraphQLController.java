@@ -74,6 +74,7 @@ import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.service.MetadataService;
 import au.org.ala.listsapi.service.SearchHelperService;
 import au.org.ala.listsapi.service.TaxonService;
+import au.org.ala.listsapi.service.UserdetailsService;
 import au.org.ala.listsapi.service.ValidationService;
 import au.org.ala.listsapi.util.ElasticUtils;
 import au.org.ala.ws.security.profile.AlaUserProfile;
@@ -149,6 +150,8 @@ public class GraphQLController {
     protected AuthUtils authUtils;
     @Autowired
     protected MetadataService metadataService;
+    @Autowired
+    protected UserdetailsService userdetailsService;
 
     static Date parsedDate(String date) {
         try {
@@ -765,6 +768,7 @@ public class GraphQLController {
             @Argument Boolean isBiosecurity,
             @Argument List<String> tags,
             @Argument String dataResourceUid,
+            @Argument String owner,
             @AuthenticationPrincipal Principal principal) throws Exception {
         Optional<SpeciesList> optionalSpeciesList = speciesListMongoRepository.findByIdOrDataResourceUid(id, id);
 
@@ -814,6 +818,10 @@ String normalisedLicence = licence == null ? StringUtils.trimToNull(toUpdate.get
                     }
                 }
                 toUpdate.setDataResourceUid(newUid);
+                reindexRequired = true;
+            }
+
+            if (updateOwner(toUpdate, owner, principal)) {
                 reindexRequired = true;
             }
 
@@ -903,6 +911,46 @@ String normalisedLicence = licence == null ? StringUtils.trimToNull(toUpdate.get
         } else {
             throw new AccessDeniedException("You dont have access to this list");
         }
+    }
+
+    private boolean updateOwner(SpeciesList toUpdate, String owner, Principal principal) throws Exception {
+        String newOwner = StringUtils.trimToNull(owner);
+        String oldOwner = toUpdate.getOwner();
+
+        if (newOwner == null || newOwner.equals(oldOwner)) {
+            return false;
+        }
+
+        if (!authUtils.isAdmin(principal)) {
+            throw new AccessDeniedException("You don't have permission to change the list owner");
+        }
+
+        Map userDetails;
+        try {
+            userDetails = userdetailsService.fetchUserById(newOwner);
+        } catch (Exception e) {
+            logger.error("Failed to look up user {} for list {} ownership change", newOwner, toUpdate.getId(), e);
+            throw new Exception("Unable to verify the new owner, please try again later");
+        }
+
+        Object resolvedId = userDetails != null ? userDetails.get("userId") : null;
+        if (resolvedId == null || StringUtils.isBlank(resolvedId.toString())) {
+            throw new Exception("No ALA user found with ID: " + newOwner);
+        }
+        if (Boolean.TRUE.equals(userDetails.get("locked"))) {
+            throw new Exception("ALA user " + newOwner + " is locked and cannot own a list");
+        }
+
+        String newOwnerId = resolvedId.toString().trim();
+        if (newOwnerId.equals(oldOwner)) {
+            return false;
+        }
+
+        toUpdate.setOwner(newOwnerId);
+        toUpdate.setOwnerName(UserdetailsService.getDisplayName(userDetails));
+        logger.info("List {} ownership changed from {} to {} by {}",
+                toUpdate.getId(), oldOwner, newOwnerId, principal.getName());
+        return true;
     }
 
     private boolean isFlagChanged(Boolean newValue, Boolean existingValue) {

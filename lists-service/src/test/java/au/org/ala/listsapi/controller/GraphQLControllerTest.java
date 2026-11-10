@@ -10,6 +10,7 @@ import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import org.bson.types.ObjectId;
 
 import java.util.Optional;
@@ -36,6 +37,7 @@ import au.org.ala.listsapi.model.InputSpeciesListItem;
 import au.org.ala.listsapi.service.MetadataService;
 import au.org.ala.listsapi.service.SearchHelperService;
 import au.org.ala.listsapi.service.TaxonService;
+import au.org.ala.listsapi.service.UserdetailsService;
 import au.org.ala.listsapi.service.ValidationService;
 import au.org.ala.listsapi.repo.SpeciesListMongoRepository;
 import au.org.ala.listsapi.repo.SpeciesListItemMongoRepository;
@@ -68,6 +70,9 @@ class GraphQLControllerTest {
 
     @Mock
     private MetadataService metadataService;
+
+    @Mock
+    private UserdetailsService userdetailsService;
 
     @Mock
     private Principal principal;
@@ -348,7 +353,7 @@ class GraphQLControllerTest {
         SpeciesList result = graphQLController.updateMetadata(
                 listId, "New Title", "description", "CC-BY", "TEST",
                 "authority", "region", null, true, false, false,
-                false, false, false, false, new ArrayList<>(), "", principal);
+                false, false, false, false, new ArrayList<>(), "", null, principal);
 
         assertNotNull(result);
         assertEquals("New Title", result.getTitle());
@@ -377,7 +382,7 @@ class GraphQLControllerTest {
         SpeciesList result = graphQLController.updateMetadata(
                 listId, "Biosecurity Alert List", "description", "CC-BY", "TEST",
                 "authority", "region", null, true, false, false,
-                false, false, false, true, new ArrayList<>(), "", principal);
+                false, false, false, true, new ArrayList<>(), "", null, principal);
 
         assertNotNull(result);
         assertTrue(result.getIsBiosecurity());
@@ -404,7 +409,7 @@ class GraphQLControllerTest {
             graphQLController.updateMetadata(
                     listId, "Test List", "description", "CC-BY", "TEST",
                     "authority", "region", null, true, false, false,
-                    false, false, false, true, new ArrayList<>(), "", principal);
+                    false, false, false, true, new ArrayList<>(), "", null, principal);
         });
 
         assertTrue(exception.getMessage().contains("isBiosecurity"));
@@ -429,7 +434,7 @@ class GraphQLControllerTest {
             graphQLController.updateMetadata(
                     listId, "Test List", "description", "CC-BY", "TEST",
                     "authority", "region", null, true, true, false,
-                    false, false, false, true, new ArrayList<>(), "", principal);
+                    false, false, false, true, new ArrayList<>(), "", null, principal);
         });
 
         assertTrue(exception.getMessage().contains("isThreatened"));
@@ -458,7 +463,7 @@ class GraphQLControllerTest {
         SpeciesList result = graphQLController.updateMetadata(
                 listId, "Title", "description", "CC-BY", "TEST",
                 "authority", "region", null, true, false, false,
-                false, false, false, false, new ArrayList<>(), "dr123", principal);
+                false, false, false, false, new ArrayList<>(), "dr123", null, principal);
 
         assertNotNull(result);
         assertEquals("dr123", result.getDataResourceUid());
@@ -490,7 +495,7 @@ class GraphQLControllerTest {
             graphQLController.updateMetadata(
                     listId, "Title", "description", "CC-BY", "TEST",
                     "authority", "region", null, true, false, false,
-                    false, false, false, false, new ArrayList<>(), "dr123", principal);
+                    false, false, false, false, new ArrayList<>(), "dr123", null, principal);
         });
 
         assertEquals("dataResourceUid is already in use by another list", exception.getMessage());
@@ -517,7 +522,7 @@ class GraphQLControllerTest {
         SpeciesList result = graphQLController.updateMetadata(
                 listId, "New Title", "description", "CC-BY", "TEST",
                 "authority", "region", null, false, false, false,
-                false, false, false, true, new ArrayList<>(), "", principal);
+                false, false, false, true, new ArrayList<>(), "", null, principal);
 
         assertNotNull(result);
         assertEquals("New Title", result.getTitle());
@@ -543,7 +548,7 @@ class GraphQLControllerTest {
         SpeciesList result = graphQLController.updateMetadata(
                 listId, "New Title", "description", "", "TEST",
                 "authority", "region", null, true, false, false,
-                false, false, false, false, new ArrayList<>(), "", principal);
+                false, false, false, false, new ArrayList<>(), "", null, principal);
 
         assertNotNull(result);
         assertNull(result.getLicence());
@@ -570,7 +575,7 @@ class GraphQLControllerTest {
         SpeciesList result = graphQLController.updateMetadata(
                 listId, "New Title", "description", null, "TEST",
                 "authority", "region", null, true, false, false,
-                false, false, false, false, new ArrayList<>(), "", principal);
+                false, false, false, false, new ArrayList<>(), "", null, principal);
 
         assertNotNull(result);
         assertEquals("CC-BY", result.getLicence());
@@ -597,7 +602,7 @@ class GraphQLControllerTest {
         SpeciesList result = graphQLController.updateMetadata(
                 listId, "Updated Public List", "new description", null, "TEST",
                 "authority", "region", null, false, false, false,
-                false, false, false, false, new ArrayList<>(), "", principal);
+                false, false, false, false, new ArrayList<>(), "", null, principal);
 
         assertNotNull(result);
         assertEquals("CC-BY", result.getLicence());
@@ -622,7 +627,7 @@ class GraphQLControllerTest {
             graphQLController.updateMetadata(
                     listId, "Public List", "description", null, "TEST",
                     "authority", "region", null, false, false, false,
-                    false, false, false, false, new ArrayList<>(), "", principal);
+                    false, false, false, false, new ArrayList<>(), "", null, principal);
         });
 
         assertEquals("A valid licence is required for public lists", exception.getMessage());
@@ -646,7 +651,7 @@ class GraphQLControllerTest {
             graphQLController.updateMetadata(
                     listId, "Now Public List", "description", "", "TEST",
                     "authority", "region", null, false, false, false,
-                    false, false, false, false, new ArrayList<>(), "", principal);
+                    false, false, false, false, new ArrayList<>(), "", null, principal);
         });
 
         assertEquals("A valid licence is required for public lists", exception.getMessage());
@@ -671,7 +676,7 @@ class GraphQLControllerTest {
             graphQLController.updateMetadata(
                     listId, "Private List", "description", "INVALID_LICENCE", "TEST",
                     "authority", "region", null, true, false, false,
-                    false, false, false, false, new ArrayList<>(), "", principal);
+                    false, false, false, false, new ArrayList<>(), "", null, principal);
         });
 
         assertEquals("Updated list contains invalid properties for a controlled value (list type, license)", exception.getMessage());
@@ -696,7 +701,7 @@ class GraphQLControllerTest {
         SpeciesList result = graphQLController.updateMetadata(
                 listId, "New Title", "description", null, "TEST",
                 "authority", "region", null, null, false, false,
-                false, false, false, false, new ArrayList<>(), "", principal);
+                false, false, false, false, new ArrayList<>(), "", null, principal);
 
         assertNotNull(result);
         assertTrue(result.getIsPrivate());
@@ -722,7 +727,7 @@ class GraphQLControllerTest {
             graphQLController.updateMetadata(
                     listId, "Public List", "description", null, "TEST",
                     "authority", "region", null, null, false, false,
-                    false, false, false, false, new ArrayList<>(), "", principal);
+                    false, false, false, false, new ArrayList<>(), "", null, principal);
         });
 
         assertEquals("A valid licence is required for public lists", exception.getMessage());
@@ -754,11 +759,145 @@ class GraphQLControllerTest {
         SpeciesList result = graphQLController.updateMetadata(
                 listId, "Old Title", null, "   ", "TEST",
                 null, null, null, true, false, false,
-                false, false, false, false, null, "", principal);
+                false, false, false, false, null, "", null, principal);
 
         assertNotNull(result);
         assertNull(result.getLicence());
         verify(taxonService, never()).reindex(any());
         verify(speciesListMongoRepository).save(list);
+    }
+
+    private SpeciesList ownedList(String listId, String owner) {
+        SpeciesList list = new SpeciesList();
+        list.setId(listId);
+        list.setTitle("Title");
+        list.setListType("TEST");
+        list.setIsPrivate(true);
+        list.setLicence("CC-BY");
+        list.setIsAuthoritative(false);
+        list.setIsSDS(false);
+        list.setIsBIE(false);
+        list.setIsBiosecurity(false);
+        list.setIsInvasive(false);
+        list.setIsThreatened(false);
+        list.setOwner(owner);
+        list.setOwnerName("Old Owner");
+        return list;
+    }
+
+    private void stubValidUpdate(SpeciesList list) {
+        when(speciesListMongoRepository.findByIdOrDataResourceUid(list.getId(), list.getId()))
+                .thenReturn(Optional.of(list));
+        when(authUtils.isAuthorized(list, principal)).thenReturn(true);
+        when(validationService.isValueValid(eq(ConstraintType.listType), any())).thenReturn(true);
+        lenient().when(validationService.isValueValid(eq(ConstraintType.licence), any())).thenReturn(true);
+    }
+
+    private SpeciesList updateOwner(String listId, String owner) throws Exception {
+        return graphQLController.updateMetadata(
+                listId, "Title", null, "CC-BY", "TEST",
+                null, null, null, true, false, false,
+                false, false, false, false, null, "", owner, principal);
+    }
+
+    @Test
+    void testUpdateMetadata_AdminChangesOwner_UpdatesOwnerAndNameAndReindexes() throws Exception {
+        SpeciesList list = ownedList("list123", "185354");
+        stubValidUpdate(list);
+        when(authUtils.isAdmin(principal)).thenReturn(true);
+        when(principal.getName()).thenReturn("admin123");
+        when(userdetailsService.fetchUserById("62639")).thenReturn(Map.of(
+                "userId", "62639", "firstName", "Sally", "lastName", "Carson", "locked", false));
+        when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
+
+        SpeciesList result = updateOwner("list123", " 62639 ");
+
+        assertEquals("62639", result.getOwner());
+        assertEquals("Sally Carson", result.getOwnerName());
+        verify(speciesListMongoRepository).save(list);
+        verify(taxonService).reindex("list123");
+    }
+
+    @Test
+    void testUpdateMetadata_AdminChangesOwnerByEmail_StoresResolvedUserId() throws Exception {
+        SpeciesList list = ownedList("list123", "185354");
+        stubValidUpdate(list);
+        when(authUtils.isAdmin(principal)).thenReturn(true);
+        when(userdetailsService.fetchUserById("sally@example.com")).thenReturn(Map.of(
+                "userId", "62639", "displayName", "Sally Carson"));
+        when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
+
+        SpeciesList result = updateOwner("list123", "sally@example.com");
+
+        assertEquals("62639", result.getOwner());
+        assertEquals("Sally Carson", result.getOwnerName());
+    }
+
+    @Test
+    void testUpdateMetadata_NonAdminChangesOwner_ThrowsAccessDeniedException() {
+        SpeciesList list = ownedList("list123", "185354");
+        stubValidUpdate(list);
+        when(authUtils.isAdmin(principal)).thenReturn(false);
+
+        assertThrows(AccessDeniedException.class, () -> updateOwner("list123", "62639"));
+
+        verify(userdetailsService, never()).fetchUserById(any());
+        verify(speciesListMongoRepository, never()).save(any());
+    }
+
+    @Test
+    void testUpdateMetadata_OwnerNotFound_ThrowsAndDoesNotSave() {
+        SpeciesList list = ownedList("list123", "185354");
+        stubValidUpdate(list);
+        when(authUtils.isAdmin(principal)).thenReturn(true);
+        when(userdetailsService.fetchUserById("99999999")).thenReturn(null);
+
+        Exception exception = assertThrows(Exception.class, () -> updateOwner("list123", "99999999"));
+
+        assertEquals("No ALA user found with ID: 99999999", exception.getMessage());
+        assertEquals("185354", list.getOwner());
+        verify(speciesListMongoRepository, never()).save(any());
+    }
+
+    @Test
+    void testUpdateMetadata_OwnerLocked_ThrowsAndDoesNotSave() {
+        SpeciesList list = ownedList("list123", "185354");
+        stubValidUpdate(list);
+        when(authUtils.isAdmin(principal)).thenReturn(true);
+        when(userdetailsService.fetchUserById("62639")).thenReturn(Map.of("userId", "62639", "locked", true));
+
+        Exception exception = assertThrows(Exception.class, () -> updateOwner("list123", "62639"));
+
+        assertTrue(exception.getMessage().contains("locked"));
+        verify(speciesListMongoRepository, never()).save(any());
+    }
+
+    @Test
+    void testUpdateMetadata_OwnerLookupFails_ThrowsFriendlyError() {
+        SpeciesList list = ownedList("list123", "185354");
+        stubValidUpdate(list);
+        when(authUtils.isAdmin(principal)).thenReturn(true);
+        when(userdetailsService.fetchUserById("62639")).thenThrow(new RuntimeException("timeout"));
+
+        Exception exception = assertThrows(Exception.class, () -> updateOwner("list123", "62639"));
+
+        assertEquals("Unable to verify the new owner, please try again later", exception.getMessage());
+        verify(speciesListMongoRepository, never()).save(any());
+    }
+
+    @Test
+    void testUpdateMetadata_SameOrBlankOwner_NoLookupNoAdminCheck() throws Exception {
+        SpeciesList list = ownedList("list123", "185354");
+        stubValidUpdate(list);
+        when(speciesListMongoRepository.save(any(SpeciesList.class))).thenAnswer(i -> i.getArgument(0));
+
+        updateOwner("list123", "185354");
+        updateOwner("list123", "  ");
+        updateOwner("list123", null);
+
+        assertEquals("185354", list.getOwner());
+        assertEquals("Old Owner", list.getOwnerName());
+        verify(userdetailsService, never()).fetchUserById(any());
+        verify(taxonService, never()).reindex(any());
     }
 }

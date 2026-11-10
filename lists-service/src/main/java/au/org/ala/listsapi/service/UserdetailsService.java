@@ -58,4 +58,28 @@ public class UserdetailsService {
 
         return null;
     }
+
+    public Map fetchUserById(String userId) {
+        return fetchUserByEmail(userId);
+    }
+
+    public static String getDisplayName(Map userDetails) {
+        if (userDetails == null) {
+            return null;
+        }
+
+        String displayName = trimToEmpty(userDetails.get("displayName"));
+        if (!displayName.isEmpty()) {
+            return displayName;
+        }
+
+        String fullName =
+                (trimToEmpty(userDetails.get("firstName")) + " " + trimToEmpty(userDetails.get("lastName")))
+                        .trim();
+        return fullName.isEmpty() ? null : fullName;
+    }
+
+    private static String trimToEmpty(Object value) {
+        return value instanceof String ? ((String) value).trim() : "";
+    }
 }

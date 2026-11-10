@@ -52,7 +52,10 @@ type SpeciesListSubmit = Omit<
   | 'ownerName'
   | 'distinctMatchCount'
   | 'editors'
->;
+> & {
+  // Only sent when an admin changes the list owner
+  owner?: string;
+};
 
 interface Release {
   releasedVersion: string;
