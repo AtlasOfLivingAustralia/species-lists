@@ -585,6 +585,7 @@ export function ListMeta({
                           )
                         : undefined
                     }
+                    inputWrapperOrder={['label', 'input', 'description', 'error']}
                     placeholder={intl.formatMessage({ id: 'listmeta.owner.placeholder', defaultMessage: 'ALA user ID' })}
                     disabled={loading}
                     readOnly={!ownerChangeConfirmed}
