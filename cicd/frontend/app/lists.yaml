@@ -58,6 +58,7 @@ Resources:
         BlockPublicAcls: TRUE
         BlockPublicPolicy: TRUE
         RestrictPublicBuckets: TRUE
+        IgnorePublicAcls: TRUE
       Tags:
         - Key: component
           Value: website
