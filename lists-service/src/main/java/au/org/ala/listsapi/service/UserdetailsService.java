@@ -34,9 +34,9 @@ public class UserdetailsService {
     @Value("${userDetails.api.url}")
     private String userdetailsUrl;
 
-    public Map fetchUserByEmail(String email) {
-        Map<String, Object> params = Map.of("userName", email);
-        Map request = webService.post(
+    private Map requestUserDetails(String userName) {
+        Map<String, Object> params = Map.of("userName", userName);
+        return webService.post(
                 userdetailsUrl + "userDetails/getUserDetails",
                 null,
                 params,
@@ -45,6 +45,10 @@ public class UserdetailsService {
                 false,
                 null
         );
+    }
+
+    public Map fetchUserByEmail(String email) {
+        Map request = requestUserDetails(email);
 
         if ((int)request.get("statusCode") == 200) {
             Object resp = request.get("resp");
@@ -60,7 +64,31 @@ public class UserdetailsService {
     }
 
     public Map fetchUserById(String userId) {
-        return fetchUserByEmail(userId);
+        Map request = requestUserDetails(userId);
+        Object statusObj = request != null ? request.get("statusCode") : null;
+        if (!(statusObj instanceof Integer)) {
+            throw new UserLookupException("User details lookup for " + userId + " returned no status code");
+        }
+
+        int statusCode = (Integer) statusObj;
+        if (statusCode == 404) {
+            return null;
+        }
+        if (statusCode != 200) {
+            throw new UserLookupException("User details lookup for " + userId + " failed: " + request.get("error"));
+        }
+
+        Object resp = request.get("resp");
+        if (!(resp instanceof Map)) {
+            throw new UserLookupException("Unexpected response from user details API for " + userId + ": " + resp);
+        }
+        return (Map) resp;
+    }
+
+    public static class UserLookupException extends RuntimeException {
+        public UserLookupException(String message) {
+            super(message);
+        }
     }
 
     public static String getDisplayName(Map userDetails) {

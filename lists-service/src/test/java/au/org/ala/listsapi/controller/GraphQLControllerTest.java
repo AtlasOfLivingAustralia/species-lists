@@ -873,6 +873,34 @@ class GraphQLControllerTest {
     }
 
     @Test
+    void testUpdateMetadata_OwnerLockedAsString_ThrowsAndDoesNotSave() {
+        SpeciesList list = ownedList("list123", "185354");
+        stubValidUpdate(list);
+        when(authUtils.isAdmin(principal)).thenReturn(true);
+        when(userdetailsService.fetchUserById("62639")).thenReturn(Map.of("userId", "62639", "locked", "true"));
+
+        Exception exception = assertThrows(Exception.class, () -> updateOwner("list123", "62639"));
+
+        assertTrue(exception.getMessage().contains("locked"));
+        verify(speciesListMongoRepository, never()).save(any());
+    }
+
+    @Test
+    void testUpdateMetadata_OwnerNotActivated_ThrowsAndDoesNotSave() {
+        SpeciesList list = ownedList("list123", "185354");
+        stubValidUpdate(list);
+        when(authUtils.isAdmin(principal)).thenReturn(true);
+        when(userdetailsService.fetchUserById("62639"))
+                .thenReturn(Map.of("userId", "62639", "activated", false));
+
+        Exception exception = assertThrows(Exception.class, () -> updateOwner("list123", "62639"));
+
+        assertTrue(exception.getMessage().contains("not activated"));
+        assertEquals("185354", list.getOwner());
+        verify(speciesListMongoRepository, never()).save(any());
+    }
+
+    @Test
     void testUpdateMetadata_OwnerLookupFails_ThrowsFriendlyError() {
         SpeciesList list = ownedList("list123", "185354");
         stubValidUpdate(list);

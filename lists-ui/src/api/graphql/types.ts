@@ -53,7 +53,6 @@ type SpeciesListSubmit = Omit<
   | 'distinctMatchCount'
   | 'editors'
 > & {
-  // Only sent when an admin changes the list owner
   owner?: string;
 };
 

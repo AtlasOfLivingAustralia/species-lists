@@ -243,7 +243,6 @@
   "listmeta.owner.dialog.title": "Dangerous Change",
   "listmeta.owner.dialog.message.1": "Are you sure you want to change the list owner?",
   "listmeta.owner.dialog.message.2": "The current owner will <strong>lose access</strong> to edit this list (unless they are an admin or editor). Please check the new owner's ALA user ID is correct before updating.",
-  "listmeta.validation.ownerRequired": "Please enter the ALA user ID of the list owner",
   "isPrivate": "Visibility",
   "summary.list.label": "list",
   "summary.dataResourceUid.tooltip": "View data resource details",
@@ -252,6 +251,7 @@
 
   "actions.editMetadata.title": "Edit list metadata",
   "actions.editMetadata.success": "updated successfully",
+  "actions.editMetadata.notFound": "The list could not be found, it may have been deleted",
   "actions.menu.ariaLabel": "List actions",
   "actions.downloadList": "Download list",
   "actions.menu.label": "Actions",

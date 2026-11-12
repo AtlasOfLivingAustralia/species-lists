@@ -937,8 +937,11 @@ String normalisedLicence = licence == null ? StringUtils.trimToNull(toUpdate.get
         if (resolvedId == null || StringUtils.isBlank(resolvedId.toString())) {
             throw new Exception("No ALA user found with ID: " + newOwner);
         }
-        if (Boolean.TRUE.equals(userDetails.get("locked"))) {
+        if (isFlagSet(userDetails.get("locked"), false)) {
             throw new Exception("ALA user " + newOwner + " is locked and cannot own a list");
+        }
+        if (!isFlagSet(userDetails.get("activated"), true)) {
+            throw new Exception("ALA user " + newOwner + " is not activated and cannot own a list");
         }
 
         String newOwnerId = resolvedId.toString().trim();
@@ -951,6 +954,16 @@ String normalisedLicence = licence == null ? StringUtils.trimToNull(toUpdate.get
         logger.info("List {} ownership changed from {} to {} by {}",
                 toUpdate.getId(), oldOwner, newOwnerId, principal.getName());
         return true;
+    }
+
+    private static boolean isFlagSet(Object value, boolean defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+        return Boolean.parseBoolean(value.toString().trim());
     }
 
     private boolean isFlagChanged(Boolean newValue, Boolean existingValue) {

@@ -204,6 +204,8 @@ export const MUTATION_LIST_UPDATE = `mutation update(
     owner: $owner
   ) {
     id
+    owner
+    ownerName
   }
 }`;
 

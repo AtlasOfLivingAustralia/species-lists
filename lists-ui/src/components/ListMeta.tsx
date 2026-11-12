@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useId, useMemo, useRef, useState } from 'react';
 import {
   Anchor,
   Autocomplete,
@@ -48,13 +48,14 @@ interface ConfirmChangeDialogProps {
   detail: React.ReactNode;
 }
 
-// Warning dialog shown before an admin can edit a "dangerous" field.
-// Closes with returnValue 'confirm' or 'cancel'.
 function ConfirmChangeDialog({ dialogRef, onClose, title, question, detail }: ConfirmChangeDialogProps) {
+  const titleId = useId();
+
   return (
     <dialog
       ref={dialogRef}
       onClose={onClose}
+      aria-labelledby={titleId}
       style={{
         padding: '2rem',
         borderRadius: '10px',
@@ -65,7 +66,7 @@ function ConfirmChangeDialog({ dialogRef, onClose, title, question, detail }: Co
     >
       <Text size="lg" fw={700} mb={10}>
           <CautionIcon color="red" size={16}/>&nbsp;&nbsp;
-          <strong>{title}</strong>
+          <strong id={titleId}>{title}</strong>
       </Text>
       <hr/>
       <Text mt="sm"><strong>{question}</strong></Text>
@@ -136,7 +137,6 @@ export function ListMeta({
   const [ownerChangeConfirmed, setOwnerChangeConfirmed] = useState(false);
   const ownerDialogRef = useRef<HTMLDialogElement | null>(null);
 
-  // Owner can only be changed by admins when editing an existing list
   const canEditOwner = Boolean(initialValues) && ala.isAdminOrEditor;
 
   const intl = useIntl();
@@ -170,13 +170,6 @@ export function ListMeta({
         }
         return null;
       },
-      owner: (value) =>
-        canEditOwner && (!value || value.trim().length === 0)
-          ? intl.formatMessage({
-              id: 'listmeta.validation.ownerRequired',
-              defaultMessage: 'Please enter the ALA user ID of the list owner',
-            })
-          : null,
     },
   });
 
@@ -245,12 +238,13 @@ export function ListMeta({
   };
 
   const handleSumbit = (values: typeof form.values) => {
-    // Only send the owner when an admin has changed it
-    const newOwner = values.owner?.trim();
+    const { owner, ...rest } = values;
+    const newOwner = owner?.trim();
+    const ownerChanged = canEditOwner && Boolean(newOwner) && newOwner !== initialValues?.owner;
     onSubmit({
-      ...values,
+      ...rest,
       licence: values.licence ?? '',
-      owner: canEditOwner && newOwner && newOwner !== initialValues?.owner ? newOwner : undefined,
+      ...(ownerChanged ? { owner: newOwner } : {}),
     });
   };
 
@@ -596,6 +590,12 @@ export function ListMeta({
                     readOnly={!ownerChangeConfirmed}
                     onClick={() => {
                       if (!ownerChangeConfirmed) {
+                        ownerDialogRef.current?.showModal();
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (!ownerChangeConfirmed && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault();
                         ownerDialogRef.current?.showModal();
                       }
                     }}
