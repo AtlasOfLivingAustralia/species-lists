@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useId, useMemo, useRef, useState } from 'react';
 import {
   Anchor,
   Autocomplete,
@@ -40,6 +40,59 @@ interface ListMetaProps {
   onSubmit: (list: SpeciesListSubmit) => void;
 }
 
+interface ConfirmChangeDialogProps {
+  dialogRef: React.RefObject<HTMLDialogElement | null>;
+  onClose: (event: React.SyntheticEvent<HTMLDialogElement>) => void;
+  title: React.ReactNode;
+  question: React.ReactNode;
+  detail: React.ReactNode;
+}
+
+function ConfirmChangeDialog({ dialogRef, onClose, title, question, detail }: ConfirmChangeDialogProps) {
+  const titleId = useId();
+
+  return (
+    <dialog
+      ref={dialogRef}
+      onClose={onClose}
+      aria-labelledby={titleId}
+      style={{
+        padding: '2rem',
+        borderRadius: '10px',
+        border: '1px solid #ccc',
+        width: '500px',
+        maxWidth: '90%',
+      }}
+    >
+      <Text size="lg" fw={700} mb={10}>
+          <CautionIcon color="red" size={16}/>&nbsp;&nbsp;
+          <strong id={titleId}>{title}</strong>
+      </Text>
+      <hr/>
+      <Text mt="sm"><strong>{question}</strong></Text>
+      <Text mt="sm" mb="lg">{detail}</Text>
+      <Group justify="flex-end" gap="md">
+        <Button
+          variant="light"
+          type="button"
+          radius="md"
+          onClick={() => dialogRef.current?.close('cancel')}
+        >
+          <FormattedMessage id="listmeta.button.cancel.label" defaultMessage="Cancel" />
+        </Button>
+        <Button
+          variant="filled"
+          type="button"
+          radius="md"
+          onClick={() => dialogRef.current?.close('confirm')}
+        >
+          <FormattedMessage id="listmeta.button.confirm.label" defaultMessage="Confirm" />
+        </Button>
+      </Group>
+    </dialog>
+  );
+}
+
 const defaultList = (
   list?: SpeciesList,
   initialTitle?: string
@@ -64,6 +117,7 @@ const defaultList = (
   wkt: list?.wkt || '',
   tags: list?.tags || [] || null,
   dataResourceUid: list?.dataResourceUid || '',
+  owner: list?.owner || '',
   metadataLastUpdated: list?.metadataLastUpdated || '',
 });
 
@@ -80,6 +134,10 @@ export function ListMeta({
   const [uidChangeConfirmed, setUidChangeConfirmed] = useState(false);
   const [customTags, setCustomTags] = useState<string[]>([]);
   const dialogRef = useRef<HTMLDialogElement | null>(null);
+  const [ownerChangeConfirmed, setOwnerChangeConfirmed] = useState(false);
+  const ownerDialogRef = useRef<HTMLDialogElement | null>(null);
+
+  const canEditOwner = Boolean(initialValues) && ala.isAdminOrEditor;
 
   const intl = useIntl();
   const chooserUrl = intl.formatMessage({ id: 'listmeta.cc.chooserUrl', defaultMessage: 'https://creativecommons.org/share-your-work/cclicenses/' });
@@ -180,9 +238,13 @@ export function ListMeta({
   };
 
   const handleSumbit = (values: typeof form.values) => {
+    const { owner, ...rest } = values;
+    const newOwner = owner?.trim();
+    const ownerChanged = canEditOwner && Boolean(newOwner) && newOwner !== initialValues?.owner;
     onSubmit({
-      ...values,
+      ...rest,
       licence: values.licence ?? '',
+      ...(ownerChanged ? { owner: newOwner } : {}),
     });
   };
 
@@ -221,6 +283,15 @@ export function ListMeta({
     } else {
       setUidChangeConfirmed(false);
       form.setFieldValue('dataResourceUid', initialValues?.dataResourceUid || '');
+    }
+  };
+
+  const handleOwnerDialogClose = (event: React.SyntheticEvent<HTMLDialogElement>) => {
+    if (event.currentTarget.returnValue === 'confirm') {
+      setOwnerChangeConfirmed(true);
+    } else {
+      setOwnerChangeConfirmed(false);
+      form.setFieldValue('owner', initialValues?.owner || '');
     }
   };
 
@@ -433,26 +504,16 @@ export function ListMeta({
         </Grid.Col>
         {ala.isAdminOrEditor && (
             <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-                <dialog 
-                  ref={dialogRef} 
+                <ConfirmChangeDialog
+                  dialogRef={dialogRef}
                   onClose={handleDialogClose}
-                  style={{
-                    padding: '2rem',
-                    borderRadius: '10px',
-                    border: '1px solid #ccc',
-                    width: '500px',
-                    maxWidth: '90%',
-                  }}
-                >
-                  <Text size="lg" fw={700} mb={10}>
-                      <CautionIcon color="red" size={16}/>&nbsp;&nbsp;
-                      <strong><FormattedMessage id="listmeta.dr.dialog.title" defaultMessage="Dangerous Change" /></strong>
-                  </Text>
-                  <hr/>
-                  <Text mt="sm"><strong>
-                    <FormattedMessage id="listmeta.dr.dialog.message.1" defaultMessage="Are you sure you want to change the Data Resource ID?" /></strong>
-                  </Text>
-                  <Text mt="sm" mb="lg">
+                  title={
+                    <FormattedMessage id="listmeta.dr.dialog.title" defaultMessage="Dangerous Change" />
+                  }
+                  question={
+                    <FormattedMessage id="listmeta.dr.dialog.message.1" defaultMessage="Are you sure you want to change the Data Resource ID?" />
+                  }
+                  detail={
                     <FormattedMessage 
                       id="listmeta.dr.dialog.message.2"
                       defaultMessage="This is a <strong>dangerous change</strong> and will update data on 
@@ -462,26 +523,8 @@ export function ListMeta({
                         strong: (chunks) => <strong>{chunks}</strong>,
                       }}
                       />
-                  </Text>
-                  <Group justify="flex-end" gap="md">
-                    <Button
-                      variant="light"
-                      type="button"
-                      radius="md"
-                      onClick={() => dialogRef.current?.close('cancel')}
-                    >
-                      <FormattedMessage id="listmeta.button.cancel.label" defaultMessage="Cancel" />
-                    </Button>
-                    <Button
-                      variant="filled"
-                      type="button"
-                      radius="md"
-                      onClick={() => dialogRef.current?.close('confirm')}
-                    >
-                      <FormattedMessage id="listmeta.button.confirm.label" defaultMessage="Confirm" />
-                    </Button>
-                  </Group>
-                </dialog>
+                  }
+                />
                 <TextInput
                     name='dataResourceUid'
                     label={
@@ -500,6 +543,65 @@ export function ListMeta({
                     }}
                     error={form.errors.dataResourceUid}
                     {...form.getInputProps('dataResourceUid')}
+                />
+            </Grid.Col>
+        )}
+        {canEditOwner && (
+            <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+                <ConfirmChangeDialog
+                  dialogRef={ownerDialogRef}
+                  onClose={handleOwnerDialogClose}
+                  title={
+                    <FormattedMessage id="listmeta.owner.dialog.title" defaultMessage="Dangerous Change" />
+                  }
+                  question={
+                    <FormattedMessage id="listmeta.owner.dialog.message.1" defaultMessage="Are you sure you want to change the list owner?" />
+                  }
+                  detail={
+                    <FormattedMessage
+                      id="listmeta.owner.dialog.message.2"
+                      defaultMessage="The current owner will <strong>lose access</strong> to edit this list
+                      (unless they are an admin or editor). Please check the new owner's ALA user ID is
+                      correct before updating."
+                      values={{
+                        strong: (chunks) => <strong>{chunks}</strong>,
+                      }}
+                    />
+                  }
+                />
+                <TextInput
+                    name='owner'
+                    label={
+                        <Group gap="xs">
+                            <FontAwesomeIcon icon={faExclamationTriangle} color="red" />
+                            <FormattedMessage id="listmeta.owner.label" defaultMessage="Owner (ALA user ID)" />
+                        </Group>
+                    }
+                    description={
+                      initialValues?.ownerName
+                        ? intl.formatMessage(
+                            { id: 'listmeta.owner.description', defaultMessage: 'Current owner: {name}' },
+                            { name: initialValues.ownerName }
+                          )
+                        : undefined
+                    }
+                    inputWrapperOrder={['label', 'input', 'description', 'error']}
+                    placeholder={intl.formatMessage({ id: 'listmeta.owner.placeholder', defaultMessage: 'ALA user ID' })}
+                    disabled={loading}
+                    readOnly={!ownerChangeConfirmed}
+                    onClick={() => {
+                      if (!ownerChangeConfirmed) {
+                        ownerDialogRef.current?.showModal();
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (!ownerChangeConfirmed && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault();
+                        ownerDialogRef.current?.showModal();
+                      }
+                    }}
+                    error={form.errors.owner}
+                    {...form.getInputProps('owner')}
                 />
             </Grid.Col>
         )}

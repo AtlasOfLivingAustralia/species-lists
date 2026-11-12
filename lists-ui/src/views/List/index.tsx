@@ -6,7 +6,6 @@ import {
   queries,
   SpeciesList,
   SpeciesListItem,
-  SpeciesListSubmit,
 } from '#/api';
 import {
   Box,
@@ -446,7 +445,7 @@ function List() {
   );
   
   const handleListMetaUpdated = useCallback(
-    (item: SpeciesListSubmit) => {
+    (item: Partial<SpeciesList>) => {
       setMeta((prevMeta) => ({
         ...prevMeta!,
         ...item,
