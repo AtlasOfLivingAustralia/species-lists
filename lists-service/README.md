@@ -21,7 +21,7 @@ Add the following properties, sourcing client IDs (values with`<insert-client-id
 
 ```properties
 # AUTH config common to CAS and Cognito
-security.admin.role=ROLE_ADMIN,ala/internal
+security.admin.roles=ROLE_ADMIN,ala/internal
 security.apikey.enabled=false
 security.jwt.enabled=true
 security.cas.enabled=false
@@ -34,15 +34,18 @@ security.jwt.roleClaims=cognito:groups
 security.jwt.rolesFromAccessToken=true
 security.jwt.userIdClaim=username
 security.oidc.discoveryUri=https://cognito-idp.ap-southeast-2.amazonaws.com/ap-southeast-2_OOXU9GW39/.well-known/openid-configuration
-security.oidc.clientId=<insert-client-id>
 security.oidc.scope=openid profile email ala/attrs ala/roles
-security.oidc.secret=<insert-client-secret>
 userDetails.api.url=https://api.test.ala.org.au/userdetails/cognito
 userDetails.web.url=https://userdetails.test.ala.org.au/
 webservice.client-id=<insert-client-id>
 webservice.client-secret=<insert-client-secret>
 webservice.jwt-scopes=users/read ala/internal
 ```
+
+The client id for incoming tokens is read from `security.jwt.clientId`, and the credentials for
+outgoing calls from `webservice.client-id` / `webservice.client-secret`. `security.oidc.clientId` and
+`security.oidc.secret` are bound by ala-security-common 8.x, but no code reads them. See [Configuration](#configuration)
+for the properties the service needs to start.
 
 When opening the project in the IDE, select the "Open in container" option. Everything should be automatic after that.
 
@@ -61,6 +64,47 @@ Run the following command:
 
 ```bash
 docker-compose -f lists-service/src/main/docker/docker-compose.yml up -d
+```
+
+## Configuration
+
+`src/main/resources/application.properties` holds ALA's defaults. A deployment overrides them with
+its own properties file, without rebuilding the image:
+
+- `/data/lists-service/config/lists-service-config.properties` is loaded when it exists
+  (`spring.config.import` in `application.properties`).
+- For a file elsewhere, use Spring Boot's `SPRING_CONFIG_ADDITIONAL_LOCATION`:
+
+```bash
+SPRING_CONFIG_ADDITIONAL_LOCATION=file:/etc/lists-service/lists-service.properties
+```
+
+### Authentication
+
+Incoming authentication is configuration only: the service validates JWTs from any OIDC provider
+(Cognito, CAS, Keycloak...) set in `security.jwt.*`.
+
+These properties have no usable default and must be set, non-blank, or the service does not start:
+
+| Property | Error when missing |
+|---|---|
+| `security.jwt.clientId` | pac4j: `clientId cannot be blank` |
+| `webservice.client-id` | `PlaceholderResolutionException` for `webservice.client-id` |
+| `webservice.client-secret` | `PlaceholderResolutionException` for `webservice.client-secret` |
+
+To use a provider other than ALA's Cognito, point the discovery URI at it and set the claims that
+carry the user id and the roles. For example, for a CAS or Keycloak provider:
+
+```properties
+security.jwt.discoveryUri=https://auth.example.org/cas/oidc/.well-known
+security.jwt.roleClaims=role
+security.jwt.userIdClaim=userid
+security.jwt.clientId=<client-id>
+# roles (or scopes) that grant admin access
+security.admin.roles=ROLE_ADMIN,ala/internal
+# client credentials for outgoing calls to other services
+webservice.client-id=<client-id>
+webservice.client-secret=<client-secret>
 ```
 
 ## GraphQL
