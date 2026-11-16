@@ -57,6 +57,7 @@ import {
 } from '#/components/FiltersSection';
 import { getErrorMessage, mergeFacetsWithBase, parseAsFilters, showActiveFilterTags } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
+import { getAppName } from '#/helpers/utils/branding';
 
 // Styles
 import { Link } from 'react-router';
@@ -82,7 +83,7 @@ const sortField = [
 const MAX_ENTRIES = 10000; // Maximum number of entries the API allows us to paginate through (for performance reasons)
 
 const Home = ({ routeId }: { routeId: string }) => {
-  useDocumentTitle('ALA Species Lists');
+  useDocumentTitle(getAppName());
   const isMobile = useMediaQuery(`(max-width: ${em(750)})`) || false;
   const intl = useIntl();
   const ala = useALA();
@@ -346,7 +347,7 @@ const Home = ({ routeId }: { routeId: string }) => {
               />
               )}
               {ala.isAdminOrEditor && !isMyListsPage && isAdminListPage && (
-                <Text component='span' inherit opacity={0.7} c='flamingo'>
+                <Text component='span' inherit opacity={0.7} c='var(--lists-accent-color, var(--mantine-color-flamingo-filled))'>
                   {' '}
                   <FormattedMessage
                     id='lists.home.admin.title'
@@ -469,7 +470,7 @@ const Home = ({ routeId }: { routeId: string }) => {
                     },
                   }}
                   style={{
-                    '--button-hover': 'var(--mantine-color-rust-filled-hover)',
+                    '--button-hover': 'var(--mantine-primary-color-filled-hover)',
                     '--button-hover-color': 'white',
                   }}
                   radius="md"

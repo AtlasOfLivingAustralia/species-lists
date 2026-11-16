@@ -35,6 +35,7 @@ import { IngestProgress } from '#/components/IngestProgress';
 import PageLoader from '#/components/PageLoader';
 import { getErrorMessage } from '#/helpers';
 import { useALA } from '#/helpers/context/useALA';
+import { getPageTitle } from '#/helpers/utils/branding';
 import { Breadcrumbs } from '../Dashboard/components/Breadcrumbs';
 import { ActionCard } from './components/ActionCard';
 import { FetchInfo } from './components/FetchInfo';
@@ -42,7 +43,7 @@ import { FetchInfo } from './components/FetchInfo';
 import classes from './index.module.css';
 
 export function Component() {
-  useDocumentTitle('ALA Lists | Admin');
+  useDocumentTitle(getPageTitle('Admin'));
   const intl = useIntl();
   const AppVersion = () => <span>v{__APP_VERSION__}</span>
 

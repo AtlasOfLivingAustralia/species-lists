@@ -52,7 +52,9 @@ type SpeciesListSubmit = Omit<
   | 'ownerName'
   | 'distinctMatchCount'
   | 'editors'
->;
+> & {
+  owner?: string;
+};
 
 interface Release {
   releasedVersion: string;
@@ -167,6 +169,7 @@ interface Classification {
   genusID: string;
   rank: string;
   rankID: number;
+  matchType?: string;
 }
 
 interface ListsUser {

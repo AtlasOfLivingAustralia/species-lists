@@ -31,7 +31,7 @@ import { modals } from '@mantine/modals';
 import { notifications } from '@mantine/notifications';
 
 // API & Helpers
-import { performGQLQuery, SpeciesList, SpeciesListSubmit } from '#/api';
+import { performGQLQuery, SpeciesList } from '#/api';
 import { MUTATION_LIST_UPDATE } from '#/api/queries';
 import { ListMeta } from '#/components/ListMeta';
 import { getErrorMessage } from '#/helpers';
@@ -46,7 +46,7 @@ interface ActionsProps {
   editing: boolean;
   rematching: boolean;
   onEditingChange: (editing: boolean) => void;
-  onMetaEdited: (meta: SpeciesListSubmit) => void;
+  onMetaEdited: (meta: Partial<SpeciesList>) => void;
   onRematch: () => void;
   handleAddClick: () => void;
 }
@@ -239,7 +239,9 @@ export function Actions({
 
             try {
               // Update the list
-              await performGQLQuery(
+              const { updateMetadata: updated } = await performGQLQuery<{
+                updateMetadata: Pick<SpeciesList, 'owner' | 'ownerName'> | null;
+              }>(
                 MUTATION_LIST_UPDATE,
                 {
                   id: meta.id,
@@ -247,6 +249,15 @@ export function Actions({
                 },
                 ala.token
               );
+
+              if (!updated) {
+                throw new Error(
+                  intl.formatMessage({
+                    id: 'actions.editMetadata.notFound',
+                    defaultMessage: 'The list could not be found, it may have been deleted',
+                  })
+                );
+              }
 
               // Show success notification
               notifications.show({
@@ -263,7 +274,11 @@ export function Actions({
                 radius: 'md',
               });
 
-              onMetaEdited(values);
+              onMetaEdited({
+                ...values,
+                owner: updated.owner,
+                ownerName: updated.ownerName,
+              });
             } catch (error) {
               // Show the error notificaiton
               notifications.show({

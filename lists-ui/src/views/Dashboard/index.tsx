@@ -19,6 +19,7 @@ import { Outlet, ScrollRestoration, useNavigation } from 'react-router';
 
 // Authentication
 import { ExternalBanner } from '#/components/ExternalBanner';
+import { ExternalFooter, ExternalHeader } from '#/components/ExternalChrome';
 import { useAuth } from 'react-oidc-context';
 import handleSignout from '../../helpers/auth/handleSignout';
 
@@ -26,6 +27,16 @@ function Dashboard() {
   const auth = useAuth();
   const { state } = useNavigation();
   const isLegacySkin = import.meta.env.VITE_LEGACY_SKIN === 'true';
+
+  // A portal's own header/footer templates replace ala-mantine's when set (community build)
+  const themeHeaderUrl: string = import.meta.env.VITE_THEME_HEADER_URL || '';
+  const themeFooterUrl: string = import.meta.env.VITE_THEME_FOOTER_URL || '';
+  const containerClass: string = import.meta.env.VITE_THEME_CONTAINER_CLASS || 'container-fluid';
+  const searchUrl: string = import.meta.env.VITE_THEME_SEARCH_URL || 'https://bie.ala.org.au';
+
+  const signIn = () =>
+    auth.signinRedirect({ state: { targetUrl: window.location.pathname + window.location.search } });
+  const signOut = () => handleSignout(auth);
 
   // Effect handler for navigation process indicator
   useEffect(() => {
@@ -49,7 +60,18 @@ function Dashboard() {
         url={import.meta.env.VITE_ALA_MESSAGES}
         services={['lists']}
       />
-      <Header
+      {themeHeaderUrl && (
+        <ExternalHeader
+          url={themeHeaderUrl}
+          containerClass={containerClass}
+          searchUrl={searchUrl}
+          jsUrl={import.meta.env.VITE_THEME_JS_URL || ''}
+          isAuthenticated={auth.isAuthenticated}
+          onLogin={signIn}
+          onLogout={signOut}
+        />
+      )}
+      {!themeHeaderUrl && <Header
         isAuthenticated={auth.isAuthenticated}
         onAuthClick={() => {
           if (auth.isAuthenticated) {
@@ -59,18 +81,27 @@ function Dashboard() {
           }
         }}
         homeUrl={import.meta.env.VITE_ALA_HOME_PAGE || ''}
-        onSearchClick={() => (window.location.href = 'https://bie.ala.org.au')
+        onSearchClick={() => (window.location.href = searchUrl)
         }
         fullWidth 
         compact
         myProfileUrl={import.meta.env.VITE_ALA_USER_PROFILE || ''}
         isLegacySkin={isLegacySkin}
-      />
+      />}
       <Divider />
       <Outlet />
       <Divider mt='xl' />
-      <Footer fullWidth />
-      <IndigenousAcknowledgement />
+      {themeFooterUrl && (
+        <ExternalFooter
+          url={themeFooterUrl}
+          containerClass={containerClass}
+          isAuthenticated={auth.isAuthenticated}
+          onLogin={signIn}
+          onLogout={signOut}
+        />
+      )}
+      {!themeFooterUrl && <Footer fullWidth />}
+      {!themeFooterUrl && <IndigenousAcknowledgement />}
     </>
   );
 }

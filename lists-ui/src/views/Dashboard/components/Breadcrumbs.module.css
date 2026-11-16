@@ -9,11 +9,11 @@
 
   &:hover {
     @mixin light {
-      color: var(--mantine-color-rust-6);
+      color: var(--mantine-primary-color-6);
     }
 
     @mixin dark {
-      color: var(--mantine-color-flamingo-4);
+      color: var(--lists-accent-color, var(--mantine-color-flamingo-4));
     }
   }
 }

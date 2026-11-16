@@ -13,6 +13,10 @@
     "build:testing": "tsc && vite build --mode testing",
     "build:development": "tsc && vite build --mode development",
     "test": "node --test --experimental-strip-types 'test/*.test.ts'",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
+    "test:e2e:ui": "playwright test --config=e2e/playwright.config.ts --ui",
+    "test:e2e:headed": "playwright test --config=e2e/playwright.config.ts --headed",
+    "test:e2e:report": "playwright show-report e2e/playwright-report",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
@@ -47,6 +51,7 @@
   },
   "devDependencies": {
     "@axe-core/react": "^4.12.1",
+    "@playwright/test": "^1.64.1",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^22.7.5",
     "@types/react": "^19.1.2",

@@ -2,6 +2,8 @@ import { MouseEventHandler, ReactNode } from 'react';
 import { Anchor, Button, Center, Stack, Text, ThemeIcon } from '@mantine/core';
 import { ListIcon } from '@atlasoflivingaustralia/ala-mantine';
 
+import { getSupportEmail } from '#/helpers/utils/branding';
+
 interface MessageProps {
   title?: string;
   subtitle?: string;
@@ -36,8 +38,8 @@ export function Message({
             {withAlaContact && (
               <Text size='sm' c='dimmed'>
                 If this issue persists, contact us at{' '}
-                <Anchor size='sm' href='mailto:support@ala.org.au'>
-                  support@ala.org.au
+                <Anchor size='sm' href={`mailto:${getSupportEmail()}`}>
+                  {getSupportEmail()}
                 </Anchor>
               </Text>
             )}
