@@ -26,6 +26,7 @@ import {
 // Notifications & modals managers
 import { notifications } from '@mantine/notifications';
 import { modals } from '@mantine/modals';
+import { FormattedMessage, useIntl } from 'react-intl';
 
 import classes from './index.module.css';
 import { TaxonImage } from '#/components/TaxonImage';
@@ -60,6 +61,7 @@ export function SpeciesItemDrawer({
   const [editing, setEditing] = useState<boolean>(false);
   const [editItem, setEditItem] = useState<InputSpeciesList | null>(null);
   const { token, isAuthenticated, isAuthorisedForList } = useALA();
+  const intl = useIntl();
 
   // useEffect replaced with a simple function to stop editing and reset state when closing the drawer
   const stopEditing = () => {
@@ -242,7 +244,7 @@ export function SpeciesItemDrawer({
                   radius='md'
                   variant='filled'
                 >
-                  Update
+                  <FormattedMessage id='listmeta.button.update.label' defaultMessage='Update' />
                 </Button>
                 <Button
                   disabled={updating}
@@ -251,7 +253,7 @@ export function SpeciesItemDrawer({
                   color='grey'
                   onClick={() => stopEditing()}
                 >
-                  Cancel
+                  <FormattedMessage id='listmeta.button.cancel.label' defaultMessage='Cancel' />
                 </Button>
               </Group>
               <Button
@@ -260,16 +262,22 @@ export function SpeciesItemDrawer({
                   modals.openConfirmModal({
                     title: (
                       <Text fw='bold' size='lg'>
-                        Confirm item deletion
+                        <FormattedMessage id='actions.itemDelete.title' defaultMessage='Confirm item deletion' />
                       </Text>
                     ),
                     children: (
                       <Text>
-                        Please confirm that you wish to delete{' '}
-                        <b>{item?.scientificName}</b> from this list.
+                        <FormattedMessage
+                          id='actions.itemDelete.message'
+                          defaultMessage='Please confirm that you wish to delete {title} from this list.'
+                          values={{ title: <b>{item?.scientificName}</b> }}
+                        />
                       </Text>
                     ),
-                    labels: { confirm: 'Confirm', cancel: 'Cancel' },
+                    labels: {
+                      confirm: intl.formatMessage({ id: 'listmeta.button.confirm.label', defaultMessage: 'Confirm' }),
+                      cancel: intl.formatMessage({ id: 'listmeta.button.cancel.label', defaultMessage: 'Cancel' }),
+                    },
                     confirmProps: {
                       variant: 'filled',
                       radius: 'md',
@@ -281,7 +289,7 @@ export function SpeciesItemDrawer({
                 radius='md'
                 variant='outline'
               >
-                Remove from list
+                <FormattedMessage id='actions.itemDelete.button' defaultMessage='Remove from list' />
               </Button>
             </Group>
           ) : (
@@ -293,7 +301,7 @@ export function SpeciesItemDrawer({
                 radius='md'
                 variant='filled'
               >
-                Create
+                <FormattedMessage id='listmeta.button.create.label' defaultMessage='Create' />
               </Button>
               <Button
                 disabled={updating}
@@ -302,7 +310,7 @@ export function SpeciesItemDrawer({
                 color='grey'
                 onClick={() => onClose()}
               >
-                Cancel
+                <FormattedMessage id='listmeta.button.cancel.label' defaultMessage='Cancel' />
               </Button>
             </Group>
           )}

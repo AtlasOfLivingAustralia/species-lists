@@ -8,6 +8,7 @@ import {
   Transition,
 } from '@mantine/core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { ThNoWrap } from './ThNoWrap';
 import { faTrashAlt } from '@fortawesome/free-regular-svg-icons';
 
@@ -41,6 +42,7 @@ export function ThEditable({
   const [updatedField, setUpdatedField] = useState<string>(field);
   const [deleting, setDeleting] = useState<boolean>(false);
   const [updating, setUpdating] = useState<boolean>(false);
+  const intl = useIntl();
 
   const TRANSITION_MS = 200;
   const ACTIONS_WIDTH_EDITING = 76;
@@ -65,16 +67,22 @@ export function ThEditable({
       modals.openConfirmModal({
         title: (
           <Text fw='bold' size='lg'>
-            Confirm field deletion
+            <FormattedMessage id='actions.fieldDelete.title' defaultMessage='Confirm field deletion' />
           </Text>
         ),
         children: (
           <Text>
-            Please confirm that you wish to delete the <b>{field}</b> field from
-            this list
+            <FormattedMessage
+              id='actions.fieldDelete.message'
+              defaultMessage='Please confirm that you wish to delete the {title} field from this list'
+              values={{ title: <b>{field}</b> }}
+            />
           </Text>
         ),
-        labels: { confirm: 'Confirm', cancel: 'Cancel' },
+        labels: {
+          confirm: intl.formatMessage({ id: 'listmeta.button.confirm.label', defaultMessage: 'Confirm' }),
+          cancel: intl.formatMessage({ id: 'listmeta.button.cancel.label', defaultMessage: 'Cancel' }),
+        },
         confirmProps: {
           variant: 'filled',
           radius: 'md',
@@ -127,16 +135,22 @@ export function ThEditable({
     modals.openConfirmModal({
       title: (
         <Text fw='bold' size='lg'>
-          Confirm field renaming
+          <FormattedMessage id='actions.fieldRename.title' defaultMessage='Confirm field renaming' />
         </Text>
       ),
       children: (
         <Text>
-          Please confirm that you wish to rename the <b>{field}</b> field to{' '}
-          <b>{updatedField}</b> within list
+          <FormattedMessage
+            id='actions.fieldRename.message'
+            defaultMessage='Please confirm that you wish to rename the {oldName} field to {newName} within list'
+            values={{ oldName: <b>{field}</b>, newName: <b>{updatedField}</b> }}
+          />
         </Text>
       ),
-      labels: { confirm: 'Confirm', cancel: 'Cancel' },
+      labels: {
+        confirm: intl.formatMessage({ id: 'listmeta.button.confirm.label', defaultMessage: 'Confirm' }),
+        cancel: intl.formatMessage({ id: 'listmeta.button.cancel.label', defaultMessage: 'Cancel' }),
+      },
       confirmProps: {
         variant: 'filled',
         radius: 'md',

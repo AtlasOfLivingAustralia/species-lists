@@ -48,7 +48,7 @@ export function ListRow({ list, isMobile }: ListRowProps) {
                     },
                   }}
               >
-                <FormattedMessage id={list?.listType || 'OTHER'} />
+                <FormattedMessage id={`listType.${list?.listType || 'OTHER'}`} />
               </Badge>
               { !isMobile ? ( 
               <>
