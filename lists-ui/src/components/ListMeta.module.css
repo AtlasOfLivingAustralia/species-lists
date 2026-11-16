@@ -1,0 +1,16 @@
+.dialog {
+  padding: 2rem;
+  border-radius: 10px;
+  width: 500px;
+  max-width: 90%;
+  background-color: var(--mantine-color-body);
+  color: var(--mantine-color-text);
+
+  @mixin light {
+    border: 1px solid var(--mantine-color-gray-4);
+  }
+
+  @mixin dark {
+    border: 1px solid var(--mantine-color-dark-4);
+  }
+}
