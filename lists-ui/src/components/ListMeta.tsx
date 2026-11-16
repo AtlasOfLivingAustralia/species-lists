@@ -30,6 +30,7 @@ import { listFlags } from '#/helpers';
 import { ALAContextProps } from '#/helpers/context/ALAContext';
 import { generateCCLink } from '#/helpers/utils/generateCCLinks';
 import { FlagCard } from './FlagCard';
+import classes from './ListMeta.module.css';
 
 interface ListMetaProps {
   ala: ALAContextProps;
@@ -56,13 +57,7 @@ function ConfirmChangeDialog({ dialogRef, onClose, title, question, detail }: Co
       ref={dialogRef}
       onClose={onClose}
       aria-labelledby={titleId}
-      style={{
-        padding: '2rem',
-        borderRadius: '10px',
-        border: '1px solid #ccc',
-        width: '500px',
-        maxWidth: '90%',
-      }}
+      className={classes.dialog}
     >
       <Text size="lg" fw={700} mb={10}>
           <CautionIcon color="red" size={16}/>&nbsp;&nbsp;
